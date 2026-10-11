@@ -8,7 +8,7 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
-## [Non rilasciato]
+## [0.6.0] — 2026-10-11 — Simula reazione
 
 ### Aggiunto
 - **Simula reazione** (`R`): le molecole sul banco (o quelle selezionate) si agitano e si urtano; con un urto efficace
