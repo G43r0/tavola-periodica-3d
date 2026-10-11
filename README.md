@@ -3,8 +3,9 @@
 Applicazione desktop (Electron + Three.js) con la tavola periodica interattiva dei 118 elementi,
 schede informative in italiano e modelli 3D degli atomi esplorabili fino alle singole particelle
 (protoni, neutroni, elettroni e quark), più un **laboratorio molecolare** in cui si collegano gli atomi per formare
-molecole e composti e una **sandbox degli elementi** in stile *The Powder Toy*: i 118 elementi e i materiali di base
-(legno, carbone, calcestruzzo, muro indistruttibile) cadono, fondono, bollono, bruciano e reagiscono secondo i loro dati reali.
+molecole e composti e una **sandbox degli elementi** in stile *The Powder Toy*: i 118 elementi, le 554 sostanze della
+libreria e i materiali di base (legno, carbone, calcestruzzo, muro indistruttibile) cadono, fondono, bollono, si sciolgono,
+bruciano e reagiscono secondo i loro dati reali e le reazioni del catalogo.
 Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 
 | Fase | Contenuto | Stato |
@@ -259,9 +260,25 @@ nel pennello). È una «sabbiera» a particelle ispirata a *The Powder Toy*: una
 400 × 225), ognuna un granello di sostanza con la sua temperatura.
 
 - **Sostanze**: i 118 elementi (tavola periodica nella tavolozza), i materiali di base — **legno**, **carbone**,
-  **calcestruzzo**, **muro indistruttibile** — più il **generatore elettrico** e alcuni composti utili agli esperimenti
-  (acqua, sale da cucina, ruggine, anidride carbonica). Le reazioni producono fuoco, fumo, cenere, CO₂, SO₂, vapore,
-  sali, ossidi e idrossidi, ognuno con nome e formula generati (es. «Ioduro di piombo(II)», PbI₂).
+  **calcestruzzo**, **muro indistruttibile** — più il **generatore elettrico** e **tutte le 554 sostanze della libreria
+  del laboratorio** (molecole, acidi, basi, sali, ossidi, ioni, composti organici ed esplosivi), divise per gruppi e
+  con una ricerca per nome o formula (`CuSO4` trova il solfato di rame). Ogni sostanza ha i suoi dati fisici: temperature
+  di fusione ed ebollizione, densità, colore, solubilità in acqua, infiammabilità e temperatura di accensione
+  (`src/sandbox/data/compounds.js`). Le reazioni «a mano» producono i sali, gli ossidi e gli idrossidi della libreria
+  (Na + Cl₂ → NaCl, Mg + O₂ → MgO, Na + H₂O → NaOH(aq)); se il composto non c'è, nome e formula sono generati
+  (es. «Cloruro di ferro(III)», FeCl₃).
+- **Soluzioni**: i sali solubili, gli acidi e le basi si sciolgono nell'acqua (o si posano direttamente «In soluzione»)
+  e diffondono nel liquido, colorandolo (Cu²⁺ azzurro, Ni²⁺ verde, KMnO₄ viola); gli ioni esistono solo in acqua.
+  Facendo bollire una soluzione l'acqua evapora e il soluto **cristallizza**; le soluzioni di ioni conducono la corrente.
+- **Reazioni del catalogo**: le 1349 reazioni del laboratorio sono simulate nella sandbox con i loro coefficienti, le
+  condizioni scritte (soluzione acquosa, riscaldamento, innesco, luce, scintilla) e il calore dal ΔH°: precipitazioni
+  (AgNO₃ + NaCl → AgCl, Pb(NO₃)₂ + KI → PbI₂ giallo), neutralizzazioni, metalli e acidi (lo zinco sviluppa idrogeno,
+  il rame no), combustioni dei combustibili (metano, etanolo, benzina…), decomposizioni termiche (CaCO₃ → CaO + CO₂),
+  **catalizzatori** (H₂O₂ si decompone solo vicino a MnO₂) e detonazioni (nitroglicerina, TNT, nitrometano). 1149
+  reazioni usano il motore del catalogo, 93 coincidono con le regole «a mano» (combustioni, metallo + alogeno, metallo +
+  acqua); restano escluse, con il motivo, solo 107: equilibri (⇌), reazioni con catalizzatori non specificati o assenti
+  e quelle che richiedono un organismo vivente. Un composto infiammabile senza combustione in catalogo brucia comunque, e
+  quelli organici che si decompongono **carbonizzano** (lo zucchero scaldato lascia carbonio).
 - **Stati fisici reali**: ogni elemento è solido, liquido o gas in base a temperatura di fusione e di ebollizione
   (sublimazione per carbonio e arsenico). Nella scheda «Posa come» si sceglie lo stato (es. azoto liquido, ferro
   fuso, vapore di sodio) o la temperatura, e se un solido va posato come **polvere** (cade e si ammucchia) o come **blocco**
@@ -288,13 +305,16 @@ nel pennello). È una «sabbiera» a particelle ispirata a *The Powder Toy*: una
 - **Fissione**: i neutroni (strumento Neutroni) spezzano uranio, plutonio e gli altri attinidi fissili in coppie di
   frammenti reali (Ba + Kr, Xe + Sr…) liberando altri neutroni e calore: reazione a catena. Acqua e grafite rallentano i
   neutroni (moderatori), cadmio, boro e gadolinio li assorbono (barre di controllo), il berillio li riflette.
-- **Esplosioni** (strumento Esplosione, cesio in acqua, fissione): lanciano le particelle, frantumano i blocchi deboli;
-  il calcestruzzo resiste, il muro indistruttibile non si scalfisce.
-- **Registro delle reazioni**: a destra compaiono, con l'equazione bilanciata e il numero di volte, le reazioni avvenute,
-  i decadimenti (²²⁶Ra → ²²²Rn + ⁴He), le fissioni e i cambiamenti di stato (con la temperatura).
-- **Esempi** pronti: metalli alcalini in acqua, saggio alla fiamma, termite, reazione a catena, scarica nei gas,
+- **Esplosioni** (strumento Esplosione, cesio in acqua, fissione, esplosivi): lanciano le particelle, frantumano i
+  blocchi deboli; l'onda d'urto fa detonare gli esplosivi vicini; il calcestruzzo resiste, il muro indistruttibile non si
+  scalfisce.
+- **Registro delle reazioni**: a destra compaiono, con l'equazione bilanciata e il numero di volte, le reazioni avvenute
+  (per quelle del catalogo anche condizioni, ΔH° e numero nel catalogo), le soluzioni e le cristallizzazioni, i
+  decadimenti (²²⁶Ra → ²²²Rn + ⁴He), le fissioni e i cambiamenti di stato (con la temperatura).
+- **Esempi** pronti (17): metalli alcalini in acqua, saggio alla fiamma, termite, reazione a catena, scarica nei gas,
   decadimento radioattivo, legno e carbone, idrogeno e ossigeno, galleggiare sul mercurio, elettrolisi dell'acqua,
-  sodio e cloro.
+  precipitazioni colorate, combustibili, acqua ossigenata e catalizzatore, metalli e acido cloridrico, acqua salata ed
+  evaporazione, esplosivi, sodio e cloro.
 
 | Strumento | Effetto |
 |---|---|
@@ -306,8 +326,10 @@ nel pennello). È una «sabbiera» a particelle ispirata a *The Powder Toy*: una
 | Esplosione | un'esplosione al clic |
 
 Limiti dichiarati: una cella è un «granello», non un atomo; le reazioni, le conducibilità e le velocità sono semplificate
-e scelte per il gioco; i prodotti generici (sali, ossidi) hanno temperature di fusione indicative; la radioattività segue
-il solo isotopo principale. Il motore è un modulo puro (`src/sandbox/world.js`) provato dai test (`npm test`).
+e scelte per il gioco (una cella di prodotto per ogni cella di reagente, in proporzione ai coefficienti); i prodotti
+generici (sali, ossidi) hanno temperature di fusione indicative; la solubilità è «sì o no», senza concentrazioni né
+equilibri; la radioattività segue il solo isotopo principale. Il motore è un modulo puro (`src/sandbox/world.js`, con
+`chemistry.js` per il catalogo) provato dai test (`npm test`).
 
 ## 9. Struttura del progetto
 
@@ -347,14 +369,16 @@ src/
     data/molecules-reazioni.js sostanze aggiunte per il catalogo delle reazioni (ioni monoatomici, complessi, silice…)
     data/reactions.js libreria delle reazioni
   sandbox/            sandbox degli elementi
-    substances.js     sostanze: elementi (dati reali), materiali, prodotti; proprietà per il motore
-    world.js          motore: movimento, calore, cambi di stato, combustione, reazioni, elettricità, radioattività, esplosioni
+    substances.js     sostanze: elementi (dati reali), materiali, prodotti, sostanze della libreria; proprietà per il motore
+    data/compounds.js dati fisici delle 554 sostanze della libreria (fusione, ebollizione, densità, colore, solubilità…)
+    chemistry.js      le reazioni del catalogo per il motore: specie, condizioni, catalizzatori, indici per coppia
+    world.js          motore: movimento, calore, cambi di stato, soluzioni, combustione, reazioni, elettricità, radioattività, esplosioni
     render.js         disegno: colori, incandescenza, fiamme colorate, scariche, vista termica, bagliore
     describe.js       nomi e formule generati, equazioni del registro, note sulle sostanze
     presets.js        esempi pronti
     sandbox-view.js   interfaccia: tavolozza, strumenti, pennello, scheda, registro, tastiera
 tests/lab/            test del motore chimico (npm test)
-tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi)
+tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo)
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json

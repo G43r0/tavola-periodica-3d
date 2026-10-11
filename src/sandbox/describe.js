@@ -7,6 +7,8 @@ import {
   SALT, OXIDE, SOLUTION, WATER, phaseAt, saltParts,
 } from './substances.js';
 
+export const LIBRARY_STATE = { solid: 'solido', liquid: 'liquido', gas: 'gas', aq: 'in soluzione acquosa' };
+
 const SUBSCRIPT = '₀₁₂₃₄₅₆₇₈₉';
 const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 const sub = (n) => (n === 1 ? '' : String(n).replace(/\d/g, (d) => SUBSCRIPT[d]));
@@ -85,10 +87,53 @@ export function substanceLabel(subs, id, ctype = 0) {
     return { name: `Idrossido di ${metalName(M.el, c)} in soluzione`, formula: c === 1 ? `${M.symbol}OH` : `${M.symbol}(OH)${sub(c)}` };
   }
   if (s.kind === 'element') return { name: s.name, formula: MOLECULE[s.symbol] ?? s.symbol };
-  return { name: s.name, formula: s.kind === 'compound' || s.kind === 'product' ? s.symbol : '' };
+  if (s.kind === 'compound' && s.formula) return { name: s.name, formula: s.formula };
+  return { name: s.name, formula: s.kind === 'product' || s.id === WATER ? s.symbol : '' };
 }
 
 // ------------------------------------------------------------------ equazioni
+export const ALIAS_FORMULA = { h2: 'H₂', n2: 'N₂', o2: 'O₂', f2: 'F₂', cl2: 'Cl₂', br2: 'Br₂', i2: 'I₂', p4: 'P₄', s8: 'S₈', h2o: 'H₂O', co2: 'CO₂', so2: 'SO₂' };
+const STATE_MARK = { solid: '(s)', liquid: '(l)', gas: '(g)', aq: '(aq)' };
+const mark = (s) => STATE_MARK[s.state25] ?? '';
+const phaseMark = (subs, s, T) => ({ 1: '(s)', 2: '(l)', 3: '(g)' })[phaseAt(s, T)] ?? '';
+const LOG_GROUP = {
+  combustioni: 'Combustioni', decomposizioni: 'Decomposizioni', ioni: 'Reazioni in soluzione', precipitazioni: 'Reazioni in soluzione',
+  'acidi-basi': 'Acidi e basi', acqua: 'Reazioni con l\'acqua', organica: 'Chimica organica', metallurgia: 'Metallurgia',
+};
+
+/** Formula di una specie del catalogo («el:Na», «h2o», «nacl»). */
+export function speciesFormula(subs, key) {
+  if (key.startsWith('el:')) return key.slice(3);
+  if (ALIAS_FORMULA[key]) return ALIAS_FORMULA[key];
+  const id = subs.libraryId.get(key);
+  return subs.list[id]?.formula ?? key;
+}
+
+/** Equazione di una reazione del catalogo, con i coefficienti. */
+export function reactionEquation(subs, r) {
+  const side = (list) => list.map(([c, key]) => `${coef(c)}${speciesFormula(subs, key)}`).join(' + ');
+  return `${side(r.reactants)} → ${side(r.products)}`;
+}
+
+function describeCatalogReaction(subs, id) {
+  const rx = subs.chem?.byId.get(id);
+  if (!rx) return null;
+  const r = rx.r;
+  const productNames = r.products.map(([, key]) => {
+    const sid = key.startsWith('el:') ? subs.byKey.get(key.slice(3))?.id : subs.libraryId.get(key);
+    return subs.list[sid]?.name ?? key;
+  });
+  const title = r.name ?? `Si forma${r.products.length > 1 ? 'no' : ''}: ${productNames.map(low).join(', ')}`;
+  const cond = r.cond ? `Condizioni: ${r.cond}. ` : '';
+  const dH = rx.dH != null ? `ΔH° ≈ ${fmtNumber(rx.dH, 0)} kJ. ` : '';
+  return {
+    group: LOG_GROUP[r.group] ?? 'Reazioni chimiche',
+    title,
+    equation: reactionEquation(subs, r),
+    note: `${cond}${dH}${r.note ?? r.desc ?? ''}${r.catalogo ? ` (catalogo n. ${r.catalogo})` : ''}`.trim(),
+  };
+}
+
 function burnEquation(subs, id) {
   const s = subs.list[id];
   const fixed = {
@@ -164,8 +209,29 @@ export function describeEvent(subs, key) {
   const [kind, a, b, c] = key.split(':');
   const L = subs.list;
   switch (kind) {
+    case 'rx':
+      return describeCatalogReaction(subs, key.slice(3));
+    case 'dissolve': {
+      const s = L[Number(a)];
+      return { group: 'Soluzioni', title: `Si scioglie in acqua: ${low(s.name)}`, equation: `${s.formula}${mark(s)} → ${s.formula}(aq)` };
+    }
+    case 'crystal': {
+      const s = L[Number(a)];
+      return { group: 'Soluzioni', title: `Cristallizza: ${low(s.name)}`, equation: `${s.formula}(aq) → ${s.formula}${phaseMark(subs, s, 373.15)} + H₂O(g)`, note: 'L\'acqua della soluzione bolle via e il soluto resta.' };
+    }
+    case 'char': {
+      const s = L[Number(a)];
+      return { group: 'Decomposizioni', title: `Carbonizzazione: ${low(s.name)}`, equation: `${s.formula} → C + H₂O + …`, note: `Oltre ${fmtCelsius(s.bp)} si decompone lasciando carbonio (come lo zucchero che diventa caramello e poi carbone).` };
+    }
+    case 'boom': {
+      const s = L[Number(a)];
+      return { group: 'Esplosioni', title: `Detonazione: ${low(s.name)}`, equation: `${s.formula} → gas caldi`, note: 'Si decompone di colpo liberando gas ed energia.' };
+    }
     case 'burn': {
       const s = L[Number(a)];
+      if (s.kind === 'compound') {
+        return { group: 'Combustioni', title: `Combustione: ${low(s.name)}`, equation: `${s.formula} + O₂ → ${s.counts?.[6] ? 'CO₂ + ' : ''}H₂O + …`, note: 'Equazione indicativa (reazione non presente nel catalogo): prodotti principali della combustione.' };
+      }
       const notes = {
         H: 'L\'idrogeno brucia di colpo: il vapore acqueo prodotto poi si condensa in gocce.',
         wood: 'La cellulosa brucia con fiamma e fumo; restano cenere e un po\' di carbone.',
@@ -277,6 +343,7 @@ export function substanceNotes(subs, id, ctype = 0) {
   const s = subs.list[id];
   const notes = [];
   if (!s) return notes;
+  if (s.kind === 'compound') return compoundNotes(subs, s);
   const f = s.flags;
   if (f & S.WALL) return ['Indistruttibile: non brucia, non fonde, isola dal calore, resiste alle esplosioni e ferma radiazioni e neutroni.'];
   if (f & S.GENERATOR) return ['Genera una scintilla ogni 0,2 s nei conduttori che tocca: metalli, grafite, acqua, gas nobili.', 'Non brucia e non fonde.'];
@@ -320,5 +387,40 @@ export function substanceNotes(subs, id, ctype = 0) {
     const label = substanceLabel(subs, id, ctype);
     if (label.formula) notes.unshift(`${label.name} (${label.formula}).`);
   }
+  const n = subs.chem?.involvement.get(id);
+  if (n) notes.push(`Compare in ${n} reazioni del catalogo simulate nella sandbox.`);
+  if (s.entry?.desc) notes.unshift(s.entry.desc);
+  return notes;
+}
+
+/** Note su una sostanza della libreria del laboratorio. */
+function compoundNotes(subs, s) {
+  const f = s.flags;
+  const notes = [];
+  if (s.entry?.desc) notes.push(s.entry.desc);
+  const est = s.estimated ? ' (stima)' : '';
+  if (f & S.AQUEOUS) {
+    notes.push('Esiste solo in soluzione acquosa: si muove come l\'acqua (colorata, se lo ione è colorato); bollendo lascia solo vapore.');
+  } else {
+    const phase = phaseAt(s, AMBIENT);
+    notes.push(`A 22 °C è ${phase === GAS ? 'un gas' : PHASE_NAME[phase]}.`);
+    if (f & S.DECOMPOSES) notes.push(s.mp < s.bp ? `Fonde a ${fmtCelsius(s.mp)} e si decompone verso ${fmtCelsius(s.bp)}${est}.` : `Si decompone verso ${fmtCelsius(s.bp)}${est}.`);
+    else if (s.sublimes) notes.push(`Sublima a ${fmtCelsius(s.mp)}${est}: da solido diventa direttamente gas.`);
+    else notes.push(`Fonde a ${fmtCelsius(s.mp)} e bolle a ${fmtCelsius(s.bp)}${est}.`);
+    notes.push(densityText(s, phase));
+    if (f & S.SOLUBLE) notes.push('Si scioglie in acqua (oppure posala «In soluzione»); facendo bollire la soluzione torna a cristallizzare.');
+    else if (f & S.MISCIBLE) notes.push('Si mescola con l\'acqua in ogni proporzione.');
+    else if (phase !== GAS) notes.push('Non si scioglie in acqua: se si forma in una soluzione, precipita.');
+  }
+  if (s.burn) notes.push(`Infiammabile: ${f & S.INSTANT_BURN ? 'con l\'aria brucia di colpo' : 'brucia con l\'aria'}${s.ignC != null ? ` (si accende da sola sopra ${fmtCelsius(s.ignC + 273.15)})` : ''}.`);
+  if (f & S.EXPLOSIVE) notes.push(`Esplosivo: detona sopra ${fmtCelsius(s.bp)} o se raggiunto da un'esplosione.`);
+  if (f & S.OXIDIZER) notes.push('Ossidante: fa bruciare ciò che lo tocca anche senza aria.');
+  if (f & S.EXTINGUISHER) notes.push('Non brucia e soffoca le fiamme.');
+  if (f & S.LIQUID_CONDUCTOR && !(f & S.AQUEOUS) && (f & S.SOLUBLE || s.mp < s.bp)) notes.push(f & S.SOLUBLE ? 'Fuso o sciolto in acqua conduce l\'elettricità (elettrolisi).' : 'Fuso conduce l\'elettricità (elettrolisi ignea).');
+  const tint = subs.P.flameTint[s.id];
+  if (tint && FLAME_COLOR_NAME[subs.list[tint].symbol]) notes.push(`Nel fuoco dà una fiamma ${FLAME_COLOR_NAME[subs.list[tint].symbol]} (${low(subs.list[tint].name)}).`);
+  const n = subs.chem?.involvement.get(s.id);
+  notes.push(n ? `Compare in ${n} reazioni del catalogo simulate nella sandbox.` : 'Nessuna reazione del catalogo la coinvolge nella sandbox.');
+  if (s.entry?.uses) notes.push(`Usi: ${s.entry.uses}`);
   return notes;
 }

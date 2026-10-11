@@ -1,7 +1,7 @@
 // Esempi pronti della sandbox: esperimenti classici costruiti sulla griglia (coordinate pensate per 320 × 180
 // e riscalate sulla griglia scelta). Ogni esempio restituisce le etichette da disegnare e un suggerimento.
-import { AMBIENT, SOLID, WOOD, COAL, CONCRETE, WALL, WATER, OXIDE, SALT, GENERATOR, saltCtype } from './substances.js';
-import { C_POWDER } from './world.js';
+import { AMBIENT, SOLID, WOOD, COAL, CONCRETE, WALL, WATER, SALT, GENERATOR, saltCtype } from './substances.js';
+import { C_POWDER, C_DISSOLVED } from './world.js';
 
 function tools(world) {
   const { W, H } = world;
@@ -18,6 +18,7 @@ function tools(world) {
       else world.flags[i] &= ~C_POWDER;
     }
     if (o.burn) world.setBurning(i);
+    if (o.dissolved) world.flags[i] = (world.flags[i] & ~(C_POWDER | (3 << 2))) | C_DISSOLVED | (2 << 2);
     return i;
   };
   /** Rettangolo pieno (coordinate già in celle, estremi inclusi). */
@@ -51,6 +52,7 @@ function tools(world) {
 }
 
 const Z = (subs, symbol) => subs.byKey.get(symbol).id;
+const aq = { dissolved: true };
 
 export const PRESETS = [
   {
@@ -84,11 +86,13 @@ export const PRESETS = [
       metals.forEach((s, k) => {
         const cx = X(30 + k * 43);
         const top = t.H - Y(6) - Y(14);
-        const salt = { ctype: saltCtype(Z(subs, s), Z(subs, 'Cl')), powder: true };
+        // il cloruro della libreria (LiCl, NaCl… CuCl₂) o, se mancasse, un sale generico
+        const lib = subs.saltFor(Z(subs, s), Z(subs, 'Cl'));
+        const [saltId, salt] = lib ? [lib, { powder: true }] : [SALT, { ctype: saltCtype(Z(subs, s), Z(subs, 'Cl')), powder: true }];
         // legna imbevuta di sale, con un mucchietto di sale sopra
-        t.mixture(cx - X(9), top, cx + X(9), t.H - Y(6) - 1, [[WOOD, {}, 4], [SALT, salt, 1]]);
+        t.mixture(cx - X(9), top, cx + X(9), t.H - Y(6) - 1, [[WOOD, {}, 4], [saltId, salt, 1]]);
         for (let x = cx - X(9); x <= cx + X(9); x++) t.set(x, top, WOOD, { burn: true });
-        t.rect(cx - X(7), top - 3, cx + X(7), top - 1, SALT, salt);
+        t.rect(cx - X(7), top - 3, cx + X(7), top - 1, saltId, salt);
         labels.push({ x: cx, y: top - Y(40), text: `${s}Cl${s === 'Ca' || s === 'Sr' || s === 'Ba' || s === 'Cu' ? '₂' : ''}` });
       });
       return { labels, hint: 'Aggiungi sale con il pennello per ravvivare i colori; prova anche boro e tallio in polvere.' };
@@ -111,7 +115,7 @@ export const PRESETS = [
       t.box(X(135), Y(85), X(185), Y(125), CONCRETE, { open: true, t: 3 });
       t.mixture(X(135) + 3, Y(97), X(185) - 3, Y(125) - 3, [
         [Z(subs, 'Al'), { powder: true }, 1],
-        [OXIDE, { ctype: fe, powder: true }, 1],
+        [subs.byKey.get('fe2o3').id, { powder: true }, 1],
       ]);
       // innesco: magnesio acceso
       const mg = Z(subs, 'Mg');
@@ -268,6 +272,135 @@ export const PRESETS = [
         t.rect(x - 1, Y(64), x + 2, Y(69), GENERATOR);
       }
       return { labels: [], hint: 'Le bolle salgono e si accumulano in alto: avvicina il Fuoco e senti lo scoppio dell\'idrogeno.' };
+    },
+  },
+  {
+    id: 'precipitazioni',
+    name: 'Precipitazioni colorate',
+    description: 'Soluzioni limpide che, mescolandosi, formano solidi: AgCl bianco, PbI₂ giallo oro, Cu(OH)₂ azzurro.',
+    build(world, subs) {
+      const t = tools(world);
+      const { X, Y } = t;
+      const k = (key) => subs.byKey.get(key).id;
+      t.ground();
+      const pairs = [['agno3', 'nacl', 'AgNO₃ + NaCl → AgCl'], ['pbno32', 'ki', 'Pb(NO₃)₂ + KI → PbI₂'], ['cuso4', 'naoh', 'CuSO₄ + NaOH → Cu(OH)₂']];
+      const labels = [];
+      pairs.forEach(([a, b, text], n) => {
+        const x0 = X(12 + n * 102);
+        const x1 = x0 + X(92);
+        t.box(x0, Y(70), x1, t.H - Y(6), CONCRETE, { open: true, t: 2 });
+        const mid = Math.round((x0 + x1) / 2);
+        t.rect(x0 + 2, Y(110), mid, t.H - Y(6) - 2, k(a), aq);
+        t.rect(mid + 1, Y(110), x1 - 2, t.H - Y(6) - 2, k(b), aq);
+        labels.push({ x: mid, y: Y(62), text });
+      });
+      return { labels, hint: 'Le due soluzioni si mescolano per diffusione: dove si incontrano si forma il precipitato, che cade sul fondo. Scegli «In soluzione» nella scheda per versarne altre.' };
+    },
+  },
+  {
+    id: 'combustibili',
+    name: 'Combustibili',
+    description: 'Etanolo, ottano e acetone in vaschette, una nuvola di propano: ognuno brucia con la sua reazione del catalogo.',
+    build(world, subs) {
+      const t = tools(world);
+      const { X, Y } = t;
+      const k = (key) => subs.byKey.get(key).id;
+      t.ground();
+      const labels = [];
+      ['etanolo', 'ottano', 'acetone'].forEach((key, n) => {
+        const x0 = X(20 + n * 70);
+        const x1 = x0 + X(50);
+        t.box(x0, t.H - Y(26), x1, t.H - Y(6), CONCRETE, { open: true, t: 2 });
+        t.rect(x0 + 2, t.H - Y(18), x1 - 2, t.H - Y(6) - 2, k(key));
+        world.ignite(Math.round((x0 + x1) / 2), t.H - Y(19), 2);
+        labels.push({ x: Math.round((x0 + x1) / 2), y: t.H - Y(34), text: subs.byKey.get(key).name });
+      });
+      t.box(X(232), Y(40), X(305), t.H - Y(6), CONCRETE, { open: true, t: 2 });
+      t.rect(X(232) + 2, Y(90), X(305) - 2, t.H - Y(6) - 2, k('c3h8'));
+      labels.push({ x: X(268), y: Y(32), text: 'propano (più pesante dell\'aria)' });
+      return { labels, hint: 'Avvicina il Fuoco al propano: brucia di colpo. Prova anche benzene, metano, glucosio o lo zolfo.' };
+    },
+  },
+  {
+    id: 'perossido',
+    name: 'Acqua ossigenata e catalizzatore',
+    description: 'Il diossido di manganese fa decomporre l\'acqua ossigenata: 2 H₂O₂ → 2 H₂O + O₂ (solo dove c\'è il catalizzatore).',
+    build(world, subs) {
+      const t = tools(world);
+      const { X, Y } = t;
+      const k = (key) => subs.byKey.get(key).id;
+      t.ground();
+      for (const [x0, cat] of [[X(40), true], [X(180), false]]) {
+        const x1 = x0 + X(100);
+        t.box(x0, Y(60), x1, t.H - Y(6), CONCRETE, { open: true, t: 2 });
+        t.rect(x0 + 2, Y(100), x1 - 2, t.H - Y(6) - 2, k('h2o2'));
+        if (cat) t.rect(x0 + X(40), Y(50), x0 + X(60), Y(54), k('mno2'), { powder: true });
+      }
+      return { labels: [{ x: X(90), y: Y(44), text: 'con MnO₂' }, { x: X(230), y: Y(44), text: 'senza catalizzatore' }], hint: 'Le bolle di ossigeno salgono; accanto al catalizzatore puoi accendere un legnetto: brucia più vivacemente nell\'ossigeno.' };
+    },
+  },
+  {
+    id: 'acido',
+    name: 'Metalli e acido cloridrico',
+    description: 'Zinco, magnesio e rame in acido cloridrico: i primi due sviluppano idrogeno, il rame no (è meno reattivo).',
+    build(world, subs) {
+      const t = tools(world);
+      const { X, Y } = t;
+      const k = (key) => subs.byKey.get(key).id;
+      t.ground();
+      const labels = [];
+      ['Zn', 'Mg', 'Cu'].forEach((sym, n) => {
+        const x0 = X(20 + n * 100);
+        const x1 = x0 + X(80);
+        t.box(x0, Y(70), x1, t.H - Y(6), CONCRETE, { open: true, t: 2 });
+        t.rect(x0 + 2, Y(100), x1 - 2, t.H - Y(6) - 2, k('hcl'), aq);
+        t.rect(x0 + X(30), t.H - Y(6) - Y(8), x1 - X(30), t.H - Y(6) - 2, Z(subs, sym), { powder: true });
+        labels.push({ x: Math.round((x0 + x1) / 2), y: Y(62), text: `${subs.byKey.get(sym).name} + HCl(aq)` });
+      });
+      return { labels, hint: 'Zn + 2 HCl → ZnCl₂ + H₂: l\'idrogeno sale in bolle. Il rame resta intatto: non sposta l\'idrogeno dagli acidi.' };
+    },
+  },
+  {
+    id: 'salamoia',
+    name: 'Acqua salata ed evaporazione',
+    description: 'Una pentola di acqua salata e una di acqua zuccherata: scaldandole il sale cristallizza, lo zucchero carbonizza.',
+    build(world, subs) {
+      const t = tools(world);
+      const { X, Y } = t;
+      const k = (key) => subs.byKey.get(key).id;
+      t.ground();
+      const cu = Z(subs, 'Cu');
+      for (const [x0, key] of [[X(40), 'nacl'], [X(180), 'saccarosio']]) {
+        const x1 = x0 + X(100);
+        t.box(x0, Y(110), x1, Y(150), cu, { open: true, t: 2 });
+        t.mixture(x0 + 2, Y(122), x1 - 2, Y(148), [[WATER, {}, 2], [k(key), aq, 1]]);
+        t.rect(x0 + X(10), Y(151), x0 + X(14), t.H - Y(6) - 1, CONCRETE);
+        t.rect(x1 - X(14), Y(151), x1 - X(10), t.H - Y(6) - 1, CONCRETE);
+      }
+      return { labels: [{ x: X(90), y: Y(102), text: 'acqua salata' }, { x: X(230), y: Y(102), text: 'acqua zuccherata' }], hint: 'Usa lo strumento Calore sotto le pentole di rame: l\'acqua bolle via, il sale resta come polvere bianca.' };
+    },
+  },
+  {
+    id: 'esplosivi',
+    name: 'Esplosivi',
+    description: 'TNT, nitroglicerina e nitrometano in un bunker di calcestruzzo: una detonazione innesca le altre.',
+    build(world, subs) {
+      const t = tools(world);
+      const { X, Y } = t;
+      const k = (key) => subs.byKey.get(key).id;
+      t.rect(0, t.H - Y(6), t.W - 1, t.H - 1, WALL);
+      t.box(X(30), Y(60), X(290), t.H - Y(6), CONCRETE, { open: true, t: 4 });
+      t.rect(X(60), t.H - Y(26), X(110), t.H - Y(6) - 4, k('tnt'), { powder: false });
+      t.box(X(140), t.H - Y(40), X(180), t.H - Y(6) - 4, CONCRETE, { open: true, t: 2 });
+      t.rect(X(140) + 2, t.H - Y(30), X(180) - 2, t.H - Y(6) - 6, k('nitroglicerina'));
+      t.rect(X(210), t.H - Y(24), X(260), t.H - Y(6) - 4, k('nitrometano'));
+      // miccia: legna che brucia fino al TNT
+      t.rect(X(44), t.H - Y(27), X(64), t.H - Y(26), WOOD);
+      t.set(X(44), t.H - Y(27), WOOD, { burn: true });
+      return {
+        labels: [{ x: X(85), y: t.H - Y(32), text: 'TNT' }, { x: X(160), y: t.H - Y(46), text: 'nitroglicerina' }, { x: X(235), y: t.H - Y(30), text: 'nitrometano' }],
+        hint: 'La miccia di legno brucia fino al TNT. Il muro indistruttibile non si scalfisce, il calcestruzzo resiste solo in parte.',
+      };
     },
   },
   {

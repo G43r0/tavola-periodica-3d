@@ -29,6 +29,21 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   - Registro delle reazioni osservate con equazioni bilanciate, decadimenti, fissioni e cambiamenti di stato; scheda della
     sostanza selezionata; 11 esempi pronti; pausa, passo singolo, velocità, bordi aperti, tre dimensioni della griglia.
   - Test: `tests/sandbox/sandbox.test.mjs` (fisica, reazioni, determinismo, equazioni bilanciate, esempi).
+- **Tutte le 554 sostanze della libreria nella sandbox**: nuova sezione «Sostanze della libreria» nella tavolozza, per
+  gruppi e con ricerca per nome o formula. Ogni sostanza ha dati fisici propri (`src/sandbox/data/compounds.js`:
+  fusione, ebollizione, densità, colore, solubilità, infiammabilità, accensione) e note nella scheda.
+  - **Soluzioni acquose**: i sali solubili, gli acidi e le basi si sciolgono e diffondono nell'acqua colorandola (posa
+    «In soluzione»); bollendo, il soluto cristallizza; gli ioni esistono solo in acqua; le soluzioni ioniche conducono.
+  - **Reazioni del catalogo nella sandbox** (`src/sandbox/chemistry.js`): 1149 delle 1349 reazioni girano con
+    coefficienti, condizioni (soluzione, calore, innesco, luce, scintilla), catalizzatori e calore dal ΔH°; 93 sono già
+    coperte dalle regole «a mano»; 107 restano escluse con il motivo (equilibri, catalizzatori non specificati o assenti,
+    organismi viventi). Precipitazioni, neutralizzazioni, metalli e acidi, combustioni, decomposizioni termiche,
+    carbonizzazione dei composti organici, detonazioni a catena degli esplosivi.
+  - Le regole «a mano» producono le sostanze della libreria (NaCl, MgO, Fe₂O₃, NaOH in soluzione…).
+  - 6 nuovi esempi: precipitazioni colorate, combustibili, acqua ossigenata e catalizzatore, metalli e acido cloridrico,
+    acqua salata ed evaporazione, esplosivi.
+  - Test: `tests/sandbox/compounds.test.mjs` (dati delle 554 sostanze, catalogo, soluzioni, precipitazione,
+    combustione, catalizzatore, decomposizione, detonazione, metalli e acidi, carbonizzazione).
 - **Tutte le 1349 reazioni del catalogo nel laboratorio**: il pulsante «Reazioni» le elenca in 14 gruppi divisi in
   sottogruppi (si aprono uno alla volta) e una **ricerca** trova una reazione da formula, sostanza o parola. Le 1302
   nuove hanno equazione, condizioni e nota; le 47 già presenti conservano nome e descrizione. Per ognuna sono

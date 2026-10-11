@@ -7,11 +7,11 @@ import { esc, normalize, fmtNumber } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
 import {
   createSubstances, AMBIENT, T_MAX, SOLID, LIQUID, GAS, S, WOOD, COAL, CONCRETE, WALL, GENERATOR, WATER, SALT, OXIDE, CO2,
-  phaseAt, saltCtype,
+  phaseAt,
 } from './substances.js';
 import { World } from './world.js';
 import { createRenderer, heatScale } from './render.js';
-import { describeEvent, substanceLabel, substanceNotes, fmtCelsius, PHASE_NAME } from './describe.js';
+import { describeEvent, substanceLabel, ALIAS_FORMULA, substanceNotes, fmtCelsius, PHASE_NAME } from './describe.js';
 import { PRESETS } from './presets.js';
 
 const GRIDS = { small: [240, 135], medium: [320, 180], large: [400, 225] };
@@ -41,9 +41,9 @@ const MATERIALS = [
 ];
 const COMPOUNDS = (subs) => [
   { id: WATER, ctype: 0 },
-  { id: SALT, ctype: saltCtype(subs.byKey.get('Na').id, subs.byKey.get('Cl').id) },
-  { id: OXIDE, ctype: subs.byKey.get('Fe').id },
-  { id: CO2, ctype: 0 },
+  { id: subs.byKey.get('nacl').id, ctype: 0, label: 'Sale' },
+  { id: subs.byKey.get('fe2o3').id, ctype: 0, label: 'Ruggine' },
+  { id: CO2, ctype: 0, label: 'CO₂' },
 ];
 
 const TEMPLATE = `
@@ -83,6 +83,10 @@ const TEMPLATE = `
     <p class="sbx-sec">Elementi</p>
     <div class="sbx-search"><input type="search" placeholder="Cerca elemento…" aria-label="Cerca un elemento" spellcheck="false" /></div>
     <div class="sbx-grid"></div>
+    <p class="sbx-sec">Sostanze della libreria <span class="sbx-sec__count"></span></p>
+    <div class="sbx-search sbx-libsearch"><input type="search" placeholder="Cerca per nome o formula…" aria-label="Cerca una sostanza della libreria" spellcheck="false" /></div>
+    <div class="sbx-lib"></div>
+    <p class="sbx-lib__empty" hidden>Nessuna sostanza trovata.</p>
     <p class="sbx-palette__hint">Clic sinistro: disegna · destro: cancella · rotella: pennello · clic centrale o Alt+clic: preleva.</p>
   </aside>
 
@@ -175,7 +179,7 @@ export function createSandbox(elements, { onClose } = {}) {
     speed: 1,
     heatView: false,
     glow: true,
-    place: { temp: AMBIENT, form: 'powder' },
+    place: { temp: AMBIENT, form: 'powder', dissolved: false },
     labels: [],
     hover: null, // { x, y } in celle
     drawing: null, // { mode: 'primary'|'erase', last: [x, y] }
@@ -186,17 +190,67 @@ export function createSandbox(elements, { onClose } = {}) {
   };
 
   // ---------------------------------------------------------------- tavolozza
-  const swatch = (id, ctype = 0) => {
+  const swatchColor = (id) => {
+    const s = L[id];
+    const c = id === SALT ? [238, 238, 240] : id === OXIDE ? [139, 58, 30] : s.colors[phaseAt(s, AMBIENT)] ?? s.colors[SOLID];
+    return `rgb(${c[0]},${c[1]},${c[2]})`;
+  };
+  const swatch = (id, ctype = 0, short) => {
     const s = L[id];
     const label = substanceLabel(subs, id, ctype);
-    const c = id === SALT ? [238, 238, 240] : id === OXIDE ? [139, 58, 30] : s.colors[phaseAt(s, AMBIENT)];
-    const rgb = `rgb(${c[0]},${c[1]},${c[2]})`;
-    return `<button type="button" class="sbx-item" data-id="${id}" data-ctype="${ctype}" style="--sw:${rgb}" title="${esc(label.name)}${label.formula ? ` (${esc(label.formula)})` : ''}">
-      <span class="sbx-item__sw"></span><span class="sbx-item__name">${esc(id === OXIDE ? 'Ruggine' : id === SALT ? 'Sale' : id === CO2 ? 'CO₂' : id === GENERATOR ? 'Generatore' : id === WALL ? 'Muro' : s.name)}</span></button>`;
+    return `<button type="button" class="sbx-item" data-id="${id}" data-ctype="${ctype}" style="--sw:${swatchColor(id)}" title="${esc(label.name)}${label.formula ? ` (${esc(label.formula)})` : ''}">
+      <span class="sbx-item__sw"></span><span class="sbx-item__name">${esc(short ?? (id === GENERATOR ? 'Generatore' : id === WALL ? 'Muro' : s.name))}</span></button>`;
   };
   $('.sbx-tools').innerHTML = TOOLS.map((t) => `<button type="button" class="sbx-tool" data-tool="${t.key}" style="--tc:${t.color}" title="${esc(t.name)}: ${esc(t.text)}">${icons[t.icon](17)}<span>${t.name}</span></button>`).join('');
   $('.sbx-mats').innerHTML = MATERIALS.map((m) => swatch(m.id, m.ctype)).join('');
-  $('.sbx-comps').innerHTML = COMPOUNDS(subs).map((m) => swatch(m.id, m.ctype)).join('');
+  $('.sbx-comps').innerHTML = COMPOUNDS(subs).map((m) => swatch(m.id, m.ctype, m.label)).join('');
+  // le 554 sostanze della libreria del laboratorio, per gruppi (alcune sono elementi o sostanze già presenti: H₂, H₂O…)
+  const libItems = subs.library.entries.map((e) => {
+    const id = subs.libraryId.get(e.id);
+    const s = L[id];
+    const formula = ALIAS_FORMULA[e.id] ?? (s.formula || substanceLabel(subs, id).formula || '');
+    return { e, id, name: e.name, formula, search: normalize(`${e.name} ${e.aka ?? ''} ${formula} ${formula.replace(/[₀-₉]/g, (d) => '₀₁₂₃₄₅₆₇₈₉'.indexOf(d))}`) };
+  });
+  $('.sbx-sec__count').textContent = `(${libItems.length})`;
+  $('.sbx-lib').innerHTML = subs.groups
+    .map((g) => {
+      const items = libItems.filter((it) => it.e.group === g.key);
+      if (!items.length) return '';
+      return `<details class="sbx-libgroup" data-group="${g.key}"><summary>${esc(g.label)} <span>${items.length}</span></summary><div>${items
+        .map((it) => `<button type="button" class="sbx-libitem" data-id="${it.id}" data-ctype="0" data-search="${esc(it.search)}" style="--sw:${swatchColor(it.id)}" title="${esc(it.name)} (${esc(it.formula)})">
+            <span class="sbx-item__sw"></span><span class="sbx-libitem__name">${esc(it.name)}</span><span class="sbx-libitem__f">${esc(it.formula)}</span></button>`)
+        .join('')}</div></details>`;
+    })
+    .join('');
+  const libSearch = $('.sbx-libsearch input');
+  libSearch.addEventListener('input', () => {
+    const q = normalize(libSearch.value);
+    let any = false;
+    root.querySelectorAll('.sbx-libgroup').forEach((g) => {
+      let hits = 0;
+      g.querySelectorAll('.sbx-libitem').forEach((b) => {
+        const hit = !q || b.dataset.search.includes(q);
+        b.hidden = !hit;
+        if (hit) hits++;
+      });
+      g.hidden = Boolean(q) && !hits;
+      if (q) g.open = hits > 0 && hits <= 40;
+      any ||= hits > 0;
+    });
+    $('.sbx-lib__empty').hidden = any;
+  });
+  libSearch.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      const first = root.querySelector('.sbx-libitem:not([hidden])');
+      if (first && libSearch.value) selectSubstance(Number(first.dataset.id), 0);
+    }
+    if (ev.key === 'Escape') {
+      libSearch.value = '';
+      libSearch.dispatchEvent(new Event('input'));
+      libSearch.blur();
+    }
+    ev.stopPropagation();
+  });
   $('.sbx-grid').innerHTML = elements
     .map((el) => {
       const cat = CATEGORY[el.category] ?? CATEGORY.unknown;
@@ -251,7 +305,11 @@ export function createSandbox(elements, { onClose } = {}) {
     state.sel = { kind: 'sub', id, ctype };
     state.place.temp = AMBIENT;
     state.place.form = s.defaultPowder && !(s.flags & S.BLOCK_ONLY) ? 'powder' : 'block';
+    state.place.dissolved = false;
     renderSelection();
+    // la voce selezionata nella libreria resta visibile
+    const item = root.querySelector(`.sbx-libitem[data-id="${id}"]`);
+    if (item && !item.closest('details').open && state.sel.kind === 'sub') item.closest('details').open = true;
   }
 
   function selectTool(key) {
@@ -280,7 +338,11 @@ export function createSandbox(elements, { onClose } = {}) {
     const canLiquid = Number.isFinite(s.mp) && s.mp > 0 && s.bp > s.mp;
     const canGas = Number.isFinite(s.bp) && s.bp > 0;
     const blockOnly = s.flags & S.BLOCK_ONLY;
-    const eyebrow = cat ? `${esc(cat.singular)} · Z = ${s.z}` : { material: 'Materiale', compound: 'Composto', product: 'Prodotto' }[s.kind] ?? '';
+    const groupLabel = s.kind === 'compound' ? subs.groups.find((g) => g.key === s.group)?.label : null;
+    const eyebrow = cat ? `${esc(cat.singular)} · Z = ${s.z}` : groupLabel ? `Libreria · ${esc(groupLabel)}` : { material: 'Materiale', compound: 'Composto', product: 'Prodotto' }[s.kind] ?? '';
+    const aqueous = s.flags & S.AQUEOUS;
+    const soluble = s.flags & S.SOLUBLE;
+    const dissolved = aqueous || (soluble && state.place.dissolved);
     const tile = cat
       ? `<span class="sbx-sel__tile" style="--c:${cat.color}"><i>${s.z}</i><b>${esc(s.symbol)}</b></span>`
       : `<span class="sbx-sel__tile sbx-sel__tile--mat" style="--sw:rgb(${(s.colors[SOLID] ?? [128, 128, 128]).slice(0, 3).join(',')})"></span>`;
@@ -290,14 +352,18 @@ export function createSandbox(elements, { onClose } = {}) {
       ${
         blockOnly
           ? ''
-          : `<div class="sbx-place">
+          : aqueous
+            ? `<div class="sbx-place"><p class="sbx-label">Posa come</p><p class="sbx-place__aq">Soluzione acquosa (lo ione esiste solo in acqua)</p>
+               <label class="sbx-temp">Temperatura <input type="number" step="1" min="-273" max="99" value="${Math.round(state.place.temp - 273.15)}" /> °C</label></div>`
+            : `<div class="sbx-place">
         <p class="sbx-label">Posa come</p>
         <div class="segmented sbx-phase" role="group" aria-label="Stato">
-          <button type="button" class="segmented__btn" data-phase="${SOLID}" aria-pressed="${phase === SOLID}" ${canSolid ? '' : 'disabled'}>Solido</button>
-          <button type="button" class="segmented__btn" data-phase="${LIQUID}" aria-pressed="${phase === LIQUID}" ${canLiquid ? '' : 'disabled'}>Liquido</button>
-          <button type="button" class="segmented__btn" data-phase="${GAS}" aria-pressed="${phase === GAS}" ${canGas ? '' : 'disabled'}>Gas</button>
+          <button type="button" class="segmented__btn" data-phase="${SOLID}" aria-pressed="${!dissolved && phase === SOLID}" ${canSolid ? '' : 'disabled'}>Solido</button>
+          <button type="button" class="segmented__btn" data-phase="${LIQUID}" aria-pressed="${!dissolved && phase === LIQUID}" ${canLiquid ? '' : 'disabled'}>Liquido</button>
+          <button type="button" class="segmented__btn" data-phase="${GAS}" aria-pressed="${!dissolved && phase === GAS}" ${canGas ? '' : 'disabled'}>Gas</button>
+          ${soluble ? `<button type="button" class="segmented__btn" data-phase="aq" aria-pressed="${Boolean(dissolved)}" title="Sciolto in acqua">In soluzione</button>` : ''}
         </div>
-        <div class="segmented sbx-form" role="group" aria-label="Forma del solido" ${phase === SOLID ? '' : 'hidden'}>
+        <div class="segmented sbx-form" role="group" aria-label="Forma del solido" ${!dissolved && phase === SOLID ? '' : 'hidden'}>
           <button type="button" class="segmented__btn" data-form="powder" aria-pressed="${state.place.form === 'powder'}">Polvere</button>
           <button type="button" class="segmented__btn" data-form="block" aria-pressed="${state.place.form === 'block'}">Blocco</button>
         </div>
@@ -311,7 +377,13 @@ export function createSandbox(elements, { onClose } = {}) {
     const ph = ev.target.closest('[data-phase]');
     const fm = ev.target.closest('[data-form]');
     if (ph && state.sel.kind === 'sub') {
-      state.place.temp = tempFor(L[state.sel.id], Number(ph.dataset.phase));
+      if (ph.dataset.phase === 'aq') {
+        state.place.dissolved = true;
+        state.place.temp = AMBIENT;
+      } else {
+        state.place.dissolved = false;
+        state.place.temp = tempFor(L[state.sel.id], Number(ph.dataset.phase));
+      }
       renderSelection();
     }
     if (fm) {
@@ -437,7 +509,8 @@ export function createSandbox(elements, { onClose } = {}) {
     }
     const sel = state.sel;
     if (sel.kind === 'sub') {
-      world.paint(x, y, state.brush, sel.id, { temp: state.place.temp, powder: state.place.form === 'powder', ctype: sel.ctype });
+      const temp = state.place.dissolved ? Math.min(state.place.temp, 372) : state.place.temp;
+      world.paint(x, y, state.brush, sel.id, { temp, powder: state.place.form === 'powder', ctype: sel.ctype, dissolved: state.place.dissolved });
       return;
     }
     switch (sel.key) {
@@ -480,6 +553,7 @@ export function createSandbox(elements, { onClose } = {}) {
     selectSubstance(c.id, c.id === SALT || c.id === OXIDE ? c.ctype : 0);
     state.place.temp = c.temp;
     state.place.form = c.powder ? 'powder' : 'block';
+    state.place.dissolved = c.dissolved;
     renderSelection();
   }
 
@@ -705,7 +779,7 @@ export function createSandbox(elements, { onClose } = {}) {
     const s = L[c.id];
     const label = substanceLabel(subs, c.id, c.ctype);
     const sym = s.kind === 'element' ? `<span class="sbx-hover__sym">${esc(s.symbol)}</span>` : '';
-    const state_ = s.flags & S.FIRE ? 'fiamma' : c.phase === SOLID ? (s.flags & S.BLOCK_ONLY ? 'solido' : c.powder ? 'polvere' : 'blocco') : PHASE_NAME[c.phase];
+    const state_ = s.flags & S.FIRE ? 'fiamma' : c.dissolved || s.flags & S.AQUEOUS ? (c.phase === SOLID ? 'soluzione gelata' : 'in soluzione') : c.phase === SOLID ? (s.flags & S.BLOCK_ONLY ? 'solido' : c.powder ? 'polvere' : 'blocco') : PHASE_NAME[c.phase];
     const extra = [c.burning ? 'brucia' : '', c.spark ? 'corrente' : ''].filter(Boolean).join(' · ');
     const tShow = s.flags & S.WALL ? '' : ` · <b>${fmtCelsius(c.temp)}</b>`;
     el.innerHTML = `${sym}<b>${esc(label.name)}</b>${label.formula && label.formula !== s.symbol ? ` <span class="muted">${esc(label.formula)}</span>` : ''} · ${state_}${tShow}${extra ? ` · <span class="sbx-hover__hot">${extra}</span>` : ''}
