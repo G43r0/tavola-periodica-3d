@@ -41,6 +41,7 @@ const toolbar = createToolbar(app.querySelector('.toolbar'), app.querySelector('
   onOpen: open,
   onInfo: info.open,
   onLab: () => openLab(),
+  onSandbox: () => openSandbox(),
   onCategoryHover: (key) => table.highlightCategory(key),
 });
 
@@ -83,17 +84,36 @@ function openLab(z) {
   labLoading.then((l) => l?.open(z));
 }
 
+// ------------------------------------------------------------ sandbox degli elementi (caricata su richiesta)
+let sandbox = null;
+let sandboxLoading = null;
+
+function openSandbox(z) {
+  sandboxLoading ??= import('./sandbox/sandbox-view.js')
+    .then((m) => {
+      sandbox = m.createSandbox(elements, {});
+      return sandbox;
+    })
+    .catch((err) => {
+      console.error(err);
+      sandboxLoading = null;
+      toast('Impossibile caricare la sandbox.');
+    });
+  sandboxLoading.then((s) => s?.open(z));
+}
+
 createElementPanel(app.querySelector('.panel'), elements, store, {
   onInfo: info.open,
   onOpen3D: open3D,
   onOpenLab: openLab,
+  onOpenSandbox: openSandbox,
 });
 
 // ------------------------------------------------------------ scorciatoie globali
 const isTyping = (t) => t instanceof HTMLElement && (t.matches('input, textarea, select') || t.isContentEditable);
 
 window.addEventListener('keydown', (ev) => {
-  if (document.querySelector('dialog[open]') || viewer?.isOpen() || lab?.isOpen()) return;
+  if (document.querySelector('dialog[open]') || viewer?.isOpen() || lab?.isOpen() || sandbox?.isOpen()) return;
   const typing = isTyping(ev.target);
 
   if ((ev.key === '/' && !typing) || ((ev.ctrlKey || ev.metaKey) && ['f', 'k'].includes(ev.key.toLowerCase()))) {

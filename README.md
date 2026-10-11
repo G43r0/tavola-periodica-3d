@@ -3,7 +3,9 @@
 Applicazione desktop (Electron + Three.js) con la tavola periodica interattiva dei 118 elementi,
 schede informative in italiano e modelli 3D degli atomi esplorabili fino alle singole particelle
 (protoni, neutroni, elettroni e quark), più un **laboratorio molecolare** in cui si collegano gli atomi per formare
-molecole e composti. Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
+molecole e composti e una **sandbox degli elementi** in stile *The Powder Toy*: i 118 elementi e i materiali di base
+(legno, carbone, calcestruzzo, muro indistruttibile) cadono, fondono, bollono, bruciano e reagiscono secondo i loro dati reali.
+Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 
 | Fase | Contenuto | Stato |
 |------|-----------|-------|
@@ -12,6 +14,7 @@ molecole e composti. Funziona **completamente offline**: dati, font e codice son
 | 3 | Analisi delle singole particelle (protoni, neutroni, elettroni, quark) | ✅ completata |
 | 4 | Laboratorio molecolare: costruzione di molecole (3D + Lewis, Combina/Separa, libreria) | ✅ completata |
 | 5 | Laboratorio: reazioni (animazione, bilanciamento, energia di reazione) | ✅ completata |
+| 6 | Sandbox degli elementi: polveri, liquidi e gas con temperatura, reazioni, elettricità, radioattività | ✅ completata |
 
 ---
 
@@ -249,7 +252,64 @@ Test automatici del motore chimico:
 npm test
 ```
 
-## 8. Struttura del progetto
+## 8. Sandbox degli elementi
+
+Si apre dal pulsante **Sandbox** nella barra in alto, oppure con «Sandbox» nella scheda di un elemento (l'elemento è già
+nel pennello). È una «sabbiera» a particelle ispirata a *The Powder Toy*: una griglia di celle (240 × 135, 320 × 180 o
+400 × 225), ognuna un granello di sostanza con la sua temperatura.
+
+- **Sostanze**: i 118 elementi (tavola periodica nella tavolozza), i materiali di base — **legno**, **carbone**,
+  **calcestruzzo**, **muro indistruttibile** — più il **generatore elettrico** e alcuni composti utili agli esperimenti
+  (acqua, sale da cucina, ruggine, anidride carbonica). Le reazioni producono fuoco, fumo, cenere, CO₂, SO₂, vapore,
+  sali, ossidi e idrossidi, ognuno con nome e formula generati (es. «Ioduro di piombo(II)», PbI₂).
+- **Stati fisici reali**: ogni elemento è solido, liquido o gas in base a temperatura di fusione e di ebollizione
+  (sublimazione per carbonio e arsenico). Nella scheda «Posa come» si sceglie lo stato (es. azoto liquido, ferro
+  fuso, vapore di sodio) o la temperatura, e se un solido va posato come **polvere** (cade e si ammucchia) o come **blocco**
+  (resta fermo). Il fuso che si raffredda solidifica in un blocco; i vapori si condensano in gocce.
+- **Densità**: liquidi e polveri si stratificano con le densità reali (il mercurio va sotto l'acqua, il piombo vi galleggia,
+  l'oro affonda); i gas salgono o scendono rispetto all'aria secondo la massa molare e la temperatura (idrogeno ed elio in
+  alto, cloro e radon in basso, i gas caldi salgono).
+- **Calore**: conduzione tra celle (i metalli conducono di più, il muro isola), raffreddamento verso i 22 °C dell'aria,
+  incandescenza dei corpi oltre il punto di Draper (525 °C) e vista termica (`H`).
+- **Combustione** (serve aria o ossigeno): legno (fiamma, fumo, cenere; senza ossigeno **pirolisi** in carbone), carbone
+  (brace lenta), carbonio, zolfo (fiamma blu, SO₂), fosforo (si accende a 34 °C), idrogeno (brucia di colpo e diventa
+  vapore acqueo), metalli in polvere (magnesio, alluminio, ferro…). Ogni metallo colora la fiamma (**saggio alla fiamma**:
+  litio rosso, sodio giallo, potassio lilla, bario verde, rame verde-azzurro…). Acqua e CO₂ fredda spengono il fuoco.
+- **Reazioni chimiche**: metalli alcalini e alcalino-terrosi + acqua (idrogeno, idrossido, calore; rubidio e cesio
+  esplodono), metallo + alogeno → sale (più veloce quanto più grande è la differenza di elettronegatività), alluminotermia
+  (2 Al + Fe₂O₃, innesco con il magnesio), ruggine del ferro bagnato.
+- **Elettricità**: lo strumento Scintilla e il generatore mandano impulsi nei conduttori (metalli, grafite, acqua, sali fusi;
+  silicio e germanio solo da caldi); i gas nobili si illuminano con i colori dei tubi a scarica (neon rosso-arancio, argon
+  violetto, xeno blu…); la corrente scalda per effetto Joule, accende l'idrogeno ed elettrolizza acqua e sali fusi.
+- **Radioattività**: gli elementi senza isotopi stabili decadono (α, β⁻, cattura elettronica, fissione spontanea) secondo
+  l'isotopo principale, con il tempo accelerato in **scala logaritmica** (il radio, 1 600 anni, dimezza in circa 2 minuti e
+  mezzo; l'uranio-238 in 43 minuti): si formano le catene reali (U → Th → Ra → Rn → Po → Pb), il decadimento α libera elio
+  e la radiazione è fermata dal piombo.
+- **Fissione**: i neutroni (strumento Neutroni) spezzano uranio, plutonio e gli altri attinidi fissili in coppie di
+  frammenti reali (Ba + Kr, Xe + Sr…) liberando altri neutroni e calore: reazione a catena. Acqua e grafite rallentano i
+  neutroni (moderatori), cadmio, boro e gadolinio li assorbono (barre di controllo), il berillio li riflette.
+- **Esplosioni** (strumento Esplosione, cesio in acqua, fissione): lanciano le particelle, frantumano i blocchi deboli;
+  il calcestruzzo resiste, il muro indistruttibile non si scalfisce.
+- **Registro delle reazioni**: a destra compaiono, con l'equazione bilanciata e il numero di volte, le reazioni avvenute,
+  i decadimenti (²²⁶Ra → ²²²Rn + ⁴He), le fissioni e i cambiamenti di stato (con la temperatura).
+- **Esempi** pronti: metalli alcalini in acqua, saggio alla fiamma, termite, reazione a catena, scarica nei gas,
+  decadimento radioattivo, legno e carbone, idrogeno e ossigeno, galleggiare sul mercurio, elettrolisi dell'acqua,
+  sodio e cloro.
+
+| Strumento | Effetto |
+|---|---|
+| Gomma | cancella (anche il tasto destro) |
+| Calore / Freddo | ± 30 K per passo (fino a 9 999 K / zero assoluto) |
+| Fuoco | fiamme a circa 900 °C |
+| Scintilla | impulso elettrico nei conduttori |
+| Neutroni | sorgente di neutroni veloci |
+| Esplosione | un'esplosione al clic |
+
+Limiti dichiarati: una cella è un «granello», non un atomo; le reazioni, le conducibilità e le velocità sono semplificate
+e scelte per il gioco; i prodotti generici (sali, ossidi) hanno temperature di fusione indicative; la radioattività segue
+il solo isotopo principale. Il motore è un modulo puro (`src/sandbox/world.js`) provato dai test (`npm test`).
+
+## 9. Struttura del progetto
 
 ```
 electron/
@@ -286,7 +346,15 @@ src/
     data/molecules.js libreria di molecole, ioni e composti ionici (con ΔHf°)
     data/molecules-reazioni.js sostanze aggiunte per il catalogo delle reazioni (ioni monoatomici, complessi, silice…)
     data/reactions.js libreria delle reazioni
+  sandbox/            sandbox degli elementi
+    substances.js     sostanze: elementi (dati reali), materiali, prodotti; proprietà per il motore
+    world.js          motore: movimento, calore, cambi di stato, combustione, reazioni, elettricità, radioattività, esplosioni
+    render.js         disegno: colori, incandescenza, fiamme colorate, scariche, vista termica, bagliore
+    describe.js       nomi e formule generati, equazioni del registro, note sulle sostanze
+    presets.js        esempi pronti
+    sandbox-view.js   interfaccia: tavolozza, strumenti, pennello, scheda, registro, tastiera
 tests/lab/            test del motore chimico (npm test)
+tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi)
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json
@@ -296,7 +364,7 @@ data-sources/         dati di origine (PubChem + dati curati in italiano)
 build/icon.png        icona usata da electron-builder
 ```
 
-## 9. Uso
+## 10. Uso
 
 - **Passa il mouse** su un elemento: anteprima in alto e cella in rilievo.
   Passando su un numero di gruppo/periodo o su una categoria della legenda si evidenzia l'intera colonna/riga/categoria.
@@ -323,3 +391,9 @@ build/icon.png        icona usata da electron-builder
 | `F` / `Ctrl+V` | (laboratorio) scrivi o incolla una formula, un nome o uno SMILES |
 | `Ctrl+Z` / `Ctrl+Y` | (laboratorio) annulla / ripeti |
 | `Canc` | (laboratorio) elimina la selezione |
+| `Spazio` / `F` | (sandbox) pausa / avanza di un passo |
+| `H` / `G` | (sandbox) vista termica / bagliore |
+| `E` | (sandbox) gomma |
+| `[` / `]`, rotella | (sandbox) pennello più piccolo / più grande |
+| clic destro / centrale | (sandbox) cancella / preleva la sostanza |
+| `Maiusc` + clic | (sandbox) linea dal punto precedente |

@@ -11,6 +11,24 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 ## [Non rilasciato]
 
 ### Aggiunto
+- **Sandbox degli elementi** (pulsante «Sandbox» nella barra in alto e nella scheda dell'elemento): una sabbiera a
+  particelle in stile *The Powder Toy* con i 118 elementi e i materiali di base — legno, carbone, calcestruzzo, muro
+  indistruttibile — più generatore elettrico, acqua, sale, ruggine e CO₂.
+  - Stati fisici dalle temperature reali di fusione ed ebollizione (posa come solido, liquido o gas, polvere o blocco,
+    a una temperatura scelta), stratificazione con le densità reali, galleggiamento dei gas secondo massa molare e
+    temperatura, conduzione del calore, incandescenza e vista termica.
+  - Combustione con l'aria (legno, carbone, carbonio, zolfo, fosforo, idrogeno, metalli in polvere), pirolisi del legno,
+    fiamme colorate dei metalli (saggio alla fiamma), estinzione con acqua e CO₂.
+  - Reazioni: metalli alcalini e alcalino-terrosi + acqua, metallo + alogeno → sale, alluminotermia, ruggine;
+    nomi e formule dei prodotti generati (es. cloruro di ferro(III), FeCl₃).
+  - Elettricità: scintille e generatore nei conduttori, scarica colorata nei gas nobili, effetto Joule, elettrolisi
+    dell'acqua e dei sali fusi; semiconduttori che conducono solo da caldi.
+  - Radioattività dell'isotopo principale con tempo accelerato in scala logaritmica (catene reali, elio dal decadimento α,
+    radiazione schermata dal piombo); fissione indotta da neutroni con frammenti reali, moderatori, assorbitori e
+    riflettori; esplosioni (il calcestruzzo resiste, il muro è indistruttibile).
+  - Registro delle reazioni osservate con equazioni bilanciate, decadimenti, fissioni e cambiamenti di stato; scheda della
+    sostanza selezionata; 11 esempi pronti; pausa, passo singolo, velocità, bordi aperti, tre dimensioni della griglia.
+  - Test: `tests/sandbox/sandbox.test.mjs` (fisica, reazioni, determinismo, equazioni bilanciate, esempi).
 - **Tutte le 1349 reazioni del catalogo nel laboratorio**: il pulsante «Reazioni» le elenca in 14 gruppi divisi in
   sottogruppi (si aprono uno alla volta) e una **ricerca** trova una reazione da formula, sostanza o parola. Le 1302
   nuove hanno equazione, condizioni e nota; le 47 già presenti conservano nome e descrizione. Per ognuna sono

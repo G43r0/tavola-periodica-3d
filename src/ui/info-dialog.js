@@ -46,6 +46,8 @@ export function createInfoDialog(meta) {
       <p class="keys">Nel visualizzatore 3D: <kbd>B</kbd> modello di Bohr · <kbd>Q</kbd> modello quantistico ·
         <kbd>E</kbd> esplodi il nucleo · <kbd>L</kbd> etichette · <kbd>Spazio</kbd> pausa · <kbd>F</kbd> fps ·
         <b>clic</b> su una particella per analizzarla · <kbd>Esc</kbd> chiude l'analisi</p>
+      <p class="keys">Nella sandbox: <kbd>Spazio</kbd> pausa · <kbd>F</kbd> un passo · <kbd>H</kbd> vista termica · <kbd>G</kbd> bagliore ·
+        <kbd>E</kbd> gomma · <kbd>[</kbd> <kbd>]</kbd> pennello · clic destro cancella · clic centrale preleva</p>
       <h3>Modelli 3D</h3>
       <ul>
         <li><b>Nucleo</b>: protoni e neutroni impacchettati come sfere rigide mescolate; il raggio cresce come A<sup>⅓</sup>, come nei nuclei reali.</li>
@@ -62,6 +64,9 @@ export function createInfoDialog(meta) {
             momenti dipolari sperimentali, le altre valori stimati (≈). Metalli d/f: «struttura non verificata»; Z ≥ 104: «chimica sconosciuta».</li>
         <li><b>Reazioni</b>: ΔH° = Σ ΔHf°(prodotti) − Σ ΔHf°(reagenti), per le quantità dell'equazione, a 25 °C e nello stato fisico
             indicato; la stima con le energie di legame (rotti − formati) usa valori medi in fase gassosa. Il diagramma energetico è schematico.</li>
+        <li><b>Sandbox degli elementi</b>: ogni cella è un granello di sostanza con la sua temperatura. Fusione, ebollizione e densità
+            sono quelle reali (elements.json); la radioattività usa l'isotopo principale con il tempo accelerato in scala logaritmica.
+            Reazioni, conducibilità e velocità sono semplificate per il gioco.</li>
         <li><b>Scala</b>: nessun modello è in scala. Il nucleo reale è da decine a centinaia di migliaia di volte più piccolo dell'atomo.</li>
       </ul>
     </form>`;

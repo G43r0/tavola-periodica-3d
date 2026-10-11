@@ -1,0 +1,269 @@
+// Disegno della sandbox: dalla griglia del motore ai pixel (una cella = un pixel, poi ingrandito dal canvas).
+// Colori realistici delle sostanze, incandescenza dei corpi caldi (dal punto di Draper, 525 °C), fiamme colorate,
+// scintille, scarica nei gas e vista termica. Riempie due buffer: colore e bagliore (per l'effetto glow).
+import { SOLID, LIQUID, GAS, S, COUNT, WOOD, CONCRETE, WALL, GENERATOR, SALT, OXIDE, SOLUTION, variantColor } from './substances.js';
+import { C_BURN, SPARK_ACTIVE, NEUTRON } from './world.js';
+
+const BG = [6, 9, 14];
+const DRAPER = 798; // K: sotto questa temperatura un corpo caldo non emette luce visibile
+
+/** Colore di un corpo nero alla temperatura T (approssimazione di Tanner Helland). */
+export function blackbody(T) {
+  const t = Math.max(T, 600) / 100;
+  let r;
+  let g;
+  let b;
+  if (t <= 66) {
+    r = 255;
+    g = 99.4708025861 * Math.log(t) - 161.1195681661;
+    b = t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
+  } else {
+    r = 329.698727446 * (t - 60) ** -0.1332047592;
+    g = 288.1221695283 * (t - 60) ** -0.0755148492;
+    b = 255;
+  }
+  const c = (v) => Math.max(0, Math.min(255, Math.round(v)));
+  return [c(r), c(g), c(b)];
+}
+
+const HEAT_STOPS = [
+  [0, [26, 11, 94]],
+  [0.18, [32, 80, 255]],
+  [0.35, [24, 196, 154]],
+  [0.5, [216, 224, 64]],
+  [0.65, [255, 138, 32]],
+  [0.82, [255, 42, 58]],
+  [1, [255, 255, 255]],
+];
+
+/** Posizione (0–1) di una temperatura sulla scala della vista termica: lineare fino a 22 °C, poi logaritmica. */
+export function heatScale(T) {
+  if (T <= 295) return 0.35 * Math.max(0, T) / 295;
+  return Math.min(1, 0.35 + (0.65 * Math.log(T / 295)) / Math.log(10000 / 295));
+}
+
+function heatColor(t) {
+  for (let k = 1; k < HEAT_STOPS.length; k++) {
+    const [p1, c1] = HEAT_STOPS[k];
+    const [p0, c0] = HEAT_STOPS[k - 1];
+    if (t <= p1) {
+      const u = (t - p0) / (p1 - p0);
+      return c0.map((v, n) => Math.round(v + (c1[n] - v) * u));
+    }
+  }
+  return [255, 255, 255];
+}
+
+export function createRenderer(world, subs) {
+  // colori di base per sostanza e stato: rgba (alfa 0–255)
+  const base = new Uint8Array(COUNT * 16);
+  const flags = subs.P.flags;
+  for (const s of subs.list) {
+    if (!s || !s.colors) continue;
+    for (const ph of [SOLID, LIQUID, GAS]) {
+      const c = s.colors[ph];
+      if (!c) continue;
+      const o = s.id * 16 + ph * 4;
+      base[o] = c[0];
+      base[o + 1] = c[1];
+      base[o + 2] = c[2];
+      base[o + 3] = Math.round(c[3] * 255);
+    }
+  }
+  const tint = new Uint8Array(COUNT * 4); // colore della fiamma e della scarica per elemento
+  const discharge = new Uint8Array(COUNT * 4);
+  for (const s of subs.list) {
+    if (s?.flameColor) tint.set([...s.flameColor, 1], s.id * 4);
+    if (s?.discharge) discharge.set([...s.discharge, 1], s.id * 4);
+  }
+  // tabelle per temperatura (passo di 40 K)
+  const LUT = 256;
+  const bb = new Uint8Array(LUT * 3);
+  for (let k = 0; k < LUT; k++) bb.set(blackbody(k * 40), k * 3);
+  const HEAT_N = 512;
+  const heatLut = new Uint8Array(HEAT_N * 3);
+  for (let k = 0; k < HEAT_N; k++) heatLut.set(heatColor(k / (HEAT_N - 1)), k * 3);
+  const variants = new Map();
+  const variant = (id, ctype) => {
+    const key = id * 65536 + ctype;
+    let c = variants.get(key);
+    if (!c) {
+      c = variantColor(subs, id, ctype) ?? [200, 200, 200];
+      variants.set(key, c);
+    }
+    return c;
+  };
+
+  const { mp, bp } = subs.P;
+
+  /**
+   * @param {Uint32Array} out pixel ABGR (W×H)
+   * @param {Uint32Array} glow pixel ABGR del bagliore (W×H)
+   * @param {{heatView?:boolean, frame?:number}} opts
+   * @returns {number} celle occupate
+   */
+  function draw(out, glow, { heatView = false, frame = 0 } = {}) {
+    const { W, N, type, temp, flags: cf, seed, spark, ctype, life } = world;
+    const bgPix = (255 << 24) | (BG[2] << 16) | (BG[1] << 8) | BG[0];
+    let count = 0;
+    for (let i = 0; i < N; i++) {
+      const id = type[i];
+      if (!id) {
+        out[i] = bgPix;
+        glow[i] = 0;
+        continue;
+      }
+      count++;
+      const T = temp[i];
+      const sf = flags[id];
+      let r;
+      let g;
+      let b;
+      let a;
+      let gr = 0;
+      let gg = 0;
+      let gb = 0;
+      let ga = 0;
+
+      if (heatView) {
+        const k = Math.min(HEAT_N - 1, Math.round(heatScale(T) * (HEAT_N - 1))) * 3;
+        r = heatLut[k];
+        g = heatLut[k + 1];
+        b = heatLut[k + 2];
+        a = sf & S.FIRE || T >= bp[id] ? 0.75 : 1;
+      } else if (sf & S.FIRE) {
+        const k = Math.min(LUT - 1, Math.round((T * 1.15) / 40)) * 3;
+        r = bb[k];
+        g = bb[k + 1];
+        b = bb[k + 2];
+        const tz = ctype[i];
+        if (tz && tint[tz * 4 + 3]) {
+          const o = tz * 4;
+          r = (r * 0.2 + tint[o] * 0.8) | 0;
+          g = (g * 0.2 + tint[o + 1] * 0.8) | 0;
+          b = (b * 0.2 + tint[o + 2] * 0.8) | 0;
+        }
+        a = Math.min(1, 0.35 + life[i] / 18);
+        gr = r;
+        gg = g;
+        gb = b;
+        ga = 200 * a;
+      } else {
+        const ph = T < mp[id] ? SOLID : T < bp[id] ? LIQUID : GAS;
+        const o = id * 16 + ph * 4;
+        if (id === SALT || id === OXIDE || id === SOLUTION) {
+          const c = variant(id, ctype[i]);
+          r = c[0];
+          g = c[1];
+          b = c[2];
+        } else {
+          r = base[o];
+          g = base[o + 1];
+          b = base[o + 2];
+        }
+        a = base[o + 3] / 255;
+        const x = i % W;
+        const y = (i / W) | 0;
+        // trama: grana del legno, ghiaia del calcestruzzo, muro tratteggiato, variazioni delle polveri
+        let shade;
+        if (id === WOOD) shade = 0.82 + ((y * 7 + ((x >> 2) * 3)) % 5) * 0.04 + seed[i] / 2550;
+        else if (id === CONCRETE) shade = seed[i] > 236 ? 0.72 : seed[i] < 18 ? 1.12 : 0.95 + seed[i] / 2550;
+        else if (id === WALL) shade = (x + y) % 4 === 0 ? 1.25 : 1;
+        else if (id === GENERATOR) shade = ((x >> 1) + (y >> 1)) & 1 ? 1 : 0.55;
+        else if (ph === SOLID) shade = cf[i] & 1 ? 0.86 + seed[i] / 920 : 0.95 + seed[i] / 2550;
+        else if (ph === LIQUID) shade = 0.95 + seed[i] / 2550;
+        else shade = 1;
+        r = Math.min(255, r * shade);
+        g = Math.min(255, g * shade);
+        b = Math.min(255, b * shade);
+
+        // gas caldissimi (esplosioni): un bagliore tenue che si spegne raffreddandosi
+        if (T > 1200 && ph === GAS) {
+          const k = Math.min(LUT - 1, Math.round(T / 40)) * 3;
+          const u = Math.min(0.75, (T - 1200) / 2400);
+          r += (bb[k] - r) * u;
+          g += (bb[k + 1] - g) * u;
+          b += (bb[k + 2] - b) * u;
+          a = Math.max(a, u);
+          gr = bb[k];
+          gg = bb[k + 1];
+          gb = bb[k + 2];
+          ga = 110 * u;
+        }
+        // incandescenza
+        if (T > DRAPER && ph !== GAS) {
+          const k = Math.min(LUT - 1, Math.round(T / 40)) * 3;
+          const u = Math.min(1, (T - DRAPER) / 1300);
+          r += (bb[k] - r) * u;
+          g += (bb[k + 1] - g) * u;
+          b += (bb[k + 2] - b) * u;
+          gr = bb[k];
+          gg = bb[k + 1];
+          gb = bb[k + 2];
+          ga = 150 * u;
+          a = Math.max(a, u);
+        }
+        // in fiamme: brace che tremola
+        if (cf[i] & C_BURN) {
+          const flick = ((seed[i] + frame * 7) & 15) / 15;
+          r += (255 - r) * 0.6;
+          g += (100 + flick * 70 - g) * 0.6;
+          b += (20 - b) * 0.6;
+          gr = 255;
+          gg = 120 + flick * 60;
+          gb = 30;
+          ga = Math.max(ga, 120 + flick * 60);
+        }
+        // elettricità
+        const sp = spark[i];
+        if (sp >= SPARK_ACTIVE && sp <= 11) {
+          if (sf & S.DISCHARGE && ph === GAS) {
+            const d = id * 4;
+            r = discharge[d];
+            g = discharge[d + 1];
+            b = discharge[d + 2];
+            a = 0.85;
+            gr = r;
+            gg = g;
+            gb = b;
+            ga = 230;
+          } else {
+            r = 255;
+            g = 244;
+            b = 160;
+            a = 1;
+            gr = 255;
+            gg = 236;
+            gb = 140;
+            ga = 220;
+          }
+        } else if (id === GENERATOR && sp) {
+          ga = 90;
+          gr = 255;
+          gg = 220;
+          gb = 80;
+        }
+      }
+      if (a < 1) {
+        r = BG[0] + (r - BG[0]) * a;
+        g = BG[1] + (g - BG[1]) * a;
+        b = BG[2] + (b - BG[2]) * a;
+      }
+      out[i] = (255 << 24) | ((b & 255) << 16) | ((g & 255) << 8) | (r & 255);
+      glow[i] = ga ? ((ga & 255) << 24) | ((gb & 255) << 16) | ((gg & 255) << 8) | (gr & 255) : 0;
+    }
+    // particelle libere (neutroni, radiazione)
+    for (const p of world.particles) {
+      const x = Math.floor(p.x);
+      const y = Math.floor(p.y);
+      if (x < 0 || y < 0 || x >= W || y >= world.H) continue;
+      const i = y * W + x;
+      const c = p.kind === NEUTRON ? (p.slow ? [150, 190, 255] : [215, 235, 255]) : [180, 255, 120];
+      out[i] = (255 << 24) | (c[2] << 16) | (c[1] << 8) | c[0];
+      glow[i] = (230 << 24) | (c[2] << 16) | (c[1] << 8) | c[0];
+    }
+    return count;
+  }
+
+  return { draw };
+}
