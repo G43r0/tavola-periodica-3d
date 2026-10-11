@@ -15,7 +15,7 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   bilanciate, scritte solo con sostanze della libreria o elementi, in 14 sezioni (sintesi, combustioni,
   decomposizioni, acqua, acidi e basi, ioni, precipitazioni, spostamento, ossidoriduzioni, metallurgia, industria,
   chimica organica, biochimica), con condizioni, note ed entalpia di reazione dove è nota. Comprende tutte le
-  45 reazioni attuali; il motore non lo carica ancora.
+  46 reazioni attuali; il motore non lo carica ancora.
 - **109 nuove sostanze** nella libreria «Esempi» (ora 554), necessarie alle reazioni del catalogo: ioni monoatomici
   (Na⁺, K⁺, Ag⁺, Ca²⁺, Ba²⁺, Pb²⁺, Cu²⁺, Zn²⁺, Fe²⁺, Fe³⁺, Mn²⁺, Cr³⁺, Cl⁻, Br⁻, I⁻, con ΔHf° in soluzione), complessi
   ([Cu(NH₃)₄]²⁺, [Ag(NH₃)₂]⁺, [Fe(SCN)]²⁺, [Ag(S₂O₃)₂]³⁻), ione tetrationato, silice e silicati, sali di manganese,
@@ -23,6 +23,8 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   composti dell'uranio, composti organici di base (nitrobenzene, etilbenzene, cumene, tristearina, sapone,
   sorbitolo, glicilglicina…). Un atomo isolato con carica (es. Na⁺ ottenuto con ±e⁻) ora è riconosciuto come lo ione
   della libreria.
+- **Reazione della polvere nera** (2 KNO₃ + S + 3 C → K₂S + N₂ + 3 CO₂, ΔH° ≈ −572 kJ) nel gruppo «Altre
+  reazioni»; il nitrato di potassio ha ora l'entalpia di formazione (−494,6 kJ/mol).
 
 ### Modificato
 - Struttura di Lewis: un metallo con carica in un frammento (es. Fe³⁺ nel complesso [Fe(SCN)]²⁺) tiene solo gli

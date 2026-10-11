@@ -1,7 +1,7 @@
 # Catalogo delle reazioni chimiche del laboratorio
 
 Elenco delle reazioni che il motore delle reazioni dovrà contenere. Per ora è solo un elenco: il motore carica
-ancora le 45 reazioni di `src/lab/data/reactions.js`, che sono tutte comprese qui.
+ancora le 46 reazioni di `src/lab/data/reactions.js`, che sono tutte comprese qui.
 
 ## Le sostanze
 
@@ -40,9 +40,9 @@ il nichel tetracarbonile ([Appendice A](#appendice-a--reazioni-ancora-fuori-libr
 | Reazioni nel catalogo | **1349** |
 | Sostanze della libreria che compaiono in almeno una reazione | **554 / 554** |
 | Elementi usati come `el:X` | 85 |
-| Reazioni già presenti in `src/lab/data/reactions.js` (tutte incluse e segnate «già presente») | 45 / 45 |
+| Reazioni già presenti in `src/lab/data/reactions.js` (tutte incluse e segnate «già presente») | 46 / 46 |
 | Equilibri (⇌) | 42 |
-| Reazioni con ΔH° calcolabile oggi dalle entalpie di formazione della libreria | 312 |
+| Reazioni con ΔH° calcolabile oggi dalle entalpie di formazione della libreria | 315 |
 | Reazioni con più bilanciamenti possibili, con i coefficienti scritti a mano (vedi sotto) | 19 |
 | Reazioni dell'Appendice A (ancora fuori libreria) | 1 |
 
@@ -584,7 +584,7 @@ il nichel tetracarbonile ([Appendice A](#appendice-a--reazioni-ancora-fuori-libr
 | 375 | MgSO₄ → MgO + SO₃ | Δ > 1100 °C |  |  | `mgso4 → mgo + so3` |
 | 376 | 4 K₂Cr₂O₇ → 4 K₂CrO₄ + 2 Cr₂O₃ + 3 O₂ | Δ > 500 °C |  |  | `4 k2cr2o7 → 4 k2cro4 + 2 cr2o3 + 3 o2` |
 | 377 | 2 NaClO → 2 NaCl + O₂ | luce, Δ | La candeggina perde efficacia col tempo. |  | `2 naclo → 2 nacl + o2` |
-| 378 | 2 KNO₃ → 2 KNO₂ + O₂ | Δ | Il salnitro libera ossigeno: per questo alimenta la polvere nera. |  | `2 kno3 → 2 kno2 + o2` |
+| 378 | 2 KNO₃ → 2 KNO₂ + O₂ | Δ | Il salnitro libera ossigeno: per questo alimenta la polvere nera. | 250 | `2 kno3 → 2 kno2 + o2` |
 | 379 | 2 KMnO₄ → K₂MnO₄ + MnO₂ + O₂ | Δ | Ossigeno in laboratorio dal permanganato. |  | `2 kmno4 → k2mno4 + mno2 + o2` |
 
 ### 4.3 Ossidi, perossidi e alogenuri (12)
@@ -825,7 +825,7 @@ il nichel tetracarbonile ([Appendice A](#appendice-a--reazioni-ancora-fuori-libr
 | 543 | HI + NaOH → NaI + H₂O |  |  |  | `hi + naoh → nai + h2o` |
 | 544 | HI + KOH → KI + H₂O |  |  | −216 | `hi + koh → ki + h2o` |
 | 545 | HNO₃ + NaOH → NaNO₃ + H₂O |  |  |  | `hno3 + naoh → nano3 + h2o` |
-| 546 | HNO₃ + KOH → KNO₃ + H₂O |  |  |  | `hno3 + koh → kno3 + h2o` |
+| 546 | HNO₃ + KOH → KNO₃ + H₂O |  |  | −182 | `hno3 + koh → kno3 + h2o` |
 | 547 | H₂SO₄ + 2 NaOH → Na₂SO₄ + 2 H₂O |  |  |  | `h2so4 + 2 naoh → na2so4 + 2 h2o` |
 | 548 | H₂SO₄ + 2 KOH → K₂SO₄ + 2 H₂O |  |  |  | `h2so4 + 2 koh → k2so4 + 2 h2o` |
 | 549 | H₂SO₄ + Mg(OH)₂ → MgSO₄ + 2 H₂O |  |  |  | `h2so4 + mgoh2 → mgso4 + 2 h2o` |
@@ -1455,7 +1455,7 @@ il nichel tetracarbonile ([Appendice A](#appendice-a--reazioni-ancora-fuori-libr
 | 1002 | 48 KNO₃ + 5 C₁₂H₂₂O₁₁ → 24 K₂CO₃ + 24 N₂ + 36 CO₂ + 55 H₂O | innesco | "Rocket candy": propellente dei razzi amatoriali. |  | `48 kno3 + 5 saccarosio → 24 k2co3 + 24 n2 + 36 co2 + 55 h2o` |
 | 1003 | 10 NaN₃ + 2 KNO₃ → K₂O + 5 Na₂O + 16 N₂ | innesco elettrico | Generatore degli airbag: il nitrato elimina il sodio metallico. |  | `10 nan3 + 2 kno3 → k2o + 5 na2o + 16 n2` |
 | 1004 | 31 NH₄NO₃ + C₁₀H₂₂ → 10 CO₂ + 31 N₂ + 73 H₂O | detonatore | ANFO (il decano rappresenta il gasolio). |  | `31 nh4no3 + decano → 10 co2 + 31 n2 + 73 h2o` |
-| 1005 | 2 KNO₃ + S + 3 C → K₂S + N₂ + 3 CO₂ | innesco | Polvere nera nella forma dei libri di testo. |  | `2 kno3 + el:S + 3 el:C → k2s + n2 + 3 co2` |
+| 1005 | 2 KNO₃ + S + 3 C → K₂S + N₂ + 3 CO₂ | innesco | **già presente** (`polvere-nera`). Polvere nera nella forma dei libri di testo. | −572 | `2 kno3 + el:S + 3 el:C → k2s + n2 + 3 co2` |
 
 ### 10.8 Composti dell'azoto, dello zolfo e altri (28)
 
