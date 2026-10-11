@@ -8,7 +8,9 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
-## [Non rilasciato]
+## [0.7.0] — 2026-10-11 — Catalogo delle reazioni
+
+Note di release complete (con l'elenco delle 109 sostanze e delle 1349 reazioni): [docs/release-0.7.0.md](docs/release-0.7.0.md).
 
 ### Aggiunto
 - **Catalogo delle reazioni** ([docs/catalogo-reazioni.md](docs/catalogo-reazioni.md)): 1349 reazioni reali e
