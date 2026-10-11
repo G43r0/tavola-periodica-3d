@@ -10,14 +10,14 @@ le sostanze della libreria e i 118 elementi. Nel laboratorio è disponibile in p
   reazione dove è calcolabile (315 reazioni). Tutte le 554 sostanze e 85 elementi vi compaiono almeno una volta.
 - **109 nuove sostanze** (elenco sotto), 72 con entalpia di formazione (NIST/CRC).
 - **Polvere nera** nel gruppo «Altre reazioni» del laboratorio: 2 KNO₃ + S + 3 C → K₂S + N₂ + 3 CO₂, ΔH° ≈ −572 kJ.
-  Il nitrato di potassio ha ora ΔHf° = −494,6 kJ/mol. Le reazioni del laboratorio sono 46.
+  Il nitrato di potassio ha ora ΔHf° = −494,6 kJ/mol. Le reazioni del laboratorio sono 47.
 - Un atomo isolato con carica (es. Na⁺ ottenuto con ±e⁻) è riconosciuto come lo ione della libreria.
 - Struttura di Lewis: un metallo con carica dentro un complesso (es. Fe³⁺ in [Fe(SCN)]²⁺) tiene solo gli elettroni
   che gli restano come ione. Nessuna voce preesistente cambia.
 
 ## Limiti
 
-- Il motore del laboratorio carica ancora solo le 46 reazioni di `src/lab/data/reactions.js`: le altre 1303 sono nel catalogo, non
+- Il motore del laboratorio carica ancora solo le 47 reazioni di `src/lab/data/reactions.js`: le altre 1302 sono nel catalogo, non
   ancora eseguibili nell'app.
 - Nichel tetracarbonile Ni(CO)₄ non incluso (il laboratorio conta gli elettroni di valenza dei metalli di transizione
   dallo stato di ossidazione massimo). Polimerizzazioni e reazioni nucleari sono escluse.
@@ -51,7 +51,7 @@ le sostanze della libreria e i 118 elementi. Nel laboratorio è disponibile in p
 ## Le 1349 reazioni
 
 Formato: numero, equazione bilanciata — condizioni; ΔH° a 25 °C (negativo = esotermica). **già nell'app** = una delle
-46 reazioni già presenti nel laboratorio. Note, specie e dettagli completi sono nel
+47 reazioni già presenti nel laboratorio. Note, specie e dettagli completi sono nel
 [catalogo](docs/catalogo-reazioni.md).
 
 #### 1. Sintesi dagli elementi (169)

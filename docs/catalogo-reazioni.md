@@ -1,7 +1,7 @@
 # Catalogo delle reazioni chimiche del laboratorio
 
 Elenco delle reazioni che il motore delle reazioni dovrà contenere. Per ora è solo un elenco: il motore carica
-ancora le 46 reazioni di `src/lab/data/reactions.js`, che sono tutte comprese qui.
+ancora le 47 reazioni di `src/lab/data/reactions.js`, che sono tutte comprese qui.
 
 ## Le sostanze
 
@@ -40,7 +40,7 @@ il nichel tetracarbonile ([Appendice A](#appendice-a--reazioni-ancora-fuori-libr
 | Reazioni nel catalogo | **1349** |
 | Sostanze della libreria che compaiono in almeno una reazione | **554 / 554** |
 | Elementi usati come `el:X` | 85 |
-| Reazioni già presenti in `src/lab/data/reactions.js` (tutte incluse e segnate «già presente») | 46 / 46 |
+| Reazioni già presenti in `src/lab/data/reactions.js` (tutte incluse e segnate «già presente») | 47 / 47 |
 | Equilibri (⇌) | 42 |
 | Reazioni con ΔH° calcolabile oggi dalle entalpie di formazione della libreria | 315 |
 | Reazioni con più bilanciamenti possibili, con i coefficienti scritti a mano (vedi sotto) | 19 |

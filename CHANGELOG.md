@@ -17,7 +17,7 @@ Note di release complete (con l'elenco delle 109 sostanze e delle 1349 reazioni)
   bilanciate, scritte solo con sostanze della libreria o elementi, in 14 sezioni (sintesi, combustioni,
   decomposizioni, acqua, acidi e basi, ioni, precipitazioni, spostamento, ossidoriduzioni, metallurgia, industria,
   chimica organica, biochimica), con condizioni, note ed entalpia di reazione dove è nota. Comprende tutte le
-  46 reazioni attuali; il motore non lo carica ancora.
+  47 reazioni attuali; il motore non lo carica ancora.
 - **109 nuove sostanze** nella libreria «Esempi» (ora 554), necessarie alle reazioni del catalogo: ioni monoatomici
   (Na⁺, K⁺, Ag⁺, Ca²⁺, Ba²⁺, Pb²⁺, Cu²⁺, Zn²⁺, Fe²⁺, Fe³⁺, Mn²⁺, Cr³⁺, Cl⁻, Br⁻, I⁻, con ΔHf° in soluzione), complessi
   ([Cu(NH₃)₄]²⁺, [Ag(NH₃)₂]⁺, [Fe(SCN)]²⁺, [Ag(S₂O₃)₂]³⁻), ione tetrationato, silice e silicati, sali di manganese,

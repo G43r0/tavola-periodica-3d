@@ -203,7 +203,7 @@ le geometrie fuori libreria sono stime (≈); il legame metallico non è simulat
 
 ### Reazioni
 
-Pulsante **Reazioni** nella barra del laboratorio: 46 reazioni in 5 gruppi (sintesi, combustioni, decomposizioni,
+Pulsante **Reazioni** nella barra del laboratorio: 47 reazioni in 5 gruppi (sintesi, combustioni, decomposizioni,
 acidi e basi, altre: fotosintesi, fermentazione, termite, idrogenazione…).
 
 - **Equazione** con gli stati fisici, es. `CH₄(g) + 2 O₂(g) → CO₂(g) + 2 H₂O(l)`.
@@ -237,7 +237,7 @@ reazione e sopra le molecole compare il ΔH. A destra un resoconto elenca le rea
 - `Ctrl+Z` annulla l'intera simulazione.
 
 Il bilanciamento è algebrico (spazio nullo intero della matrice degli atomi), quindi funziona per qualsiasi equazione;
-i test verificano che tutte le 46 reazioni della libreria siano bilanciate con i coefficienti minimi.
+i test verificano che tutte le 47 reazioni della libreria siano bilanciate con i coefficienti minimi.
 
 Il [catalogo delle reazioni](docs/catalogo-reazioni.md) elenca le 1349 reazioni che il motore dovrà contenere: tutte
 reali, bilanciate e scritte solo con sostanze della libreria (o elementi), divise in 14 sezioni, con condizioni ed
