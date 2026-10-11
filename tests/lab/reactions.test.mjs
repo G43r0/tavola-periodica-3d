@@ -6,7 +6,7 @@ import { createLabElements } from '../../src/lab/chem/elements-lab.js';
 import { createLibraryIndex } from '../../src/lab/chem/identify.js';
 import { speciesInfo, balance, reactionEnthalpy, balanceTable } from '../../src/lab/chem/reactions.js';
 import { MOLECULES } from '../../src/lab/data/molecules.js';
-import { REACTIONS, REACTION_GROUPS } from '../../src/lab/data/reactions.js';
+import { REACTIONS, REACTION_GROUPS, BASE_REACTIONS } from '../../src/lab/data/reactions.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
 const lab = createLabElements(elements);
@@ -19,25 +19,52 @@ function load(r) {
   return { reactants, products, rc: r.reactants.map(([c]) => c), pc: r.products.map(([c]) => c) };
 }
 
+test('il catalogo è completo: 1349 reazioni, con quelle scritte a mano', () => {
+  assert.equal(REACTIONS.length, 1349);
+  assert.equal(new Set(REACTIONS.map((r) => r.id)).size, REACTIONS.length, 'id unici');
+  for (const b of BASE_REACTIONS) assert.ok(REACTIONS.some((r) => r.id === b.id && r.name === b.name), b.id);
+  assert.deepEqual(REACTIONS.map((r) => r.catalogo), REACTIONS.map((_, i) => i + 1), 'nell\'ordine del catalogo');
+  for (const g of REACTION_GROUPS) assert.ok(REACTIONS.some((r) => r.group === g.key), g.key);
+});
+
 test('ogni reazione è bilanciata e i coefficienti sono i minimi interi', () => {
-  assert.ok(REACTIONS.length >= 40);
   for (const r of REACTIONS) {
     assert.ok(REACTION_GROUPS.some((g) => g.key === r.group), r.id);
     const { reactants, products, rc, pc } = load(r);
     for (const row of balanceTable(reactants, products, rc, pc)) assert.equal(row.left, row.right, `${r.id}: Z=${row.z}`);
+    // la carica si conserva (conta nelle reazioni tra ioni)
+    const charge = (list, cs) => list.reduce((t, s, i) => t + cs[i] * s.atoms.reduce((u, a) => u + (a.charge || 0), 0), 0);
+    assert.equal(charge(reactants, rc), charge(products, pc), `${r.id}: carica`);
+    const g = [...rc, ...pc].reduce((a, b) => {
+      while (b) [a, b] = [b, a % b];
+      return a;
+    });
+    assert.equal(g, 1, `${r.id}: coefficienti non minimi`);
     const b = balance(reactants, products);
-    assert.equal(b.ok, true, `${r.id}: ${b.reason}`);
+    if (!b.ok) {
+      // con più bilanciamenti indipendenti i coefficienti sono scelti a mano: vale la tabella degli atomi
+      assert.match(b.reason, /più bilanciamenti/, `${r.id}: ${b.reason}`);
+      continue;
+    }
     assert.deepEqual(b.reactants, rc, `${r.id} reagenti`);
     assert.deepEqual(b.products, pc, `${r.id} prodotti`);
   }
 });
 
-test('ogni specie delle reazioni ha l\'entalpia di formazione', () => {
-  for (const r of REACTIONS) {
+test('ogni specie delle reazioni scritte a mano ha l\'entalpia di formazione', () => {
+  for (const r of BASE_REACTIONS) {
     const { reactants, products, rc, pc } = load(r);
     const h = reactionEnthalpy(lab, reactants, products, rc, pc);
     assert.deepEqual(h.formation.missing, [], r.id);
   }
+});
+
+test('le reazioni del catalogo con entalpie note hanno un ΔH° calcolabile', () => {
+  const withDh = REACTIONS.filter((r) => {
+    const { reactants, products, rc, pc } = load(r);
+    return reactionEnthalpy(lab, reactants, products, rc, pc).formation.value != null;
+  });
+  assert.ok(withDh.length >= 300, `${withDh.length} reazioni con ΔH°`);
 });
 
 test('ΔH° dalle entalpie di formazione (valori noti)', () => {

@@ -1,6 +1,7 @@
 // Pannello delle reazioni: elenco, scheda della reazione (equazione, "bilancia tu", energia, diagramma).
 import { esc, fmtNumber } from '../chem/format.js';
 import { REACTION_GROUPS } from './data/reactions.js';
+import { normalizeName } from './chem/identify.js';
 import { balanceTable } from './chem/reactions.js';
 import { reactionDH } from './chem/simulate.js';
 import { icons } from '../ui/icons.js';
@@ -23,6 +24,9 @@ export function equationText(re) {
   const side = (list, coeffs) => list.map((s, i) => `${coeffs[i] > 1 ? `${coeffs[i]} ` : ''}${s.display}`).join(' + ');
   return `${side(re.reactants, re.rc)} → ${side(re.products, re.pc)}`;
 }
+
+/** Titolo di una reazione: il nome, oppure (per quelle del catalogo senza nome) l'equazione in testo semplice. */
+export const reactionTitle = (re) => re.r.name ?? equationText(re);
 
 /** Equazione di un passo della simulazione, nella forma di una reazione caricata. */
 export function stepEquation(step) {
@@ -56,7 +60,7 @@ export function simulationReportHtml(sim) {
       const precise = s.kind === 'library' || s.method === 'formation';
       // minuscola solo la prima lettera: «cloruro di ferro(III)» conserva il numero romano
       const product = s.kind === 'library' ? '' : s.product.entry.name.charAt(0).toLowerCase() + s.product.entry.name.slice(1);
-      const name = s.kind === 'library' ? s.re.r.name : `Si forma: ${product}`;
+      const name = s.kind === 'library' ? reactionTitle(s.re) : `Si forma: ${product}`;
       const what = s.kind === 'library'
         ? `<button type="button" class="chip-btn" data-reaction="${s.re.r.id}">Scheda della reazione</button>`
         : `<p class="mp-note">Non è nella libreria delle reazioni: prodotto previsto dal modello (la sostanza nota che si forma con gli stessi atomi),
@@ -76,12 +80,12 @@ export function simulationReportHtml(sim) {
     const hints = [
       ...missing.slice(0, 3).map((m) => {
         const n = m.lack.reduce((t, x) => t + x.count, 0);
-        return `<div class="sim-hint"><p>Per «${esc(m.re.r.name)}» ${n === 1 ? 'manca' : 'mancano'} <b>${countText(m.lack)}</b>:</p>${equationHtml(m.re)}
+        return `<div class="sim-hint"><p>Per «${esc(reactionTitle(m.re))}» ${n === 1 ? 'manca' : 'mancano'} <b>${countText(m.lack)}</b>:</p>${equationHtml(m.re)}
           <button type="button" class="chip-btn" data-sim-add="${m.re.r.id}">Aggiungi e simula</button></div>`;
       }),
-      ...endothermic.slice(0, 3).map((re) => `<div class="sim-hint is-endo"><p>«${esc(re.r.name)}» è endotermica (ΔH° = ${kj(reactionDH(re))} kJ):
+      ...endothermic.slice(0, 3).map((re) => `<div class="sim-hint is-endo"><p>«${esc(reactionTitle(re))}» è endotermica (ΔH° = ${kj(reactionDH(re))} kJ):
           avviene solo fornendo energia.</p>${equationHtml(re)}</div>`),
-      ...needs.map((re) => `<div class="sim-hint"><p>«${esc(re.r.name)}» richiede ${esc(re.r.needs)}: non avviene da sola.</p></div>`),
+      ...needs.slice(0, 4).map((re) => `<div class="sim-hint"><p>«${esc(reactionTitle(re))}» ${re.r.needs ? `richiede ${esc(re.r.needs)}: non avviene da sola` : 'è un equilibrio: non si completa da sola'}.</p></div>`),
     ];
     body = `<p>Le molecole si urtano ma <b>rimbalzano</b>: nessun urto è efficace${sim.energy ? ', nemmeno fornendo energia' : ''}.</p>
       ${hints.join('')}
@@ -105,21 +109,79 @@ export function simulationReportHtml(sim) {
   </section>`;
 }
 
+const MAX_RESULTS = 60;
+const MAX_BENCH = 6;
+
+/** Una voce dell'elenco: con il nome della reazione, se ce l'ha; altrimenti solo l'equazione. */
+function reactionItem(re) {
+  return `<li><button type="button" class="rx-item${re.r.name ? '' : ' rx-item--bare'}" data-reaction="${re.r.id}">${re.r.name ? `<b>${esc(re.r.name)}</b>` : ''}${equationHtml(re)}</button></li>`;
+}
+
+/** Testo in cui cercare: equazione, nome, condizioni, descrizione e nomi delle sostanze (senza accenti e pedici). */
+function searchText(re) {
+  if (!re.search) {
+    const names = [...re.reactants, ...re.products].map((x) => x.name).join(' ');
+    const text = `${equationText(re)} ${re.r.name ?? ''} ${re.r.cond ?? ''} ${re.r.sub ?? ''} ${re.r.desc} ${names}`;
+    re.search = normalizeName(text.replace(/[₀-₉]/g, (c) => '₀₁₂₃₄₅₆₇₈₉'.indexOf(c)));
+  }
+  return re.search;
+}
+
+/**
+ * Corpo dell'elenco: i risultati della ricerca, oppure i gruppi del catalogo (chiusi, con le voci solo se aperti).
+ * @param {object[]} loaded reazioni caricate
+ * @param {{query:string, open:Set<string>}} ui testo cercato e gruppi aperti
+ */
+export function reactionResultsHtml(loaded, ui) {
+  const terms = normalizeName(ui.query).split(' ').filter(Boolean);
+  if (terms.length) {
+    const hits = loaded.filter((re) => {
+      const text = searchText(re);
+      return terms.every((t) => text.includes(t));
+    });
+    if (!hits.length) return '<p class="mp-note">Nessuna reazione trovata. Prova con una formula (es. NaCl), il nome di una sostanza o una parola chiave.</p>';
+    return `<p class="mp-note">${hits.length} ${hits.length === 1 ? 'reazione trovata' : 'reazioni trovate'}${hits.length > MAX_RESULTS ? `: mostro le prime ${MAX_RESULTS}, restringi la ricerca per vedere le altre` : ''}.</p>
+      <ul class="rx-list">${hits.slice(0, MAX_RESULTS).map(reactionItem).join('')}</ul>`;
+  }
+  return REACTION_GROUPS.map((g) => {
+    const list = loaded.filter((re) => re.r.group === g.key);
+    const open = ui.open.has(g.key);
+    return `<details class="rx-group rx-fold" data-rx-group="${g.key}"${open ? ' open' : ''}>
+      <summary><h4>${esc(g.label)}</h4><small>${list.length}</small></summary><div class="rx-fold__body">${open ? reactionGroupBodyHtml(list) : ''}</div></details>`;
+  }).join('');
+}
+
+/** Voci di un gruppo del catalogo, divise per sottogruppo. */
+export function reactionGroupBodyHtml(list) {
+  let body = '';
+  let last = null;
+  for (const re of list) {
+    if (re.r.sub !== last) {
+      body += `${last === null ? '' : '</ul>'}<h5>${esc(re.r.sub ?? '')}</h5><ul class="rx-list">`;
+      last = re.r.sub;
+    }
+    body += reactionItem(re);
+  }
+  return body + (last === null ? '' : '</ul>');
+}
+
 /** Elenco delle reazioni, con in testa quelle possibili con le molecole presenti sul banco. */
-export function reactionListHtml(loaded, matches) {
-  const item = (re) => `<li><button type="button" class="rx-item" data-reaction="${re.r.id}"><b>${esc(re.r.name)}</b>${equationHtml(re)}</button></li>`;
+export function reactionListHtml(loaded, matches, ui) {
   const possible = matches.filter((m) => m.missing.length === 0);
   const near = matches.filter((m) => m.missing.length > 0).slice(0, 4);
+  const searching = normalizeName(ui.query) !== '';
   return `
-    <header class="mp-head"><p class="mp-kind">Reazioni</p><h3 class="mp-name">Scegli una reazione</h3>
+    <header class="mp-head"><p class="mp-kind">Reazioni · ${loaded.length}</p><h3 class="mp-name">Scegli una reazione</h3>
       <button type="button" class="btn-icon mp-close" data-act="reactions" title="Chiudi le reazioni">${icons.close(16)}</button></header>
-    ${possible.length ? `<section class="rx-group rx-group--bench"><h4>Possibili con le molecole sul banco</h4><ul>${possible.map((m) => item(m.re)).join('')}</ul></section>` : ''}
-    ${near.length ? `<section class="rx-group rx-group--near"><h4>Quasi pronte sul banco</h4><ul>${near
-      .map((m) => `<li><button type="button" class="rx-item" data-reaction="${m.re.r.id}"><b>${esc(m.re.r.name)}</b><small>manca: ${m.missing.map((x) => `${x.count} ${sub(x.display)}`).join(', ')}</small></button></li>`)
+    <label class="rx-search"><input type="search" data-rx-search placeholder="Cerca: formula, sostanza, parola…" value="${esc(ui.query)}" autocomplete="off" spellcheck="false" aria-label="Cerca una reazione"></label>
+    ${possible.length && !searching ? `<section class="rx-group rx-group--bench"><h4>Possibili con le molecole sul banco${possible.length > MAX_BENCH ? ` (${possible.length})` : ''}</h4><ul class="rx-list">${possible
+      .slice(0, MAX_BENCH)
+      .map((m) => reactionItem(m.re))
       .join('')}</ul></section>` : ''}
-    ${REACTION_GROUPS.map(
-      (g) => `<section class="rx-group"><h4>${g.label}</h4><ul>${loaded.filter((re) => re.r.group === g.key).map(item).join('')}</ul></section>`,
-    ).join('')}`;
+    ${near.length && !searching ? `<section class="rx-group rx-group--near"><h4>Quasi pronte sul banco</h4><ul class="rx-list">${near
+      .map((m) => `<li><button type="button" class="rx-item" data-reaction="${m.re.r.id}"><b>${esc(reactionTitle(m.re))}</b><small>manca: ${m.missing.map((x) => `${x.count} ${sub(x.display)}`).join(', ')}</small></button></li>`)
+      .join('')}</ul></section>` : ''}
+    <div class="rx-results">${reactionResultsHtml(loaded, ui)}</div>`;
 }
 
 /** Diagramma energetico schematico (livelli reali, gobba dell'energia di attivazione indicativa). */
@@ -205,10 +267,11 @@ export function reactionCardHtml(lab, re, ui) {
   }
 
   const available = ui.available;
+  const tooBig = !available && ui.atoms > ui.maxAtoms;
   return `
     <header class="mp-head">
       <p class="mp-kind"><button type="button" class="rx-back" data-act="rx-list">${icons.prev(13)} Reazioni</button> · ${esc(groupLabel)}</p>
-      <h3 class="mp-name">${esc(r.name)}</h3>
+      <h3 class="mp-name">${esc(reactionTitle(re))}</h3>
       <button type="button" class="btn-icon mp-close" data-act="reactions" title="Chiudi le reazioni">${icons.close(16)}</button>
     </header>
     <div class="segmented rx-tabs" role="group">
@@ -217,10 +280,10 @@ export function reactionCardHtml(lab, re, ui) {
     </div>
     ${ui.practice ? practice : equationHtml(re)}
     <div class="rx-actions">
-      <button type="button" class="lab-act lab-act--primary" data-act="rx-run">${icons.flask(17)}<span>${available ? 'Avvia la reazione' : 'Prepara e avvia'}</span></button>
-      <button type="button" class="lab-act" data-act="rx-prepare" title="Mette sul banco le molecole dei reagenti">${icons.plus(16)}<span>Solo reagenti</span></button>
+      <button type="button" class="lab-act lab-act--primary" data-act="rx-run"${tooBig ? ' disabled' : ''}>${icons.flask(17)}<span>${available ? 'Avvia la reazione' : 'Prepara e avvia'}</span></button>
+      <button type="button" class="lab-act" data-act="rx-prepare"${tooBig ? ' disabled' : ''} title="Mette sul banco le molecole dei reagenti">${icons.plus(16)}<span>Solo reagenti</span></button>
     </div>
-    <p class="mp-note">${available ? 'I reagenti sono già sul banco: la reazione userà quelle molecole.' : 'Le molecole dei reagenti verranno create sul banco.'}</p>
+    <p class="mp-note">${tooBig ? `Troppo grande per il banco: i reagenti hanno ${ui.atoms} atomi e il banco ne contiene al massimo ${ui.maxAtoms}. L'equazione, il bilanciamento e l'energia restano consultabili.` : available ? 'I reagenti sono già sul banco: la reazione userà quelle molecole.' : 'Le molecole dei reagenti verranno create sul banco.'}</p>
     <section class="mp-sec">
       <h4>Energia</h4>
       ${dH == null ? '<p>Entalpie di formazione non disponibili per tutte le specie.</p>' : `
@@ -231,5 +294,8 @@ export function reactionCardHtml(lab, re, ui) {
       <p class="mp-note">Diagramma schematico: i livelli di reagenti e prodotti seguono ΔH; l'energia di attivazione Eₐ (la "collina" da superare) è solo indicativa.</p>`}
       ${bondsBlock}
     </section>
-    <section class="mp-sec"><h4>La reazione</h4><p>${esc(r.desc)}</p>${r.note ? `<p class="mp-callout">${esc(r.note)}</p>` : ''}</section>`;
+    <section class="mp-sec"><h4>La reazione</h4><p>${esc(r.desc)}</p>${r.note ? `<p class="mp-callout">${esc(r.note)}</p>` : ''}
+      ${r.cond ? `<p class="rx-cond"><b>Condizioni:</b> ${esc(r.cond)}</p>` : ''}
+      ${r.needs ? `<p class="rx-cond"><b>Richiede:</b> ${esc(r.needs)} (la simulazione non la esegue da sola).</p>` : ''}
+      ${r.rev ? '<p class="rx-cond">Reazione di equilibrio (⇌): qui è scritta nel verso diretto, non si completa.</p>' : ''}</section>`;
 }

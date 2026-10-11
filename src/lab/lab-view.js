@@ -20,7 +20,7 @@ import { REACTIONS } from './data/reactions.js';
 import { speciesInfo, reactionEnthalpy } from './chem/reactions.js';
 import { planReactions, diagnose, modelReaction, graphBondEnergy, reactionDH } from './chem/simulate.js';
 import { bondEnergy } from './chem/bond-energy.js';
-import { reactionListHtml, reactionCardHtml, equationHtml, equationText, stepEquation, simulationReportHtml } from './reaction-panel.js';
+import { reactionListHtml, reactionResultsHtml, reactionGroupBodyHtml, reactionCardHtml, reactionTitle, equationHtml, equationText, stepEquation, simulationReportHtml } from './reaction-panel.js';
 import { esc, fmtNumber } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
 
@@ -127,7 +127,7 @@ export function createLab(elements, { onClose }) {
     relaxers: new Map(),
     alternatives: new Map(), // chiave unità → isomeri proposti da Combina
     opts: { labels: true, lone: true },
-    rx: { open: false, current: null, practice: false, coeffs: null },
+    rx: { open: false, current: null, practice: false, coeffs: null, query: '', groups: new Set() },
     anim: null, // animazione di una reazione in corso
     sim: null, // ultima «Simula reazione»: passi, molecole avanzate, diagnosi
   };
@@ -471,7 +471,7 @@ export function createLab(elements, { onClose }) {
         'beforeend',
         `<section class="mp-sec rx-suggest"><h4>Reazioni possibili sul banco</h4>${ready
           .slice(0, 4)
-          .map((m) => `<button type="button" class="rx-item" data-reaction="${m.re.r.id}"><b>${esc(m.re.r.name)}</b>${equationHtml(m.re)}</button>`)
+          .map((m) => `<button type="button" class="rx-item" data-reaction="${m.re.r.id}">${m.re.r.name ? `<b>${esc(m.re.r.name)}</b>` : ''}${equationHtml(m.re)}</button>`)
           .join('')}</section>`,
       );
     }
@@ -1274,13 +1274,16 @@ export function createLab(elements, { onClose }) {
     return groups;
   }
 
+  /** Atomi dei reagenti di una reazione (coefficienti compresi): serve a sapere se stanno sul banco. */
+  const reactantAtoms = (re) => re.reactants.reduce((t, s, i) => t + s.atoms.length * re.rc[i], 0);
+
   function renderReactions() {
     const scroll = panel.scrollTop;
     if (!state.rx.current) {
-      panel.innerHTML = reactionListHtml(reactions, matchReactions());
+      panel.innerHTML = reactionListHtml(reactions, matchReactions(), { query: state.rx.query, open: state.rx.groups });
     } else {
       const re = reactionById.get(state.rx.current);
-      panel.innerHTML = reactionCardHtml(lab, re, { practice: state.rx.practice, coeffs: state.rx.coeffs, available: Boolean(availableUnits(re)) });
+      panel.innerHTML = reactionCardHtml(lab, re, { practice: state.rx.practice, coeffs: state.rx.coeffs, available: Boolean(availableUnits(re)), atoms: reactantAtoms(re), maxAtoms: MAX_ATOMS });
     }
     panel.scrollTop = scroll;
     $('[data-act="reactions"]').setAttribute('aria-pressed', String(state.rx.open));
@@ -1305,9 +1308,9 @@ export function createLab(elements, { onClose }) {
   /** Crea i reagenti sul banco, in fila nel primo spazio libero; restituisce i gruppi di atomi. */
   function prepareReactants(re) {
     const count = re.r.reactants.reduce((t, [c]) => t + c, 0);
-    const size = re.reactants.reduce((t, s) => t + s.atoms.length * 1, 0);
-    if (bench.atoms.size + size * 1 > MAX_ATOMS) {
-      message(`Il banco può contenere al massimo ${MAX_ATOMS} atomi: svuotalo prima.`, 'bad');
+    const size = reactantAtoms(re);
+    if (bench.atoms.size + size > MAX_ATOMS) {
+      message(size > MAX_ATOMS ? `Troppo grande per il banco: servono ${size} atomi, il massimo è ${MAX_ATOMS}.` : `Il banco può contenere al massimo ${MAX_ATOMS} atomi: svuotalo prima.`, 'bad');
       return null;
     }
     const groups = [];
@@ -1535,7 +1538,7 @@ export function createLab(elements, { onClose }) {
     state.sim = null;
     startAnim([ev], {
       say: {
-        start: `<b>${esc(re.r.name)}</b>: le molecole si avvicinano e si urtano…`,
+        start: `<b>${esc(reactionTitle(re))}</b>: le molecole si avvicinano e si urtano…`,
         break: 'Si <b>rompono</b> i legami dei reagenti (in rosso): serve energia.',
         form: 'Si <b>formano</b> i nuovi legami dei prodotti (in verde): si libera energia.',
       },
@@ -1544,7 +1547,7 @@ export function createLab(elements, { onClose }) {
         refresh();
         const dH = re.enthalpy.formation.value;
         const energy = dH == null ? '' : ` · ΔH° = <b>${dH > 0 ? '+' : '−'}${fmtNumber(Math.abs(dH), 1, 1)} kJ</b> (${dH < 0 ? 'esotermica: libera calore' : 'endotermica: assorbe energia'})`;
-        message(`Reazione completata: <b>${esc(re.r.name)}</b>${energy}`, 'ok', 7000);
+        message(`Reazione completata: <b>${esc(reactionTitle(re))}</b>${energy}`, 'ok', 7000);
       },
     });
   }
@@ -1776,8 +1779,8 @@ export function createLab(elements, { onClose }) {
       executed: records.map((r) => r.re),
       say: {
         start: records.length === 1
-          ? `Passo ${sim.rounds + 1} · <b>${esc(first.re.r.name)}</b>${first.times > 1 ? ` (${first.times} volte)` : ''}: ${esc(equationText(first.re))}`
-          : `Passo ${sim.rounds + 1} · ${records.length} reazioni insieme: ${records.map((r) => `<b>${esc(r.re.r.name)}</b>`).join(', ')}`,
+          ? `Passo ${sim.rounds + 1} · <b>${esc(reactionTitle(first.re))}</b>${first.times > 1 ? ` (${first.times} volte)` : ''}: ${esc(equationText(first.re))}`
+          : `Passo ${sim.rounds + 1} · ${records.length} reazioni insieme: ${records.map((r) => `<b>${esc(reactionTitle(r.re))}</b>`).join(', ')}`,
         break: 'Urto efficace: si <b>rompono</b> i legami dei reagenti (in rosso).',
         form: `Si <b>formano</b> i legami dei prodotti (in verde): ${exo ? 'si libera energia' : 'l\'energia fornita resta nei prodotti'}.`,
       },
@@ -1862,7 +1865,7 @@ export function createLab(elements, { onClose }) {
           renderPanel();
           const hint = sim.diag.missing[0];
           const text = hint
-            ? ` Per «${esc(hint.re.r.name)}» ${hint.lack.reduce((t, x) => t + x.count, 0) === 1 ? 'manca' : 'mancano'} ${esc(hint.lack.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', '))}.`
+            ? ` Per «${esc(reactionTitle(hint.re))}» ${hint.lack.reduce((t, x) => t + x.count, 0) === 1 ? 'manca' : 'mancano'} ${esc(hint.lack.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', '))}.`
             : sim.diag.endothermic.length
               ? ' Una reazione è possibile solo fornendo energia: vedi la scheda.'
               : '';
@@ -2001,6 +2004,23 @@ export function createLab(elements, { onClose }) {
       }
     }
   });
+
+  // ricerca tra le reazioni e gruppi del catalogo (si disegnano solo le voci dei gruppi aperti)
+  panel.addEventListener('input', (ev) => {
+    if (!ev.target.matches('[data-rx-search]')) return;
+    state.rx.query = ev.target.value;
+    const searching = ev.target.value.trim() !== '';
+    panel.querySelectorAll('.rx-group--bench, .rx-group--near').forEach((el) => (el.hidden = searching));
+    panel.querySelector('.rx-results').innerHTML = reactionResultsHtml(reactions, { query: state.rx.query, open: state.rx.groups });
+  });
+  panel.addEventListener('toggle', (ev) => {
+    const key = ev.target.dataset?.rxGroup;
+    if (!key) return;
+    if (ev.target.open) state.rx.groups.add(key);
+    else state.rx.groups.delete(key);
+    const body = ev.target.querySelector('.rx-fold__body');
+    if (ev.target.open && !body.children.length) body.innerHTML = reactionGroupBodyHtml(reactions.filter((re) => re.r.group === key));
+  }, true);
 
   root.addEventListener('change', (ev) => {
     const k = ev.target.dataset.opt;
