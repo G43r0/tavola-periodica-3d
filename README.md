@@ -5,6 +5,10 @@ schede informative in italiano e modelli 3D degli atomi esplorabili fino alle si
 (protoni, neutroni, elettroni e quark), più un **laboratorio molecolare** in cui si collegano gli atomi per formare
 molecole e composti. Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 
+**Versione web** — la stessa app si apre anche in una scheda di Chrome, senza installare nulla:
+<https://g43r0.github.io/tavola-periodica-3d/> (pubblicata da GitHub Pages a ogni push su `main`, vedi
+[Versione web](#versione-web-chrome-github-pages)).
+
 | Fase | Contenuto | Stato |
 |------|-----------|-------|
 | 1 | Tavola periodica, ricerca, filtri, scheda dell'elemento | ✅ completata |
@@ -92,6 +96,30 @@ Vanno eseguiti sul rispettivo sistema operativo (producono `.dmg` e `.AppImage`)
   `npm run dist`; se persiste, aggiungi la cartella del progetto alle esclusioni dell'antivirus.
 - **Avviso SmartScreen all'avvio dell'exe** — l'eseguibile non è firmato digitalmente: scegli
   «Ulteriori informazioni → Esegui comunque». Per la distribuzione pubblica serve un certificato di firma del codice.
+
+### Versione web (Chrome, GitHub Pages)
+
+L'interfaccia non dipende da Electron: la build di Vite (`dist/`) funziona così com'è in Chrome, Edge e negli altri
+browser basati su Chromium (serve WebGL 2 per il visualizzatore 3D e il laboratorio). Il workflow
+`.github/workflows/pages.yml` la pubblica su GitHub Pages a ogni push su `main`, dopo aver eseguito i test:
+
+**<https://g43r0.github.io/tavola-periodica-3d/>**
+
+Attivazione (una sola volta): nel repository su GitHub apri **Settings → Pages** e in «Build and deployment»
+scegli **Source: GitHub Actions**. Al push successivo su `main` (oppure da **Actions → Versione web (GitHub Pages)
+→ Run workflow**) il sito viene pubblicato; l'indirizzo compare anche nella pagina **Settings → Pages**.
+
+- GitHub Pages per i repository **privati** richiede un piano GitHub Pro (o Team/Enterprise); con il piano gratuito
+  il repository deve essere pubblico. In ogni caso il sito pubblicato è visibile a chiunque ne conosca l'indirizzo.
+- Tutto (dati, font, Three.js) è servito dallo stesso sito: nessuna richiesta a server esterni.
+
+Per provare in locale la versione web di produzione:
+
+```bash
+npm run preview
+```
+
+e apri `http://127.0.0.1:4173` in Chrome.
 
 ## 5. Dati scientifici
 
@@ -227,6 +255,8 @@ npm test
 ## 8. Struttura del progetto
 
 ```
+.github/workflows/
+  pages.yml           build e pubblicazione della versione web su GitHub Pages
 electron/
   main.cjs            processo principale (finestra, menu, sicurezza: contextIsolation, sandbox)
   preload.cjs         ponte minimo verso il renderer

@@ -8,6 +8,14 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
+## [Non rilasciato]
+
+### Aggiunto
+- **Versione web per Chrome**: il workflow `.github/workflows/pages.yml` esegue i test, compila l'app con Vite e la
+  pubblica su GitHub Pages a ogni push su `main` (<https://g43r0.github.io/tavola-periodica-3d/>). Va attivata una
+  volta da **Settings → Pages → Source: GitHub Actions**.
+- Icona dell'app nella scheda del browser; script `npm run preview` per provare in locale la versione web di produzione.
+
 ## [0.5.0] — 2026-10-11 — Fase 5: Reazioni
 
 Il laboratorio molecolare passa dalle molecole alle trasformazioni chimiche.

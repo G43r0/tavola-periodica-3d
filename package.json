@@ -14,6 +14,7 @@
     "data": "node scripts/build-data.mjs && node scripts/build-binding.mjs",
     "icon": "node scripts/make-icon.mjs",
     "build": "vite build",
+    "preview": "vite build && vite preview --host 127.0.0.1",
     "start": "vite build && electron .",
     "dist": "vite build && electron-builder --win",
     "dist:mac": "vite build && electron-builder --mac",
