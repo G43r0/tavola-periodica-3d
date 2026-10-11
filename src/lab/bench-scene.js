@@ -116,6 +116,7 @@ export function createBenchScene(stage, deps) {
     }
     rebuildLobes();
     applySelection();
+    sync(0);
   }
 
   function rebuildLobes() {
@@ -154,7 +155,10 @@ export function createBenchScene(stage, deps) {
   }
 
   // ---------------------------------------------------------------- aggiornamento per fotogramma
-  engine.add((dt) => {
+  // (chiamato anche da rebuild con dt = 0, così gli oggetti appena creati non compaiono per un
+  // fotogramma con la trasformazione predefinita)
+  engine.add(sync);
+  function sync(dt) {
     const k = 1 - Math.exp(-dt * 10);
     for (const [id, o] of atoms) {
       const a = deps.bench.atoms.get(id);
@@ -216,7 +220,57 @@ export function createBenchScene(stage, deps) {
         }
       });
     }
+  }
+
+  // ---------------------------------------------------------------- effetti delle reazioni
+  // lampo dell'urto (bagliore che si espande e svanisce) ed etichette che salgono e svaniscono (ΔH)
+  const flashes = [];
+  let glowMap = null;
+  engine.add((dt) => {
+    for (let i = flashes.length - 1; i >= 0; i--) {
+      const f = flashes[i];
+      f.t += dt;
+      const k = f.t / 0.8;
+      if (k >= 1) {
+        root.remove(f.sprite);
+        f.sprite.material.dispose();
+        flashes.splice(i, 1);
+        continue;
+      }
+      f.sprite.scale.setScalar(f.size * (0.35 + 1.65 * Math.sqrt(k)));
+      f.sprite.material.opacity = 0.85 * (1 - k) ** 2;
+    }
   });
+
+  function flash(pos, color, size = 1.4) {
+    if (!glowMap) {
+      const c = document.createElement('canvas');
+      c.width = c.height = 64;
+      const g = c.getContext('2d');
+      const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, 'rgba(255,255,255,1)');
+      grad.addColorStop(0.35, 'rgba(255,255,255,0.45)');
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 64, 64);
+      glowMap = new THREE.CanvasTexture(c);
+    }
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowMap, color, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
+    sprite.position.set(pos[0], pos[1], pos[2]);
+    sprite.raycast = () => {};
+    root.add(sprite);
+    flashes.push({ sprite, t: 0, size });
+  }
+
+  function floatText(pos, html, cls = '') {
+    const el = document.createElement('div');
+    el.className = 'lab-float';
+    el.innerHTML = `<span class="${cls}">${html}</span>`;
+    const obj = new CSS2DObject(el);
+    obj.position.set(pos[0], pos[1], pos[2]);
+    root.add(obj);
+    setTimeout(() => root.remove(obj), 2400); // CSS2DObject toglie l'elemento dal DOM quando viene rimosso
+  }
 
   function perpendicular(o, dir) {
     const bench = deps.bench;
@@ -421,7 +475,12 @@ export function createBenchScene(stage, deps) {
     setOptions(o) {
       Object.assign(opts, o);
       rebuildLobes();
+      sync(0);
     },
+    /** Lampo luminoso in `pos` (urto tra molecole, energia liberata o assorbita). */
+    flash,
+    /** Etichetta che sale e svanisce in `pos` (es. ΔH di una reazione). */
+    floatText,
     /** Punto libero vicino al centro della vista, lontano almeno `clearance` dagli atomi presenti. */
     freeSpot(clearance = 1.6) {
       const target = engine.controls.target.clone();

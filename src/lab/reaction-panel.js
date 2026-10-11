@@ -2,6 +2,7 @@
 import { esc, fmtNumber } from '../chem/format.js';
 import { REACTION_GROUPS } from './data/reactions.js';
 import { balanceTable } from './chem/reactions.js';
+import { reactionDH } from './chem/simulate.js';
 import { icons } from '../ui/icons.js';
 
 const sub = (f) => esc(f).replace(/([₀-₉]+)/g, '<span class="sub">$1</span>');
@@ -15,6 +16,93 @@ function term(coef, s, { showOne = false } = {}) {
 export function equationHtml(re) {
   const side = (list, coeffs) => list.map((s, i) => term(coeffs[i], s)).join('<span class="eq-plus">+</span>');
   return `<p class="eq">${side(re.reactants, re.rc)}<span class="eq-arrow">→</span>${side(re.products, re.pc)}</p>`;
+}
+
+/** Equazione in testo semplice: "2 H₂ + O₂ → 2 H₂O" */
+export function equationText(re) {
+  const side = (list, coeffs) => list.map((s, i) => `${coeffs[i] > 1 ? `${coeffs[i]} ` : ''}${s.display}`).join(' + ');
+  return `${side(re.reactants, re.rc)} → ${side(re.products, re.pc)}`;
+}
+
+/** Equazione di un passo della simulazione, nella forma di una reazione caricata. */
+export function stepEquation(step) {
+  if (step.kind === 'library') return step.re;
+  return {
+    reactants: step.reactants.map((x) => ({ display: x.display, mark: '' })),
+    rc: step.reactants.map((x) => x.count),
+    products: [{ display: step.productFormula, mark: '' }],
+    pc: [step.product.copies],
+  };
+}
+
+const countText = (list) => list.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${sub(x.display)}`).join(', ');
+
+/**
+ * Resoconto di «Simula reazione»: i passi avvenuti (con ΔH), le molecole che non hanno reagito o,
+ * se non è successo nulla, il perché (reagenti mancanti, energia da fornire, condizioni particolari).
+ */
+export function simulationReportHtml(sim) {
+  const running = sim.status === 'running';
+  const title = running
+    ? 'Simulazione in corso…'
+    : sim.status === 'none'
+      ? 'Nessuna reazione'
+      : sim.steps.length === 1
+        ? 'Reazione avvenuta'
+        : `${sim.steps.length} reazioni avvenute`;
+  const steps = sim.steps
+    .map((s, i) => {
+      const exo = s.dH < 0;
+      const precise = s.kind === 'library' || s.method === 'formation';
+      // minuscola solo la prima lettera: «cloruro di ferro(III)» conserva il numero romano
+      const product = s.kind === 'library' ? '' : s.product.entry.name.charAt(0).toLowerCase() + s.product.entry.name.slice(1);
+      const name = s.kind === 'library' ? s.re.r.name : `Si forma: ${product}`;
+      const what = s.kind === 'library'
+        ? `<button type="button" class="chip-btn" data-reaction="${s.re.r.id}">Scheda della reazione</button>`
+        : `<p class="mp-note">Non è nella libreria delle reazioni: prodotto previsto dal modello (la sostanza nota che si forma con gli stessi atomi),
+            ΔH ${precise ? 'dalle entalpie di formazione' : 'stimato con le energie di legame medie'}.</p>`;
+      return `<li class="sim-step">
+        <p class="sim-step__name"><span class="sim-step__n">${i + 1}</span><b>${esc(name)}</b>${s.times > 1 ? `<span class="sim-times" title="L'equazione è avvenuta ${s.times} volte">× ${s.times}</span>` : ''}</p>
+        ${equationHtml(stepEquation(s))}
+        <p class="rx-dh sim-step__dh ${exo ? 'is-exo' : 'is-endo'}">ΔH${precise ? '°' : ' ≈'} <b>${kj(s.dH, precise ? 1 : 0)} kJ</b> <span>${exo ? 'esotermica' : 'endotermica'}</span></p>
+        ${what}
+      </li>`;
+    })
+    .join('');
+
+  let body = '';
+  if (sim.status === 'none' && sim.diag) {
+    const { missing, endothermic, needs } = sim.diag;
+    const hints = [
+      ...missing.slice(0, 3).map((m) => {
+        const n = m.lack.reduce((t, x) => t + x.count, 0);
+        return `<div class="sim-hint"><p>Per «${esc(m.re.r.name)}» ${n === 1 ? 'manca' : 'mancano'} <b>${countText(m.lack)}</b>:</p>${equationHtml(m.re)}
+          <button type="button" class="chip-btn" data-sim-add="${m.re.r.id}">Aggiungi e simula</button></div>`;
+      }),
+      ...endothermic.slice(0, 3).map((re) => `<div class="sim-hint is-endo"><p>«${esc(re.r.name)}» è endotermica (ΔH° = ${kj(reactionDH(re))} kJ):
+          avviene solo fornendo energia.</p>${equationHtml(re)}</div>`),
+      ...needs.map((re) => `<div class="sim-hint"><p>«${esc(re.r.name)}» richiede ${esc(re.r.needs)}: non avviene da sola.</p></div>`),
+    ];
+    body = `<p>Le molecole si urtano ma <b>rimbalzano</b>: nessun urto è efficace${sim.energy ? ', nemmeno fornendo energia' : ''}.</p>
+      ${hints.join('')}
+      ${endothermic.length ? `<button type="button" class="lab-act sim-energy" data-act="sim-energy">${icons.bolt(16)}<span>Fornisci energia e simula</span></button>
+        <p class="mp-note">Calore, luce o corrente elettrica forniscono l'energia che manca alle reazioni endotermiche.</p>` : ''}
+      ${hints.length ? '' : '<p class="mp-note">Queste sostanze sono stabili insieme. Aggiungi un altro reagente (es. O₂ per una combustione) oppure apri <b>Reazioni</b> per vedere quelle della libreria.</p>'}`;
+  } else {
+    body = `${steps ? `<ol class="sim-steps">${steps}</ol>` : ''}
+      ${sim.leftover?.length ? `<p class="sim-left">Non hanno reagito: <b>${countText(sim.leftover)}</b> <small>(in eccesso o senza un partner adatto)</small></p>` : ''}`;
+  }
+
+  return `<section class="sim-report${running ? ' is-running' : ''}">
+    <header class="mp-head">
+      <p class="mp-kind">Simulazione${sim.energy ? ' · con energia fornita' : ''}</p>
+      <h3 class="mp-name">${title}</h3>
+      ${running ? '' : `<button type="button" class="btn-icon mp-close" data-act="sim-close" title="Chiudi il resoconto">${icons.close(16)}</button>`}
+    </header>
+    ${body}
+    <p class="mp-note">Una reazione avviene solo con un <b>urto efficace</b>: le molecole devono scontrarsi con abbastanza energia
+      (energia di attivazione) e con l'orientamento giusto. Gli atomi non si creano né si distruggono: si riorganizzano.</p>
+  </section>`;
 }
 
 /** Elenco delle reazioni, con in testa quelle possibili con le molecole presenti sul banco. */

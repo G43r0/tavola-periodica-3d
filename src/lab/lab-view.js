@@ -8,7 +8,7 @@ import { Bench } from './chem/molecule.js';
 import { analyzeLewis } from './chem/lewis.js';
 import { checkBond, checkOrder, bondCharacter, ORDER_NAME, Art } from './chem/bonding.js';
 import { createRelaxer, initialLayout, vsepr } from './chem/geometry.js';
-import { createLibraryIndex, covalentParts, displayFormula, chargeText, formulaKey, normalizeName, subscript } from './chem/identify.js';
+import { createLibraryIndex, covalentParts, displayFormula, chargeText, formulaKey, normalizeName, subscript, signature } from './chem/identify.js';
 import { combine, entryBonds, entryEnergy, ionicDecomposition } from './chem/combine.js';
 import { parseFormula, looksLikeSmiles, splitFormulaList } from './chem/formula.js';
 import { parseSmiles } from './chem/smiles.js';
@@ -18,12 +18,16 @@ import { createPalette } from './palette.js';
 import { unitPanelHtml, summaryHtml } from './molecule-panel.js';
 import { REACTIONS } from './data/reactions.js';
 import { speciesInfo, reactionEnthalpy } from './chem/reactions.js';
+import { planReactions, diagnose, modelReaction, graphBondEnergy, reactionDH } from './chem/simulate.js';
 import { bondEnergy } from './chem/bond-energy.js';
-import { reactionListHtml, reactionCardHtml, equationHtml } from './reaction-panel.js';
+import { reactionListHtml, reactionCardHtml, equationHtml, equationText, stepEquation, simulationReportHtml } from './reaction-panel.js';
 import { esc, fmtNumber } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
 
 const MAX_ATOMS = 150;
+const MAX_SIM_ROUNDS = 8;
+// elementi il cui stato standard è una molecola (H₂, N₂, O₂, alogeni): un loro atomo isolato non ha ΔHf° = 0
+const MOLECULAR_ELEMENTS = new Set([1, 7, 8, 9, 17, 35, 53]);
 /** Nome in minuscolo dentro una frase, senza toccare i numeri romani: "Cloruro di ferro(III)" → "cloruro di ferro(III)". */
 const lowerFirst = (s) => s.charAt(0).toLowerCase() + s.slice(1);
 const PALETTE_W = 318;
@@ -54,6 +58,7 @@ const TEMPLATE = `
   <aside class="lab-panel" aria-live="polite"></aside>
   <div class="lab-dock" role="toolbar" aria-label="Azioni">
     <button type="button" class="lab-act lab-act--primary" data-act="combine" title="Combina gli atomi selezionati (o tutti gli atomi liberi) nella struttura più stabile (C)">${icons.merge(18)}<span>Combina</span></button>
+    <button type="button" class="lab-act lab-act--sim" data-act="simulate" title="Simula reazione: le molecole sul banco (o quelle selezionate) si muovono e si urtano; se possono reagire si trasformano nei prodotti (R)">${icons.bolt(18)}<span>Simula reazione</span></button>
     <button type="button" class="lab-act" data-act="separate" title="Separa la molecola selezionata in atomi (S)">${icons.split(18)}<span>Separa</span></button>
     <button type="button" class="lab-act" data-act="ions" hidden title="Separa il composto ionico nei suoi ioni">${icons.split(18)}<span>In ioni</span></button>
     <span class="lab-dock__sep"></span>
@@ -124,7 +129,10 @@ export function createLab(elements, { onClose }) {
     opts: { labels: true, lone: true },
     rx: { open: false, current: null, practice: false, coeffs: null },
     anim: null, // animazione di una reazione in corso
+    sim: null, // ultima «Simula reazione»: passi, molecole avanzate, diagnosi
   };
+  /** Reazione o simulazione in corso: il banco non si modifica. */
+  const busy = () => Boolean(state.anim) || state.sim?.status === 'running';
 
   // reazioni caricate: specie con formula da mostrare, coefficienti ed entalpia
   const reactions = REACTIONS.map((r) => {
@@ -366,7 +374,7 @@ export function createLab(elements, { onClose }) {
 
   // ---------------------------------------------------------------- cronologia
   function act(fn) {
-    if (state.anim) {
+    if (busy()) {
       message('Attendi la fine della reazione.', 'info', 2000);
       return false;
     }
@@ -376,20 +384,25 @@ export function createLab(elements, { onClose }) {
     history.past.push(snap);
     if (history.past.length > 120) history.past.shift();
     history.future = [];
+    state.sim = null; // il banco è cambiato: il resoconto della simulazione non vale più
     refresh();
     return true;
   }
   function undo() {
+    if (busy()) return message('Attendi la fine della reazione.', 'info', 2000);
     if (!history.past.length) return message('Niente da annullare.', 'info');
     history.future.push(bench.snapshot());
     bench.restore(history.past.pop());
+    state.sim = null;
     cleanSelection();
     refresh();
   }
   function redo() {
+    if (busy()) return message('Attendi la fine della reazione.', 'info', 2000);
     if (!history.future.length) return message('Niente da ripetere.', 'info');
     history.past.push(bench.snapshot());
     bench.restore(history.future.pop());
+    state.sim = null;
     cleanSelection();
     refresh();
   }
@@ -434,6 +447,7 @@ export function createLab(elements, { onClose }) {
 
   // ---------------------------------------------------------------- scheda
   function renderPanel() {
+    $('[data-act="reactions"]').setAttribute('aria-pressed', String(state.rx.open));
     if (state.rx.open) return renderReactions();
     const sel = selectedUnits();
     const scroll = panel.scrollTop;
@@ -441,9 +455,14 @@ export function createLab(elements, { onClose }) {
       panel.innerHTML = unitPanelHtml(lab, sel[0], { alternatives: state.alternatives.get(sel[0].key) ?? [] });
       panel.scrollTop = scroll;
     } else if (sel.length > 1) {
-      panel.innerHTML = `${summaryHtml(sel)}<p class="mp-note">${sel.length} unità selezionate: premi <b>Combina</b> per riunirne gli atomi in una nuova struttura.</p>`;
+      panel.innerHTML = `${summaryHtml(sel)}<p class="mp-note">${sel.length} unità selezionate: premi <b>Combina</b> per riunirne gli atomi in una nuova struttura
+        oppure <b>Simula reazione</b> per farle urtare tra loro.</p>`;
     } else {
       panel.innerHTML = summaryHtml(state.units);
+    }
+    if (state.sim && sel.length !== 1) {
+      panel.insertAdjacentHTML('afterbegin', simulationReportHtml(state.sim));
+      panel.scrollTop = state.sim.status === 'running' ? 0 : scroll;
     }
     // reazioni possibili con le molecole presenti
     const ready = matchReactions().filter((m) => m.missing.length === 0);
@@ -466,11 +485,12 @@ export function createLab(elements, { onClose }) {
     for (const k of ['add-e', 'remove-e']) $(`[data-act="${k}"]`).disabled = sel.length !== 1;
     $('[data-act="delete"]').disabled = !has;
     $('[data-act="clear"]').disabled = bench.atoms.size === 0;
+    $('[data-act="simulate"]').disabled = state.units.length < 2;
     $('[data-act="undo"]').disabled = !history.past.length;
     $('[data-act="redo"]').disabled = !history.future.length;
     root.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
     root.classList.toggle('mode-cut', state.mode === 'cut');
-    root.classList.toggle('is-reacting', Boolean(state.anim));
+    root.classList.toggle('is-reacting', busy());
     root.classList.toggle('mode-bond', state.mode === 'bond');
   }
 
@@ -1201,21 +1221,31 @@ export function createLab(elements, { onClose }) {
   });
 
   // ---------------------------------------------------------------- reazioni
-  /** Unità del banco che corrispondono a una specie (molecola della libreria o atomo neutro isolato). */
-  function benchSpecies() {
+  /** Specie di un'unità: id della molecola della libreria o "el:X" per un atomo neutro isolato; null se nessuna. */
+  function speciesKey(u) {
+    if (u.charge !== 0) return null;
+    if (u.ident.exact) return u.ident.entry.id;
+    if (u.ids.length === 1) return `el:${lab.get(u.desc.atoms[0].z).symbol}`;
+    return null;
+  }
+
+  /** Unità raggruppate per specie: chiave → unità. */
+  function speciesOf(units) {
     const m = new Map();
-    const sel = new Set(selectedUnits().map((u) => u.key));
-    // prima le unità selezionate
-    const units = [...state.units].sort((a, b) => sel.has(b.key) - sel.has(a.key));
     for (const u of units) {
-      let key = null;
-      if (u.ident.exact && u.charge === 0) key = u.ident.entry.id;
-      else if (u.ids.length === 1 && u.charge === 0) key = `el:${lab.get(u.desc.atoms[0].z).symbol}`;
+      const key = speciesKey(u);
       if (!key) continue;
       if (!m.has(key)) m.set(key, []);
       m.get(key).push(u);
     }
     return m;
+  }
+
+  /** Unità del banco che corrispondono a una specie (molecola della libreria o atomo neutro isolato). */
+  function benchSpecies() {
+    // prima le unità selezionate
+    const sel = new Set(selectedUnits().map((u) => u.key));
+    return speciesOf([...state.units].sort((a, b) => sel.has(b.key) - sel.has(a.key)));
   }
 
   function matchReactions() {
@@ -1298,7 +1328,7 @@ export function createLab(elements, { onClose }) {
 
   function runReaction(id) {
     const re = reactionById.get(id);
-    if (!re || state.anim) return;
+    if (!re || busy()) return;
     let groups = availableUnits(re);
     if (!groups) {
       groups = prepareReactants(re);
@@ -1312,22 +1342,58 @@ export function createLab(elements, { onClose }) {
 
   const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
   const pairKey = (a, b) => (a < b ? `${a}:${b}` : `${b}:${a}`);
+  const bondKey = (b) => `${pairKey(b.a, b.b)}:${b.ionic ? 'i' : b.order}`;
+  // tempi di un evento (s): avvicinamento e urto → rottura dei legami → nuovi legami → prodotti al loro posto
+  const T_BREAK = 0.9;
+  const T_SWAP = 1.8;
+  const T_END = 3.3;
+  const T_BOUNCE = 1.8; // urto non efficace: le molecole si avvicinano e tornano indietro
 
-  /** Pianifica l'animazione: dove andrà ogni atomo, quali legami si rompono e quali si formano. */
-  function startAnimation(re, groups) {
+  /** Posizioni dei prodotti attorno a `center` nel piano della vista: in fila, o su più file se sono tanti. */
+  function slotsAround(center, n, spacing = 2.6) {
+    const m = engine.camera.matrixWorld.elements;
+    const right = [m[0], m[1], m[2]];
+    const up = [m[4], m[5], m[6]];
+    const cols = n <= 4 ? n : Math.ceil(Math.sqrt(n * 1.6));
+    const rows = Math.ceil(n / cols);
+    return Array.from({ length: n }, (_, k) => {
+      const row = Math.floor(k / cols);
+      const inRow = row === rows - 1 ? n - row * cols : cols;
+      const x = ((k % cols) - (inRow - 1) / 2) * spacing;
+      const y = ((rows - 1) / 2 - row) * spacing * 0.85;
+      return center.map((c, q) => c + right[q] * x + up[q] * y);
+    });
+  }
+
+  /** Evento di animazione: i legami tra gli atomi `ids` diventano `newBonds` e gli atomi vanno in `targets`. */
+  function reactionEvent(groups, ids, center, newBonds, targets, dH) {
+    const oldBonds = bench.bondsWithin(ids);
+    const newKeys = new Set(newBonds.map(bondKey));
+    return {
+      kind: 'react',
+      groups,
+      ids,
+      center,
+      newBonds,
+      targets,
+      dH,
+      breaking: oldBonds.filter((b) => !newKeys.has(bondKey(b))),
+      oldKeys: new Set(oldBonds.map(bondKey)),
+    };
+  }
+
+  /** Un'istanza di una reazione della libreria: dove andrà ogni atomo, quali legami si rompono e quali si formano. */
+  function libraryEvent(re, groups) {
     const ids = groups.flat().filter((id) => bench.atoms.has(id));
-    if (!ids.length) return;
+    if (!ids.length) return null;
     const center = centroid(ids.map((id) => bench.atoms.get(id).pos));
-    const right = [engine.camera.matrixWorld.elements[0], engine.camera.matrixWorld.elements[1], engine.camera.matrixWorld.elements[2]];
     // istanze dei prodotti con la loro disposizione
     const instances = [];
     re.r.products.forEach(([c, key], pi) => {
       for (let n = 0; n < c; n++) instances.push({ key, sp: re.products[pi] });
     });
-    const plan = [];
-    instances.forEach((inst, k) => {
-      const off = (k - (instances.length - 1) / 2) * 2.6;
-      const c = center.map((x, q) => x + right[q] * off);
+    const places = slotsAround(center, instances.length);
+    const plan = instances.map((inst, k) => {
       const sp = inst.sp;
       const bonds = sp.element ? [] : entryBonds(lab, library.get(inst.key));
       const desc = {
@@ -1335,8 +1401,8 @@ export function createLab(elements, { onClose }) {
         bonds: bonds.filter((b) => !b.ionic),
         ionic: bonds.filter((b) => b.ionic).map((b) => ({ i: b.i, j: b.j, transfer: b.transfer, donor: b.donor })),
       };
-      const layout = sp.atoms.length > 1 ? initialLayout(lab, desc, c, k + 1) : [c];
-      plan.push({ inst, bonds, layout, atomIds: [] });
+      const layout = sp.atoms.length > 1 ? initialLayout(lab, desc, places[k], k + 1) : [places[k]];
+      return { inst, bonds, layout, atomIds: [] };
     });
     // ogni atomo dei prodotti prende l'atomo dello stesso elemento più vicino tra quelli dei reagenti
     const pool = new Map();
@@ -1364,7 +1430,7 @@ export function createLab(elements, { onClose }) {
       filled.add(sk);
       plan[p.sl.pi].atomIds[p.sl.ai] = p.id;
     }
-    if (filled.size !== slots.length) return message('Gli atomi dei reagenti non corrispondono ai prodotti.', 'bad');
+    if (filled.size !== slots.length) return null;
 
     const newBonds = [];
     for (const p of plan) {
@@ -1374,97 +1440,467 @@ export function createLab(elements, { onClose }) {
         newBonds.push(b.ionic ? { a, b: c, ionic: true, transfer: b.transfer, donor: p.atomIds[b.donor] } : { a, b: c, order: b.order });
       }
     }
-    const oldBonds = bench.bondsWithin(ids);
-    const newKeys = new Set(newBonds.map((b) => `${pairKey(b.a, b.b)}:${b.ionic ? 'i' : b.order}`));
-    const oldKeys = new Set(oldBonds.map((b) => `${pairKey(b.a, b.b)}:${b.ionic ? 'i' : b.order}`));
-    const breaking = oldBonds.filter((b) => !newKeys.has(`${pairKey(b.a, b.b)}:${b.ionic ? 'i' : b.order}`));
     const targets = new Map();
     plan.forEach((p) => p.atomIds.forEach((id, k) => targets.set(id, p.layout[k])));
+    return reactionEvent(groups, ids, center, newBonds, targets, reactionDH(re));
+  }
 
+  /** Reazione prevista dal modello: gli atomi dei gruppi si legano con `bonds` (indici sugli atomi dei gruppi, come da combine). */
+  function modelEvent(groups, bonds, dH) {
+    const ids = groups.flat();
+    const center = centroid(ids.map((id) => bench.atoms.get(id).pos));
+    const newBonds = bonds.map((b) =>
+      b.ionic ? { a: ids[b.i], b: ids[b.j], ionic: true, transfer: b.transfer, donor: ids[b.donor] } : { a: ids[b.i], b: ids[b.j], order: b.order },
+    );
+    // molecole dei prodotti (componenti connesse) disposte attorno al centro
+    const parent = ids.map((_, i) => i);
+    const find = (x) => (parent[x] === x ? x : (parent[x] = find(parent[x])));
+    for (const b of bonds) parent[find(b.i)] = find(b.j);
+    const parts = new Map();
+    ids.forEach((_, i) => parts.set(find(i), [...(parts.get(find(i)) ?? []), i]));
+    const list = [...parts.values()];
+    const places = slotsAround(center, list.length);
+    const targets = new Map();
+    list.forEach((idx, k) => {
+      const local = new Map(idx.map((v, n) => [v, n]));
+      const inner = bonds.filter((b) => local.has(b.i));
+      const charge = idx.map(() => 0);
+      for (const b of inner.filter((x) => x.ionic)) {
+        charge[local.get(b.donor)] += b.transfer;
+        charge[local.get(b.donor === b.i ? b.j : b.i)] -= b.transfer;
+      }
+      const desc = {
+        atoms: idx.map((i, n) => ({ z: bench.atoms.get(ids[i]).z, charge: charge[n] })),
+        bonds: inner.filter((b) => !b.ionic).map((b) => ({ i: local.get(b.i), j: local.get(b.j), order: b.order })),
+        ionic: inner.filter((b) => b.ionic).map((b) => ({ i: local.get(b.i), j: local.get(b.j), transfer: b.transfer, donor: local.get(b.donor) })),
+      };
+      const layout = idx.length > 1 ? initialLayout(lab, desc, places[k], k + 1) : [places[k]];
+      idx.forEach((i, n) => targets.set(ids[i], layout[n]));
+    });
+    return reactionEvent(groups, ids, center, newBonds, targets, dH);
+  }
+
+  /** Urto non efficace: le molecole si avvicinano e rimbalzano. */
+  function bounceEvent(groups) {
+    const ids = groups.flat();
+    return { kind: 'bounce', groups, ids, center: centroid(ids.map((id) => bench.atoms.get(id).pos)) };
+  }
+
+  /**
+   * Avvia gli eventi in parallelo, ciascuno con un piccolo ritardo (urti successivi).
+   * @param {{spectators?:number[][], say?:{start?:string, break?:string, form?:string}, onDone?:Function}} opts
+   *   spectators: molecole che non reagiscono (solo agitazione termica); say: messaggi delle fasi
+   */
+  function startAnim(events, { spectators = [], say = {}, onDone = null } = {}) {
+    const wobble = () => [0, 1, 2].map(() => ({ w: 7 + Math.random() * 6, p: Math.random() * Math.PI * 2 }));
+    const startOf = (ids) => new Map(ids.map((id) => [id, [...bench.atoms.get(id).pos]]));
+    events.forEach((ev, n) => {
+      ev.delay = n * Math.min(0.3, 1.5 / events.length);
+      ev.phase = 'approach';
+      ev.start = startOf(ev.ids);
+      ev.wobble = ev.groups.map(wobble);
+      // ogni gruppo si avvicina al centro fino a toccare gli altri (non oltre)
+      ev.shifts = ev.groups.map((g) => {
+        const pts = g.map((id) => bench.atoms.get(id).pos);
+        const gc = centroid(pts);
+        const d = ev.center.map((x, q) => x - gc[q]);
+        const dist = Math.hypot(...d);
+        const reach = Math.max(...pts.map((p) => Math.hypot(p[0] - gc[0], p[1] - gc[1], p[2] - gc[2]))) + 0.55;
+        return d.map((x) => (dist > reach ? (x * (dist - reach)) / dist : 0));
+      });
+    });
+    state.anim = {
+      t: 0,
+      events,
+      say,
+      onDone,
+      highlight: new Map(),
+      spectators: spectators.map((ids) => ({ ids, start: startOf(ids), wobble: wobble() })),
+      end: Math.max(...events.map((ev) => ev.delay + (ev.kind === 'bounce' ? T_BOUNCE : T_END))),
+    };
+    scene.setBondHighlight(new Map());
+    if (say.start) message(say.start, 'info', 2600);
+    updateDock();
+  }
+
+  /** Pianifica l'animazione di una reazione della libreria con i reagenti già sul banco. */
+  function startAnimation(re, groups) {
+    if (busy()) return;
+    const ev = libraryEvent(re, groups);
+    if (!ev) return message('Gli atomi dei reagenti non corrispondono ai prodotti.', 'bad');
     // cronologia: si potrà annullare l'intera reazione
     history.past.push(bench.snapshot());
     history.future = [];
     state.alternatives.clear();
-    const groupCentroids = groups.map((g) => centroid(g.map((id) => bench.atoms.get(id).pos)));
-    state.anim = {
-      re,
-      t: 0,
-      ids,
-      groups,
-      start: new Map(ids.map((id) => [id, [...bench.atoms.get(id).pos]])),
-      groupCentroids,
-      center,
-      targets,
-      breaking,
-      newBonds,
-      oldKeys,
-      phase: 'approach',
-    };
-    scene.setBondHighlight(new Map());
-    message(`<b>${esc(re.r.name)}</b>: le molecole si avvicinano e si urtano…`, 'info', 2500);
-    updateDock();
+    state.sim = null;
+    startAnim([ev], {
+      say: {
+        start: `<b>${esc(re.r.name)}</b>: le molecole si avvicinano e si urtano…`,
+        break: 'Si <b>rompono</b> i legami dei reagenti (in rosso): serve energia.',
+        form: 'Si <b>formano</b> i nuovi legami dei prodotti (in verde): si libera energia.',
+      },
+      onDone: () => {
+        state.selected = new Set(ev.ids.slice(0, 1));
+        refresh();
+        const dH = re.enthalpy.formation.value;
+        const energy = dH == null ? '' : ` · ΔH° = <b>${dH > 0 ? '+' : '−'}${fmtNumber(Math.abs(dH), 1, 1)} kJ</b> (${dH < 0 ? 'esotermica: libera calore' : 'endotermica: assorbe energia'})`;
+        message(`Reazione completata: <b>${esc(re.r.name)}</b>${energy}`, 'ok', 7000);
+      },
+    });
+  }
+
+  const wobbleAt = (wv, t, amp) => wv.map((o) => Math.sin(o.w * t + o.p) * amp);
+  function placeGroup(ev, gi, offset) {
+    for (const id of ev.groups[gi]) {
+      const a = bench.atoms.get(id);
+      const s0 = ev.start.get(id);
+      if (a) for (let q = 0; q < 3; q++) a.pos[q] = s0[q] + offset[q];
+    }
   }
 
   function stepAnimation(dt) {
     const A = state.anim;
     A.t += Math.min(dt, 0.05);
-    const T_BREAK = 0.9;
-    const T_SWAP = 1.8;
-    const T_END = 3.3;
-    if (A.t < T_BREAK) {
-      const k = ease(A.t / T_BREAK) * 0.4;
-      A.groups.forEach((g, gi) => {
-        const gc = A.groupCentroids[gi];
-        for (const id of g) {
-          const a = bench.atoms.get(id);
-          const s0 = A.start.get(id);
-          for (let q = 0; q < 3; q++) a.pos[q] = s0[q] + (A.center[q] - gc[q]) * k;
+    let swapped = false;
+    let lit = false;
+    for (const ev of A.events) {
+      const t = A.t - ev.delay;
+      if (t < 0 || ev.done) continue;
+      if (ev.kind === 'bounce') {
+        const k = Math.sin(Math.PI * Math.min(1, t / T_BOUNCE));
+        ev.groups.forEach((g, gi) => {
+          const w = wobbleAt(ev.wobble[gi], t, 0.1 * (1 - k));
+          placeGroup(ev, gi, ev.shifts[gi].map((x, q) => x * k * 0.9 + w[q]));
+        });
+        if (t >= T_BOUNCE / 2 && ev.phase === 'approach') {
+          ev.phase = 'hit';
+          scene.flash(ev.center, 0xc9d8f0, 1.3);
         }
-      });
-      return;
-    }
-    if (A.phase === 'approach') {
-      A.phase = 'break';
-      scene.setBondHighlight(new Map(A.breaking.map((b) => [b.id, 'break'])));
-      if (A.breaking.length) message('Si <b>rompono</b> i legami dei reagenti (in rosso): serve energia.', 'warn', 2000);
-    }
-    if (A.t < T_SWAP) return;
-    if (A.phase === 'break') {
-      A.phase = 'form';
-      for (const b of bench.bondsWithin(A.ids)) bench.removeBond(b.id);
-      for (const id of A.ids) bench.atoms.get(id).extra = 0;
-      const formed = new Map();
-      for (const b of A.newBonds) {
-        const id = b.ionic ? bench.addBond(b.a, b.b, { ionic: true, transfer: b.transfer, donor: b.donor }) : bench.addBond(b.a, b.b, { order: b.order });
-        if (!A.oldKeys.has(`${pairKey(b.a, b.b)}:${b.ionic ? 'i' : b.order}`)) formed.set(id, 'form');
+        if (t >= T_BOUNCE) {
+          ev.groups.forEach((g, gi) => placeGroup(ev, gi, [0, 0, 0]));
+          ev.done = true;
+        }
+        continue;
       }
-      A.from = new Map(A.ids.map((id) => [id, [...bench.atoms.get(id).pos]]));
+      if (t < T_BREAK) {
+        // avvicinamento con agitazione termica che si smorza all'urto
+        const k = ease(t / T_BREAK);
+        ev.groups.forEach((g, gi) => {
+          const w = wobbleAt(ev.wobble[gi], t, 0.12 * (1 - k));
+          placeGroup(ev, gi, ev.shifts[gi].map((x, q) => x * k + w[q]));
+        });
+        continue;
+      }
+      if (ev.phase === 'approach') {
+        ev.phase = 'break';
+        ev.groups.forEach((g, gi) => placeGroup(ev, gi, ev.shifts[gi]));
+        for (const b of ev.breaking) A.highlight.set(b.id, 'break');
+        lit = true;
+        scene.flash(ev.center, 0xfff1c4, 1.2);
+        if (ev === A.events[0] && A.say.break && ev.breaking.length) message(A.say.break, 'warn', 2000);
+      }
+      if (t < T_SWAP) continue;
+      if (ev.phase === 'break') {
+        ev.phase = 'form';
+        for (const b of bench.bondsWithin(ev.ids)) {
+          A.highlight.delete(b.id);
+          bench.removeBond(b.id);
+        }
+        for (const id of ev.ids) bench.atoms.get(id).extra = 0;
+        for (const b of ev.newBonds) {
+          const id = b.ionic ? bench.addBond(b.a, b.b, { ionic: true, transfer: b.transfer, donor: b.donor }) : bench.addBond(b.a, b.b, { order: b.order });
+          if (!ev.oldKeys.has(bondKey(b))) A.highlight.set(id, 'form');
+        }
+        ev.from = new Map(ev.ids.map((id) => [id, [...bench.atoms.get(id).pos]]));
+        swapped = lit = true;
+        // energia liberata (arancione) o assorbita (azzurro)
+        const exo = ev.dH == null || ev.dH < 0;
+        scene.flash(ev.center, exo ? 0xffa64d : 0x5cb6ff, exo ? 2.4 : 1.6);
+        if (ev.dH != null) {
+          // sopra le molecole, nella direzione «su» della vista
+          const m = engine.camera.matrixWorld.elements;
+          const at = ev.center.map((c, q) => c + m[4 + q] * 1.4);
+          scene.floatText(at, `${ev.dH < 0 ? '−' : '+'}${fmtNumber(Math.abs(Math.round(ev.dH)), 0)} kJ`, exo ? 'is-exo' : 'is-endo');
+        }
+        if (ev === A.events[0] && A.say.form) message(A.say.form, 'ok', 2200);
+      }
+      const k = ease(Math.min(1, (t - T_SWAP) / (T_END - T_SWAP)));
+      for (const id of ev.ids) {
+        const a = bench.atoms.get(id);
+        const f0 = ev.from.get(id);
+        const t0 = ev.targets.get(id);
+        for (let q = 0; q < 3; q++) a.pos[q] = f0[q] + (t0[q] - f0[q]) * k;
+      }
+      if (t >= T_END) ev.done = true;
+    }
+    // le molecole che non reagiscono si agitano e poi tornano al loro posto
+    const env = Math.sin(Math.PI * Math.min(1, A.t / A.end));
+    for (const s of A.spectators) {
+      const w = wobbleAt(s.wobble, A.t, 0.1 * env);
+      for (const id of s.ids) {
+        const a = bench.atoms.get(id);
+        const s0 = s.start.get(id);
+        if (a) for (let q = 0; q < 3; q++) a.pos[q] = s0[q] + w[q];
+      }
+    }
+    if (swapped) {
       analyze();
       syncRelaxers();
-      scene.rebuild();
-      scene.setBondHighlight(formed);
-      message('Si <b>formano</b> i nuovi legami dei prodotti (in verde): si libera energia.', 'ok', 2000);
     }
-    const k = ease(Math.min(1, (A.t - T_SWAP) / (T_END - T_SWAP)));
-    for (const id of A.ids) {
-      const a = bench.atoms.get(id);
-      const f0 = A.from.get(id);
-      const t0 = A.targets.get(id);
-      for (let q = 0; q < 3; q++) a.pos[q] = f0[q] + (t0[q] - f0[q]) * k;
-    }
-    if (A.t < T_END) return;
+    if (lit) scene.setBondHighlight(new Map(A.highlight)); // ricostruisce anche la scena
+    if (A.t < A.end) return;
     // fine
+    for (const s of A.spectators) {
+      for (const id of s.ids) {
+        const a = bench.atoms.get(id);
+        if (a) a.pos = [...s.start.get(id)];
+      }
+    }
     state.anim = null;
-    const re = A.re;
-    state.selected = new Set(A.ids.slice(0, 1));
     refresh();
     setTimeout(() => {
       if (!state.anim) scene.setBondHighlight(new Map());
     }, 1600);
-    const dH = re.enthalpy.formation.value;
-    const energy = dH == null ? '' : ` · ΔH° = <b>${dH > 0 ? '+' : '−'}${fmtNumber(Math.abs(dH), 1, 1)} kJ</b> (${dH < 0 ? 'esotermica: libera calore' : 'endotermica: assorbe energia'})`;
-    message(`Reazione completata: <b>${esc(re.r.name)}</b>${energy}`, 'ok', 7000);
+    A.onDone?.();
+  }
+
+  // ---------------------------------------------------------------- «Simula reazione»
+  // Le molecole sul banco (o quelle selezionate) si agitano e si urtano. A ogni passo avviene la reazione
+  // scelta da planReactions (libreria) o, in mancanza, da modelReaction (sintesi per addizione); i prodotti
+  // possono reagire nel passo successivo. Se non succede nulla, le molecole rimbalzano e il resoconto spiega perché.
+
+  /** Unità che partecipano alla simulazione: quelle che contengono i suoi atomi. */
+  const simUnits = (sim) => state.units.filter((u) => u.ids.some((id) => sim.atoms.has(id)));
+  const countList = (list) => {
+    const m = new Map();
+    for (const d of list) m.set(d, (m.get(d) || 0) + 1);
+    return [...m].map(([display, count]) => ({ display, count }));
+  };
+
+  function simulate({ energy = false, atoms = null } = {}) {
+    if (busy()) return message('Attendi la fine della reazione.', 'info', 2000);
+    let units = atoms ? state.units.filter((u) => u.ids.some((id) => atoms.has(id))) : selectedUnits();
+    if (!atoms && units.length < 2) units = state.units;
+    if (units.length < 2) {
+      return message('Per simulare una reazione servono almeno <b>due molecole</b> (o atomi) sul banco: aggiungile con <b>Esempi</b>, <b>Formula</b> o dalla tavolozza.', 'info', 5000);
+    }
+    if (units.length > 60) return message('Troppe molecole per la simulazione: selezionane alcune (Ctrl+clic) e riprova.', 'bad');
+    history.past.push(bench.snapshot()); // Ctrl+Z annulla l'intera simulazione
+    if (history.past.length > 120) history.past.shift();
+    history.future = [];
+    state.alternatives.clear();
+    state.rx.open = false;
+    state.rx.current = null;
+    state.selected.clear();
+    scene.setSelection([]);
+    const sim = { energy, atoms: new Set(units.flatMap((u) => u.ids)), rounds: 0, steps: [], executed: [], reacted: new Set(), status: 'running', leftover: [], diag: null };
+    state.sim = sim;
     renderPanel();
+    updateDock();
+    message(`Simulazione${energy ? ' con energia fornita dall\'esterno' : ''}: ${units.length} unità si muovono e si urtano…`, 'info', 2400);
+    nextRound(sim);
+  }
+
+  function nextRound(sim) {
+    if (state.sim !== sim || sim.status !== 'running') return;
+    try {
+      const units = simUnits(sim);
+      if (sim.rounds < MAX_SIM_ROUNDS && (libraryRound(sim, units) || modelRound(sim, units))) return;
+      finishSimulation(sim, units);
+    } catch (err) {
+      console.error(err);
+      state.sim = null;
+      state.anim = null;
+      refresh();
+      message('Simulazione interrotta da un errore imprevisto.', 'bad');
+    }
+  }
+
+  /**
+   * Per ogni istanza della reazione, le molecole dei reagenti vicine tra loro sul banco.
+   * @param {[string, number][]} req specie e numero di molecole per istanza
+   * @param {Map<string, object[]>} pool unità disponibili per specie (quelle scelte vengono tolte)
+   */
+  function assignGroups(req, pool, times) {
+    const out = [];
+    for (let n = 0; n < times; n++) {
+      const groups = [];
+      let center = null;
+      for (const [key, c] of req) {
+        for (let m = 0; m < c; m++) {
+          const list = pool.get(key);
+          if (!list?.length) return out;
+          let pick = 0;
+          if (center) {
+            let best = Infinity;
+            list.forEach((u, i) => {
+              const p = centroid(u.positions);
+              const d = Math.hypot(p[0] - center[0], p[1] - center[1], p[2] - center[2]);
+              if (d < best) [best, pick] = [d, i];
+            });
+          }
+          groups.push(list.splice(pick, 1)[0].ids);
+          center = centroid(groups.flat().map((id) => bench.atoms.get(id).pos));
+        }
+      }
+      out.push(groups);
+    }
+    return out;
+  }
+
+  /**
+   * Un passo con le reazioni della libreria: tutte quelle che le molecole presenti possono fare subito
+   * avvengono insieme (i prodotti reagiranno nel passo successivo). false se nessuna è possibile.
+   */
+  function libraryRound(sim, units) {
+    const species = speciesOf(units);
+    if (!species.size) return false;
+    const inventory = new Map([...species].map(([k, list]) => [k, list.length]));
+    const now = planReactions(inventory, reactions, { energy: sim.energy, exclude: sim.executed }).steps.filter((s) => s.onlyOrig);
+    const pool = new Map([...species].map(([k, list]) => [k, [...list]]));
+    const events = [];
+    const records = [];
+    for (const { re, times } of now) {
+      const list = assignGroups(re.r.reactants.map(([c, k]) => [k, c]), pool, times)
+        .map((groups) => libraryEvent(re, groups))
+        .filter(Boolean);
+      if (!list.length) continue;
+      events.push(...list);
+      records.push({ kind: 'library', re, times: list.length, dH: reactionDH(re) });
+    }
+    if (!events.length) return false;
+    const [first] = records;
+    const exo = records.every((r) => r.dH < 0);
+    runRound(sim, events, {
+      records,
+      executed: records.map((r) => r.re),
+      say: {
+        start: records.length === 1
+          ? `Passo ${sim.rounds + 1} · <b>${esc(first.re.r.name)}</b>${first.times > 1 ? ` (${first.times} volte)` : ''}: ${esc(equationText(first.re))}`
+          : `Passo ${sim.rounds + 1} · ${records.length} reazioni insieme: ${records.map((r) => `<b>${esc(r.re.r.name)}</b>`).join(', ')}`,
+        break: 'Urto efficace: si <b>rompono</b> i legami dei reagenti (in rosso).',
+        form: `Si <b>formano</b> i legami dei prodotti (in verde): ${exo ? 'si libera energia' : 'l\'energia fornita resta nei prodotti'}.`,
+      },
+    });
+    return true;
+  }
+
+  /** Un passo previsto dal modello (sintesi per addizione); false se nessuna coppia o terna reagisce. */
+  function modelRound(sim, units) {
+    const groups = new Map();
+    for (const u of units) {
+      if (u.charge !== 0 || u.invalid) continue;
+      let key = speciesKey(u);
+      let hf = null;
+      if (key?.startsWith('el:')) hf = MOLECULAR_ELEMENTS.has(u.desc.atoms[0].z) ? null : 0;
+      else if (key) hf = u.ident.entry.hf ?? null;
+      else if (!u.ionic) key = `x:${formulaKey(lab, u.desc.atoms, 0)}:${signature(u.desc.atoms, u.desc.bonds)}`;
+      if (!key) continue;
+      if (!groups.has(key)) {
+        const bondKj = u.ionic ? null : graphBondEnergy(lab, u.desc.atoms, u.desc.bonds, { tabulated: true });
+        groups.set(key, { key, units: [], zs: u.desc.atoms.map((a) => a.z), hf, bondKj });
+      }
+      groups.get(key).units.push(u);
+    }
+    const species = [...groups.values()].map((g) => ({ ...g, count: g.units.length }));
+    const best = modelReaction(lab, library, species, reactions);
+    if (!best) return false;
+    const req = [...new Set(best.keys)].map((k) => [k, best.keys.filter((x) => x === k).length]);
+    const times = Math.min(...req.map(([k, m]) => Math.floor(groups.get(k).units.length / m)));
+    const instances = assignGroups(req, new Map([...groups].map(([k, g]) => [k, [...g.units]])), times);
+    const events = [];
+    for (const g of instances) {
+      const r = combine(lab, library, g.flat().map((id) => bench.atoms.get(id).z));
+      if (r.ok && r.source === 'library' && r.entry.id === best.product.entry.id) events.push(modelEvent(g, r.bonds, best.dH));
+    }
+    if (!events.length) return false;
+    const entry = best.product.entry;
+    const productFormula = entry.formula ?? displayFormula(lab, entry.graph.atoms, 0, { ionic: entry.ionic });
+    const reactants = countList(instances[0].map((g) => state.unitOfAtom.get(g[0]).formula));
+    const record = { kind: 'model', product: best.product, productFormula, reactants, dH: best.dH, method: best.method, times: events.length };
+    runRound(sim, events, {
+      records: [record],
+      say: {
+        start: `Passo ${sim.rounds + 1} · urto ${esc(equationText(stepEquation(record)).split(' → ')[0])}: il modello prevede <b>${esc(lowerFirst(entry.name))}</b>`,
+        break: 'Urto efficace: si <b>rompono</b> i legami dei reagenti (in rosso).',
+        form: `Si forma <b>${esc(lowerFirst(entry.name))}</b> (in verde i nuovi legami): si libera energia.`,
+      },
+    });
+    return true;
+  }
+
+  function runRound(sim, events, { records, executed = [], say }) {
+    const used = new Set(events.flatMap((ev) => ev.ids));
+    const spectators = simUnits(sim)
+      .filter((u) => !u.ids.some((id) => used.has(id)))
+      .map((u) => u.ids);
+    for (const id of used) sim.reacted.add(id);
+    startAnim(events, {
+      spectators,
+      say,
+      onDone: () => {
+        sim.rounds++;
+        sim.steps.push(...records);
+        sim.executed.push(...executed);
+        renderPanel();
+        // breve pausa: i prodotti assumono la loro forma prima dell'urto successivo
+        setTimeout(() => nextRound(sim), 700);
+      },
+    });
+  }
+
+  function finishSimulation(sim, units) {
+    if (!sim.steps.length) {
+      // nessuna reazione: urti non efficaci, le molecole rimbalzano
+      sim.diag = diagnose(new Map([...speciesOf(units)].map(([k, list]) => [k, list.length])), reactions, { energy: sim.energy });
+      startAnim([bounceEvent(units.map((u) => u.ids))], {
+        say: { start: 'Le molecole si urtano…' },
+        onDone: () => {
+          history.past.pop(); // il banco non è cambiato: niente da annullare
+          sim.status = 'none';
+          updateDock();
+          renderPanel();
+          const hint = sim.diag.missing[0];
+          const text = hint
+            ? ` Per «${esc(hint.re.r.name)}» ${hint.lack.reduce((t, x) => t + x.count, 0) === 1 ? 'manca' : 'mancano'} ${esc(hint.lack.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', '))}.`
+            : sim.diag.endothermic.length
+              ? ' Una reazione è possibile solo fornendo energia: vedi la scheda.'
+              : '';
+          message(`<b>Nessuna reazione</b>: le molecole si urtano ma rimbalzano (urti non efficaci).${text}`, 'warn', 7000);
+        },
+      });
+      return;
+    }
+    sim.status = 'done';
+    sim.leftover = countList(units.filter((u) => !u.ids.some((id) => sim.reacted.has(id))).map((u) => u.formula));
+    state.selected.clear();
+    refresh();
+    if (bench.atoms.size <= 60) scene.frameAll(1);
+    const eq = sim.steps.map((s) => `${esc(equationText(stepEquation(s)))}${s.times > 1 ? ` (× ${s.times})` : ''}`).join(' · ');
+    const dH = sim.steps.reduce((t, s) => t + s.dH * s.times, 0);
+    const left = sim.leftover.length ? `<br><small>Non hanno reagito: ${esc(sim.leftover.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', '))}.</small>` : '';
+    message(
+      `<b>Simulazione completata</b>${sim.rounds > 1 ? ` in ${sim.rounds} passi` : ''}: ${eq}
+        · ΔH ${dH < 0 ? '≈ −' : '≈ +'}${fmtNumber(Math.abs(Math.round(dH)), 0)} kJ (${dH < 0 ? 'esotermica' : 'endotermica'})${left}`,
+      'ok',
+      9000,
+    );
+  }
+
+  /** Aggiunge i reagenti che mancano a una reazione «quasi pronta» e ripete la simulazione. */
+  function addMissingAndSimulate(id) {
+    const prev = state.sim;
+    const m = prev?.diag?.missing.find((x) => x.re.r.id === id);
+    if (!m) return;
+    const size = m.lack.reduce((t, x) => t + x.count * (x.key.startsWith('el:') ? 1 : library.get(x.key).graph.atoms.length), 0);
+    if (bench.atoms.size + size > MAX_ATOMS) return message(`Il banco può contenere al massimo ${MAX_ATOMS} atomi.`, 'bad');
+    const atoms = new Set(prev.atoms);
+    const ok = act(() => {
+      for (const x of m.lack) {
+        for (let n = 0; n < x.count; n++) for (const a of placeSpecies(x.key, scene.freeSpot(2.4))) atoms.add(a);
+      }
+    });
+    if (ok) simulate({ energy: prev.energy, atoms });
   }
 
   // ---------------------------------------------------------------- testi al passaggio del puntatore
@@ -1506,6 +1942,7 @@ export function createLab(elements, { onClose }) {
       buildEntry(MOLECULES.find((m) => m.id === t.dataset.example));
     }
     if (t.dataset.reaction) openReaction(t.dataset.reaction);
+    if (t.dataset.simAdd) addMissingAndSimulate(t.dataset.simAdd);
     if (t.dataset.rxTab) {
       state.rx.practice = t.dataset.rxTab === 'practice';
       renderPanel();
@@ -1535,6 +1972,9 @@ export function createLab(elements, { onClose }) {
       case 'close': close(); break;
       case 'deselect': select([]); break;
       case 'combine': combineAction(); break;
+      case 'simulate': simulate(); break;
+      case 'sim-energy': simulate({ energy: true, atoms: state.sim?.atoms }); break;
+      case 'sim-close': state.sim = null; renderPanel(); break;
       case 'separate': separate(); break;
       case 'ions': separate({ ions: true }); break;
       case 'add-e': changeCharge(+1); break;
@@ -1648,6 +2088,7 @@ export function createLab(elements, { onClose }) {
       ev.preventDefault();
       deleteSelected();
     } else if (key === 'c') combineAction();
+    else if (key === 'r') simulate();
     else if (key === 's') separate();
     else if (key === 'v') setMode('move');
     else if (key === 'b') setMode('bond');
@@ -1666,7 +2107,7 @@ export function createLab(elements, { onClose }) {
   window.addEventListener('resize', () => !root.hidden && layout());
 
   // solo in sviluppo: accesso dalla console per i test
-  if (import.meta.env.DEV) window.__lab = { bench, lab, library, state, scene, addAtom, bond, combineAction, buildEntry, select, separate, cycleOrder, breakBond, changeCharge, undo, redo, reactions, openReaction, runReaction, matchReactions, interpret, buildFromFormula, toggleFormula };
+  if (import.meta.env.DEV) window.__lab = { bench, lab, library, state, scene, addAtom, bond, combineAction, buildEntry, select, separate, cycleOrder, breakBond, changeCharge, undo, redo, reactions, openReaction, runReaction, matchReactions, interpret, buildFromFormula, toggleFormula, simulate };
 
   // ---------------------------------------------------------------- apertura / chiusura
   let lastFocus = null;

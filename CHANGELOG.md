@@ -8,6 +8,23 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
+## [Non rilasciato]
+
+### Aggiunto
+- **Simula reazione** (`R`): le molecole sul banco (o quelle selezionate) si agitano e si urtano; con un urto efficace
+  i legami rotti diventano rossi, i nuovi verdi, un bagliore e un'etichetta mostrano l'energia liberata o assorbita (ΔH).
+  Sceglie le reazioni della libreria possibili con le molecole presenti (reagente limitante, molecole in eccesso,
+  reazioni contemporanee e a catena); fuori libreria prevede le sintesi per addizione verso sostanze note
+  (H₂ + Br₂ → 2 HBr, SO₃ + H₂O → H₂SO₄) se sono abbastanza esotermiche. Se non succede nulla le molecole rimbalzano
+  e il resoconto spiega perché, con «Aggiungi e simula» (reagenti mancanti) e «Fornisci energia e simula»
+  (reazioni endotermiche). `Ctrl+Z` annulla l'intera simulazione.
+- Test della simulazione (`tests/lab/simulate.test.mjs`).
+
+### Corretto
+- Gli oggetti 3D del banco appena ricreati (legami, coppie solitarie) non compaiono più per un fotogramma ingranditi
+  al centro della scena durante le reazioni.
+- `Ctrl+Z` / `Ctrl+Y` durante l'animazione di una reazione non lasciano più il banco in uno stato incoerente.
+
 ## [0.5.0] — 2026-10-11 — Fase 5: Reazioni
 
 Il laboratorio molecolare passa dalle molecole alle trasformazioni chimiche.

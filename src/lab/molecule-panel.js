@@ -254,6 +254,7 @@ export function summaryHtml(units) {
         <li>Trascina un atomo vicino a un altro per <b>legarli</b>, oppure premi <b>Combina</b>.</li>
         <li>Clic su un legame per renderlo doppio o triplo; tasto destro (o le forbici) per romperlo.</li>
         <li>Clic su una molecola per vederne la scheda.</li>
+        <li>Con due o più molecole sul banco premi <b>Simula reazione</b>: si urtano e, se possono, reagiscono.</li>
       </ol>
       <p>Oppure scegli una molecola da <b>Esempi</b>.</p></div>`;
   }
