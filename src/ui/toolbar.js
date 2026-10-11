@@ -5,7 +5,7 @@ import { hasActiveFilters, initialState } from '../state/store.js';
 import { esc } from '../chem/format.js';
 import { icons } from './icons.js';
 
-export function createToolbar(header, legend, elements, store, { onOpen, onInfo, onLab, onCategoryHover }) {
+export function createToolbar(header, legend, elements, store, { onOpen, onInfo, onLab, onSandbox, onCategoryHover }) {
   header.innerHTML = `
     <div class="brand">
       <span class="brand__logo">${icons.atom(26)}</span>
@@ -46,6 +46,7 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
       <span class="result-count" aria-live="polite"></span>
       <button type="button" class="btn-ghost reset" hidden title="Azzera ricerca e filtri">${icons.reset(15)}<span>Azzera</span></button>
       <button type="button" class="btn-ghost lab-entry" data-action="lab" title="Laboratorio molecolare: collega gli atomi e costruisci molecole">${icons.flask(16)}<span>Laboratorio</span></button>
+      <button type="button" class="btn-ghost lab-entry" data-action="sandbox" title="Sandbox degli elementi: polveri, liquidi e gas che fondono, bruciano e reagiscono">${icons.sand(16)}<span>Sandbox</span></button>
       <button type="button" class="btn-icon" data-action="info" title="Fonti dei dati e guida">${icons.info(18)}</button>
     </div>`;
 
@@ -95,6 +96,7 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
     }
     if (ev.target.closest('[data-action="info"]')) onInfo();
     if (ev.target.closest('[data-action="lab"]')) onLab?.();
+    if (ev.target.closest('[data-action="sandbox"]')) onSandbox?.();
   });
 
   legend.addEventListener('click', (ev) => {

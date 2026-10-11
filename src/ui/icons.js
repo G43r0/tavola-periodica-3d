@@ -41,5 +41,11 @@ export const icons = {
   minus: (s) => svg(`<path d="M5 12h14"/>`, s),
   book: (s) => svg(`<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/>`, s),
   broom: (s) => svg(`<path d="M15 3 9.5 12.5"/><path d="M6 13h8l1.5 8H4.5z"/><path d="M8 17v4M11.5 17v4"/>`, s),
+  sand: (s) => svg(`<path d="M3 20.5h18"/><path d="M5.5 20.5c1.2-4 3.7-6.5 6.5-6.5s5.3 2.5 6.5 6.5"/><circle cx="12" cy="4.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="9.5" cy="11" r="0.9" fill="currentColor" stroke="none"/><circle cx="14.5" cy="11" r="0.9" fill="currentColor" stroke="none"/>`, s),
+  flame: (s) => svg(`<path d="M12 21.5c-3.6 0-6.5-2.6-6.5-6.2 0-3.4 2.4-5.4 3.7-8.3.4 1.8 1.4 3 2.6 3.6-.2-3.3 1.3-5.9 3.5-8.1.1 3.6 3.2 5.9 3.2 10.4 0 4.2-2.9 8.6-6.5 8.6z"/><path d="M12 21.5c-1.6 0-2.8-1.2-2.8-2.9 0-1.9 1.6-2.9 2.3-4.6 1.4 1.3 3.3 2.6 3.3 4.6 0 1.7-1.2 2.9-2.8 2.9z"/>`, s),
+  snow: (s) => svg(`<path d="M12 2.5v19M3.8 7.25l16.4 9.5M3.8 16.75l16.4-9.5"/><path d="m9.5 4 2.5 2 2.5-2M9.5 20l2.5-2 2.5 2M4.2 10.4l3.1-.6-1-3M19.8 13.6l-3.1.6 1 3M4.2 13.6l3.1.6-1 3M19.8 10.4l-3.1-.6 1-3"/>`, s),
+  thermo: (s) => svg(`<path d="M10 4.5a2 2 0 0 1 4 0v9.3a4.5 4.5 0 1 1-4 0z"/><path d="M12 9v7.5"/><circle cx="12" cy="17.5" r="1.6" fill="currentColor" stroke="none"/>`, s),
+  eraser: (s) => svg(`<path d="m14.5 4.5 5 5-9.5 9.5H5l-1.5-1.5a2.1 2.1 0 0 1 0-3z"/><path d="m9 10 5 5M10 19h10"/>`, s),
+  step: (s) => svg(`<path d="M6 5v14l9-7z" fill="currentColor" stroke="none"/><rect x="16.5" y="5" width="2.5" height="14" rx="1" fill="currentColor" stroke="none"/>`, s),
   keyboard: (s) => svg(`<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>`, s),
 };

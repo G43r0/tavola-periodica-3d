@@ -20,7 +20,7 @@ const EST_LABEL = {
 
 const SERIES_NAME = { 6: 'serie dei lantanidi', 7: 'serie degli attinidi' };
 
-export function createElementPanel(host, elements, store, { onOpen3D, onOpenLab, onInfo }) {
+export function createElementPanel(host, elements, store, { onOpen3D, onOpenLab, onOpenSandbox, onInfo }) {
   const byZ = new Map(elements.map((e) => [e.z, e]));
 
   host.innerHTML = `
@@ -41,6 +41,7 @@ export function createElementPanel(host, elements, store, { onOpen3D, onOpenLab,
       case 'next': store.set({ selectedZ: z === 118 ? 1 : z + 1 }); break;
       case 'open-3d': onOpen3D(z); break;
       case 'open-lab': onOpenLab?.(z); break;
+      case 'open-sandbox': onOpenSandbox?.(z); break;
       case 'info': onInfo(); break;
     }
   });
@@ -148,6 +149,7 @@ function heroSection(el) {
       <div class="hero__ctas">
         <button type="button" class="btn-primary hero__cta" data-action="open-3d">${icons.cube(18)}<span>Visualizza atomo in 3D</span></button>
         <button type="button" class="btn-ghost hero__lab" data-action="open-lab" title="Apri il laboratorio molecolare con questo atomo sul banco">${icons.flask(16)}<span>Usa nel laboratorio</span></button>
+        <button type="button" class="btn-ghost hero__lab" data-action="open-sandbox" title="Apri la sandbox degli elementi con questo elemento nel pennello">${icons.sand(16)}<span>Sandbox</span></button>
       </div>
     </section>`;
 }

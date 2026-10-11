@@ -190,14 +190,16 @@
 .hero__ctas {
   grid-area: cta;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 .hero__cta {
+  grid-column: 1 / -1;
   width: 100%;
 }
 .hero__lab {
-  height: 100%;
+  justify-content: center;
+  height: 36px;
   white-space: nowrap;
 }
 .counters {
