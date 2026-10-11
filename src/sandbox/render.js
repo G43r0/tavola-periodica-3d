@@ -1,11 +1,19 @@
 // Disegno della sandbox: dalla griglia del motore ai pixel (una cella = un pixel, poi ingrandito dal canvas).
 // Colori realistici delle sostanze, incandescenza dei corpi caldi (dal punto di Draper, 525 °C), fiamme colorate,
 // scintille, scarica nei gas e vista termica. Riempie due buffer: colore e bagliore (per l'effetto glow).
-import { SOLID, LIQUID, GAS, S, COUNT, WOOD, CONCRETE, WALL, GENERATOR, SALT, OXIDE, SOLUTION, variantColor } from './substances.js';
-import { C_BURN, SPARK_ACTIVE, NEUTRON } from './world.js';
+import { SOLID, LIQUID, GAS, S, WOOD, CONCRETE, WALL, GENERATOR, SALT, OXIDE, SOLUTION, variantColor } from './substances.js';
+import { C_BURN, C_DISSOLVED, SPARK_ACTIVE, NEUTRON } from './world.js';
 
 const BG = [6, 9, 14];
 const DRAPER = 798; // K: sotto questa temperatura un corpo caldo non emette luce visibile
+// [Z, colore dello ione in acqua, colore dello ione (II) se diverso]
+const ION_COLOR = [
+  [29, [30, 120, 240]], // Cu²⁺ azzurro
+  [28, [60, 180, 90]], // Ni²⁺ verde
+  [27, [225, 90, 140]], // Co²⁺ rosa
+  [24, [70, 130, 80]], // Cr³⁺ verde scuro
+  [26, [205, 150, 40], [150, 200, 140]], // Fe³⁺ giallo-bruno, Fe²⁺ verde pallido
+];
 
 /** Colore di un corpo nero alla temperatura T (approssimazione di Tanner Helland). */
 export function blackbody(T) {
@@ -56,6 +64,7 @@ function heatColor(t) {
 
 export function createRenderer(world, subs) {
   // colori di base per sostanza e stato: rgba (alfa 0–255)
+  const COUNT = subs.list.length;
   const base = new Uint8Array(COUNT * 16);
   const flags = subs.P.flags;
   for (const s of subs.list) {
@@ -69,6 +78,17 @@ export function createRenderer(world, subs) {
       base[o + 2] = c[2];
       base[o + 3] = Math.round(c[3] * 255);
     }
+  }
+  // colore delle soluzioni: acqua tinta dal soluto (KMnO₄ viola, K₂Cr₂O₇ arancio; i sali bianchi la lasciano limpida);
+  // gli ioni dei metalli di transizione hanno un colore loro, diverso da quello del sale anidro (CuSO₄ bianco → azzurro)
+  const dissolved = new Uint8Array(COUNT * 3);
+  for (const s of subs.list) {
+    if (!s?.colors?.[SOLID]) continue;
+    const ion = s.counts && !/cromato|permanganato/i.test(s.name) && ION_COLOR.find(([z]) => s.counts[z]);
+    const c = ion ? (ion[2] && /\(II\)/.test(s.name) ? ion[2] : ion[1]) : s.colors[SOLID];
+    const white = c[0] > 225 && c[1] > 225 && c[2] > 220;
+    const u = ion ? 0.6 : white ? 0.12 : 0.45;
+    dissolved.set([40 + (c[0] - 40) * u, 120 + (c[1] - 120) * u, 220 + (c[2] - 220) * u].map(Math.round), s.id * 3);
   }
   const tint = new Uint8Array(COUNT * 4); // colore della fiamma e della scarica per elemento
   const discharge = new Uint8Array(COUNT * 4);
@@ -149,9 +169,15 @@ export function createRenderer(world, subs) {
         gb = b;
         ga = 200 * a;
       } else {
-        const ph = T < mp[id] ? SOLID : T < bp[id] ? LIQUID : GAS;
+        const isDissolved = cf[i] & C_DISSOLVED;
+        const ph = isDissolved ? (T < 271.15 ? SOLID : LIQUID) : T < mp[id] ? SOLID : T < bp[id] ? LIQUID : GAS;
         const o = id * 16 + ph * 4;
-        if (id === SALT || id === OXIDE || id === SOLUTION) {
+        if (isDissolved) {
+          const d = id * 3;
+          r = dissolved[d];
+          g = dissolved[d + 1];
+          b = dissolved[d + 2];
+        } else if (id === SALT || id === OXIDE || id === SOLUTION) {
           const c = variant(id, ctype[i]);
           r = c[0];
           g = c[1];
@@ -161,7 +187,7 @@ export function createRenderer(world, subs) {
           g = base[o + 1];
           b = base[o + 2];
         }
-        a = base[o + 3] / 255;
+        a = isDissolved ? 0.88 : base[o + 3] / 255;
         const x = i % W;
         const y = (i / W) | 0;
         // trama: grana del legno, ghiaia del calcestruzzo, muro tratteggiato, variazioni delle polveri

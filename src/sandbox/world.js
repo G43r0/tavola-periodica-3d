@@ -1,13 +1,15 @@
 // Motore della sandbox: griglia di celle (automa cellulare) con temperatura, cambiamenti di stato, densità reali,
-// conduzione del calore, combustione, reazioni chimiche, elettricità, radioattività, fissione ed esplosioni.
-// Modulo puro (niente DOM): lo disegna render.js, lo pilota sandbox-view.js, lo provano i test.
+// conduzione del calore, combustione, soluzioni acquose, le reazioni del catalogo, elettricità, radioattività,
+// fissione ed esplosioni. Modulo puro (niente DOM): lo disegna render.js, lo pilota sandbox-view.js, lo provano i test.
 import {
   AMBIENT, T_MAX, AIR_DENSITY, SOLID, LIQUID, GAS, S, DECAY,
   EMPTY, WOOD, COAL, WATER, FIRE, SMOKE, SALT, OXIDE, SOLUTION, GENERATOR, saltCtype,
 } from './substances.js';
+import { buildChemistry, PAIR_K } from './chemistry.js';
 
 const H_Z = 1;
 const HE_Z = 2;
+const C_Z = 6;
 const O_Z = 8;
 const FE_Z = 26;
 
@@ -15,6 +17,9 @@ const FE_Z = 26;
 export const C_POWDER = 1; // solido sciolto (polvere) invece che blocco
 export const C_BURN = 2; // sta bruciando
 const PHASE_MASK = 3 << 2; // ultimo stato fisico registrato (per i cambiamenti di stato)
+export const C_DISSOLVED = 16; // sciolto in acqua: la cella è una soluzione (es. NaCl(aq))
+const FREEZE_AQ = 271.15; // K: una soluzione acquosa gela poco sotto 0 °C…
+const BOIL_AQ = 373.15; // …e bollendo lascia cristallizzare il soluto
 
 // scintille: 12 = appena caricata, 11 = trasmette ai vicini, 11–8 = attiva, 7–1 = refrattaria
 export const SPARK_START = 12;
@@ -28,6 +33,11 @@ export const RADIATION = 2;
 const MAX_PARTICLES = 4000;
 const MAX_BLASTS_PER_STEP = 24;
 const THERMITE_T = 1200; // K: innesco dell'alluminotermia (la legna non basta, il magnesio sì)
+const DISSOLVE_RATE = 0.03;
+const MIX_RATE = 0.45; // diffusione tra liquidi miscibili
+const C_RAD2_DX = [];
+const C_RAD2_DY = [];
+for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (dx || dy) (C_RAD2_DX.push(dx), C_RAD2_DY.push(dy));
 
 const DX = [-1, 0, 1, -1, 1, -1, 0, 1];
 const DY = [-1, -1, -1, 0, 0, 1, 1, 1];
@@ -47,6 +57,7 @@ export class World {
   constructor(subs, W, H, { seed = 0x2545f491 } = {}) {
     this.subs = subs;
     this.P = subs.P;
+    this.chem = subs.chem ?? (subs.chem = buildChemistry(subs)); // reazioni del catalogo (una volta per tabella)
     this.rng = seed >>> 0 || 1;
     this.openEdges = false;
     this.resize(W, H);
@@ -56,7 +67,7 @@ export class World {
     this.W = W;
     this.H = H;
     const N = (this.N = W * H);
-    this.type = new Uint8Array(N);
+    this.type = new Uint16Array(N);
     this.temp = new Float32Array(N).fill(AMBIENT);
     this.life = new Int16Array(N);
     this.ctype = new Uint16Array(N);
@@ -108,6 +119,74 @@ export class World {
     const P = this.P;
     if (P.flags[id] & S.FIRE) return GAS;
     return T < P.mp[id] ? SOLID : T < P.bp[id] ? LIQUID : GAS;
+  }
+
+  /** Stato fisico della cella: le soluzioni sono liquide tra il gelo e l'ebollizione dell'acqua. */
+  cellPhase(i) {
+    const id = this.type[i];
+    if (!id) return 0;
+    if (this.flags[i] & C_DISSOLVED) return this.temp[i] < FREEZE_AQ ? SOLID : LIQUID;
+    return this.phaseOf(id, this.temp[i]);
+  }
+
+  /** Acqua liquida, una soluzione o uno ione. */
+  isWater(i) {
+    const id = this.type[i];
+    if (id === WATER) return this.temp[i] >= FREEZE_AQ + 2 && this.temp[i] < BOIL_AQ;
+    return Boolean(this.flags[i] & C_DISSOLVED || this.P.flags[id] & S.AQUEOUS);
+  }
+
+  /** La cella è in soluzione o tocca l'acqua (per le reazioni «in soluzione»). */
+  isWet(i) {
+    if (!this.type[i]) return false;
+    if (this.isWater(i)) return true;
+    const x = i % this.W;
+    const y = (i / this.W) | 0;
+    for (const k of ORTHO) {
+      const nx = x + DX[k];
+      const ny = y + DY[k];
+      if (nx >= 0 && ny >= 0 && nx < this.W && ny < this.H && this.isWater(ny * this.W + nx)) return true;
+    }
+    return false;
+  }
+
+  /** Liquido che si mescola con l'acqua (acqua, soluzioni, ioni, alcoli, acidi…). */
+  miscible(i) {
+    const id = this.type[i];
+    return id === WATER || Boolean(this.flags[i] & C_DISSOLVED || this.P.flags[id] & (S.MISCIBLE | S.AQUEOUS));
+  }
+
+  /** C'è una sostanza dell'insieme `ids` nel raggio di 2 celle? */
+  near(x, y, ids) {
+    for (let m = 0; m < 24; m++) {
+      const nx = x + C_RAD2_DX[m];
+      const ny = y + C_RAD2_DY[m];
+      if (nx >= 0 && ny >= 0 && nx < this.W && ny < this.H && ids.has(this.type[ny * this.W + nx])) return true;
+    }
+    return false;
+  }
+
+  /** Una scintilla o una scarica entro 2 celle. */
+  sparkNear(x, y) {
+    if (this.spark[y * this.W + x] >= SPARK_ACTIVE) return true;
+    for (let m = 0; m < 24; m++) {
+      const nx = x + C_RAD2_DX[m];
+      const ny = y + C_RAD2_DY[m];
+      if (nx >= 0 && ny >= 0 && nx < this.W && ny < this.H && this.spark[ny * this.W + nx] >= SPARK_ACTIVE) return true;
+    }
+    return false;
+  }
+
+  /** Luce vicina (fiamma, scintilla, corpo incandescente): basta per le reazioni fotochimiche. */
+  lightNear(x, y) {
+    for (let m = 0; m < 24; m++) {
+      const nx = x + C_RAD2_DX[m];
+      const ny = y + C_RAD2_DY[m];
+      if (nx < 0 || ny < 0 || nx >= this.W || ny >= this.H) continue;
+      const j = ny * this.W + nx;
+      if (this.type[j] === FIRE || this.spark[j] >= SPARK_ACTIVE || this.temp[j] > 1000) return true;
+    }
+    return false;
   }
 
   /** Mette una sostanza nuova nella cella (stato di default: polvere per elementi e prodotti, blocco per i materiali). */
@@ -199,10 +278,11 @@ export class World {
     }
   }
 
-  /** Ossidante accanto alla cella: indice di una cella di O/F, -2 se c'è aria, -1 se manca. */
+  /** Ossidante accanto alla cella: indice di una cella di O/F, -2 se c'è aria (in `airCell`), -1 se manca. */
   oxidizer(x, y) {
     const { W, H, type, P } = this;
     let air = false;
+    this.airCell = -1;
     for (const k of ORTHO) {
       const nx = x + DX[k];
       const ny = y + DY[k];
@@ -212,10 +292,25 @@ export class World {
       }
       const j = ny * W + nx;
       const id = type[j];
-      if (!id || id === FIRE || id === SMOKE) air = true; // la fiamma e il fumo sono mescolati all'aria
-      else if (P.flags[id] & S.OXIDIZER) return j;
+      if (!id || id === FIRE || id === SMOKE) {
+        air = true; // la fiamma e il fumo sono mescolati all'aria
+        this.airCell = j;
+      } else if (P.flags[id] & S.OXIDIZER) return j;
     }
     return air ? -2 : -1;
+  }
+
+  /** Quante celle intorno portano ossigeno (aria, O₂, ossidanti). */
+  oxidizerCount(x, y) {
+    let n = 0;
+    for (const k of ORTHO) {
+      const nx = x + DX[k];
+      const ny = y + DY[k];
+      if (nx < 0 || ny < 0 || nx >= this.W || ny >= this.H) continue;
+      const id = this.type[ny * this.W + nx];
+      if (!id || id === FIRE || id === SMOKE || this.P.flags[id] & S.OXIDIZER) n++;
+    }
+    return n;
   }
 
   touchesAir(x, y) {
@@ -282,16 +377,71 @@ export class World {
       return;
     }
     const T = this.temp[i];
-    let phase = T < P.mp[id] ? SOLID : T < P.bp[id] ? LIQUID : GAS;
-    const last = (this.flags[i] >> 2) & 3;
-    if (last !== phase && last) {
-      // isteresi di 1,5 K: niente sfarfallio tra due stati attorno alla temperatura di transizione
-      const threshold = Math.min(last, phase) === SOLID ? P.mp[id] : P.bp[id];
-      if (Math.abs(T - threshold) < 1.5) phase = last;
+    // gli esplosivi detonano oltre la loro temperatura (o colpiti da un'esplosione)
+    if (sf & S.EXPLOSIVE && T >= P.bp[id]) {
+      this.detonate(i, x, y, id);
+      return;
     }
-    if (last !== phase && this.changePhase(i, id, last, phase)) return;
+    let phase;
+    if (this.flags[i] & C_DISSOLVED) {
+      // soluzione: bollendo l'acqua evapora e il soluto cristallizza
+      if (T >= BOIL_AQ && this.crystallize(i, x, y, id)) return;
+      phase = this.cellPhase(i);
+      this.flags[i] = (this.flags[i] & ~PHASE_MASK) | (phase << 2);
+    } else {
+      // si decompone invece di bollire (carbonato di calcio, zuccheri, nitrati…)
+      const decomposes = sf & S.DECOMPOSES && (this.chem.single.has(id) || sf & S.ORGANIC);
+      if (decomposes && T >= P.bp[id] && this.decompose(i, x, y, id)) return;
+      phase = T < P.mp[id] ? SOLID : T < P.bp[id] || decomposes ? (P.mp[id] < P.bp[id] ? LIQUID : SOLID) : GAS;
+      const last = (this.flags[i] >> 2) & 3;
+      if (last !== phase && last) {
+        // isteresi di 1,5 K: niente sfarfallio tra due stati attorno alla temperatura di transizione
+        const threshold = Math.min(last, phase) === SOLID ? P.mp[id] : P.bp[id];
+        if (Math.abs(T - threshold) < 1.5) phase = last;
+      }
+      if (last !== phase && this.changePhase(i, id, last, phase)) return;
+    }
     if (this.react(i, x, y, id, phase)) return;
     this.move(i, x, y, id, phase);
+  }
+
+  /** Bollendo, l'acqua della soluzione diventa vapore e il soluto torna solido (o gas: l'ammoniaca se ne va). */
+  crystallize(i, x, y, id) {
+    const T = this.temp[i];
+    if (this.spawnNear(x, y, WATER, T, 0, true) < 0) return false;
+    const ph = this.phaseOf(id, T);
+    this.flags[i] = (this.flags[i] & ~(C_DISSOLVED | PHASE_MASK)) | (ph << 2) | (ph === SOLID ? C_POWDER : 0);
+    this.event(`crystal:${id}`);
+    return true;
+  }
+
+  /** Decomposizione termica: una reazione del catalogo, oppure (composti organici) carbonizzazione. */
+  decompose(i, x, y, id) {
+    const list = this.chem.single.get(id);
+    if (list && this.tryList(list, i, x, y, -1, -1)) return true;
+    if (this.P.flags[id] & S.ORGANIC && this.rand() < 0.05) {
+      const T = this.temp[i];
+      this.transmute(i, C_Z, T);
+      this.spawnNear(x, y, WATER, T, 0, true);
+      this.event(`char:${id}`);
+      return true;
+    }
+    return false;
+  }
+
+  /** Detonazione: esplosione e prodotti della reazione del catalogo. */
+  detonate(i, x, y, id) {
+    const rx = this.chem.boom.get(id) ?? this.chem.single.get(id)?.[0];
+    if (this.blasts < MAX_BLASTS_PER_STEP) {
+      this.blasts++;
+      this.explode(x, y, 5, 1.1, 1500);
+    }
+    if (this.type[i] !== id) return;
+    if (rx) this.applyReaction(rx, [i], x, y);
+    else {
+      this.setType(i, SMOKE, 2000);
+      this.event(`boom:${id}`);
+    }
   }
 
   changePhase(i, id, from, to) {
@@ -306,8 +456,8 @@ export class World {
         this.event(`phase:${id}:2${to}`);
       } else this.event(`phase:${id}:${from}${to}`);
     }
-    if (id === SOLUTION && to === GAS) {
-      // l'acqua della soluzione evapora
+    if (this.P.flags[id] & S.AQUEOUS && to === GAS) {
+      // uno ione (o una soluzione) che bolle: resta il vapore acqueo
       this.transmute(i, WATER, this.temp[i]);
       return true;
     }
@@ -329,7 +479,8 @@ export class World {
           const ox = this.oxidizer(x, y);
           if (ox !== -1) {
             if (sf & S.INSTANT_BURN) {
-              this.flash(i, x, y, ox);
+              if (id === H_Z) this.flash(i, x, y, ox);
+              else this.combust(i, x, y, id, ox >= 0 ? ox : this.airCell, true);
               return true;
             }
             this.flags[i] |= C_BURN;
@@ -348,6 +499,9 @@ export class World {
       this.decay(i, x, y, id);
       return true;
     }
+    const chem = this.chem;
+    // reazioni con un solo reagente (decomposizioni catalizzate, fotolisi…)
+    if (chem.hasRx[id] & 4 && this.tryList(chem.single.get(id), i, x, y, -1, -1)) return true;
     // reazioni con un vicino a caso
     const k = (this.rand() * 8) | 0;
     const nx = x + DX[k];
@@ -355,17 +509,184 @@ export class World {
     if (nx < 0 || ny < 0 || nx >= this.W || ny >= this.H) return false;
     const j = ny * this.W + nx;
     const nid = this.type[j];
-    if (!nid) return false;
+    if (!nid) {
+      // reazioni con l'ossigeno dell'aria (il rame caldo annerisce, l'ossido di azoto diventa bruno…)
+      return Boolean(chem.hasRx[id] & 2) && this.tryList(chem.airPair.get(id), i, x, y, j, 0);
+    }
     const nf = P.flags[nid];
+    // una sostanza solubile a contatto con l'acqua si scioglie (la cella d'acqua entra nella soluzione)
+    if (sf & S.SOLUBLE && nid === WATER && !(this.flags[i] & C_DISSOLVED) && this.isWater(j) && this.rand() < DISSOLVE_RATE) {
+      this.dissolve(i, j, id);
+      return true;
+    }
     if (sf & S.WATER_REACTIVE && nid === WATER && this.temp[j] >= P.mp[WATER]) return this.waterReaction(i, j, x, y, id);
     if (sf & S.METAL && nf & S.HALOGEN) return this.halide(i, j, id, nid);
     if (nid === OXIDE && sf & S.METAL && this.temp[i] >= THERMITE_T && (phase !== SOLID || this.flags[i] & C_POWDER)) return this.thermite(i, j, x, y, id);
     if (id === FE_Z && nid === WATER && this.rand() < 0.0008 && this.touchesAir(x, y)) {
-      this.setType(i, OXIDE, this.temp[i], FE_Z);
+      this.setType(i, this.subs.oxideFor(FE_Z) || OXIDE, this.temp[i], FE_Z);
       this.event('rust');
       return true;
     }
+    // le reazioni del catalogo tra le due sostanze
+    if (chem.hasRx[id] & 1) {
+      const list = chem.pair.get(id * PAIR_K + nid);
+      if (list && this.tryList(list, i, x, y, j, nid)) return true;
+    }
     return false;
+  }
+
+  dissolve(i, j, id) {
+    const T = (this.temp[i] + this.temp[j]) / 2;
+    this.clearCell(j);
+    this.temp[i] = T;
+    this.flags[i] = (this.flags[i] & ~(C_POWDER | PHASE_MASK)) | C_DISSOLVED | ((T < FREEZE_AQ ? SOLID : LIQUID) << 2);
+    this.event(`dissolve:${id}`);
+  }
+
+  // ---------------------------------------------------------------- reazioni del catalogo
+  /** Prova le reazioni dell'elenco (a partire da una a caso); true se una è avvenuta. */
+  tryList(list, i, x, y, j, nid) {
+    const n = list.length;
+    const start = (this.rand() * n) | 0;
+    for (let q = 0; q < n; q++) if (this.tryReaction(list[(start + q) % n], i, x, y, j, nid)) return true;
+    return false;
+  }
+
+  /** Verifica le condizioni, raccoglie le celle dei reagenti e, se c'è tutto, esegue la reazione. */
+  tryReaction(rx, i, x, y, j, nid) {
+    const c = rx.cond;
+    if (this.rand() >= c.rate) return false;
+    let T = this.temp[i];
+    if (nid > 0) T = Math.max(T, this.temp[j]);
+    if (T > c.maxT) return false;
+    if (c.light) {
+      if (!(this.lightNear(x, y) || (c.ignite && T >= c.minT))) return false;
+    } else if (T < c.minT) return false;
+    if (c.spark && !(this.spark[i] >= SPARK_ACTIVE || (nid > 0 && this.spark[j] >= SPARK_ACTIVE))) return false;
+    if (c.discharge && !this.sparkNear(x, y)) return false;
+    if (c.catalysts && !this.near(x, y, c.catalysts)) return false;
+    if (c.lowO2 && this.oxidizerCount(x, y) > 1) return false;
+    const slots = this.gatherSlots(rx, i, x, y, j, nid);
+    if (!slots) return false;
+    if (c.water && !slots.every((k) => !this.type[k] || this.isWet(k))) return false;
+    if (c.steam && !slots.some((k) => this.type[k] === WATER && this.temp[k] >= BOIL_AQ)) return false;
+    this.applyReaction(rx, slots, x, y);
+    return true;
+  }
+
+  /** Una cella per reagente: la cella attiva, il vicino (o l'aria per l'O₂) e gli altri entro 2 celle. */
+  gatherSlots(rx, i, x, y, j, nid) {
+    const rs = rx.reactants;
+    const slots = new Array(rs.length).fill(-1);
+    const id = this.type[i];
+    const k = rs.findIndex((r) => r.sid === id);
+    if (k < 0) return null;
+    slots[k] = i;
+    if (nid === 0) {
+      if (rx.air < 0 || slots[rx.air] !== -1) return null;
+      slots[rx.air] = j;
+    } else if (nid > 0) {
+      const k2 = rs.findIndex((r, q) => r.sid === nid && slots[q] === -1);
+      if (k2 < 0) return null;
+      slots[k2] = j;
+    }
+    for (let q = 0; q < rs.length; q++) {
+      if (slots[q] !== -1) continue;
+      const sid = rs[q].sid;
+      let found = -1;
+      for (let m = 0; m < 24 && found < 0; m++) {
+        const nx = x + C_RAD2_DX[m];
+        const ny = y + C_RAD2_DY[m];
+        if (nx < 0 || ny < 0 || nx >= this.W || ny >= this.H) continue;
+        const idx = ny * this.W + nx;
+        const t = this.type[idx];
+        if ((t === sid || (q === rx.air && !t)) && !slots.includes(idx)) found = idx;
+      }
+      if (found < 0) return null;
+      slots[q] = found;
+    }
+    return slots;
+  }
+
+  /**
+   * Esegue la reazione: ogni reagente si consuma in proporzione al suo coefficiente, le celle consumate diventano
+   * i prodotti (scelti secondo i coefficienti) e il calore di reazione cambia la temperatura.
+   */
+  applyReaction(rx, slots, x, y) {
+    const P = this.P;
+    const consumed = [];
+    for (let q = 0; q < slots.length; q++) if (slots[q] >= 0 && this.rand() < rx.reactants[q].c / rx.cmax) consumed.push(slots[q]);
+    if (!consumed.length) consumed.push(slots[rx.maxIndex] >= 0 ? slots[rx.maxIndex] : slots[0]);
+    let wet = rx.cond.water;
+    let Tsum = 0;
+    for (const k of consumed) {
+      const t = this.type[k];
+      Tsum += t ? this.temp[k] : AMBIENT;
+      if (t && (this.flags[k] & C_DISSOLVED || P.flags[t] & S.AQUEOUS)) wet = true;
+    }
+    // in soluzione il calore si disperde nell'acqua (neutralizzazione: qualche decina di gradi, non centinaia)
+    const T = clampT(Tsum / consumed.length + (wet && !rx.cond.water ? rx.dT / 6 : rx.dT));
+    const nProd = Math.floor((consumed.length * rx.P) / rx.R + this.rand());
+    for (let n = 0; n < Math.max(nProd, consumed.length); n++) {
+      const sid = n < nProd ? this.sampleProduct(rx) : 0;
+      if (n < consumed.length) {
+        if (sid) this.placeProduct(consumed[n], sid, T, wet);
+        else this.clearCell(consumed[n]);
+      } else {
+        const cell = this.spawnNear(x, y, sid, T, 0, P.densG[sid] < AIR_DENSITY);
+        if (cell >= 0) this.placeProduct(cell, sid, T, wet);
+      }
+    }
+    this.event(`rx:${rx.id}`);
+  }
+
+  sampleProduct(rx) {
+    let r = this.rand() * rx.P;
+    for (const p of rx.products) if ((r -= p.c) < 0) return p.sid;
+    return rx.products[rx.products.length - 1].sid;
+  }
+
+  /** Mette un prodotto nella cella; in soluzione le sostanze solubili restano sciolte, le altre precipitano. */
+  placeProduct(cell, sid, T, wet) {
+    this.setType(cell, sid, T);
+    if (wet && sid !== WATER && this.P.flags[sid] & S.SOLUBLE && T < BOIL_AQ && this.phaseOf(sid, T) !== GAS) {
+      this.flags[cell] = (this.flags[cell] & ~(C_POWDER | PHASE_MASK)) | C_DISSOLVED | (LIQUID << 2);
+    }
+  }
+
+  /** Combustione di un composto: la reazione del catalogo con l'ossigeno (o, se manca, CO₂ + H₂O). */
+  combust(i, x, y, id, ox, flash = false) {
+    const P = this.P;
+    const T = Math.max(this.temp[i], P.flame[id]);
+    this.temp[i] = T;
+    const rx = this.chem.comb.get(id);
+    const oxCell = ox >= 0 && (!this.type[ox] || this.type[ox] === O_Z || this.type[ox] === FIRE || this.type[ox] === SMOKE) ? ox : -1;
+    if (rx) {
+      const slots = rx.reactants.map((r) => (r.sid === id ? i : oxCell));
+      if (slots[rx.air] < 0) slots[rx.air] = -1;
+      this.applyReaction(rx, slots, x, y);
+    } else {
+      // senza reazione in catalogo: il carbonio diventa CO₂, l'idrogeno acqua
+      const counts = this.subs.list[id].counts ?? {};
+      const products = [counts[6] ? this.subs.byKey.get('co2').id : 0, counts[1] ? WATER : 0].filter(Boolean);
+      if (!products.length) products.push(SMOKE);
+      this.setType(i, products[0], T);
+      if (products[1] && oxCell >= 0) this.setType(oxCell, products[1], T * 0.9);
+      this.event(`burn:${id}`);
+    }
+    if (flash) {
+      const tint = P.flameTint[id];
+      for (let k = 0; k < 8; k++) {
+        const nx = x + DX[k];
+        const ny = y + DY[k];
+        if (nx < 0 || ny < 0 || nx >= this.W || ny >= this.H) continue;
+        const j = ny * this.W + nx;
+        if (!this.type[j]) {
+          if (this.rand() < 0.5) this.setType(j, FIRE, P.flame[id], tint);
+        } else if (this.type[j] === id) this.temp[j] = Math.max(this.temp[j], P.ignite[id] + 20);
+        else if (!(P.flags[this.type[j]] & S.WALL)) this.temp[j] = clampT(this.temp[j] + 40);
+      }
+    }
   }
 
   /** Metallo alcalino (o alcalino-terroso) + acqua → idrossido in soluzione + idrogeno + calore. */
@@ -377,8 +698,11 @@ export class World {
     if (this.rand() >= P.waterRate[id] * (1 + Math.max(0, T - AMBIENT) / 600)) return false;
     const heat = P.waterHeat[id];
     const tw = this.temp[w] + heat * 0.5;
-    if (tw < P.bp[SOLUTION]) this.setType(w, SOLUTION, tw, id);
-    else this.setType(w, WATER, tw); // l'acqua vaporizza subito
+    const hydroxide = this.subs.hydroxideFor(id);
+    // es. NaOH(aq): la soluzione resta sotto l'ebollizione, il calore in più fa bollire l'acqua vicina
+    if (hydroxide) this.placeProduct(w, hydroxide, Math.min(tw, BOIL_AQ - 10), true);
+    else if (tw >= BOIL_AQ) this.setType(w, WATER, tw); // l'acqua vaporizza subito
+    else this.setType(w, SOLUTION, tw, id);
     // 2 M + 2 H₂O → 2 MOH + H₂: una cella di idrogeno ogni due di metallo alcalino
     const alkali = this.subs.list[id].category === 'alkali';
     if (!alkali || this.rand() < 0.5) this.setType(m, H_Z, T + heat, id);
@@ -398,8 +722,10 @@ export class World {
     if (this.rand() >= 0.03 * r * r * (1 + Math.max(0, T - AMBIENT) / 150)) return false;
     const heat = 120 + 500 * r;
     const keep = this.flags[m] & C_POWDER;
-    this.setType(m, SALT, this.temp[m] + heat, saltCtype(id, hal));
-    if (!keep && this.phaseOf(SALT, this.temp[m]) === SOLID) this.flags[m] &= ~C_POWDER; // un blocco di metallo diventa un blocco di sale
+    const lib = this.subs.saltFor(id, hal); // il sale della libreria (NaCl, FeCl₃…) o, se manca, uno generico
+    if (lib) this.setType(m, lib, this.temp[m] + heat);
+    else this.setType(m, SALT, this.temp[m] + heat, saltCtype(id, hal));
+    if (!keep && this.phaseOf(this.type[m], this.temp[m]) === SOLID) this.flags[m] &= ~C_POWDER; // un blocco di metallo diventa un blocco di sale
     // una molecola X₂ ogni 2/n atomi di metallo con carica n
     if (this.rand() < Math.min(1, P.charge[id] / 2)) this.clearCell(h);
     else this.temp[h] = clampT(this.temp[h] + heat * 0.5);
@@ -415,7 +741,9 @@ export class World {
     if (P.en[id] >= P.en[b] - 0.15) return false;
     if (this.rand() >= 0.3) return false;
     const T = Math.max(this.temp[m], 2800) + this.rand() * 300;
-    this.setType(m, OXIDE, T, id);
+    const lib = this.subs.oxideFor(id);
+    if (lib) this.setType(m, lib, T);
+    else this.setType(m, OXIDE, T, id);
     this.setType(o, b, T);
     this.heatAround(x, y, 2, 450);
     this.event(`thermite:${id}:${b}`);
@@ -472,19 +800,27 @@ export class World {
       else this.clearCell(ox);
     }
     if (this.life[i] <= 0) {
-      this.finishBurn(i, id);
+      this.finishBurn(i, x, y, id, ox >= 0 ? ox : this.airCell);
       return true;
     }
     return false;
   }
 
-  finishBurn(i, id) {
+  finishBurn(i, x, y, id, ox) {
     const P = this.P;
     const T = this.temp[i];
+    this.flags[i] &= ~C_BURN;
+    if (id >= this.subs.firstCompound) {
+      this.combust(i, x, y, id, ox);
+      return;
+    }
     this.event(`burn:${id}`);
     const end = P.burnEnd[id];
     if (end === OXIDE) {
-      this.setType(i, OXIDE, Math.min(T, 1900), id);
+      // l'ossido della libreria (MgO, Fe₂O₃…) o, se manca, un ossido generico
+      const lib = this.subs.oxideFor(id);
+      if (lib) this.setType(i, lib, Math.min(T, 1900));
+      else this.setType(i, OXIDE, Math.min(T, 1900), id);
       return;
     }
     if (end) {
@@ -725,6 +1061,7 @@ export class World {
     if (nf & S.FIRE) return 2;
     if (nf & (S.WALL | S.GENERATOR)) return 0;
     const T = this.temp[j];
+    if (this.flags[j] & C_DISSOLVED) return T >= FREEZE_AQ && P.dissDens[nid] < d ? 2 : 0;
     if (T < P.mp[nid]) return 0;
     const nd = T < P.bp[nid] ? P.densL[nid] : (P.densG[nid] * 273.15) / T;
     return nd < d ? 2 : 0;
@@ -732,6 +1069,7 @@ export class World {
 
   isGasCell(j) {
     const id = this.type[j];
+    if (this.flags[j] & C_DISSOLVED) return false;
     return Boolean(this.P.flags[id] & S.FIRE) || this.temp[j] >= this.P.bp[id];
   }
 
@@ -763,7 +1101,22 @@ export class World {
 
   moveLiquid(i, x, y, id) {
     const { W, H, P } = this;
-    const d = P.densL[id];
+    const dissolved = this.flags[i] & C_DISSOLVED;
+    const d = dissolved ? P.dissDens[id] : P.densL[id];
+    // liquidi miscibili (acqua, soluzioni, alcol…) si mescolano per diffusione
+    if (this.rand() < MIX_RATE && this.miscible(i)) {
+      const k = ORTHO[(this.rand() * 4) | 0];
+      const nx = x + DX[k];
+      const ny = y + DY[k];
+      if (nx >= 0 && ny >= 0 && nx < W && ny < H) {
+        const j = ny * W + nx;
+        const nid = this.type[j];
+        if (nid && nid !== id && this.miscible(j) && this.cellPhase(j) === LIQUID) {
+          this.swap(i, j);
+          return;
+        }
+      }
+    }
     if (y + 1 < H) {
       const b = i + W;
       let r = this.sinkInto(b, d);
@@ -787,7 +1140,7 @@ export class World {
       return;
     }
     // scorre di lato, fino a `disp` celle
-    const disp = P.disp[id];
+    const disp = dissolved ? 5 : P.disp[id];
     let dir = this.rand() < 0.5 ? -1 : 1;
     for (let s = 0; s < 2; s++, dir = -dir) {
       let target = -1;
@@ -843,7 +1196,7 @@ export class World {
     const nf = P.flags[nid];
     if (nid === id || nf & (S.WALL | S.GENERATOR)) return;
     const nT = this.temp[j];
-    const nph = nf & S.FIRE ? GAS : nT < P.mp[nid] ? SOLID : nT < P.bp[nid] ? LIQUID : GAS;
+    const nph = nf & S.FIRE ? GAS : this.flags[j] & C_DISSOLVED ? LIQUID : nT < P.mp[nid] ? SOLID : nT < P.bp[nid] ? LIQUID : GAS;
     if (nph === GAS) {
       const nrho = nid === FIRE ? 0.0002 : (P.densG[nid] * 273.15) / nT;
       if ((dy < 0 && rho < nrho) || (dy > 0 && rho > nrho) || (dy === 0 && this.rand() < 0.3)) this.swap(i, j);
@@ -962,6 +1315,7 @@ export class World {
     const f = P.flags[id];
     if (f & S.CONDUCTOR) return true;
     const T = this.temp[j];
+    if (this.flags[j] & C_DISSOLVED) return Boolean(f & S.LIQUID_CONDUCTOR) && T >= FREEZE_AQ; // le soluzioni di sali e acidi conducono
     if (f & S.SEMI) return T > 450;
     if (f & S.LIQUID_CONDUCTOR) return T >= P.mp[id] && T < P.bp[id];
     if (f & S.DISCHARGE) return T >= P.bp[id];
@@ -1061,7 +1415,8 @@ export class World {
         }
         if (P.flags[id] & S.WALL) continue;
         if (heat) temp[i] = clampT(temp[i] + heat * f);
-        if (this.phaseOf(id, temp[i]) === SOLID && !(this.flags[i] & C_POWDER)) {
+        if (P.flags[id] & S.EXPLOSIVE) temp[i] = Math.max(temp[i], P.bp[id] + 1); // l'onda d'urto fa detonare gli esplosivi
+        if (this.cellPhase(i) === SOLID && !(this.flags[i] & C_POWDER)) {
           if (P.flags[id] & S.BLOCK_ONLY || P.hardness[id] >= power * f * 1.2) continue;
           this.flags[i] |= C_POWDER; // il blocco va in frantumi
         }
@@ -1094,12 +1449,16 @@ export class World {
    * Dipinge una sostanza nelle celle vuote del pennello (o su tutte con `replace`).
    * @param {{temp?:number, powder?:boolean, ctype?:number, replace?:boolean}} opts
    */
-  paint(cx, cy, r, id, { temp = AMBIENT, powder, ctype = 0, replace = false } = {}) {
+  paint(cx, cy, r, id, { temp = AMBIENT, powder, ctype = 0, replace = false, dissolved = false } = {}) {
     const P = this.P;
     this.brush(cx, cy, r, (i) => {
       if (this.type[i] && !replace) return;
       this.setType(i, id, temp, ctype);
       if (id === FIRE) return;
+      if (dissolved && P.flags[id] & S.SOLUBLE) {
+        this.flags[i] = (this.flags[i] & ~(C_POWDER | PHASE_MASK)) | C_DISSOLVED | ((this.temp[i] < FREEZE_AQ ? SOLID : LIQUID) << 2);
+        return;
+      }
       if (this.phaseOf(id, this.temp[i]) === SOLID && powder !== undefined && !(P.flags[id] & S.BLOCK_ONLY)) {
         if (powder) this.flags[i] |= C_POWDER;
         else this.flags[i] &= ~C_POWDER;
@@ -1173,8 +1532,9 @@ export class World {
       id,
       temp: this.temp[i],
       ctype: this.ctype[i],
-      phase: id ? this.phaseOf(id, this.temp[i]) : 0,
+      phase: this.cellPhase(i),
       powder: Boolean(this.flags[i] & C_POWDER),
+      dissolved: Boolean(this.flags[i] & C_DISSOLVED),
       burning: Boolean(this.flags[i] & C_BURN),
       spark: this.spark[i] >= SPARK_ACTIVE,
     };

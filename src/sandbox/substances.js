@@ -1,6 +1,11 @@
 // Sostanze della sandbox: i 118 elementi con i dati reali di elements.json (fusione, ebollizione, densità,
-// radioattività, elettronegatività) più i materiali di base e i prodotti delle reazioni.
+// radioattività, elettronegatività), i materiali di base, i prodotti delle reazioni e le 554 sostanze della libreria
+// del laboratorio (dati fisici in data/compounds.js).
 // Modulo puro (niente DOM): lo usano il motore (world.js), il disegno e i test.
+import { MOLECULES, MOLECULE_GROUPS } from '../lab/data/molecules.js';
+import { createLabElements } from '../lab/chem/elements-lab.js';
+import { createLibraryIndex, displayFormula, chargeText, formulaKey } from '../lab/chem/identify.js';
+import { COMPOUND_DATA, LIBRARY_ALIASES } from './data/compounds.js';
 
 export const AMBIENT = 295.15; // 22 °C
 export const T_MAX = 9999;
@@ -38,6 +43,12 @@ export const S = {
   FADES: 1 << 21, // si dissolve col tempo (fumo)
   GENERATOR: 1 << 22, // genera scintille
   SHIELD: 1 << 23, // scherma bene la radiazione (piombo, tungsteno…)
+  SOLUBLE: 1 << 24, // si scioglie in acqua
+  MISCIBLE: 1 << 25, // liquido che si mescola con l'acqua
+  AQUEOUS: 1 << 26, // esiste solo in soluzione acquosa (ioni)
+  EXPLOSIVE: 1 << 27, // detona col calore o con un'esplosione
+  DECOMPOSES: 1 << 28, // si decompone invece di bollire
+  ORGANIC: 1 << 29, // composto organico (scaldato troppo carbonizza)
 };
 
 // ------------------------------------------------------------------ identificativi
@@ -56,7 +67,7 @@ export const SALT = 129; // ctype = Z del metallo × 128 + Z dell'alogeno
 export const OXIDE = 130; // ctype = Z dell'elemento ossidato
 export const SOLUTION = 131; // idrossido in soluzione; ctype = Z del metallo
 export const GENERATOR = 132;
-export const COUNT = 133;
+export const FIRST_COMPOUND = 133; // da qui le sostanze della libreria del laboratorio
 
 export const saltCtype = (metal, halogen) => metal * 128 + halogen;
 export const saltParts = (ctype) => [ctype >> 7, ctype & 127];
@@ -394,7 +405,7 @@ function makeOthers() {
     },
     {
       ...base, kind: 'compound', id: WATER, key: 'water', name: 'Acqua', symbol: 'H₂O', mp: 273.15, bp: 373.15, densS: 0.917, densL: 0.998, densG: gasOf(18.015),
-      cond: 0.06, disp: 5, flags: S.LIQUID_CONDUCTOR | S.EXTINGUISHER | S.MODERATOR, moderate: 0.6, sparkHeat: 2,
+      cond: 0.06, disp: 5, flags: S.LIQUID_CONDUCTOR | S.EXTINGUISHER | S.MODERATOR | S.MISCIBLE, moderate: 0.6, sparkHeat: 2,
       colors: { [SOLID]: [200, 232, 255, 0.95], [LIQUID]: [40, 120, 220, 0.86], [GAS]: [225, 233, 242, 0.26] },
     },
     {
@@ -434,7 +445,7 @@ function makeOthers() {
     },
     {
       ...base, kind: 'product', id: SOLUTION, key: 'solution', name: 'Idrossido in soluzione', symbol: 'OH⁻', mp: 265, bp: 378, densS: 1.15, densL: 1.08, densG: gasOf(18.015),
-      cond: 0.06, disp: 5, flags: S.LIQUID_CONDUCTOR | S.EXTINGUISHER | S.MODERATOR, moderate: 0.6, sparkHeat: 2,
+      cond: 0.06, disp: 5, flags: S.LIQUID_CONDUCTOR | S.EXTINGUISHER | S.MODERATOR | S.MISCIBLE | S.AQUEOUS, moderate: 0.6, sparkHeat: 2,
       colors: { [SOLID]: [215, 230, 245, 0.95], [LIQUID]: [92, 150, 214, 0.86], [GAS]: [225, 233, 242, 0.26] },
     },
   ];
@@ -469,20 +480,142 @@ export function variantColor(subs, id, ctype) {
   return null;
 }
 
+const WATER_RGB = [40, 120, 220];
+const gcd = (a, b) => (b ? gcd(b, a % b) : Math.abs(a));
+
+/** Una voce della libreria del laboratorio come sostanza della sandbox. */
+function makeCompound(id, entry, data, elements, lab) {
+  const [mpC, bpC, d, color, opts = '', ignC] = data;
+  const has = (c) => opts.includes(c);
+  const aqueous = has('a');
+  const atoms = entry.graph.atoms;
+  const counts = {};
+  for (const a of atoms) counts[a.z] = (counts[a.z] ?? 0) + 1;
+  const molar = atoms.reduce((t, a) => t + elements[a.z - 1].atomicMass.value, 0);
+  const organic = Boolean(counts[6] && counts[1]);
+  let mp;
+  let bp;
+  let densS;
+  let densL;
+  let state25;
+  if (aqueous) {
+    mp = 271.15;
+    bp = 373.65;
+    densS = 0.95;
+    densL = 1.05;
+    state25 = 'aq';
+  } else {
+    mp = mpC + 273.15;
+    bp = Math.max(bpC + 273.15, mp);
+    state25 = mp > AMBIENT ? 'solid' : bp > AMBIENT ? 'liquid' : 'gas';
+    if (state25 === 'solid') {
+      densS = d;
+      densL = d * 0.92;
+    } else {
+      densL = d;
+      densS = d * 1.08;
+    }
+  }
+  let flags = 0;
+  if (has('s')) flags |= S.SOLUBLE;
+  if (has('m')) flags |= S.MISCIBLE;
+  if (has('x')) flags |= S.EXPLOSIVE;
+  if (has('o')) flags |= S.OXIDIZER;
+  if (has('d')) flags |= S.DECOMPOSES;
+  if (has('k')) flags |= S.EXTINGUISHER;
+  if (aqueous) flags |= S.AQUEOUS | S.MISCIBLE | S.LIQUID_CONDUCTOR;
+  if (entry.ionic || entry.charge || entry.group === 'acidi') flags |= S.LIQUID_CONDUCTOR; // sali fusi, ioni e acidi in soluzione conducono
+  if (organic) flags |= S.ORGANIC;
+  let burn = null;
+  if (has('f')) {
+    flags |= S.FLAMMABLE | S.BURNS_AS_BLOCK;
+    if (state25 === 'gas') flags |= S.INSTANT_BURN;
+    burn = { ignite: ignC != null ? ignC + 273.15 : organic ? 573 : 673, chance: 1, flame: state25 === 'gas' ? 2200 : 1700, fuel: [60, 140], gas: organic ? 'SMOKE' : null, gasChance: organic ? 0.15 : 0 };
+  }
+  const rgb = color ? hex(color) : null;
+  const colors = {
+    [SOLID]: [...(rgb ?? [242, 242, 240]), 1],
+    [LIQUID]: aqueous ? [...(rgb ? mix(WATER_RGB, rgb, 0.6) : [70, 140, 226]), 0.86] : rgb ? [...rgb, 1] : [214, 228, 242, 0.6],
+    [GAS]: rgb ? [...rgb, 0.4] : [208, 216, 226, 0.13],
+  };
+  // la formula scritta in libreria non ha la carica; quella generata sì
+  const formula = entry.formula ? entry.formula + chargeText(entry.charge) : displayFormula(lab, atoms, entry.charge, { ionic: entry.ionic });
+  const viscous = ['glicerolo', 'acido-oleico', 'h2so4', 'glicole-etilenico', 'nitroglicerina'].includes(entry.id);
+  // il primo metallo che colora la fiamma (NaCl → sodio, giallo)
+  const tintZ = Number(Object.keys(counts).find((z) => FLAME_COLOR[elements[z - 1].symbol] && elements[z - 1].category !== 'nonmetal')) || 0;
+  return {
+    id,
+    key: entry.id,
+    kind: 'compound',
+    entry,
+    group: entry.group,
+    name: entry.name,
+    symbol: formula,
+    formula,
+    mp,
+    bp,
+    sublimes: !aqueous && mpC === bpC && !has('d'),
+    densS,
+    densL,
+    densG: molar / MOLAR_VOLUME,
+    molar,
+    dissDens: aqueous ? 1.05 : 1 + Math.min(0.3, (d ?? 1) * 0.04),
+    cond: entry.ionic ? 0.05 : 0.025,
+    flags,
+    hardness: 0.4,
+    disp: aqueous ? 5 : viscous ? 1 : 3,
+    colors,
+    burn,
+    water: null,
+    decay: null,
+    fission: 0,
+    absorb: 0,
+    moderate: 1,
+    sparkHeat: 2,
+    flameColor: null,
+    tintZ,
+    discharge: null,
+    electronegativity: 0,
+    charge: 0,
+    estimated: has('e'),
+    defaultPowder: true,
+    state25,
+    counts,
+    ignC: ignC ?? null,
+  };
+}
+
 /**
  * Tabella completa delle sostanze: `list[id]` (oggetti descrittivi) e array tipizzati per il motore.
  * @param {object[]} elements elementi di elements.json
  */
 export function createSubstances(elements) {
-  const list = new Array(COUNT).fill(null);
+  const lab = createLabElements(elements);
+  const library = createLibraryIndex(lab, MOLECULES);
+  const list = new Array(FIRST_COMPOUND).fill(null);
   list[EMPTY] = { id: EMPTY, key: 'empty', name: 'Aria', symbol: '', kind: 'empty', mp: -1, bp: -1, densS: AIR_DENSITY, densL: AIR_DENSITY, densG: AIR_DENSITY, cond: 0, flags: 0, colors: {} };
   for (const el of elements) list[el.z] = makeElement(el);
   for (const s of makeOthers()) list[s.id] = s;
 
   const byKey = new Map(list.map((s) => [s.key, s]));
+  // le 554 voci della libreria: alcune sono già sostanze (H₂ → idrogeno, H₂O → acqua), le altre diventano composti
+  const libraryId = new Map();
+  for (const entry of library.entries) {
+    const alias = LIBRARY_ALIASES[entry.id];
+    if (alias) {
+      const s = byKey.get(alias);
+      libraryId.set(entry.id, s.id);
+      if (s.kind !== 'element') s.entry = entry;
+      continue;
+    }
+    const s = makeCompound(list.length, entry, COMPOUND_DATA[entry.id], elements, lab);
+    list.push(s);
+    byKey.set(s.key, s);
+    libraryId.set(entry.id, s.id);
+  }
   const keyId = (k) => (k ? byKey.get({ CO2: 'co2', SO2: 'so2', SMOKE: 'smoke', ASH: 'ash', COAL: 'coal', OXIDE: 'oxide' }[k] ?? k)?.id ?? 0 : 0);
 
-  const n = COUNT;
+  const n = list.length;
   const P = {
     flags: new Uint32Array(n),
     mp: new Float32Array(n),
@@ -490,6 +623,7 @@ export function createSubstances(elements) {
     densS: new Float32Array(n),
     densL: new Float32Array(n),
     densG: new Float32Array(n),
+    dissDens: new Float32Array(n),
     sqrtCond: new Float32Array(n),
     hardness: new Float32Array(n),
     disp: new Uint8Array(n),
@@ -498,9 +632,9 @@ export function createSubstances(elements) {
     flame: new Float32Array(n),
     fuelMin: new Uint16Array(n),
     fuelMax: new Uint16Array(n),
-    burnGas: new Uint8Array(n),
+    burnGas: new Uint16Array(n),
     gasChance: new Float32Array(n),
-    burnEnd: new Uint8Array(n), // sostanza in cui si trasforma a fine combustione (OXIDE: ossido dell'elemento)
+    burnEnd: new Uint16Array(n), // sostanza in cui si trasforma a fine combustione (OXIDE: ossido dell'elemento)
     waterRate: new Float32Array(n),
     waterHeat: new Float32Array(n),
     waterBoom: new Float32Array(n),
@@ -527,6 +661,7 @@ export function createSubstances(elements) {
     P.densS[i] = s.densS;
     P.densL[i] = s.densL;
     P.densG[i] = s.densG;
+    P.dissDens[i] = s.dissDens ?? 1.05;
     P.sqrtCond[i] = Math.sqrt(s.cond ?? 0);
     P.hardness[i] = s.hardness ?? 0.3;
     P.disp[i] = s.disp ?? 3;
@@ -537,6 +672,7 @@ export function createSubstances(elements) {
     P.charge[i] = s.charge ?? 0;
     P.fission[i] = s.fission ?? 0;
     if (s.flameColor) P.flameTint[i] = i;
+    else if (s.tintZ) P.flameTint[i] = s.tintZ;
     if (s.burn) {
       P.ignite[i] = s.burn.ignite;
       P.igniteChance[i] = s.burn.chance ?? 1;
@@ -561,7 +697,39 @@ export function createSubstances(elements) {
     }
   }
 
-  return { list, byKey, P, elements };
+  // composti della libreria con una data formula: sali, ossidi e idrossidi prodotti dalle reazioni «a mano»
+  const byAtoms = (atoms) => {
+    for (const item of library.byFormula(formulaKey(lab, atoms, 0))) {
+      const id = libraryId.get(item.id);
+      if (id) return id;
+    }
+    return 0;
+  };
+  const memo = new Map();
+  const cached = (key, fn) => {
+    if (!memo.has(key)) memo.set(key, fn());
+    return memo.get(key);
+  };
+  const atom = (z) => ({ z, charge: 0 });
+  const rep = (z, n) => Array.from({ length: n }, () => atom(z));
+  const lookups = {
+    /** Sale MXₙ della libreria (0 se non c'è). */
+    saltFor: (m, x) => cached(`s${m}:${x}`, () => byAtoms([atom(m), ...rep(x, list[m].charge || 1)])),
+    /** Ossido dell'elemento più comune nella libreria (0 se non c'è). */
+    oxideFor: (z) =>
+      cached(`o${z}`, () => {
+        const sym = list[z].symbol;
+        if (sym === 'P') return libraryId.get('p4o10');
+        if (sym === 'As') return libraryId.get('as4o6');
+        const c = list[z].charge || 2;
+        const g = gcd(c, 2);
+        return byAtoms([...rep(z, 2 / g), ...rep(8, c / g)]);
+      }),
+    /** Idrossido M(OH)ₙ della libreria (0 se non c'è). */
+    hydroxideFor: (z) => cached(`h${z}`, () => byAtoms([atom(z), ...rep(8, list[z].charge || 1), ...rep(1, list[z].charge || 1)])),
+  };
+
+  return { list, byKey, P, elements, lab, library, libraryId, groups: MOLECULE_GROUPS, firstCompound: FIRST_COMPOUND, ...lookups };
 }
 
 /** Stato fisico di una sostanza alla temperatura T (K). */

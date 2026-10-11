@@ -139,7 +139,7 @@ test('metallo + alogeno → sale (2 Na + Cl₂ → 2 NaCl)', () => {
   w.paint(30, 35, 4, Z('Na'), { powder: false });
   for (let y = 5; y < 28; y++) for (let x = 0; x < 60; x++) w.paint(x, y, 0, Z('Cl'));
   run(w, 600);
-  assert.ok(count(w, SALT) > 5);
+  assert.ok(count(w, subs.byKey.get('nacl').id) > 5, 'si forma il cloruro di sodio della libreria');
   const c = saltCtype(Z('Na'), Z('Cl'));
   assert.deepEqual(substanceLabel(subs, SALT, c), { name: 'Cloruro di sodio', formula: 'NaCl' });
   assert.deepEqual(substanceLabel(subs, SALT, saltCtype(Z('Fe'), Z('Cl'))), { name: 'Cloruro di ferro(III)', formula: 'FeCl₃' });
@@ -327,7 +327,7 @@ function balanced(eq) {
 test('le equazioni del registro sono bilanciate (combustioni, sali, alluminotermia, acqua, elettrolisi)', () => {
   const keys = [];
   for (const s of subs.list) {
-    if (s?.burn && s.key !== 'wood') keys.push(`burn:${s.id}`);
+    if (s?.burn && s.key !== 'wood' && s.kind !== 'compound') keys.push(`burn:${s.id}`);
     if (s?.water) keys.push(`water:${s.id}`);
   }
   const metals = subs.list.filter((s) => s?.kind === 'element' && s.flags & S.METAL && s.z < 104);
