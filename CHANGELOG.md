@@ -8,6 +8,26 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
+## [Non rilasciato]
+
+### Aggiunto
+- **Catalogo delle reazioni** ([docs/catalogo-reazioni.md](docs/catalogo-reazioni.md)): 1349 reazioni reali e
+  bilanciate, scritte solo con sostanze della libreria o elementi, in 14 sezioni (sintesi, combustioni,
+  decomposizioni, acqua, acidi e basi, ioni, precipitazioni, spostamento, ossidoriduzioni, metallurgia, industria,
+  chimica organica, biochimica), con condizioni, note ed entalpia di reazione dove è nota. Comprende tutte le
+  45 reazioni attuali; il motore non lo carica ancora.
+- **109 nuove sostanze** nella libreria «Esempi» (ora 554), necessarie alle reazioni del catalogo: ioni monoatomici
+  (Na⁺, K⁺, Ag⁺, Ca²⁺, Ba²⁺, Pb²⁺, Cu²⁺, Zn²⁺, Fe²⁺, Fe³⁺, Mn²⁺, Cr³⁺, Cl⁻, Br⁻, I⁻, con ΔHf° in soluzione), complessi
+  ([Cu(NH₃)₄]²⁺, [Ag(NH₃)₂]⁺, [Fe(SCN)]²⁺, [Ag(S₂O₃)₂]³⁻), ione tetrationato, silice e silicati, sali di manganese,
+  cromo, piombo, ferro, rame e argento, idrati (CuSO₄·5H₂O, CoCl₂·6H₂O, gesso), acidi dell'oro e del platino,
+  composti dell'uranio, composti organici di base (nitrobenzene, etilbenzene, cumene, tristearina, sapone,
+  sorbitolo, glicilglicina…). Un atomo isolato con carica (es. Na⁺ ottenuto con ±e⁻) ora è riconosciuto come lo ione
+  della libreria.
+
+### Modificato
+- Struttura di Lewis: un metallo con carica in un frammento (es. Fe³⁺ nel complesso [Fe(SCN)]²⁺) tiene solo gli
+  elettroni che gli restano dopo averne ceduti come ione. Non cambia nessuna voce della libreria esistente.
+
 ## [0.6.0] — 2026-10-11 — Simula reazione
 
 ### Aggiunto

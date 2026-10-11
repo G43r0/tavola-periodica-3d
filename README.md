@@ -177,9 +177,10 @@ Si apre dal pulsante con la beuta nella barra in alto, oppure con «Usa nel labo
   2 H + O → H₂O, Na + Cl → NaCl, 4 H + 2 O → 2 H₂O, C₂H₆O → etanolo (con l'etere dimetilico come isomero alternativo).
 - **Separa** (`S`): scompone la molecola in atomi (H₂ → 2 H); per i composti ionici anche «In ioni» (Na⁺ e Cl⁻).
 - **±e⁻**: aggiunge o toglie un elettrone (es. NH₃ + H⁺ → NH₄⁺, OH + e⁻ → OH⁻).
-- **Esempi**: 445 sostanze pronte in 14 gruppi, con ricerca per nome o formula: almeno un composto per ogni elemento
+- **Esempi**: 554 sostanze pronte in 14 gruppi, con ricerca per nome o formula: almeno un composto per ogni elemento
   che ne forma fino all'einsteinio (esclusi He, Ne, Ar, Rn, At, Fr), idrocarburi, composti organici, biomolecole
-  (amminoacidi, zuccheri, basi del DNA), farmaci e aromi, ioni, sali, composti dei metalli di transizione, di lantanidi e attinidi.
+  (amminoacidi, zuccheri, basi del DNA), farmaci e aromi, ioni (anche monoatomici e complessi: Na⁺, Cl⁻, Fe³⁺,
+  [Cu(NH₃)₄]²⁺), sali, idrati, composti dei metalli di transizione, di lantanidi e attinidi.
 - **Formula** (`F`, oppure `Ctrl+V` direttamente sul banco): si scrive o si incolla una composizione chimica e la si
   costruisce sul banco. Accetta formule con parentesi, idrati e cariche (`H2SO4`, `Ca(OH)2`, `K4[Fe(CN)6]`,
   `CuSO4·5H2O`, `NH4+`, `SO4^2-`, `SO₄²⁻`), più sostanze (`2 H2 + O2`, anche mescolando nomi: `P4O10 + 2 acqua`),
@@ -238,6 +239,10 @@ reazione e sopra le molecole compare il ΔH. A destra un resoconto elenca le rea
 Il bilanciamento è algebrico (spazio nullo intero della matrice degli atomi), quindi funziona per qualsiasi equazione;
 i test verificano che tutte le 45 reazioni della libreria siano bilanciate con i coefficienti minimi.
 
+Il [catalogo delle reazioni](docs/catalogo-reazioni.md) elenca le 1349 reazioni che il motore dovrà contenere: tutte
+reali, bilanciate e scritte solo con sostanze della libreria (o elementi), divise in 14 sezioni, con condizioni ed
+entalpia di reazione dove è nota.
+
 Test automatici del motore chimico:
 
 ```bash
@@ -277,6 +282,7 @@ src/
                       simulate.js: quali reazioni avvengono tra le molecole sul banco)
     reaction-panel.js elenco e scheda delle reazioni, diagramma energetico, resoconto di «Simula reazione»
     data/molecules.js libreria di molecole, ioni e composti ionici (con ΔHf°)
+    data/molecules-reazioni.js sostanze aggiunte per il catalogo delle reazioni (ioni monoatomici, complessi, silice…)
     data/reactions.js libreria delle reazioni
 tests/lab/            test del motore chimico (npm test)
   styles/             token di design, layout, tavola, scheda, visualizzatore
