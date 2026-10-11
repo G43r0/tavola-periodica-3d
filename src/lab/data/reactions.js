@@ -2,16 +2,16 @@
 // stato standard, es. el:Na = sodio metallico, el:C = grafite). I coefficienti sono verificati dai test
 // con il bilanciamento algebrico; ΔH° si calcola dalle entalpie di formazione della libreria.
 // `needs`: ciò che serve perché la reazione avvenga, oltre all'energia (la simulazione non la esegue da sola).
+//
+// Le reazioni scritte a mano qui sotto (con nome e descrizione) sono unite alle altre del catalogo
+// (reactions-catalogo.js, vedi docs/catalogo-reazioni.md) in un unico elenco ordinato come il catalogo.
 
-export const REACTION_GROUPS = [
-  { key: 'sintesi', label: 'Sintesi' },
-  { key: 'combustione', label: 'Combustioni' },
-  { key: 'decomposizione', label: 'Decomposizioni' },
-  { key: 'acidobase', label: 'Acidi e basi' },
-  { key: 'altre', label: 'Altre reazioni' },
-];
+import { CATALOG, CATALOG_GROUPS } from './reactions-catalogo.js';
 
-export const REACTIONS = [
+export const REACTION_GROUPS = CATALOG_GROUPS;
+
+/** Reazioni scritte a mano, con nome e descrizione. */
+export const BASE_REACTIONS = [
   // ---------------------------------------------------------------- sintesi
   { id: 'acqua', group: 'sintesi', name: 'Sintesi dell\'acqua', reactants: [[2, 'h2'], [1, 'o2']], products: [[2, 'h2o']],
     desc: 'Idrogeno e ossigeno reagiscono in modo esplosivo appena una scintilla fornisce l\'energia di attivazione.',
@@ -120,3 +120,19 @@ export const REACTIONS = [
   { id: 'idratazione', group: 'altre', name: 'Idratazione dell\'etilene', reactants: [[1, 'c2h4'], [1, 'h2o']], products: [[1, 'etanolo']],
     desc: 'Sintesi industriale dell\'etanolo, con acido fosforico come catalizzatore.' },
 ];
+
+const written = new Map(BASE_REACTIONS.map((r) => [r.id, r]));
+
+/** Tutte le reazioni, nell'ordine del catalogo: gruppo, sottogruppo, condizioni e, per le nuove, equazione e nota. */
+export const REACTIONS = CATALOG.map((c) => {
+  const meta = { group: c.group, sub: c.sub, catalogo: c.n, ...(c.cond && { cond: c.cond }), ...(c.rev && { rev: true }) };
+  if (c.ex) return { ...written.get(c.ex), ...meta };
+  return {
+    id: `cat-${c.n}`,
+    ...meta,
+    reactants: c.reactants,
+    products: c.products,
+    ...(c.needs && { needs: c.needs }),
+    desc: c.note ? c.note : `${c.sub}.`,
+  };
+});

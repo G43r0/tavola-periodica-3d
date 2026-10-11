@@ -8,6 +8,24 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
+## [Non rilasciato]
+
+### Aggiunto
+- **Tutte le 1349 reazioni del catalogo nel laboratorio**: il pulsante «Reazioni» le elenca in 14 gruppi divisi in
+  sottogruppi (si aprono uno alla volta) e una **ricerca** trova una reazione da formula, sostanza o parola. Le 1302
+  nuove hanno equazione, condizioni e nota; le 47 già presenti conservano nome e descrizione. Per ognuna sono
+  disponibili scheda, «Bilancia tu», ΔH° (dove le entalpie sono note), diagramma energetico e «Avvia la reazione».
+- Dati: `src/lab/data/reactions-catalogo.js` (generato dal catalogo); `reactions.js` unisce le due liste.
+
+### Modificato
+- «Simula reazione» non esegue le reazioni che richiedono altro (catalizzatori, soluzione acquosa, enzimi) né gli
+  equilibri (⇌), e li segnala nel resoconto. Con più reazioni note, alcune catene cambiano (es. dopo la calcinazione e
+  lo spegnimento della calce, l'acqua di calce riassorbe la CO₂).
+- «Avvia la reazione»: il numero di atomi dei reagenti tiene conto dei coefficienti; se supera i 150 atomi del banco il
+  pulsante è disattivato e la scheda lo spiega.
+- Test: bilanciamento e conservazione della carica per tutte le 1349 reazioni; il modello di «sintesi per addizione» si
+  prova con le sole reazioni scritte a mano.
+
 ## [0.7.0] — 2026-10-11 — Catalogo delle reazioni
 
 Note di release complete (con l'elenco delle 109 sostanze e delle 1349 reazioni): [docs/release-0.7.0.md](docs/release-0.7.0.md).

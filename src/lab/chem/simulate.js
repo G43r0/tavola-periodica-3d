@@ -38,7 +38,7 @@ const sum = (m) => [...m.values()].reduce((t, v) => t + v, 0);
 export function planReactions(inventory, reactions, { energy = false, exclude = [], lookahead = 2 } = {}) {
   let usable = reactions.filter((re) => {
     const dH = reactionDH(re);
-    return !re.r.needs && dH != null && (energy || dH < 0) && !exclude.some((x) => isReverse(x, re));
+    return !re.r.needs && !re.r.rev && dH != null && (energy || dH < 0) && !exclude.some((x) => isReverse(x, re));
   });
   // solo le reazioni i cui reagenti sono presenti o si possono formare
   const reachable = new Set(inventory.keys());
@@ -141,7 +141,7 @@ export function diagnose(inventory, reactions, { energy = false } = {}) {
       .map(([c, k], i) => ({ key: k, display: re.reactants[i].display, count: c - inventory.get(k) }))
       .filter((x) => x.count > 0);
     const dH = reactionDH(re);
-    if (re.r.needs) {
+    if (re.r.needs || re.r.rev) {
       if (!lack.length) needs.push(re);
     } else if (dH >= 0 && !energy) {
       if (!lack.length) endothermic.push(re);

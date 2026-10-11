@@ -237,11 +237,11 @@ reazione e sopra le molecole compare il ΔH. A destra un resoconto elenca le rea
 - `Ctrl+Z` annulla l'intera simulazione.
 
 Il bilanciamento è algebrico (spazio nullo intero della matrice degli atomi), quindi funziona per qualsiasi equazione;
-i test verificano che tutte le 47 reazioni della libreria siano bilanciate con i coefficienti minimi.
+i test verificano che tutte le 1349 reazioni della libreria siano bilanciate (atomi e carica) con i coefficienti minimi.
 
-Il [catalogo delle reazioni](docs/catalogo-reazioni.md) elenca le 1349 reazioni che il motore dovrà contenere: tutte
-reali, bilanciate e scritte solo con sostanze della libreria (o elementi), divise in 14 sezioni, con condizioni ed
-entalpia di reazione dove è nota.
+Il [catalogo delle reazioni](docs/catalogo-reazioni.md) elenca le 1349 reazioni del laboratorio: tutte reali,
+bilanciate e scritte solo con sostanze della libreria (o elementi), divise in 14 sezioni, con condizioni ed entalpia di
+reazione dove è nota. Il motore le carica tutte.
 
 Test automatici del motore chimico:
 
@@ -281,6 +281,8 @@ src/
     chem/             motore chimico puro (valenze, Lewis, VSEPR, SMILES, riconoscimento, Combina, reazioni,
                       simulate.js: quali reazioni avvengono tra le molecole sul banco)
     reaction-panel.js elenco e scheda delle reazioni, diagramma energetico, resoconto di «Simula reazione»
+    data/reactions.js reazioni scritte a mano (nome, descrizione) e unione con il catalogo
+    data/reactions-catalogo.js le 1349 reazioni del catalogo (ordine, gruppi, condizioni)
     data/molecules.js libreria di molecole, ioni e composti ionici (con ΔHf°)
     data/molecules-reazioni.js sostanze aggiunte per il catalogo delle reazioni (ioni monoatomici, complessi, silice…)
     data/reactions.js libreria delle reazioni

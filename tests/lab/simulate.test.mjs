@@ -7,7 +7,7 @@ import { createLibraryIndex, displayFormula } from '../../src/lab/chem/identify.
 import { speciesInfo, reactionEnthalpy } from '../../src/lab/chem/reactions.js';
 import { planReactions, diagnose, modelReaction, graphBondEnergy, libraryProduct } from '../../src/lab/chem/simulate.js';
 import { MOLECULES } from '../../src/lab/data/molecules.js';
-import { REACTIONS } from '../../src/lab/data/reactions.js';
+import { REACTIONS, BASE_REACTIONS } from '../../src/lab/data/reactions.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
 const lab = createLabElements(elements);
@@ -75,8 +75,9 @@ test('le reazioni endotermiche avvengono solo fornendo energia, senza tornare in
   // passo successivo della simulazione: l'inversa della reazione appena avvenuta è esclusa
   const elettrolisi = reactions.find((re) => re.r.id === 'elettrolisi');
   assert.deepEqual(ids(plan({ h2: 2, o2: 1 }, { energy: true, exclude: [elettrolisi] })), []);
-  // calcare scaldato, poi la calce viva reagisce con l'acqua
-  assert.deepEqual(ids(plan({ caco3: 1, h2o: 1 }, { energy: true })), ['calcare×1', 'calce×1']);
+  // calcare scaldato, poi la calce viva reagisce con l'acqua e l'acqua di calce riassorbe la CO₂ (ciclo della calce)
+  assert.deepEqual(ids(plan({ caco3: 1, h2o: 1 }, { energy: true })), ['calcare×1', 'calce×1', 'cat-578×1']);
+  assert.deepEqual(ids(plan({ caco3: 2, h2o: 1 }, { energy: true })).slice(0, 2), ['calcare×2', 'calce×1']);
 });
 
 test('reazioni che richiedono altro: la fermentazione non avviene senza lieviti', () => {
@@ -102,7 +103,17 @@ function species(id, count = 1) {
   const e = lib.get(id);
   return { key: id, count, zs: e.graph.atoms.map((a) => a.z), hf: e.hf ?? null, bondKj: e.ionic ? null : graphBondEnergy(lab, e.graph.atoms, e.graph.bonds, { tabulated: true }) };
 }
-const model = (...list) => modelReaction(lab, lib, list, reactions);
+// il modello prevede ciò che la libreria non sa: con tutto il catalogo molte addizioni sono già reazioni note,
+// quindi gli esempi si provano con le sole reazioni scritte a mano (le altre ricadono nel ramo «la libreria sa già»)
+const handWritten = new Set(BASE_REACTIONS.map((r) => r.id));
+const model = (...list) => modelReaction(lab, lib, list, reactions.filter((re) => handWritten.has(re.r.id)));
+const modelAll = (...list) => modelReaction(lab, lib, list, reactions);
+
+test('modello: le reazioni del catalogo hanno la precedenza sul modello', () => {
+  assert.equal(modelAll(species('h2'), species('br2')), null, 'H₂ + Br₂ → HBr è nel catalogo');
+  assert.equal(modelAll(species('no2', 2)), null, '2 NO₂ ⇌ N₂O₄ è nel catalogo');
+  assert.ok(model(species('h2'), species('br2')), 'senza il catalogo il modello lo prevede');
+});
 
 test('modello: sintesi per addizione con un prodotto della libreria', () => {
   const hbr = model(species('h2'), species('br2'));

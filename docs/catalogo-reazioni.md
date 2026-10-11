@@ -1,7 +1,7 @@
 # Catalogo delle reazioni chimiche del laboratorio
 
-Elenco delle reazioni che il motore delle reazioni dovrà contenere. Per ora è solo un elenco: il motore carica
-ancora le 47 reazioni di `src/lab/data/reactions.js`, che sono tutte comprese qui.
+Elenco delle reazioni del laboratorio. Il motore le carica tutte (`src/lab/data/reactions-catalogo.js`, generato da questo
+catalogo; le 47 reazioni scritte a mano in `src/lab/data/reactions.js`, con nome e descrizione, sono comprese qui).
 
 ## Le sostanze
 

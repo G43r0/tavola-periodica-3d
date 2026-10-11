@@ -1359,3 +1359,85 @@
 .sim-energy:hover:not(:disabled) {
   background: linear-gradient(180deg, #cdeaff, #84c8ff);
 }
+
+/* elenco delle reazioni: ricerca e gruppi del catalogo */
+.rx-search {
+  display: block;
+  margin: 8px 0 4px;
+}
+.rx-search input {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-0);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.rx-search input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.rx-list {
+  display: grid;
+  gap: 5px;
+  list-style: none;
+  margin-top: 4px;
+}
+.rx-fold {
+  margin-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.rx-fold > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 2px;
+  cursor: pointer;
+  list-style: none;
+}
+.rx-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.rx-fold > summary h4 {
+  margin: 0;
+}
+.rx-fold > summary small {
+  font-size: 11px;
+  color: var(--text-2);
+}
+.rx-fold > summary::before {
+  content: '▸';
+  margin-right: 6px;
+  font-size: 11px;
+  color: var(--text-2);
+  transition: transform 0.15s;
+}
+.rx-fold[open] > summary::before {
+  transform: rotate(90deg);
+}
+.rx-fold > summary h4 {
+  flex: 1;
+}
+.rx-fold__body h5 {
+  margin: 12px 0 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.rx-item--bare .eq {
+  margin-top: 0;
+  font-size: 13px;
+  color: var(--text-0);
+}
+.rx-cond {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+.lab-act:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
