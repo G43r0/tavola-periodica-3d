@@ -215,6 +215,26 @@ acidi e basi, altre: fotosintesi, fermentazione, termite, idrogenazione…).
   usa proprio quelli, e la scheda del banco propone le «Reazioni possibili». `Ctrl+Z` annulla l'intera reazione.
 - Anche **Combina** indica l'energia: es. 2 H₂ + O₂ → 2 H₂O, ΔH ≈ −482 kJ/mol dalle energie di legame.
 
+### Simula reazione
+
+Pulsante **Simula reazione** nella barra in basso (tasto `R`): le molecole sul banco — oppure solo quelle selezionate
+con Ctrl+clic, se sono almeno due — si agitano, si avvicinano e si urtano. Se l'urto è efficace i legami che si rompono
+diventano rossi, quelli nuovi verdi, un bagliore arancione (energia liberata) o azzurro (energia assorbita) segna la
+reazione e sopra le molecole compare il ΔH. A destra un resoconto elenca le reazioni avvenute e le molecole avanzate.
+
+- **Quale reazione**: tra le reazioni della libreria possibili con le molecole presenti si sceglie quella che consuma più
+  molecole (poi la più esotermica): 2 C + O₂ → 2 CO, ma C + O₂ → CO₂. Tutte le reazioni possibili subito avvengono
+  insieme; i prodotti possono reagire al passo successivo (N₂ + 3 H₂ + 2 HCl → 2 NH₃, poi 2 NH₄Cl).
+- **Reagente limitante**: 3 H₂ + O₂ → 2 H₂O e resta 1 H₂ «in eccesso».
+- **Nessuna reazione**: le molecole rimbalzano e il resoconto spiega perché: reagenti mancanti (H₂ + O₂: per l'acqua
+  manca 1 H₂, con il pulsante «Aggiungi e simula»), reazione endotermica (2 H₂O → elettrolisi solo con
+  «Fornisci energia e simula»), condizioni particolari (la fermentazione richiede i lieviti).
+- **Fuori libreria** il modello prova le sintesi per addizione: 2 o 3 molecole che, insieme, hanno gli atomi di una
+  sostanza nota (H₂ + Br₂ → 2 HBr, SO₃ + H₂O → H₂SO₄, 2 NO₂ → N₂O₄). L'urto è efficace solo se ΔH < −40 kJ
+  (entalpie di formazione o, in mancanza, energie di legame tabulate) e se la libreria non descrive già la reazione
+  di quelle specie (H₂ + O₂ non dà H₂O₂).
+- `Ctrl+Z` annulla l'intera simulazione.
+
 Il bilanciamento è algebrico (spazio nullo intero della matrice degli atomi), quindi funziona per qualsiasi equazione;
 i test verificano che tutte le 45 reazioni della libreria siano bilanciate con i coefficienti minimi.
 
@@ -253,8 +273,9 @@ src/
     palette.js        tavolozza degli elementi
     molecule-panel.js scheda della molecola
     lewis-svg.js      disegno della struttura di Lewis
-    chem/             motore chimico puro (valenze, Lewis, VSEPR, SMILES, riconoscimento, Combina)
-    reaction-panel.js elenco e scheda delle reazioni, diagramma energetico
+    chem/             motore chimico puro (valenze, Lewis, VSEPR, SMILES, riconoscimento, Combina, reazioni,
+                      simulate.js: quali reazioni avvengono tra le molecole sul banco)
+    reaction-panel.js elenco e scheda delle reazioni, diagramma energetico, resoconto di «Simula reazione»
     data/molecules.js libreria di molecole, ioni e composti ionici (con ΔHf°)
     data/reactions.js libreria delle reazioni
 tests/lab/            test del motore chimico (npm test)
@@ -290,6 +311,7 @@ build/icon.png        icona usata da electron-builder
 | clic su una particella | (3D) analisi della particella; `Esc` la chiude |
 | `V` / `B` / `X` | (laboratorio) sposta / lega / forbici |
 | `C` / `S` | (laboratorio) combina / separa |
+| `R` | (laboratorio) simula la reazione tra le molecole sul banco (o selezionate) |
 | `F` / `Ctrl+V` | (laboratorio) scrivi o incolla una formula, un nome o uno SMILES |
 | `Ctrl+Z` / `Ctrl+Y` | (laboratorio) annulla / ripeti |
 | `Canc` | (laboratorio) elimina la selezione |

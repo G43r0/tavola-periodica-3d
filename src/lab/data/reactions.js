@@ -1,6 +1,7 @@
 // Reazioni del laboratorio. Specie: id della libreria di molecole oppure "el:Simbolo" (elemento nel suo
 // stato standard, es. el:Na = sodio metallico, el:C = grafite). I coefficienti sono verificati dai test
 // con il bilanciamento algebrico; ΔH° si calcola dalle entalpie di formazione della libreria.
+// `needs`: ciò che serve perché la reazione avvenga, oltre all'energia (la simulazione non la esegue da sola).
 
 export const REACTION_GROUPS = [
   { key: 'sintesi', label: 'Sintesi' },
@@ -105,7 +106,7 @@ export const REACTIONS = [
   // ---------------------------------------------------------------- altre
   { id: 'fotosintesi', group: 'altre', name: 'Fotosintesi', reactants: [[6, 'co2'], [6, 'h2o']], products: [[1, 'glucosio'], [6, 'o2']],
     desc: 'Le piante usano l\'energia della luce per produrre glucosio: è la respirazione cellulare al contrario, fortemente endotermica.' },
-  { id: 'fermentazione', group: 'altre', name: 'Fermentazione alcolica', reactants: [[1, 'glucosio']], products: [[2, 'etanolo'], [2, 'co2']],
+  { id: 'fermentazione', group: 'altre', name: 'Fermentazione alcolica', reactants: [[1, 'glucosio']], products: [[2, 'etanolo'], [2, 'co2']], needs: 'i lieviti',
     desc: 'I lieviti trasformano gli zuccheri in alcol e anidride carbonica (vino, birra, pane).' },
   { id: 'termite', group: 'altre', name: 'Reazione della termite', reactants: [[1, 'fe2o3'], [2, 'el:Al']], products: [[1, 'al2o3'], [2, 'el:Fe']],
     desc: 'L\'alluminio strappa l\'ossigeno al ferro: si raggiungono circa 2500 °C e il ferro esce fuso. Si usa per saldare i binari.' },

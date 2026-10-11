@@ -322,6 +322,15 @@
 .lab-act--primary:hover:not(:disabled) {
   background: linear-gradient(180deg, #c4f6ff, var(--accent-strong));
 }
+.lab-act--sim {
+  color: #1d1102;
+  background: linear-gradient(180deg, #ffd99a, var(--warn));
+  border-color: transparent;
+  box-shadow: 0 0 18px rgba(251, 191, 36, 0.28);
+}
+.lab-act--sim:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ffe9c2, #ffcd57);
+}
 .lab-act--icon {
   padding: 0 10px;
   gap: 2px;
@@ -647,6 +656,36 @@
   font-size: 9px;
   color: #ffd37a;
 }
+/* ΔH che sale e svanisce sopra una reazione */
+.lab-float {
+  pointer-events: none;
+  user-select: none;
+}
+.lab-float span {
+  display: block;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #ffc27a;
+  background: rgba(9, 14, 22, 0.72);
+  border: 1px solid rgba(255, 166, 77, 0.55);
+  border-radius: 10px;
+  text-shadow: 0 0 6px rgba(255, 140, 40, 0.7);
+  animation: lab-float 2.3s var(--ease-out) forwards;
+}
+.lab-float span.is-endo {
+  color: #9fd2ff;
+  border-color: rgba(92, 182, 255, 0.55);
+  text-shadow: 0 0 6px rgba(92, 182, 255, 0.7);
+}
+@keyframes lab-float {
+  0% { opacity: 0; transform: translateY(6px) scale(0.9); }
+  15% { opacity: 1; transform: translateY(-6px) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-46px); }
+}
 
 /* ---------------------------------------------------------------- scheda della molecola */
 .mp-head {
@@ -937,6 +976,7 @@
     display: none;
   }
   .lab-act--primary span,
+  .lab-act--sim span,
   .lab-act--icon span {
     display: inline;
   }
@@ -1184,4 +1224,138 @@
 .lab.is-reacting .lab-dock {
   opacity: 0.5;
   pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- «Simula reazione» */
+.sim-report {
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line-2);
+}
+.sim-report .mp-kind {
+  color: var(--warn);
+}
+.sim-report.is-running .mp-name::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 8px;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: var(--warn);
+  animation: sim-pulse 1s ease-in-out infinite;
+}
+@keyframes sim-pulse {
+  50% { opacity: 0.25; }
+}
+.sim-steps {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+.sim-step {
+  padding: 9px 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.sim-step__name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+}
+.sim-step__name b {
+  font-weight: 600;
+  color: var(--text-0);
+}
+.sim-step__n {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 19px;
+  height: 19px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1d1102;
+  background: var(--warn);
+  border-radius: 50%;
+}
+.sim-times {
+  margin-left: auto;
+  padding: 1px 7px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-1);
+  background: var(--bg-3);
+  border-radius: 9px;
+}
+.sim-step .eq {
+  margin: 6px 0 4px;
+}
+.sim-step__dh {
+  font-size: 12.5px;
+}
+.sim-step__dh b {
+  font-size: 14px;
+}
+.sim-step .chip-btn,
+.sim-hint .chip-btn {
+  height: 26px;
+  margin-top: 6px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-1);
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  cursor: pointer;
+}
+.sim-step .chip-btn:hover,
+.sim-hint .chip-btn:hover {
+  color: var(--text-0);
+  border-color: var(--line-3);
+}
+.sim-hint .chip-btn {
+  color: #1d1102;
+  background: var(--warn);
+  border-color: transparent;
+}
+.sim-hint .chip-btn:hover {
+  color: #1d1102;
+  background: #ffcd57;
+}
+.sim-left {
+  margin-top: 10px;
+  font-size: 12.5px;
+}
+.sim-left small {
+  color: var(--text-2);
+}
+.sim-hint {
+  margin-top: 8px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  background: var(--bg-2);
+  border-left: 3px solid var(--warn);
+  border-radius: 6px;
+}
+.sim-hint.is-endo {
+  border-left-color: #5cb6ff;
+}
+.sim-hint .eq {
+  margin: 5px 0 0;
+}
+.sim-energy {
+  height: 36px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: #04121a;
+  background: linear-gradient(180deg, #a9dcff, #5cb6ff);
+  border-color: transparent;
+}
+.sim-energy:hover:not(:disabled) {
+  background: linear-gradient(180deg, #cdeaff, #84c8ff);
 }
