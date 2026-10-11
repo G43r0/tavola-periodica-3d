@@ -171,13 +171,17 @@ test('Combina: sali con ioni noti, alcani lunghi, più unità uguali', () => {
     const [sp] = parseFormula(formula, isSymbol).species;
     return [...sp.counts].flatMap(([s, n]) => Array(n).fill(s));
   };
-  assert.deepEqual(charges(expand('Fe2(SO4)3')), ['Fe3', 'Fe3']);
+  // Fe₂(SO₄)₃, Mn₂O₃ e BaO₂ sono voci della libreria: le stesse regole si provano con sali che non lo sono
+  assert.deepEqual(charges(expand('Co2(SO4)3')), ['Co3', 'Co3']);
   assert.deepEqual(charges(expand('KAl(SO4)2')), ['Al3', 'K1']);
   assert.deepEqual(charges(expand('(NH4)2Fe(SO4)2')), ['Fe2']);
   assert.deepEqual(charges(expand('Pb3O4')), ['Pb2', 'Pb2', 'Pb4']);
-  assert.deepEqual(charges(expand('Mn2O3')), ['Mn3', 'Mn3'], 'ossido, non perossido');
-  assert.deepEqual(charges(expand('BaO2')), ['Ba2'], 'perossido di bario');
+  assert.deepEqual(charges(expand('V2O3')), ['V3', 'V3'], 'ossido, non perossido');
+  assert.deepEqual(charges(expand('SrO2')), ['Sr2'], 'perossido di stronzio');
   assert.deepEqual(charges(expand('FeBr3')), ['Fe3']);
+  for (const [formula, id] of [['Fe2(SO4)3', 'fe2so43'], ['Mn2O3', 'mn2o3'], ['BaO2', 'bao2']]) {
+    assert.equal(combine(lab, lib, expand(formula).map(sym)).entry?.id, id, formula);
+  }
   // alogenuri con cariche alte: molecole, non sali
   assert.notEqual(combine(lab, lib, expand('WF6').map(sym)).source, 'ions');
   // alcano lineare oltre la ricerca automatica

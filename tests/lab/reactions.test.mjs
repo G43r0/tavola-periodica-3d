@@ -55,6 +55,7 @@ test('ΔH° dalle entalpie di formazione (valori noti)', () => {
   assert.ok(near(dh('fotosintesi'), 2802.7, 2), `fotosintesi ${dh('fotosintesi')}`);
   assert.ok(near(dh('calcare'), 179.2), `calcare ${dh('calcare')}`);
   assert.ok(near(dh('termite'), -851.5), `termite ${dh('termite')}`);
+  assert.ok(near(dh('polvere-nera'), -572.0), `polvere nera ${dh('polvere-nera')}`);
   assert.ok(near(dh('no'), 182.6), `NO ${dh('no')}`);
   assert.ok(near(dh('ammoniaca-dec'), 91.88), 'reazione inversa: ΔH opposto');
 });

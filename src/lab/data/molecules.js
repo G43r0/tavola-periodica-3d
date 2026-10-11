@@ -7,6 +7,7 @@
 // state: stato a 25 °C e 1 atm. formula: scrittura usuale (senza carica), se diversa da quella generata.
 
 import { MORE_GROUPS, MORE_MOLECULES } from './molecules-more.js';
+import { REACTION_MOLECULES } from './molecules-reazioni.js';
 
 const BASE_GROUPS = [
   { key: 'elementi', label: 'Elementi' },
@@ -223,4 +224,4 @@ export const MOLECULE_GROUPS = MORE_GROUPS.reduce((list, g) => {
   return list;
 }, [...BASE_GROUPS]);
 
-export const MOLECULES = [...BASE_MOLECULES, ...MORE_MOLECULES];
+export const MOLECULES = [...BASE_MOLECULES, ...MORE_MOLECULES, ...REACTION_MOLECULES];

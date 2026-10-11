@@ -46,7 +46,7 @@ test('la libreria si legge tutta e le formule sono corrette', () => {
 });
 
 test('ogni voce della libreria ha una struttura di Lewis coerente', () => {
-  const radicals = new Set(['no', 'no2', 'clo2']);
+  const radicals = new Set(['no', 'no2', 'clo2', 'ko2']); // KO₂: lo ione superossido O₂⁻ ha un elettrone spaiato
   const incomplete = new Set(['bf3', 'becl2']);
   for (const e of lib.entries) {
     for (const part of splitParts(e.graph)) {
