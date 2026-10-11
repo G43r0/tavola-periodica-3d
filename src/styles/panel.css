@@ -1,0 +1,644 @@
+/* Scheda informativa dell'elemento */
+.panel {
+  --c: var(--accent);
+}
+.panel__frame {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  width: var(--panel-w);
+  height: 100%;
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--c) 7%, transparent), transparent 220px),
+    var(--bg-1);
+  border-left: 1px solid var(--line-2);
+  box-shadow: inset 1px 0 0 color-mix(in oklab, var(--c) 18%, transparent);
+  transition: background var(--t-slow);
+}
+@media (max-width: 1100px) {
+  .panel__frame {
+    width: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------- intestazione */
+.panel__head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 18px 16px 22px;
+  border-bottom: 1px solid var(--line);
+}
+.panel__tile {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  width: 76px;
+  height: 76px;
+  padding: 7px 9px;
+  background: linear-gradient(160deg, color-mix(in oklab, var(--c) 28%, var(--bg-3)), color-mix(in oklab, var(--c) 8%, var(--bg-1)));
+  border: 1px solid var(--c);
+  border-radius: 12px;
+  box-shadow: 0 0 26px color-mix(in oklab, var(--c) 30%, transparent);
+}
+.panel__z {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+  color: color-mix(in oklab, var(--c) 85%, white);
+}
+.panel__sym {
+  align-self: center;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+}
+.panel__mass {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-1);
+}
+.panel__title {
+  min-width: 0;
+}
+.eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--c);
+}
+.panel__title h2 {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.panel__sub {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.panel__nav {
+  display: flex;
+  gap: 2px;
+  align-self: start;
+}
+
+/* ---------------------------------------------------------------- contenuto */
+.panel__scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  outline: none;
+}
+.panel__content {
+  padding: 18px 22px 28px;
+  animation: content-in var(--t-slow) var(--ease-out);
+}
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.panel__content > * {
+  animation: content-in var(--t-slow) var(--ease-out) both;
+}
+.panel__content > *:nth-child(2) { animation-delay: 40ms; }
+.panel__content > *:nth-child(3) { animation-delay: 80ms; }
+.panel__content > *:nth-child(4) { animation-delay: 120ms; }
+.panel__content > *:nth-child(n + 5) { animation-delay: 160ms; }
+
+.banner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  border-radius: var(--r-md);
+}
+.banner svg {
+  margin-top: 1px;
+}
+.banner--predicted,
+.banner--partial {
+  color: #f3dfaa;
+  background: rgba(251, 191, 36, 0.07);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+}
+.banner--predicted svg,
+.banner--partial svg {
+  color: var(--warn);
+}
+.banner b {
+  color: #fde7a7;
+  font-weight: 600;
+}
+
+/* ---- hero: modello di Bohr + conteggi + pulsante 3D */
+.hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'atom counters'
+    'note note'
+    'cta cta';
+  gap: 14px 18px;
+  align-items: center;
+  padding: 16px;
+  margin-bottom: 22px;
+  background:
+    radial-gradient(circle at 18% 50%, color-mix(in oklab, var(--c) 14%, transparent), transparent 55%),
+    var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+}
+.hero__atom {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform var(--t-med) var(--ease-out), filter var(--t-med);
+}
+.hero__atom:hover {
+  transform: scale(1.05);
+  filter: drop-shadow(0 0 16px color-mix(in oklab, var(--c) 45%, transparent));
+}
+.hero__atom-hint {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--bg-1);
+  border: 1px solid rgba(92, 225, 255, 0.4);
+  border-radius: 10px;
+}
+.hero__atom {
+  grid-area: atom;
+}
+.hero__ctas {
+  grid-area: cta;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.hero__cta {
+  width: 100%;
+}
+.hero__lab {
+  height: 100%;
+  white-space: nowrap;
+}
+.counters {
+  grid-area: counters;
+  display: grid;
+  gap: 6px;
+}
+.counter {
+  display: grid;
+  grid-template-columns: auto 3.2ch 1fr;
+  align-items: center;
+  column-gap: 10px;
+  padding: 6px 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.counter__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.counter b {
+  font-family: var(--font-mono);
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: right;
+}
+.counter > span:last-child {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.counter--p .counter__dot { background: var(--proton); box-shadow: 0 0 10px var(--proton); }
+.counter--n .counter__dot { background: var(--neutron); box-shadow: 0 0 10px var(--neutron); }
+.counter--e .counter__dot { background: var(--electron); box-shadow: 0 0 10px var(--electron); }
+.hero__note {
+  grid-area: note;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.hero__note b {
+  color: var(--text-1);
+  font-weight: 500;
+}
+
+/* ---- sezioni */
+.psec {
+  margin-bottom: 24px;
+}
+.psec__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-1);
+}
+.psec__title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--line-2), transparent);
+}
+.psec__label {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.psec__label .muted {
+  font-family: var(--font-mono);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.psec__note {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.prose {
+  color: var(--text-1);
+  line-height: 1.6;
+}
+
+/* tile dei dati di base */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.tile {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  min-width: 0;
+}
+.tile__k {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.tile__v {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--text-0);
+  overflow-wrap: anywhere;
+}
+.tiles .tile:nth-child(3) .tile__v {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+.tile__sub {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-3);
+}
+
+/* righe chiave/valore */
+.rows {
+  margin: 0;
+  display: grid;
+}
+.row {
+  display: grid;
+  grid-template-columns: minmax(150px, 42%) 1fr;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.row:last-child {
+  border-bottom: 0;
+}
+.row dt {
+  color: var(--text-2);
+  font-size: 13px;
+}
+.row dt small {
+  color: var(--text-3);
+}
+.row dd {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  min-width: 0;
+}
+.row .v {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-0);
+}
+.row .u {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.row__note {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.row--stack {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+.config {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-0);
+  word-spacing: 2px;
+}
+.config--short {
+  color: var(--accent-strong);
+}
+
+/* gusci */
+.shells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shell {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  column-gap: 8px;
+  padding: 6px 12px 6px 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+.shell__name {
+  font-weight: 600;
+  color: var(--electron);
+}
+.shell__n {
+  font-family: var(--font-mono);
+  font-size: 16px;
+}
+.shell__idx {
+  grid-column: span 2;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+/* stato fisico */
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-0);
+}
+.state svg {
+  color: var(--accent);
+}
+.state--liquid svg { color: #60a5fa; }
+.state--gas svg { color: #c4b5fd; }
+.state--unknown svg { color: var(--text-2); }
+
+/* scala elettronegatività */
+.en {
+  align-items: center !important;
+}
+.scale {
+  position: relative;
+  flex: 1;
+  min-width: 90px;
+  max-width: 180px;
+  height: 6px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #4ea8ff, #3ccf91, #f5c84b, #ff6b7a);
+  opacity: 0.85;
+}
+.scale__fill {
+  position: absolute;
+  top: 50%;
+  left: var(--p);
+  width: 12px;
+  height: 12px;
+  translate: -50% -50%;
+  background: var(--text-0);
+  border: 2px solid var(--bg-1);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+/* stati di ossidazione */
+.oxs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.ox {
+  padding: 1px 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+}
+
+/* tabella isotopi */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.isotopes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.isotopes thead th {
+  padding: 8px 10px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--text-2);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+}
+.isotopes td,
+.isotopes tbody th {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--line);
+}
+.isotopes tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.isotopes tbody th {
+  font-weight: 400;
+}
+.isotopes .num {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+.isotopes tr.is-main {
+  background: color-mix(in oklab, var(--c) 8%, transparent);
+}
+.iso__not {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+}
+.iso__name {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+.iso__name b {
+  color: var(--c);
+  font-weight: 500;
+}
+.iso__ab {
+  min-width: 96px;
+}
+.ab {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+.bar {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  background: var(--bg-3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.bar span {
+  display: block;
+  width: var(--p);
+  height: 100%;
+  background: var(--c);
+  border-radius: 4px;
+  box-shadow: 0 0 8px var(--c);
+}
+.iso__decay {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+.iso__decay abbr {
+  text-decoration: none;
+  color: var(--text-1);
+}
+
+/* storia */
+.history {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.history__year {
+  display: grid;
+  justify-items: start;
+  padding-right: 16px;
+  border-right: 1px solid var(--line);
+}
+.history__year span {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--c);
+  line-height: 1.1;
+}
+.history__year small {
+  font-size: 10.5px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.history__by .psec__label {
+  margin: 0 0 2px;
+}
+.history__by p:last-child {
+  color: var(--text-0);
+  line-height: 1.45;
+}
+
+/* usi */
+.uses {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.uses li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--text-1);
+  line-height: 1.5;
+}
+.uses li::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0.62em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 6px var(--c);
+}
+
+.panel__foot {
+  margin-top: 28px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--text-3);
+}
+.panel__foot .link {
+  margin-left: 4px;
+  font-size: 12px;
+}

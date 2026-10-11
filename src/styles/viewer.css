@@ -1,0 +1,1000 @@
+/* Visualizzatore 3D dell'atomo (schermo intero) */
+.atom-view {
+  --c: var(--accent);
+  --panel: 316px;
+  --pp: 0px; /* larghezza occupata dalla scheda della particella (impostata da JS) */
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  color: var(--text-0);
+  background: #04070c;
+}
+.atom-view.is-entering {
+  animation: av-in 700ms var(--ease-out) both;
+}
+.atom-view.is-entering .av-top,
+.atom-view.is-entering .av-panel,
+.atom-view.is-entering .av-bottom {
+  animation: av-slide 800ms var(--ease-out) both;
+  animation-delay: 220ms;
+}
+.atom-view.is-leaving {
+  animation: av-out 260ms var(--ease-in-out) both;
+}
+@keyframes av-in {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+    filter: blur(6px);
+  }
+}
+@keyframes av-out {
+  to {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+@keyframes av-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.av-stage,
+.av-canvas,
+.av-labels,
+.av-vignette {
+  position: absolute;
+  inset: 0;
+}
+.av-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  outline: none;
+}
+.av-labels {
+  pointer-events: none;
+}
+.av-vignette {
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 45% 50%, transparent 55%, rgba(2, 4, 8, 0.55) 100%),
+    radial-gradient(circle at 45% 50%, color-mix(in oklab, var(--c) 6%, transparent), transparent 45%);
+}
+
+/* ---------------------------------------------------------------- barra superiore */
+.av-top {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, rgba(4, 7, 12, 0.92), rgba(4, 7, 12, 0));
+  pointer-events: none;
+}
+.av-top > * {
+  pointer-events: auto;
+}
+.av-back {
+  height: 36px;
+  background: rgba(13, 20, 31, 0.8);
+  backdrop-filter: blur(8px);
+}
+.av-back kbd {
+  margin-left: 4px;
+}
+.av-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.av-tile {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  width: 48px;
+  height: 48px;
+  padding: 4px 6px;
+  background: linear-gradient(160deg, color-mix(in oklab, var(--c) 30%, var(--bg-3)), color-mix(in oklab, var(--c) 8%, var(--bg-1)));
+  border: 1px solid var(--c);
+  border-radius: 10px;
+  box-shadow: 0 0 22px color-mix(in oklab, var(--c) 35%, transparent);
+}
+.av-tile__z {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  color: color-mix(in oklab, var(--c) 85%, white);
+}
+.av-tile__sym {
+  align-self: center;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1;
+}
+.av-eyebrow {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--c);
+}
+.av-name {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.av-elnav {
+  display: flex;
+  margin-left: 4px;
+}
+.av-modes {
+  margin-left: auto;
+  background: rgba(13, 20, 31, 0.8);
+  backdrop-filter: blur(8px);
+}
+.av-modes .segmented__btn {
+  padding: 0 14px;
+}
+.av-panel-toggle {
+  background: rgba(13, 20, 31, 0.8);
+  border-color: var(--line-2);
+}
+.av-panel-toggle[aria-expanded='true'] {
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- pannello controlli */
+.av-panel {
+  position: absolute;
+  top: 78px;
+  right: 14px;
+  bottom: 14px;
+  width: calc(var(--panel) - 14px);
+  padding: 4px 16px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgba(9, 14, 22, 0.82);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-lg);
+  transition: transform var(--t-slow) var(--ease-out), opacity var(--t-med);
+}
+.atom-view.panel-closed .av-panel {
+  transform: translateX(calc(100% + 24px));
+  opacity: 0;
+  pointer-events: none;
+}
+.av-sec {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.av-sec:last-child {
+  border-bottom: 0;
+}
+.av-sec h3 {
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-1);
+}
+.av-note {
+  margin-top: 10px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+/* isotopi */
+.av-isotopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.iso-chip {
+  display: grid;
+  justify-items: start;
+  min-width: 66px;
+  padding: 5px 9px;
+  text-align: left;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.iso-chip b {
+  font-size: 15px;
+  font-weight: 600;
+}
+.iso-chip small {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.iso-chip.is-radio small {
+  color: color-mix(in oklab, var(--warn) 70%, var(--text-2));
+}
+.iso-chip:hover {
+  border-color: var(--line-3);
+}
+.iso-chip[aria-pressed='true'] {
+  background: color-mix(in oklab, var(--accent) 12%, var(--bg-2));
+  border-color: var(--accent);
+  box-shadow: 0 0 14px rgba(92, 225, 255, 0.2);
+}
+.av-iso-info {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+.av-iso-info .eq {
+  font-family: var(--font-mono);
+}
+.av-iso-info .p { color: var(--proton); }
+.av-iso-info .n { color: var(--neutron); }
+
+/* pulsante nucleo */
+.av-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-0);
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast), color var(--t-fast);
+}
+.av-btn kbd {
+  margin-left: auto;
+}
+.av-btn svg {
+  color: var(--proton);
+}
+.av-btn:hover {
+  border-color: var(--line-3);
+  background: var(--bg-3);
+}
+.av-btn[aria-pressed='true'] {
+  border-color: var(--proton);
+  background: color-mix(in oklab, var(--proton) 12%, var(--bg-2));
+}
+
+/* animazione */
+.av-anim {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.av-play {
+  border-color: var(--line-2);
+  background: var(--bg-2);
+  color: var(--accent);
+}
+.av-speed {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.av-speed-val {
+  min-width: 3.4ch;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-1);
+  text-align: right;
+}
+
+/* interruttori */
+.av-switches {
+  display: grid;
+  gap: 8px;
+}
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-1);
+  cursor: pointer;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.switch__track {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+.switch__track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: var(--text-2);
+  border-radius: 50%;
+  transition: transform var(--t-med) var(--ease-out), background var(--t-fast);
+}
+.switch input:checked + .switch__track {
+  background: color-mix(in oklab, var(--accent) 25%, var(--bg-3));
+  border-color: var(--accent);
+}
+.switch input:checked + .switch__track::after {
+  transform: translateX(14px);
+  background: var(--accent-strong);
+}
+.switch input:focus-visible + .switch__track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.switch kbd {
+  margin-left: auto;
+}
+
+/* orbitali */
+.av-orb-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.chip-btn {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--text-1);
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  cursor: pointer;
+}
+.chip-btn:hover {
+  color: var(--text-0);
+  border-color: var(--line-3);
+}
+.av-orb-list {
+  display: grid;
+  gap: 6px;
+}
+.orb-row {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 6px;
+  align-items: start;
+}
+.orb-sub {
+  height: 28px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--oc);
+  background: transparent;
+  border: 1px solid color-mix(in oklab, var(--oc) 35%, transparent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.orb-sub sup {
+  font-size: 9px;
+}
+.orb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.orb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 7px;
+  font-size: 12px;
+  color: var(--text-2);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+.orb-chip sub {
+  font-size: 9.5px;
+}
+.orb-chip .spins {
+  font-size: 11px;
+  letter-spacing: -0.12em;
+  color: var(--text-3);
+}
+.orb-chip[aria-pressed='true'] {
+  color: var(--text-0);
+  border-color: var(--oc);
+  background: color-mix(in oklab, var(--oc) 16%, var(--bg-2));
+}
+.orb-chip[aria-pressed='true'] .spins {
+  color: var(--oc);
+}
+/* orbitale dell'elettrone selezionato */
+.orb-chip.is-focus {
+  box-shadow: 0 0 0 2px var(--bg-1), 0 0 0 3px var(--text-0);
+}
+.av-orb-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-1);
+}
+.av-orb-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.av-orb-legend i {
+  width: 18px;
+  height: 9px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--a) 50%, var(--b) 50%);
+}
+.av-orb-legend small {
+  flex-basis: 100%;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+/* ---------------------------------------------------------------- in basso */
+.av-bottom {
+  position: absolute;
+  left: calc(var(--pp) + 18px);
+  bottom: 16px;
+  display: grid;
+  gap: 8px;
+  max-width: min(600px, calc(100% - var(--panel) - var(--pp) - 48px));
+  pointer-events: none;
+  transition: left var(--t-slow) var(--ease-out);
+}
+.atom-view.panel-closed .av-bottom {
+  max-width: min(600px, calc(100% - var(--pp) - 36px));
+}
+.av-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.av-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 11px;
+  font-size: 12.5px;
+  color: var(--text-1);
+  background: rgba(9, 14, 22, 0.78);
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+}
+.av-legend b {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--text-0);
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.dot--p { background: var(--proton); box-shadow: 0 0 8px var(--proton); }
+.dot--n { background: var(--neutron); box-shadow: 0 0 8px var(--neutron); }
+.dot--e { background: var(--electron); box-shadow: 0 0 8px var(--electron); }
+.av-scale {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 9px;
+  padding: 9px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #f1e2b3;
+  background: rgba(30, 22, 6, 0.72);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--r-md);
+  backdrop-filter: blur(8px);
+}
+.av-scale svg {
+  margin-top: 2px;
+  color: var(--warn);
+}
+
+.av-hint {
+  position: absolute;
+  left: calc(var(--pp) + (100% - var(--panel) - var(--pp)) / 2);
+  top: 84px;
+  translate: -50% 0;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text-2);
+  background: rgba(9, 14, 22, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 800ms;
+}
+.atom-view.panel-closed .av-hint {
+  left: calc(var(--pp) + (100% - var(--pp)) / 2);
+}
+.av-hint b {
+  font-weight: 600;
+  color: var(--text-1);
+}
+.av-hint.is-gone {
+  opacity: 0;
+}
+
+.av-tip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 360px;
+  padding: 7px 11px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-1);
+  background: rgba(9, 14, 22, 0.92);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  z-index: 3;
+}
+.av-tip b {
+  color: var(--text-0);
+  font-weight: 600;
+}
+.av-tip b.p { color: var(--proton); }
+.av-tip b.n { color: var(--neutron); }
+.av-tip b.e { color: var(--electron); }
+.av-tip b.q-r { color: #ff7482; }
+.av-tip b.q-g { color: #5ff59e; }
+.av-tip b.q-b { color: #79a9ff; }
+.av-tip small {
+  color: var(--text-2);
+}
+
+.av-busy {
+  position: absolute;
+  left: calc(var(--pp) + (100% - var(--panel) - var(--pp)) / 2);
+  bottom: 22px;
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text-1);
+  background: rgba(9, 14, 22, 0.8);
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+}
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--line-3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.av-fps {
+  position: absolute;
+  left: calc(var(--pp) + 18px);
+  top: 82px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+.av-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  font-size: 16px;
+  color: var(--text-1);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- scheda della particella (fase 3) */
+.av-particle {
+  position: absolute;
+  top: 78px;
+  left: 14px;
+  bottom: 14px;
+  width: 344px;
+  padding: 0 18px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-1);
+  background: rgba(9, 14, 22, 0.86);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-lg);
+  animation: pp-in var(--t-slow) var(--ease-out) both;
+  z-index: 2;
+}
+@keyframes pp-in {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+.pp-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin: 0 -18px;
+  padding: 16px 14px 14px 18px;
+  background: linear-gradient(180deg, rgba(9, 14, 22, 0.98) 75%, rgba(9, 14, 22, 0));
+}
+.pp-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+.pp-icon--proton {
+  background: radial-gradient(circle at 35% 30%, #ffb3ba, var(--proton) 45%, #7a1420);
+  box-shadow: 0 0 18px rgba(255, 93, 108, 0.55);
+}
+.pp-icon--neutron {
+  background: radial-gradient(circle at 35% 30%, #eef4ff, var(--neutron) 45%, #36465e);
+  box-shadow: 0 0 18px rgba(142, 164, 196, 0.45);
+}
+.pp-icon--electron {
+  width: 26px;
+  height: 26px;
+  margin: 5px;
+  background: radial-gradient(circle at 35% 30%, #e8fdff, var(--electron) 50%, #0b6a86);
+  box-shadow: 0 0 18px rgba(92, 225, 255, 0.6);
+}
+.pp-eyebrow {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.pp-head h3 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-0);
+}
+.pp-sym {
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-2);
+}
+.pp-list {
+  display: grid;
+  gap: 9px;
+}
+.pp-row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+}
+.pp-row dt {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.pp-row dd {
+  color: var(--text-0);
+}
+.pp-row dd b {
+  font-weight: 600;
+}
+.pp-row dd small {
+  display: block;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.pp-sec {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.pp-sec h4 {
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-1);
+}
+.pp-sec p + p,
+.pp-sec p + .pp-list,
+.pp-sec .pp-list + p,
+.pp-sec table + p {
+  margin-top: 8px;
+}
+.pp-sec b {
+  color: var(--text-0);
+  font-weight: 600;
+}
+.pp-eq {
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+  color: var(--text-0);
+}
+.pp-eq .p { color: var(--proton); }
+.pp-eq .n { color: var(--neutron); }
+.pp-note,
+.pp-hint {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.pp-hint {
+  margin-top: 6px;
+}
+.pp-cta {
+  margin-top: 10px;
+}
+.pp-cta svg {
+  color: var(--accent);
+}
+.pp-cta + .pp-hint {
+  margin-bottom: 10px;
+}
+.pp-quarks {
+  display: inline-flex;
+  gap: 3px;
+  margin-right: 6px;
+  vertical-align: -3px;
+}
+.q {
+  display: inline-grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--text-0);
+  border-radius: 50%;
+}
+.q--r { background: color-mix(in oklab, #ff4b5c 70%, black); box-shadow: 0 0 8px rgba(255, 75, 92, 0.5); }
+.q--g { background: color-mix(in oklab, #3ef08a 55%, black); box-shadow: 0 0 8px rgba(62, 240, 138, 0.45); }
+.q--b { background: color-mix(in oklab, #4d8dff 65%, black); box-shadow: 0 0 8px rgba(77, 141, 255, 0.5); }
+.cc { font-weight: 600; }
+.cc--r { color: #ff7482; }
+.cc--g { color: #5ff59e; }
+.cc--b { color: #79a9ff; }
+.pp-table {
+  width: 100%;
+  margin-top: 10px;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+.pp-table th {
+  padding: 4px 6px 4px 0;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--line-2);
+}
+.pp-table td {
+  padding: 5px 6px 5px 0;
+  color: var(--text-1);
+  border-bottom: 1px solid var(--line);
+}
+.pp-qn {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.qn {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0 8px;
+  padding: 8px 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.qn__sym {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-style: italic;
+  color: var(--electron);
+}
+.qn__val {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 500;
+}
+.qn__val small {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.qn__name {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-1);
+}
+.qn small {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+.pp-big {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--electron);
+  text-shadow: 0 0 18px rgba(92, 225, 255, 0.35);
+}
+.pp-split {
+  margin: 8px 0;
+  padding: 7px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-0);
+  background: var(--bg-2);
+  border-radius: var(--r-sm);
+}
+.pp-split small {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text-2);
+}
+.pp-sec--quarks {
+  transition: background var(--t-med);
+}
+.atom-view.is-quark-view .pp-sec--quarks {
+  margin-inline: -10px;
+  padding-inline: 10px;
+  padding-bottom: 10px;
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
+  border-radius: var(--r-md);
+}
+
+/* ---------------------------------------------------------------- etichette 3D */
+.label3d {
+  padding: 2px 9px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-1);
+  white-space: nowrap;
+  background: rgba(8, 13, 21, 0.72);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  pointer-events: none;
+}
+.label3d b {
+  font-weight: 600;
+  color: var(--electron);
+}
+.label3d--nucleus {
+  border-color: color-mix(in oklab, var(--proton) 45%, transparent);
+}
+.label3d--nucleus b {
+  color: var(--proton);
+}
+.label3d--quark {
+  padding: 0 7px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-1);
+}
+.label3d--quark b {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-0);
+}
+.label3d--axis {
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--text-1);
+  background: none;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------- schermi stretti */
+@media (max-width: 1100px) {
+  .av-back span,
+  .av-back kbd {
+    display: none;
+  }
+  .av-modes .segmented__btn {
+    padding: 0 10px;
+    font-size: 12.5px;
+  }
+}
+@media (max-width: 900px) {
+  .atom-view {
+    --panel: 0px;
+  }
+  .av-top {
+    flex-wrap: wrap;
+  }
+  .av-panel {
+    top: auto;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: 50vh;
+  }
+  .av-legend {
+    display: none;
+  }
+  .av-bottom {
+    bottom: calc(50vh + 24px);
+    max-width: calc(100% - 24px);
+    left: 12px;
+  }
+  /* schermi stretti: la scheda della particella è un foglio in basso, al posto dei controlli */
+  .av-particle {
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+    max-height: 55vh;
+    z-index: 3;
+  }
+  .atom-view.has-particle .av-panel {
+    display: none;
+  }
+  .atom-view.has-particle .av-bottom {
+    bottom: calc(55vh + 24px);
+  }
+}
