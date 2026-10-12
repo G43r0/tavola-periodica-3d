@@ -1,12 +1,19 @@
-// Formattazione numeri e grandezze in italiano.
+// Formattazione numeri e grandezze nella lingua dell'interfaccia (virgola decimale in italiano, punto in inglese).
+import { createT, locale, isItalian } from '../i18n/index.js';
+
+const t = createT({
+  it: { gasDensity: 'a 0 °C e 1 atm', trace: 'tracce', synthetic: 'artificiale' },
+  en: { gasDensity: 'at 0 °C and 1 atm', trace: 'trace', synthetic: 'synthetic' },
+  eli6: { gasDensity: 'a 0 °C e alla pressione dell\'aria normale', trace: 'pochissimo', synthetic: 'solo in laboratorio' },
+});
 
 const MINUS = '−';
 const cache = new Map();
 
 function formatter(minFrac, maxFrac) {
-  const key = `${minFrac}:${maxFrac}`;
+  const key = `${locale()}:${minFrac}:${maxFrac}`;
   if (!cache.has(key)) {
-    cache.set(key, new Intl.NumberFormat('it-IT', { minimumFractionDigits: minFrac, maximumFractionDigits: maxFrac }));
+    cache.set(key, new Intl.NumberFormat(locale(), { minimumFractionDigits: minFrac, maximumFractionDigits: maxFrac }));
   }
   return cache.get(key);
 }
@@ -23,9 +30,9 @@ export function fmtNumber(value, maxFrac = 3, minFrac = 0) {
   return formatter(minFrac, maxFrac).format(value).replace('-', MINUS);
 }
 
-/** Massa atomica: "[97]" resta tale, "55.845" → "55,845" (conserva le cifre significative). */
+/** Massa atomica: "[97]" resta tale, "55.845" → "55,845" in italiano (conserva le cifre significative). */
 export function fmtMass(atomicMass) {
-  return atomicMass.text.replace('.', ',');
+  return isItalian() ? atomicMass.text.replace('.', ',') : atomicMass.text;
 }
 
 /** Temperatura in K → { c: "1538", k: "1811" } con la stessa precisione del dato. */
@@ -43,7 +50,7 @@ export function fmtDensity(el) {
   const d = el.densityGcm3;
   if (d === null || d === undefined) return null;
   if (el.state === 'gas') {
-    return { value: fmtNumber(d * 1000, 4), unit: 'g/L', note: 'a 0 °C e 1 atm' };
+    return { value: fmtNumber(d * 1000, 4), unit: 'g/L', note: t('gasDensity') };
   }
   return { value: fmtNumber(d, 3), unit: 'g/cm³', note: el.densityNote };
 }
@@ -70,7 +77,7 @@ export function fmtAbundance(iso) {
     const d = decimalsOf(iso.abundance);
     return `${fmtNumber(iso.abundance, d, d)} %`;
   }
-  return iso.trace ? 'tracce' : 'artificiale';
+  return iso.trace ? t('trace') : t('synthetic');
 }
 
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };

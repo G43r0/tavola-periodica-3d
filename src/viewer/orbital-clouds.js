@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { sampleOrbital, radiusQuantile } from './orbital-math.js';
+import { gfx } from '../gfx/preset.js';
 
 /** Colori per tipo di orbitale: [fase ψ > 0, fase ψ < 0] */
 export const ORBITAL_COLORS = {
@@ -12,7 +13,10 @@ export const ORBITAL_COLORS = {
   3: ['#ff86d0', '#9b6bff'],
 };
 
-const pointsFor = (n) => 2400 + 900 * n;
+// punti per orbitale: il preset Professionale ne usa più del doppio (più piccoli), Semplice meno della metà
+const pointsFor = (n) => Math.round((2400 + 900 * n) * gfx().points);
+// luminosità totale circa costante al variare del numero e della dimensione dei punti
+const POINT_GAIN = Math.min(1.25, 1 / (gfx().points * gfx().pointSize ** 2) ** 0.5);
 const geometryCache = new Map();
 
 const vertexShader = /* glsl */ `
@@ -172,7 +176,7 @@ export class OrbitalClouds {
       vertexShader,
       fragmentShader,
       uniforms: {
-        uSize: { value: 0.075 + 0.0075 * e.shellR }, // dimensione del punto in unità della scena
+        uSize: { value: (0.075 + 0.0075 * e.shellR) * gfx().pointSize }, // dimensione del punto in unità della scena
         uScale: { value: this.uScale },
         uTime: { value: 0 },
         uOpacity: { value: 0 },
@@ -210,7 +214,7 @@ export class OrbitalClouds {
       e.fade += ((e.wanted ? 1 : 0) - e.fade) * k;
       const opacity = e.fade * this.master.cur;
       const mat = e.points.material;
-      mat.uniforms.uOpacity.value = 0.95 * opacity * e.points.userData.occupancy;
+      mat.uniforms.uOpacity.value = 0.95 * POINT_GAIN * opacity * e.points.userData.occupancy;
       mat.uniforms.uTime.value = time;
       mat.uniforms.uScale.value = this.uScale;
       e.points.visible = opacity > 0.01;

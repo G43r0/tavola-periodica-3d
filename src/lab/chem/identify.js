@@ -138,7 +138,10 @@ export function createLibraryIndex(lab, entries) {
   // nomi (anche alternativi) senza accenti né maiuscole, per la ricerca testuale
   const names = [...parsed.values()].map((e) => ({
     e,
-    keys: [e.name, ...(e.aka ? e.aka.split(/,\s*|\s+o\s+/) : [])].map((s) => normalizeName(s)).filter(Boolean),
+    keys: [e.name, e.nameIt, ...(e.aka ? e.aka.split(/,\s*|\s+(?:o|or)\s+/) : []), ...(e.akaIt ? e.akaIt.split(/,\s*|\s+o\s+/) : [])]
+      .filter(Boolean)
+      .map((s) => normalizeName(s))
+      .filter(Boolean),
   }));
   return {
     entries: [...parsed.values()],

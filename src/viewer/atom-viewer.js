@@ -16,6 +16,151 @@ import { L_LETTERS } from '../chem/electron-config.js';
 import { CATEGORY } from '../data/categories.js';
 import { esc, fmtNumber, fmtAbundance, isotopeNotation } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
+import { createT } from '../i18n/index.js';
+
+const ORIGIN = new THREE.Vector3();
+
+const t = createT({
+  it: {
+    back: 'Tavola periodica',
+    prev: 'Elemento precedente',
+    next: 'Elemento successivo',
+    models: 'Modello atomico',
+    bohr: 'Modello di Bohr',
+    bohrTitle: 'Modello di Bohr (B)',
+    quantum: 'Modello quantistico',
+    quantumTitle: 'Modello quantistico (Q)',
+    panel: 'Mostra o nascondi i controlli',
+    controls: 'Controlli del visualizzatore',
+    isotope: 'Isotopo',
+    chooseIsotope: 'Seleziona isotopo',
+    nucleus: 'Nucleo',
+    explode: 'Esplodi il nucleo',
+    implode: 'Ricompatta il nucleo',
+    animation: 'Animazione',
+    speed: 'Velocità dell\'animazione',
+    show: 'Mostra',
+    labels: 'Etichette',
+    shells: 'Gusci elettronici',
+    orbitals: 'Orbitali',
+    axes: 'Assi x · y · z',
+    occupied: 'Orbitali occupati',
+    last: 'Ultimo',
+    lastTitle: 'Ultimo sottolivello riempito (regola di Madelung)',
+    valence: 'Valenza',
+    valenceTitle: 'Guscio esterno e sottolivelli d/f incompleti',
+    all: 'Tutti',
+    none: 'Nessuno',
+    psiLegend: 'colore chiaro: ψ &gt; 0 · scuro: ψ &lt; 0',
+    orbitalNote: 'Forme esatte (soluzioni dell\'atomo di idrogeno), riempimento secondo la regola di Hund. Le dimensioni sono compresse per mostrare insieme tutti i gusci.',
+    protons: 'Protoni',
+    neutrons: 'Neutroni',
+    electrons: 'Elettroni',
+    hint: '<b>Clic su una particella</b> per analizzarla · trascina per ruotare · rotella per lo zoom · tasto destro per spostare',
+    busy: 'Calcolo degli orbitali…',
+    noWebgl: 'Impossibile avviare la grafica 3D (WebGL non disponibile su questo computer).',
+    yearsShort: ' a',
+    isoTitle: '{name}-{label}: {n} neutroni',
+    stable: 'Stabile',
+    radioactive: 'Radioattivo',
+    orbitalTitle: (p) => `Orbitale ${p.name}: ${p.n} elettron${p.n === 1 ? 'e' : 'i'}`,
+    subTitle: 'Tutti gli orbitali {label}',
+    nucleusLabel: '<b>Nucleo</b> {p} p⁺ · {n} n⁰',
+    scaleDefault: 'Scala non reale: il nucleo è circa 100 000 volte più piccolo dell\'atomo.',
+    scale: (p) => `Scala non reale: nell'atomo di ${p.name} il nucleo (raggio ≈ ${p.rNuc} fm) è circa ${p.ratio} volte più piccolo dell'atomo (≈ ${p.rAtom} pm). Se il nucleo fosse una biglia di 1 cm, l'atomo sarebbe largo circa ${p.size}.`,
+    pause: 'Pausa (barra spaziatrice)',
+    play: 'Riproduci (barra spaziatrice)',
+    clickToAnalyse: 'Clic per analizzarlo',
+    tipProton: '<b class="p">Protone</b> p⁺ · carica +1 · quark uud',
+    tipNeutron: '<b class="n">Neutrone</b> n⁰ · carica 0 · quark udd',
+    tipElectron: (p) => `<b class="e">Elettrone</b> e⁻ · guscio ${p.shell} (n = ${p.n}) · orbitale ${p.orbital}`,
+    tipQn: 'numeri quantici',
+    fps: '{fps} fps · qualità {q}',
+    quality: ['bassa', 'media', 'alta', 'massima'],
+  },
+  en: {
+    back: 'Periodic table',
+    prev: 'Previous element',
+    next: 'Next element',
+    models: 'Atomic model',
+    bohr: 'Bohr model',
+    bohrTitle: 'Bohr model (B)',
+    quantum: 'Quantum model',
+    quantumTitle: 'Quantum model (Q)',
+    panel: 'Show or hide the controls',
+    controls: 'Viewer controls',
+    isotope: 'Isotope',
+    chooseIsotope: 'Choose isotope',
+    nucleus: 'Nucleus',
+    explode: 'Explode the nucleus',
+    implode: 'Pack the nucleus back',
+    animation: 'Animation',
+    speed: 'Animation speed',
+    show: 'Show',
+    labels: 'Labels',
+    shells: 'Electron shells',
+    orbitals: 'Orbitals',
+    axes: 'Axes x · y · z',
+    occupied: 'Occupied orbitals',
+    last: 'Last',
+    lastTitle: 'Last filled subshell (Madelung rule)',
+    valence: 'Valence',
+    valenceTitle: 'Outer shell and incomplete d/f subshells',
+    all: 'All',
+    none: 'None',
+    psiLegend: 'light colour: ψ &gt; 0 · dark: ψ &lt; 0',
+    orbitalNote: 'Exact shapes (solutions of the hydrogen atom), filled according to Hund\'s rule. Sizes are compressed to show all the shells together.',
+    protons: 'Protons',
+    neutrons: 'Neutrons',
+    electrons: 'Electrons',
+    hint: '<b>Click a particle</b> to analyse it · drag to rotate · wheel to zoom · right button to pan',
+    busy: 'Computing the orbitals…',
+    noWebgl: 'Could not start 3D graphics (WebGL is not available on this computer).',
+    yearsShort: ' y',
+    isoTitle: '{name}-{label}: {n} neutrons',
+    stable: 'Stable',
+    radioactive: 'Radioactive',
+    orbitalTitle: (p) => `Orbital ${p.name}: ${p.n} electron${p.n === 1 ? '' : 's'}`,
+    subTitle: 'All the {label} orbitals',
+    nucleusLabel: '<b>Nucleus</b> {p} p⁺ · {n} n⁰',
+    scaleDefault: 'Not to scale: the nucleus is about 100,000 times smaller than the atom.',
+    scale: (p) => `Not to scale: in the ${p.name} atom the nucleus (radius ≈ ${p.rNuc} fm) is about ${p.ratio} times smaller than the atom (≈ ${p.rAtom} pm). If the nucleus were a 1 cm marble, the atom would be about ${p.size} across.`,
+    pause: 'Pause (space bar)',
+    play: 'Play (space bar)',
+    clickToAnalyse: 'Click to analyse it',
+    tipProton: '<b class="p">Proton</b> p⁺ · charge +1 · quarks uud',
+    tipNeutron: '<b class="n">Neutron</b> n⁰ · charge 0 · quarks udd',
+    tipElectron: (p) => `<b class="e">Electron</b> e⁻ · shell ${p.shell} (n = ${p.n}) · orbital ${p.orbital}`,
+    tipQn: 'quantum numbers',
+    fps: '{fps} fps · {q} quality',
+    quality: ['low', 'medium', 'high', 'maximum'],
+  },
+  eli6: {
+    bohr: 'Elettroni sui cerchi',
+    bohrTitle: 'Modello di Bohr (B): gli elettroni girano su cerchi, come pianeti',
+    quantum: 'Elettroni come nuvole',
+    quantumTitle: 'Modello quantistico (Q): gli elettroni sono nuvole intorno al nucleo',
+    isotope: 'Versione (isotopo)',
+    nucleus: 'Il centro dell\'atomo',
+    explode: 'Apri il nucleo',
+    implode: 'Richiudi il nucleo',
+    shells: 'Cerchi degli elettroni',
+    orbitals: 'Nuvole degli elettroni',
+    occupied: 'Nuvole con elettroni',
+    lastTitle: 'L\'ultima nuvola riempita',
+    valenceTitle: 'Le nuvole più esterne: quelle che servono per legarsi agli altri atomi',
+    psiLegend: 'due colori: le due «metà» della nuvola',
+    orbitalNote: 'Ogni nuvola mostra dove è facile trovare un elettrone: dove è più fitta, è più probabile che sia lì. Una nuvola può ospitare al massimo 2 elettroni.',
+    hint: '<b>Clicca un pallino</b> per sapere cos\'è · trascina per girare l\'atomo · rotella per avvicinarti',
+    radioactive: 'Radioattivo (si trasforma)',
+    scaleDefault: 'Attenzione: le misure non sono vere. Il nucleo è circa 100 000 volte più piccolo dell\'atomo.',
+    scale: (p) => `Attenzione: le misure non sono vere. Se il nucleo dell'atomo di ${p.name} fosse una biglia di 1 cm, l'atomo intero sarebbe largo circa ${p.size}: quasi tutto l'atomo è vuoto!`,
+    clickToAnalyse: 'Clicca per sapere tutto',
+    tipProton: '<b class="p">Protone</b> · ha carica positiva (+) · sta nel nucleo',
+    tipNeutron: '<b class="n">Neutrone</b> · non ha carica · sta nel nucleo e tiene unito il nucleo',
+    tipElectron: (p) => `<b class="e">Elettrone</b> · ha carica negativa (−) · gira nel cerchio ${p.shell}, il numero ${p.n} partendo dal centro`,
+  },
+});
 
 const PANEL_W = 316;
 const PARTICLE_W = 372; // scheda della particella (larghezza + margini)
@@ -26,12 +171,12 @@ const lastSubshell = (occupancy) =>
   occupancy.reduce((best, s) => (MADELUNG.indexOf(s.label) > MADELUNG.indexOf(best.label) ? s : best));
 const SPIN = { 1: '↑', 2: '↑↓' };
 
-const TEMPLATE = `
-  <div class="av-stage"></div>
+const TEMPLATE = () => `
+  <div class="av-stage" data-help="viewer.stage"></div>
   <div class="av-vignette" aria-hidden="true"></div>
 
   <header class="av-top">
-    <button type="button" class="btn-ghost av-back" data-act="close">${icons.prev(16)}<span>Tavola periodica</span><kbd>Esc</kbd></button>
+    <button type="button" class="btn-ghost av-back" data-act="close">${icons.prev(16)}<span>${t('back')}</span><kbd>Esc</kbd></button>
     <div class="av-title">
       <div class="av-tile"><span class="av-tile__z"></span><span class="av-tile__sym"></span></div>
       <div class="av-title__text">
@@ -39,69 +184,68 @@ const TEMPLATE = `
         <h2 class="av-name" id="av-name"></h2>
       </div>
       <div class="av-elnav">
-        <button type="button" class="btn-icon" data-act="prev" title="Elemento precedente">${icons.prev(17)}</button>
-        <button type="button" class="btn-icon" data-act="next" title="Elemento successivo">${icons.next(17)}</button>
+        <button type="button" class="btn-icon" data-act="prev" title="${t('prev')}">${icons.prev(17)}</button>
+        <button type="button" class="btn-icon" data-act="next" title="${t('next')}">${icons.next(17)}</button>
       </div>
     </div>
-    <div class="segmented av-modes" role="group" aria-label="Modello atomico">
-      <button type="button" class="segmented__btn" data-mode="bohr" aria-pressed="true" title="Modello di Bohr (B)">Modello di Bohr</button>
-      <button type="button" class="segmented__btn" data-mode="quantum" aria-pressed="false" title="Modello quantistico (Q)">Modello quantistico</button>
+    <div class="segmented av-modes" role="group" aria-label="${t('models')}">
+      <button type="button" class="segmented__btn" data-mode="bohr" data-help="term.bohrModel" aria-pressed="true" title="${t('bohrTitle')}">${t('bohr')}</button>
+      <button type="button" class="segmented__btn" data-mode="quantum" data-help="term.quantumModel" aria-pressed="false" title="${t('quantumTitle')}">${t('quantum')}</button>
     </div>
-    <button type="button" class="btn-icon av-panel-toggle" data-act="panel" title="Mostra o nascondi i controlli" aria-expanded="true">${icons.sliders(18)}</button>
+    <button type="button" class="btn-icon av-panel-toggle" data-act="panel" title="${t('panel')}" aria-expanded="true">${icons.sliders(18)}</button>
   </header>
 
-  <aside class="av-panel" aria-label="Controlli del visualizzatore">
-    <section class="av-sec">
-      <h3>Isotopo</h3>
-      <div class="av-isotopes" role="group" aria-label="Seleziona isotopo"></div>
+  <aside class="av-panel" aria-label="${t('controls')}">
+    <section class="av-sec" data-help="term.isotope">
+      <h3>${t('isotope')}</h3>
+      <div class="av-isotopes" role="group" aria-label="${t('chooseIsotope')}"></div>
       <p class="av-iso-info" aria-live="polite"></p>
     </section>
 
     <section class="av-sec">
-      <h3>Nucleo</h3>
-      <button type="button" class="av-btn" data-act="explode" aria-pressed="false">${icons.explode(17)}<span>Esplodi il nucleo</span><kbd>E</kbd></button>
+      <h3>${t('nucleus')}</h3>
+      <button type="button" class="av-btn" data-act="explode" data-help="viewer.explode" aria-pressed="false">${icons.explode(17)}<span>${t('explode')}</span><kbd>E</kbd></button>
     </section>
 
     <section class="av-sec">
-      <h3>Animazione</h3>
-      <div class="av-anim">
-        <button type="button" class="btn-icon av-play" data-act="play" title="Pausa (barra spaziatrice)"></button>
-        <input class="av-speed" type="range" min="0.1" max="3" step="0.05" value="1" aria-label="Velocità dell'animazione" />
-        <output class="av-speed-val">1,0×</output>
+      <h3>${t('animation')}</h3>
+      <div class="av-anim" data-help="viewer.animation">
+        <button type="button" class="btn-icon av-play" data-act="play" title="${t('pause')}"></button>
+        <input class="av-speed" type="range" min="0.1" max="3" step="0.05" value="1" aria-label="${t('speed')}" />
+        <output class="av-speed-val">${fmtNumber(1, 1, 1)}×</output>
       </div>
     </section>
 
     <section class="av-sec">
-      <h3>Mostra</h3>
+      <h3>${t('show')}</h3>
       <div class="av-switches">
         ${[
-          ['labels', 'Etichette', 'L'],
-          ['shells', 'Gusci elettronici', ''],
-          ['orbitals', 'Orbitali', ''],
-          ['axes', 'Assi x · y · z', ''],
+          ['labels', t('labels'), 'L', 'viewer.labels'],
+          ['shells', t('shells'), '', 'term.shell'],
+          ['orbitals', t('orbitals'), '', 'term.orbital'],
+          ['axes', t('axes'), '', 'viewer.axes'],
         ]
           .map(
-            ([k, label, key]) => `<label class="switch"><input type="checkbox" data-show="${k}" /><span class="switch__track"></span><span>${label}</span>${key ? `<kbd>${key}</kbd>` : ''}</label>`,
+            ([k, label, key, help]) => `<label class="switch" data-help="${help}"><input type="checkbox" data-show="${k}" /><span class="switch__track"></span><span>${label}</span>${key ? `<kbd>${key}</kbd>` : ''}</label>`,
           )
           .join('')}
       </div>
     </section>
 
     <section class="av-sec av-orbitals" hidden>
-      <h3>Orbitali occupati</h3>
+      <h3 data-help="term.orbital">${t('occupied')}</h3>
       <div class="av-orb-actions">
-        <button type="button" class="chip-btn" data-preset="last" title="Ultimo sottolivello riempito (regola di Madelung)">Ultimo</button>
-        <button type="button" class="chip-btn" data-preset="valence" title="Guscio esterno e sottolivelli d/f incompleti">Valenza</button>
-        <button type="button" class="chip-btn" data-preset="all">Tutti</button>
-        <button type="button" class="chip-btn" data-preset="none">Nessuno</button>
+        <button type="button" class="chip-btn" data-preset="last" title="${t('lastTitle')}">${t('last')}</button>
+        <button type="button" class="chip-btn" data-preset="valence" data-help="term.valence" title="${t('valenceTitle')}">${t('valence')}</button>
+        <button type="button" class="chip-btn" data-preset="all">${t('all')}</button>
+        <button type="button" class="chip-btn" data-preset="none">${t('none')}</button>
       </div>
       <div class="av-orb-list"></div>
       <div class="av-orb-legend">
         ${['s', 'p', 'd', 'f'].map((t, l) => `<span><i style="--a:${ORBITAL_COLORS[l][0]};--b:${ORBITAL_COLORS[l][1]}"></i>${t}</span>`).join('')}
-        <small>colore chiaro: ψ &gt; 0 · scuro: ψ &lt; 0</small>
+        <small>${t('psiLegend')}</small>
       </div>
-      <p class="av-note">Forme esatte (soluzioni dell'atomo di idrogeno), riempimento secondo la regola di Hund.
-        Le dimensioni sono compresse per mostrare insieme tutti i gusci.</p>
+      <p class="av-note">${t('orbitalNote')}</p>
     </section>
   </aside>
 
@@ -109,16 +253,16 @@ const TEMPLATE = `
 
   <div class="av-bottom">
     <div class="av-legend">
-      <span><i class="dot dot--p"></i>Protoni <b class="av-count-p"></b></span>
-      <span><i class="dot dot--n"></i>Neutroni <b class="av-count-n"></b></span>
-      <span><i class="dot dot--e"></i>Elettroni <b class="av-count-e"></b></span>
+      <span data-help="term.proton"><i class="dot dot--p"></i>${t('protons')} <b class="av-count-p"></b></span>
+      <span data-help="term.neutron"><i class="dot dot--n"></i>${t('neutrons')} <b class="av-count-n"></b></span>
+      <span data-help="term.electron"><i class="dot dot--e"></i>${t('electrons')} <b class="av-count-e"></b></span>
     </div>
     <p class="av-scale">${icons.warn(15)}<span></span></p>
   </div>
 
-  <p class="av-hint"><b>Clic su una particella</b> per analizzarla · trascina per ruotare · rotella per lo zoom · tasto destro per spostare</p>
+  <p class="av-hint">${t('hint')}</p>
   <div class="av-tip" role="tooltip" hidden></div>
-  <div class="av-busy" hidden><span class="spinner"></span>Calcolo degli orbitali…</div>
+  <div class="av-busy" hidden><span class="spinner"></span>${t('busy')}</div>
   <div class="av-fps" hidden></div>
   <div class="av-error" hidden></div>`;
 
@@ -130,7 +274,7 @@ export function createAtomViewer(elements, { onClose }) {
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
   root.setAttribute('aria-labelledby', 'av-name');
-  root.innerHTML = TEMPLATE;
+  root.innerHTML = TEMPLATE();
   document.body.append(root);
 
   const $ = (sel) => root.querySelector(sel);
@@ -143,11 +287,12 @@ export function createAtomViewer(elements, { onClose }) {
   } catch (err) {
     console.error(err);
     $('.av-error').hidden = false;
-    $('.av-error').textContent = 'Impossibile avviare la grafica 3D (WebGL non disponibile su questo computer).';
+    $('.av-error').textContent = t('noWebgl');
     return { open: () => (root.hidden = false), close: () => (root.hidden = true), isOpen: () => !root.hidden };
   }
 
   const nucleus = new Nucleus(engine.scene);
+  nucleus.useAO(engine.sphereAO);
   const bohr = new BohrModel(engine.scene);
   const clouds = new OrbitalClouds(engine.scene);
   const quarks = new QuarkView(nucleus.group);
@@ -235,7 +380,7 @@ export function createAtomViewer(elements, { onClose }) {
 
   function isoShort(iso) {
     if (iso.abundance !== null) return fmtAbundance(iso);
-    if (iso.halfLife) return `t½ ${iso.halfLife.text.replace(/ anni$/, ' a')}`;
+    if (iso.halfLife) return `t½ ${iso.halfLife.text.replace(/ (anni|years)$/, t('yearsShort'))}`;
     return '';
   }
 
@@ -244,7 +389,7 @@ export function createAtomViewer(elements, { onClose }) {
     $('.av-isotopes').innerHTML = state.isotopes
       .map(
         (iso) => `<button type="button" class="iso-chip ${iso.stable ? '' : 'is-radio'}" data-n="${iso.neutrons}" aria-pressed="${iso.neutrons === state.neutrons}"
-            title="${esc(el.name)}-${iso.label}: ${iso.neutrons} neutroni">
+            title="${esc(t('isoTitle', { name: el.name, label: iso.label, n: iso.neutrons }))}">
             <b>${isotopeNotation(iso, esc(el.symbol))}</b><small>${esc(isoShort(iso))}</small></button>`,
       )
       .join('');
@@ -256,8 +401,8 @@ export function createAtomViewer(elements, { onClose }) {
     const iso = state.isotopes.find((i) => i.neutrons === state.neutrons);
     root.querySelectorAll('.iso-chip').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.n) === state.neutrons)));
     const stability = iso.stable
-      ? '<span class="badge badge--stable">Stabile</span>'
-      : `<span class="badge badge--radio">Radioattivo</span> t½ ${esc(iso.halfLife.text)}${iso.decay.length ? ` · ${iso.decay.map((d) => d.symbol).join(' / ')}` : ''}`;
+      ? `<span class="badge badge--stable">${t('stable')}</span>`
+      : `<span class="badge badge--radio">${t('radioactive')}</span> t½ ${esc(iso.halfLife.text)}${iso.decay.length ? ` · ${iso.decay.map((d) => d.symbol).join(' / ')}` : ''}`;
     $('.av-iso-info').innerHTML = `
       <span class="eq"><b class="p">${el.z}</b> p⁺ + <b class="n">${iso.neutrons}</b> n⁰ = A <b>${iso.massNumber}</b></span>
       <span>${stability}</span>`;
@@ -270,12 +415,12 @@ export function createAtomViewer(elements, { onClose }) {
         const chips = sub.orbitals
           .map(
             (o) => `<button type="button" class="orb-chip" data-orb="${o.id}" aria-pressed="${clouds.isOn(o.id)}" style="--oc:${color}"
-                title="Orbitale ${sub.n}${o.html.replace(/<[^>]+>/g, '') || 's'}: ${o.electrons} elettron${o.electrons === 1 ? 'e' : 'i'}">
+                title="${esc(t('orbitalTitle', { name: `${sub.n}${o.html.replace(/<[^>]+>/g, '') || 's'}`, n: o.electrons }))}">
                 ${sub.l === 0 ? `${sub.n}s` : o.html}<span class="spins">${SPIN[o.electrons]}</span></button>`,
           )
           .join('');
         return `<div class="orb-row">
-            <button type="button" class="orb-sub" data-sub="${sub.label}" style="--oc:${color}" title="Tutti gli orbitali ${sub.label}">
+            <button type="button" class="orb-sub" data-sub="${sub.label}" style="--oc:${color}" title="${esc(t('subTitle', { label: sub.label }))}">
               ${sub.label}<sup>${sub.electrons}</sup></button>
             <div class="orb-chips">${chips}</div></div>`;
       })
@@ -301,7 +446,7 @@ export function createAtomViewer(elements, { onClose }) {
     $('.av-count-p').textContent = state.el.z;
     $('.av-count-n').textContent = state.neutrons;
     $('.av-count-e').textContent = state.el.z;
-    nucleusLabelEl.innerHTML = `<b>Nucleo</b> ${state.el.z} p⁺ · ${state.neutrons} n⁰`;
+    nucleusLabelEl.innerHTML = t('nucleusLabel', { p: state.el.z, n: state.neutrons });
     renderScaleNote();
   }
 
@@ -311,15 +456,13 @@ export function createAtomViewer(elements, { onClose }) {
     const A = el.z + state.neutrons;
     const rNucFm = el.z === 1 && A === 1 ? 0.84 : 1.2 * Math.cbrt(A);
     const rAtomPm = el.vdwRadiusPm ?? el.covalentRadiusPm;
-    let text = 'Scala non reale: il nucleo è circa 100 000 volte più piccolo dell\'atomo.';
+    let text = t('scaleDefault');
     if (rAtomPm) {
       const ratio = (rAtomPm * 1000) / rNucFm;
       const rounded = Math.round(ratio / 1000) * 1000;
       const meters = ratio / 100;
       const size = meters >= 1000 ? `${fmtNumber(meters / 1000, 1)} km` : `${fmtNumber(Math.round(meters / 10) * 10, 0)} m`;
-      text = `Scala non reale: nell'atomo di ${el.name.toLowerCase()} il nucleo (raggio ≈ ${fmtNumber(rNucFm, 1)} fm) è circa ` +
-        `${fmtNumber(rounded, 0)} volte più piccolo dell'atomo (≈ ${rAtomPm} pm). Se il nucleo fosse una biglia di 1 cm, ` +
-        `l'atomo sarebbe largo circa ${size}.`;
+      text = t('scale', { name: el.name.toLowerCase(), rNuc: fmtNumber(rNucFm, 1), ratio: fmtNumber(rounded, 0), rAtom: rAtomPm, size });
     }
     $('.av-scale span').textContent = text;
   }
@@ -345,10 +488,10 @@ export function createAtomViewer(elements, { onClose }) {
     $('.av-orbitals').hidden = !show.orbitals;
     const ex = $('[data-act="explode"]');
     ex.setAttribute('aria-pressed', String(exploded));
-    ex.querySelector('span').textContent = exploded ? 'Ricompatta il nucleo' : 'Esplodi il nucleo';
+    ex.querySelector('span').textContent = exploded ? t('implode') : t('explode');
     const play = $('.av-play');
     play.innerHTML = state.playing ? icons.pause(18) : icons.play(18);
-    play.title = state.playing ? 'Pausa (barra spaziatrice)' : 'Riproduci (barra spaziatrice)';
+    play.title = state.playing ? t('pause') : t('play');
     root.classList.toggle('is-quantum', mode === 'quantum');
   }
 
@@ -561,12 +704,12 @@ export function createAtomViewer(elements, { onClose }) {
     const selected = h.kind === 'electron'
       ? state.sel?.kind === 'electron' && state.sel.index === h.index
       : Boolean(state.sel?.particle) && nucleus.particleAt(h.mesh, h.index) === state.sel.particle;
-    const hint = selected ? '' : '<br><small>Clic per analizzarlo</small>';
-    if (h.kind === 'proton') return `<b class="p">Protone</b> p⁺ · carica +1 · quark uud${hint}`;
-    if (h.kind === 'neutron') return `<b class="n">Neutrone</b> n⁰ · carica 0 · quark udd${hint}`;
+    const hint = selected ? '' : `<br><small>${t('clickToAnalyse')}</small>`;
+    if (h.kind === 'proton') return `${t('tipProton')}${hint}`;
+    if (h.kind === 'neutron') return `${t('tipNeutron')}${hint}`;
     const e = state.electrons[h.index];
-    return `<b class="e">Elettrone</b> e⁻ · guscio ${e.shell} (n = ${e.n}) · orbitale ${orbitalHtml(e.n, e.l, e.ml)}
-      <br><small>numeri quantici: n = ${e.n}, l = ${e.l}, m<sub>l</sub> = ${e.ml}, m<sub>s</sub> = ${e.ms > 0 ? '+½' : '−½'}</small>${hint}`;
+    return `${t('tipElectron', { shell: e.shell, n: e.n, orbital: orbitalHtml(e.n, e.l, e.ml) })}
+      <br><small>${t('tipQn')}: n = ${e.n}, l = ${e.l}, m<sub>l</sub> = ${e.ml}, m<sub>s</sub> = ${e.ms > 0 ? '+½' : '−½'}</small>${hint}`;
   }
 
   // ------------------------------------------------------------ analisi delle particelle
@@ -620,6 +763,7 @@ export function createAtomViewer(elements, { onClose }) {
     root.classList.add('has-particle');
     root.classList.remove('is-quark-view');
     particlePanel.hidden = false;
+    window.dispatchEvent(new CustomEvent('tp3d:particle', { detail: { kind } }));
     renderParticle();
     particlePanel.scrollTop = 0;
     updateInsets();
@@ -701,6 +845,8 @@ export function createAtomViewer(elements, { onClose }) {
     state.wall += dt;
     nucleus.update(dt, state.time);
     bohr.update(dt, state.time);
+    // ombre (preset Professionale): la mappa copre solo il nucleo, a passi di 0,25 per non farla tremolare
+    engine.setShadowFocus(ORIGIN, Math.ceil((nucleus.displayRadius + NUCLEON_R) * 4) / 4);
     const viewportPx = stage.clientHeight * engine.renderer.getPixelRatio();
     clouds.setViewportHeight(viewportPx, engine.camera.fov);
     quarks.setViewportHeight(viewportPx, engine.camera.fov);
@@ -721,7 +867,7 @@ export function createAtomViewer(elements, { onClose }) {
 
   const fpsEl = $('.av-fps');
   engine.onFps = (fps, q) => {
-    fpsEl.textContent = `${Math.round(fps)} fps · qualità ${['bassa', 'media', 'alta'][q]}`;
+    fpsEl.textContent = t('fps', { fps: Math.round(fps), q: t('quality')[q] });
   };
 
   // ------------------------------------------------------------ tastiera

@@ -9,6 +9,36 @@ import { bondEnergy } from './bond-energy.js';
 import { bondCharacter } from './bonding.js';
 import { formulaKey, covalentParts } from './identify.js';
 import { TIER, typicalIonCharge } from './elements-lab.js';
+import { createT } from '../../i18n/index.js';
+
+const tx = createT({
+  it: {
+    none: 'Non ci sono atomi da combinare: aggiungine almeno due al banco.',
+    one: 'Serve almeno un altro atomo per formare un legame.',
+    metals: 'Solo metalli: tra loro formano un legame metallico (elettroni condivisi da tutto il reticolo), che il banco non simula.',
+    noble: 'I gas nobili hanno il guscio esterno completo: non formano legami.',
+    tooMany: 'Troppi atomi da sistemare automaticamente (oltre {max} atomi non terminali): collegali a mano o scegli un esempio.',
+    charges: 'Le cariche degli ioni non si bilanciano con questi atomi: aggiungi o togli atomi (es. per Na e O servono 2 Na per ogni O).',
+    invalid: 'Con questi atomi non si riesce a formare una struttura valida.',
+  },
+  en: {
+    none: 'There are no atoms to combine: put at least two on the bench.',
+    one: 'At least one more atom is needed to form a bond.',
+    metals: 'Metals only: together they form a metallic bond (electrons shared by the whole lattice), which the bench does not simulate.',
+    noble: 'Noble gases have a full outer shell: they do not form bonds.',
+    tooMany: 'Too many atoms to arrange automatically (more than {max} non-terminal atoms): connect them by hand or pick an example.',
+    charges: 'The ion charges do not balance with these atoms: add or remove atoms (e.g. Na and O need 2 Na for every O).',
+    invalid: 'These atoms cannot form a valid structure.',
+  },
+  eli6: {
+    none: 'Non c\'è niente da combinare: metti sul banco almeno due atomi.',
+    one: 'Per fare un legame servono almeno due atomi.',
+    metals: 'Ci sono solo metalli: i metalli si tengono insieme tutti in blocco, mettendo in comune gli elettroni, e qui questo non si può fare.',
+    noble: 'I gas nobili sono «completi»: non hanno bisogno di nessuno e non si legano.',
+    charges: 'Con questi atomi le cariche + e − non si pareggiano: prova ad aggiungere o togliere qualche atomo.',
+    invalid: 'Con questi atomi non riesco a costruire una molecola che stia in piedi.',
+  },
+});
 
 const MAX_HEAVY = 8;
 const BUDGET = 160000;
@@ -135,8 +165,8 @@ function partitions(g, parts, maxEach) {
 export function combine(lab, library, zs) {
   const n = zs.length;
   const info = zs.map((z) => lab.get(z));
-  if (n === 0) return { ok: false, message: 'Non ci sono atomi da combinare: aggiungine almeno due al banco.' };
-  if (n === 1) return { ok: false, message: 'Serve almeno un altro atomo per formare un legame.' };
+  if (n === 0) return { ok: false, message: tx('none') };
+  if (n === 1) return { ok: false, message: tx('one') };
 
   // 1. libreria
   if (library) {
@@ -178,10 +208,10 @@ export function combine(lab, library, zs) {
   }
 
   if (info.every((x) => x.metal)) {
-    return { ok: false, message: 'Solo metalli: tra loro formano un legame metallico (elettroni condivisi da tutto il reticolo), che il banco non simula.' };
+    return { ok: false, message: tx('metals') };
   }
   if (info.every((x) => x.valences.every((v) => v === 0))) {
-    return { ok: false, message: 'I gas nobili hanno il guscio esterno completo: non formano legami.' };
+    return { ok: false, message: tx('noble') };
   }
 
   // 2. metalli che formano legami ionici
@@ -216,9 +246,9 @@ export function combine(lab, library, zs) {
   }
 
   if (!best) {
-    if (aborted) return { ok: false, message: `Troppi atomi da sistemare automaticamente (oltre ${MAX_HEAVY} atomi non terminali): collegali a mano o scegli un esempio.` };
-    if (ionicMetals.length) return { ok: false, message: 'Le cariche degli ioni non si bilanciano con questi atomi: aggiungi o togli atomi (es. per Na e O servono 2 Na per ogni O).' };
-    return { ok: false, message: 'Con questi atomi non si riesce a formare una struttura valida.' };
+    if (aborted) return { ok: false, message: tx('tooMany', { max: MAX_HEAVY }) };
+    if (ionicMetals.length) return { ok: false, message: tx('charges') };
+    return { ok: false, message: tx('invalid') };
   }
   return { ok: true, source: 'search', bonds: best.bonds, unpaired: best.unpaired, units: best.units, energy: best.energy, explored };
 }

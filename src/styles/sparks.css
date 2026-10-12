@@ -1,0 +1,85 @@
+/* Effetti delle sorprese */
+.ptable .cell.spark-wave {
+  animation: spark-wave 900ms var(--ease-out) both;
+  animation-delay: var(--sd, 0ms);
+}
+@keyframes spark-wave {
+  40% {
+    transform: translateY(-10px) scale(1.08);
+    border-color: var(--c);
+    box-shadow: 0 0 22px color-mix(in oklab, var(--c) 70%, transparent);
+    z-index: 2;
+  }
+}
+
+.ptable .cell.spark-glow {
+  z-index: 2;
+  border-color: #ffd479;
+  animation: spark-glow 1.6s ease-in-out infinite;
+  animation-delay: var(--sd, 0ms);
+}
+@keyframes spark-glow {
+  50% {
+    box-shadow: 0 0 0 2px rgba(255, 212, 121, 0.75), 0 0 28px rgba(255, 212, 121, 0.55);
+    transform: translateY(-3px);
+  }
+}
+
+.spark-ghost {
+  position: fixed;
+  z-index: 40;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  padding: 6px 7px;
+  border: 1px dashed rgba(255, 212, 121, 0.8);
+  border-radius: 8px;
+  background: linear-gradient(160deg, rgba(255, 212, 121, 0.16), rgba(8, 13, 21, 0.9));
+  box-shadow: 0 0 28px rgba(255, 212, 121, 0.35);
+  color: #fff3d6;
+  font-family: var(--font-sans);
+  pointer-events: none;
+  animation: spark-ghost-in 900ms var(--ease-out) both, spark-ghost-pulse 2.4s ease-in-out 900ms infinite;
+}
+.spark-ghost i {
+  font: 500 11px var(--font-mono);
+  font-style: normal;
+  opacity: 0.8;
+}
+.spark-ghost b {
+  align-self: center;
+  font-size: 22px;
+  line-height: 1;
+}
+.spark-ghost span {
+  overflow: hidden;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.spark-ghost small {
+  font: 10px var(--font-mono);
+  opacity: 0.7;
+}
+.spark-ghost.is-leaving {
+  opacity: 0;
+  transition: opacity 900ms;
+}
+@keyframes spark-ghost-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.85);
+    filter: blur(6px);
+  }
+}
+@keyframes spark-ghost-pulse {
+  50% {
+    box-shadow: 0 0 40px rgba(255, 212, 121, 0.55);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ptable .cell.spark-wave,
+  .ptable .cell.spark-glow,
+  .spark-ghost {
+    animation: none;
+  }
+}

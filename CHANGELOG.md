@@ -11,6 +11,24 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 ## [Non rilasciato]
 
 ### Aggiunto
+- **Preset grafici** (pulsante con lo schermo nella barra in alto): *Semplice* per i computer poco potenti (niente
+  post-processing, meno segmenti e punti, sandbox senza bagliore, niente sfocature e animazioni continue
+  nell'interfaccia), *Medio* (la grafica di prima, predefinito) e *Professionale*: sovracampionamento, MSAA 4×, tone
+  mapping *Khronos PBR Neutral*, riflessi di uno studio fotografico, ombre morbide, occlusione ambientale analitica tra
+  le sfere, materiali fisici con vernice trasparente, sfere più dettagliate e orbitali con 2,2× punti; nella sandbox trame
+  dei materiali, rilievo e liquidi con profondità e superficie lucida. La qualità scende da sola se il computer non regge.
+- **Aspetto reale degli elementi** (preset Professionale): campione 3D di ogni elemento puro con colori e materiali veri
+  (metalli con la riflettanza misurata, cristalli, gas che brillano del colore della loro scarica in ampolle di vetro,
+  bromo liquido, goccia di mercurio, bismuto iridescente), nella scheda, nell'anteprima e in miniatura nelle celle.
+- Test dei preset grafici e dell'aspetto reale (`tests/gfx/gfx.test.mjs`).
+- **Lingue**: italiano, inglese e «Spiegamelo come se avessi 6 anni» (italiano con parole semplici), dal globo nella
+  barra in alto. Tradotti interfaccia, schede dei 118 elementi, visualizzatore 3D e analisi delle particelle, laboratorio
+  (554 sostanze, 1349 reazioni, nomi IUPAC generati), sandbox (strumenti, schede, registro, esempi) e menu dell'app
+  desktop. La scelta resta salvata; cambiando lingua l'app riapre l'elemento che si stava guardando.
+- **Modalità Spiega** (`F1` o pulsante a fumetto): evidenziando un testo o facendo clic destro su qualsiasi cosa si apre
+  una scheda che spiega termini di chimica e fisica, famiglie, gruppi, periodi, elementi, sostanze, funzioni
+  dell'interfaccia e tasti, con scorciatoie, «Vedi anche» e cronologia. Glossario di 144 voci in tre lingue.
+- Test delle lingue e del glossario (`tests/i18n/i18n.test.mjs`).
 - **Sandbox degli elementi** (pulsante «Sandbox» nella barra in alto e nella scheda dell'elemento): una sabbiera a
   particelle in stile *The Powder Toy* con i 118 elementi e i materiali di base — legno, carbone, calcestruzzo, muro
   indistruttibile — più generatore elettrico, acqua, sale, ruggine e CO₂.

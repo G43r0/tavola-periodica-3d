@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { SHELL_LETTERS } from '../chem/electron-config.js';
+import { seg } from '../gfx/preset.js';
 
 export const ELECTRON_R = 0.3;
 const HIGHLIGHT = new THREE.Color(2.4, 2.4, 2.4);
@@ -12,7 +13,7 @@ const NORMAL = new THREE.Color(1, 1, 1);
 const TILT_X = [0.0, 0.42, -0.3, 0.68, -0.55, 0.22, -0.82];
 const TILT_Z = [0.0, 0.26, 0.62, -0.38, 0.14, -0.7, 0.48];
 
-const electronGeometry = new THREE.SphereGeometry(ELECTRON_R, 20, 14);
+const electronGeometry = new THREE.SphereGeometry(ELECTRON_R, seg(20), seg(14));
 
 /** Raggi dei gusci in funzione del raggio massimo del nucleo. */
 export function shellRadii(shellCount, nucleusR) {
@@ -55,7 +56,7 @@ export class BohrModel {
       const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(TILT_X[i], 0, TILT_Z[i]));
       const u = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
       const v = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.035, 8, 220), this.ringMaterial);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.035, seg(8, 4), seg(220, 96)), this.ringMaterial);
       ring.quaternion.copy(q).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0)));
       this.group.add(ring);
 

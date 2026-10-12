@@ -4,10 +4,11 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { Engine } from '../viewer/engine.js';
+import { gfx, seg } from '../gfx/preset.js';
 
-const sphereGeo = new THREE.SphereGeometry(1, 36, 24);
-const cylGeo = new THREE.CylinderGeometry(1, 1, 1, 16, 1, false);
-const lobeGeo = new THREE.SphereGeometry(1, 20, 14);
+const sphereGeo = new THREE.SphereGeometry(1, seg(36), seg(24));
+const cylGeo = new THREE.CylinderGeometry(1, 1, 1, seg(16), 1, false);
+const lobeGeo = new THREE.SphereGeometry(1, seg(20), seg(14));
 const haloMat = new THREE.MeshBasicMaterial({ color: 0x5ce1ff, transparent: true, opacity: 0.22, side: THREE.BackSide, depthWrite: false });
 const pendingMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.35, side: THREE.BackSide, depthWrite: false });
 const lobeMat = new THREE.MeshStandardMaterial({ color: 0xb69cff, transparent: true, opacity: 0.32, roughness: 0.6, depthWrite: false, emissive: 0x3b2a7a, emissiveIntensity: 0.4 });
@@ -25,7 +26,9 @@ const _q = new THREE.Quaternion();
 
 export function createBenchScene(stage, deps) {
   const engine = new Engine(stage);
-  engine.bloom.strength = 0.2;
+  if (engine.bloom) engine.bloom.strength = 0.2;
+  const G = gfx();
+  if (engine.sphereAO) for (const m of [breakMat, formMat]) engine.sphereAO.patch(m);
   engine.camera.position.set(0, 2.5, 14);
   engine.controls.minDistance = 2;
   engine.controls.maxDistance = 80;
@@ -36,7 +39,14 @@ export function createBenchScene(stage, deps) {
   const materialFor = (color) => {
     if (!materials.has(color)) {
       const c = new THREE.Color(color);
-      materials.set(color, new THREE.MeshStandardMaterial({ color: c, roughness: 0.38, metalness: 0.06, emissive: c.clone().multiplyScalar(0.12) }));
+      // Professionale: plastica lucida dei modellini molecolari veri (vernice trasparente che riflette lo studio)
+      materials.set(
+        color,
+        G.physical
+          ? new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.32, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.08, emissive: c.clone().multiplyScalar(0.04) })
+          : new THREE.MeshStandardMaterial({ color: c, roughness: 0.38, metalness: 0.06, emissive: c.clone().multiplyScalar(0.12) }),
+      );
+      engine.sphereAO?.patch(materials.get(color));
     }
     return materials.get(color);
   };
@@ -68,6 +78,7 @@ export function createBenchScene(stage, deps) {
       if (!o) {
         const mesh = new THREE.Mesh(sphereGeo, materialFor(info.color));
         mesh.userData = { atomId: a.id };
+        mesh.castShadow = mesh.receiveShadow = G.shadows;
         const labelEl = document.createElement('div');
         labelEl.className = 'lab-label';
         const label = new CSS2DObject(labelEl);
@@ -106,6 +117,7 @@ export function createBenchScene(stage, deps) {
           for (const color of [ca, cb]) {
             const m = new THREE.Mesh(cylGeo, hl === 'break' ? breakMat : hl === 'form' ? formMat : materialFor(color));
             m.userData = { bondId: b.id };
+            m.castShadow = m.receiveShadow = G.shadows;
             group.add(m);
             parts.push(m);
           }
@@ -158,8 +170,11 @@ export function createBenchScene(stage, deps) {
   // (chiamato anche da rebuild con dt = 0, così gli oggetti appena creati non compaiono per un
   // fotogramma con la trasformazione predefinita)
   engine.add(sync);
+  const shadowBox = new THREE.Box3();
+  const shadowSphere = new THREE.Sphere();
   function sync(dt) {
     const k = 1 - Math.exp(-dt * 10);
+    shadowBox.makeEmpty();
     for (const [id, o] of atoms) {
       const a = deps.bench.atoms.get(id);
       if (!a) continue;
@@ -168,6 +183,20 @@ export function createBenchScene(stage, deps) {
       else o.disp.lerp(_a, k);
       o.mesh.position.copy(o.disp);
       o.label.visible = opts.labels;
+      shadowBox.expandByPoint(o.disp);
+    }
+    // occlusione ambientale tra atomi e legami (preset Professionale)
+    if (engine.sphereAO) {
+      engine.sphereAO.begin();
+      for (const o of atoms.values()) engine.sphereAO.add(o.disp.x, o.disp.y, o.disp.z, o.radius);
+      engine.sphereAO.commit();
+    }
+    // ombre (preset Professionale): la mappa copre tutti gli atomi del banco, a passi di 0,5
+    if (G.shadows && !shadowBox.isEmpty()) {
+      shadowBox.getBoundingSphere(shadowSphere);
+      const q = (v) => Math.round(v * 2) / 2;
+      shadowSphere.center.set(q(shadowSphere.center.x), q(shadowSphere.center.y), q(shadowSphere.center.z));
+      engine.setShadowFocus(shadowSphere.center, Math.ceil(shadowSphere.radius + 1.5));
     }
     for (const o of bonds.values()) {
       const A = atoms.get(o.a);

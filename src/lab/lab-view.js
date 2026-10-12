@@ -23,7 +23,10 @@ import { bondEnergy } from './chem/bond-energy.js';
 import { reactionListHtml, reactionResultsHtml, reactionGroupBodyHtml, reactionCardHtml, reactionTitle, equationHtml, equationText, stepEquation, simulationReportHtml } from './reaction-panel.js';
 import { esc, fmtNumber } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
+import { createT } from '../i18n/index.js';
+import { LAB_STRINGS } from './lab-strings.js';
 
+const tr = createT(LAB_STRINGS);
 const MAX_ATOMS = 150;
 const MAX_SIM_ROUNDS = 8;
 // elementi il cui stato standard è una molecola (H₂, N₂, O₂, alogeni): un loro atomo isolato non ha ΔHf° = 0
@@ -33,60 +36,61 @@ const lowerFirst = (s) => s.charAt(0).toLowerCase() + s.slice(1);
 const PALETTE_W = 318;
 const PANEL_W = 356;
 
-const TEMPLATE = `
-  <div class="lab-stage"></div>
+const TEMPLATE = () => `
+  <div class="lab-stage" data-help="lab.bench"></div>
   <header class="lab-top">
-    <button type="button" class="btn-ghost lab-back" data-act="close">${icons.prev(16)}<span>Tavola periodica</span><kbd>Esc</kbd></button>
+    <button type="button" class="btn-ghost lab-back" data-act="close">${icons.prev(16)}<span>${tr('back')}</span><kbd>Esc</kbd></button>
     <div class="lab-title">
       <span class="lab-title__icon">${icons.flask(22)}</span>
-      <div><p class="lab-eyebrow">Simulatore</p><h2 id="lab-title">Laboratorio molecolare</h2></div>
+      <div><p class="lab-eyebrow">${tr('eyebrow')}</p><h2 id="lab-title">${tr('title')}</h2></div>
     </div>
-    <div class="segmented lab-modes" role="group" aria-label="Strumento">
-      <button type="button" class="segmented__btn" data-mode="move" aria-pressed="true" title="Sposta: trascina gli atomi; avvicinali per legarli (V)">${icons.move(15)}<span>Sposta</span></button>
-      <button type="button" class="segmented__btn" data-mode="bond" aria-pressed="false" title="Lega: clic su due atomi, anche della stessa molecola (B)">${icons.link(15)}<span>Lega</span></button>
-      <button type="button" class="segmented__btn" data-mode="cut" aria-pressed="false" title="Forbici: clic su un legame per romperlo (X)">${icons.scissors(15)}<span>Forbici</span></button>
+    <div class="segmented lab-modes" role="group" aria-label="${tr('tool')}">
+      <button type="button" class="segmented__btn" data-mode="move" data-help="lab.move" aria-pressed="true" title="${tr('moveTitle')}">${icons.move(15)}<span>${tr('move')}</span></button>
+      <button type="button" class="segmented__btn" data-mode="bond" data-help="lab.bond" aria-pressed="false" title="${tr('bondTitle')}">${icons.link(15)}<span>${tr('bond')}</span></button>
+      <button type="button" class="segmented__btn" data-mode="cut" data-help="lab.cut" aria-pressed="false" title="${tr('cutTitle')}">${icons.scissors(15)}<span>${tr('cut')}</span></button>
     </div>
     <div class="lab-top__end">
-      <button type="button" class="btn-ghost lab-formula-toggle" data-act="formula" aria-expanded="false" title="Scrivi o incolla una formula, un nome o uno SMILES e costruiscila sul banco (F, oppure Ctrl+V sul banco)">${icons.clipboard(16)}<span>Formula</span></button>
-      <button type="button" class="btn-ghost lab-rx-toggle" data-act="reactions" aria-pressed="false" title="Reazioni chimiche: equazioni, bilanciamento, energia, animazione">${icons.flask(16)}<span>Reazioni</span></button>
-      <button type="button" class="btn-ghost" data-act="examples" aria-expanded="false">${icons.book(16)}<span>Esempi</span></button>
-      <label class="lab-toggle"><input type="checkbox" data-opt="labels" checked /><span>Etichette</span></label>
-      <label class="lab-toggle"><input type="checkbox" data-opt="lone" checked /><span>Coppie solitarie</span></label>
+      <button type="button" class="btn-ghost lab-formula-toggle" data-act="formula" data-help="lab.formula" aria-expanded="false" title="${tr('formulaTitle')}">${icons.clipboard(16)}<span>${tr('formula')}</span></button>
+      <button type="button" class="btn-ghost lab-rx-toggle" data-act="reactions" data-help="lab.reactions" aria-pressed="false" title="${tr('reactionsTitle')}">${icons.flask(16)}<span>${tr('reactions')}</span></button>
+      <button type="button" class="btn-ghost" data-act="examples" data-help="lab.examples" aria-expanded="false">${icons.book(16)}<span>${tr('examples')}</span></button>
+      <label class="lab-toggle" data-help="lab.labels"><input type="checkbox" data-opt="labels" checked /><span>${tr('labels')}</span></label>
+      <label class="lab-toggle" data-help="term.lonePair"><input type="checkbox" data-opt="lone" checked /><span>${tr('lone')}</span></label>
+      <button type="button" class="btn-ghost explain-toggle" data-action="explain" data-help="ui.explain" aria-pressed="false" title="F1">${icons.explain(16)}</button>
     </div>
   </header>
-  <aside class="lab-palette" aria-label="Elementi"></aside>
+  <aside class="lab-palette" aria-label="${tr('elements')}"></aside>
   <aside class="lab-panel" aria-live="polite"></aside>
-  <div class="lab-dock" role="toolbar" aria-label="Azioni">
-    <button type="button" class="lab-act lab-act--primary" data-act="combine" title="Combina gli atomi selezionati (o tutti gli atomi liberi) nella struttura più stabile (C)">${icons.merge(18)}<span>Combina</span></button>
-    <button type="button" class="lab-act lab-act--sim" data-act="simulate" title="Simula reazione: le molecole sul banco (o quelle selezionate) si muovono e si urtano; se possono reagire si trasformano nei prodotti (R)">${icons.bolt(18)}<span>Simula reazione</span></button>
-    <button type="button" class="lab-act" data-act="separate" title="Separa la molecola selezionata in atomi (S)">${icons.split(18)}<span>Separa</span></button>
-    <button type="button" class="lab-act" data-act="ions" hidden title="Separa il composto ionico nei suoi ioni">${icons.split(18)}<span>In ioni</span></button>
+  <div class="lab-dock" role="toolbar" aria-label="${tr('actions')}">
+    <button type="button" class="lab-act lab-act--primary" data-act="combine" data-help="lab.combine" title="${tr('combineTitle')}">${icons.merge(18)}<span>${tr('combine')}</span></button>
+    <button type="button" class="lab-act lab-act--sim" data-act="simulate" data-help="lab.simulate" title="${tr('simulateTitle')}">${icons.bolt(18)}<span>${tr('simulate')}</span></button>
+    <button type="button" class="lab-act" data-act="separate" data-help="lab.separate" title="${tr('separateTitle')}">${icons.split(18)}<span>${tr('separate')}</span></button>
+    <button type="button" class="lab-act" data-act="ions" data-help="term.ion" hidden title="${tr('ionsTitle')}">${icons.split(18)}<span>${tr('ions')}</span></button>
     <span class="lab-dock__sep"></span>
-    <button type="button" class="lab-act lab-act--icon" data-act="add-e" title="Aggiungi un elettrone alla molecola selezionata (diventa uno ione negativo)">${icons.plus(16)}<span>e⁻</span></button>
-    <button type="button" class="lab-act lab-act--icon" data-act="remove-e" title="Togli un elettrone alla molecola selezionata (diventa uno ione positivo)">${icons.minus(16)}<span>e⁻</span></button>
+    <button type="button" class="lab-act lab-act--icon" data-act="add-e" data-help="lab.charge" title="${tr('addETitle')}">${icons.plus(16)}<span>e⁻</span></button>
+    <button type="button" class="lab-act lab-act--icon" data-act="remove-e" data-help="lab.charge" title="${tr('removeETitle')}">${icons.minus(16)}<span>e⁻</span></button>
     <span class="lab-dock__sep"></span>
-    <button type="button" class="lab-act lab-act--icon" data-act="delete" title="Elimina la selezione (Canc)">${icons.trash(17)}</button>
-    <button type="button" class="lab-act lab-act--icon" data-act="clear" title="Svuota il banco">${icons.broom(17)}</button>
-    <button type="button" class="lab-act lab-act--icon" data-act="undo" title="Annulla (Ctrl+Z)">${icons.undo(17)}</button>
-    <button type="button" class="lab-act lab-act--icon" data-act="redo" title="Ripeti (Ctrl+Y)">${icons.redo(17)}</button>
+    <button type="button" class="lab-act lab-act--icon" data-act="delete" data-help="lab.delete" title="${tr('deleteTitle')}">${icons.trash(17)}</button>
+    <button type="button" class="lab-act lab-act--icon" data-act="clear" data-help="lab.clear" title="${tr('clearTitle')}">${icons.broom(17)}</button>
+    <button type="button" class="lab-act lab-act--icon" data-act="undo" data-help="lab.undo" title="${tr('undoTitle')}">${icons.undo(17)}</button>
+    <button type="button" class="lab-act lab-act--icon" data-act="redo" data-help="lab.undo" title="${tr('redoTitle')}">${icons.redo(17)}</button>
   </div>
-  <div class="lab-examples" hidden role="dialog" aria-label="Esempi di molecole">
-    <div class="lex-search"><input type="search" placeholder="Cerca tra ${MOLECULES.length} sostanze (nome o formula)…" aria-label="Cerca un esempio" spellcheck="false" /></div>
+  <div class="lab-examples" hidden role="dialog" aria-label="${tr('examplesLabel')}">
+    <div class="lex-search"><input type="search" placeholder="${tr('examplesSearch', { n: MOLECULES.length })}" aria-label="${tr('examplesSearchLabel')}" spellcheck="false" /></div>
     ${MOLECULE_GROUPS.map(
       (g) => `<section data-group="${g.key}"><h4>${g.label}</h4><div>${MOLECULES.filter((m) => m.group === g.key)
         .map((m) => `<button type="button" class="chip-btn" data-example="${m.id}">${esc(m.name)}</button>`)
         .join('')}</div></section>`,
     ).join('')}
-    <p class="lex-empty" hidden>Nessun esempio trovato: prova con <b>Formula</b>, che costruisce anche le sostanze non in libreria.</p>
+    <p class="lex-empty" hidden>${tr('examplesEmpty')}</p>
   </div>
   <div class="lab-formula" hidden role="dialog" aria-labelledby="lf-title">
     <form class="lf-form" autocomplete="off">
-      <label class="lf-title" id="lf-title" for="lf-input">Formula, nome o SMILES</label>
+      <label class="lf-title" id="lf-title" for="lf-input">${tr('lfTitle')}</label>
       <div class="lf-row">
         <input id="lf-input" class="lf-input" type="text" spellcheck="false" autocapitalize="off"
-          placeholder="es. H2SO4 · Ca(OH)2 · CuSO4·5H2O · 2 H2 + O2 · acqua" />
-        <button type="submit" class="lab-act lab-act--primary" data-lf="build" title="Costruisci la sostanza sul banco (Invio)">${icons.merge(16)}<span>Costruisci</span></button>
-        <button type="button" class="lab-act" data-lf="atoms" title="Metti sul banco solo gli atomi, senza legami: li colleghi tu">Solo atomi</button>
+          placeholder="${tr('lfPlaceholder')}" />
+        <button type="submit" class="lab-act lab-act--primary" data-lf="build" title="${tr('buildTitle')}">${icons.merge(16)}<span>${tr('build')}</span></button>
+        <button type="button" class="lab-act" data-lf="atoms" title="${tr('atomsOnlyTitle')}">${tr('atomsOnly')}</button>
       </div>
     </form>
     <div class="lf-preview" aria-live="polite"></div>
@@ -95,9 +99,7 @@ const TEMPLATE = `
         .map((f) => `<button type="button" class="chip-btn" data-lf-example="${esc(f)}">${esc(f)}</button>`)
         .join('')}</div>
     </div>
-    <p class="lf-help">Maiuscole e minuscole contano: <b>Co</b> è il cobalto, <b>CO</b> il monossido di carbonio.
-      Cariche: <code>NH4+</code>, <code>SO4^2-</code>; idrati: <code>CuSO4·5H2O</code>; più sostanze: <code>2 H2 + O2</code>.
-      Puoi anche premere <kbd>Ctrl</kbd>+<kbd>V</kbd> direttamente sul banco.</p>
+    <p class="lf-help">${tr('lfHelp')}</p>
   </div>
   <div class="lab-msg" role="status" hidden></div>
   <div class="lab-tip" hidden></div>`;
@@ -113,7 +115,7 @@ export function createLab(elements, { onClose }) {
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
   root.setAttribute('aria-labelledby', 'lab-title');
-  root.innerHTML = TEMPLATE;
+  root.innerHTML = TEMPLATE();
   document.body.append(root);
   const $ = (s) => root.querySelector(s);
   const panel = $('.lab-panel');
@@ -176,7 +178,7 @@ export function createLab(elements, { onClose }) {
     });
   } catch (err) {
     console.error(err);
-    $('.lab-stage').innerHTML = '<p class="lab-error">Impossibile avviare la grafica 3D (WebGL non disponibile).</p>';
+    $('.lab-stage').innerHTML = `<p class="lab-error">${tr('noWebgl')}</p>`;
     return { open: () => (root.hidden = false), close: () => (root.hidden = true), isOpen: () => !root.hidden };
   }
   const { engine } = scene;
@@ -243,7 +245,7 @@ export function createLab(elements, { onClose }) {
         );
       } else if (!ident.exact && ids.length === 1 && charge) {
         const info = lab.get(desc.atoms[0].z);
-        generatedName = `Ione ${ionName(info, charge)}`;
+        generatedName = tr('ionName', { name: ionName(info, charge) });
       }
       const u = {
         key: ids.join(','),
@@ -265,8 +267,8 @@ export function createLab(elements, { onClose }) {
         positions: ids.map((id) => bench.atoms.get(id).pos),
       };
       u.label = ident.entry
-        ? `${ident.entry.name}${ident.exact ? '' : ident.byFormula ? ' (dalla formula)' : ' (struttura diversa)'}`
-        : generatedName ?? (ids.length === 1 ? `atomo di ${lab.get(desc.atoms[0].z).name.toLowerCase()}` : 'non in libreria');
+        ? `${ident.entry.name}${ident.exact ? '' : ident.byFormula ? tr('fromFormula') : tr('otherStructure')}`
+        : generatedName ?? (ids.length === 1 ? tr('atomOf', { name: lab.get(desc.atoms[0].z).name.toLowerCase() }) : tr('notInLibrary'));
       for (const id of ids) state.unitOfAtom.set(id, u);
       return u;
     });
@@ -375,7 +377,7 @@ export function createLab(elements, { onClose }) {
   // ---------------------------------------------------------------- cronologia
   function act(fn) {
     if (busy()) {
-      message('Attendi la fine della reazione.', 'info', 2000);
+      message(tr('waitReaction'), 'info', 2000);
       return false;
     }
     const snap = bench.snapshot();
@@ -389,8 +391,8 @@ export function createLab(elements, { onClose }) {
     return true;
   }
   function undo() {
-    if (busy()) return message('Attendi la fine della reazione.', 'info', 2000);
-    if (!history.past.length) return message('Niente da annullare.', 'info');
+    if (busy()) return message(tr('waitReaction'), 'info', 2000);
+    if (!history.past.length) return message(tr('nothingUndo'), 'info');
     history.future.push(bench.snapshot());
     bench.restore(history.past.pop());
     state.sim = null;
@@ -398,8 +400,8 @@ export function createLab(elements, { onClose }) {
     refresh();
   }
   function redo() {
-    if (busy()) return message('Attendi la fine della reazione.', 'info', 2000);
-    if (!history.future.length) return message('Niente da ripetere.', 'info');
+    if (busy()) return message(tr('waitReaction'), 'info', 2000);
+    if (!history.future.length) return message(tr('nothingRedo'), 'info');
     history.past.push(bench.snapshot());
     bench.restore(history.future.pop());
     state.sim = null;
@@ -455,8 +457,7 @@ export function createLab(elements, { onClose }) {
       panel.innerHTML = unitPanelHtml(lab, sel[0], { alternatives: state.alternatives.get(sel[0].key) ?? [] });
       panel.scrollTop = scroll;
     } else if (sel.length > 1) {
-      panel.innerHTML = `${summaryHtml(sel)}<p class="mp-note">${sel.length} unità selezionate: premi <b>Combina</b> per riunirne gli atomi in una nuova struttura
-        oppure <b>Simula reazione</b> per farle urtare tra loro.</p>`;
+      panel.innerHTML = `${summaryHtml(sel)}<p class="mp-note">${tr('selectedUnits', { n: sel.length })}</p>`;
     } else {
       panel.innerHTML = summaryHtml(state.units);
     }
@@ -469,7 +470,7 @@ export function createLab(elements, { onClose }) {
     if (ready.length && sel.length !== 1) {
       panel.insertAdjacentHTML(
         'beforeend',
-        `<section class="mp-sec rx-suggest"><h4>Reazioni possibili sul banco</h4>${ready
+        `<section class="mp-sec rx-suggest"><h4>${tr('possibleOnBench')}</h4>${ready
           .slice(0, 4)
           .map((m) => `<button type="button" class="rx-item" data-reaction="${m.re.r.id}">${m.re.r.name ? `<b>${esc(m.re.r.name)}</b>` : ''}${equationHtml(m.re)}</button>`)
           .join('')}</section>`,
@@ -507,14 +508,14 @@ export function createLab(elements, { onClose }) {
 
   // ---------------------------------------------------------------- azioni sugli atomi
   function addAtom(z, pos = null) {
-    if (bench.atoms.size >= MAX_ATOMS) return message(`Il banco può contenere al massimo ${MAX_ATOMS} atomi.`, 'bad');
+    if (bench.atoms.size >= MAX_ATOMS) return message(tr('maxAtoms', { max: MAX_ATOMS }), 'bad');
     let id;
     act(() => {
       id = bench.addAtom(z, pos ?? scene.freeSpot(1.7));
     });
     select([id]);
     const info = lab.get(z);
-    if (info.tier === TIER.UNKNOWN) message(`${esc(info.name)}: chimica sconosciuta, i legami che formerai sono ipotetici.`, 'warn');
+    if (info.tier === TIER.UNKNOWN) message(tr('unknownChem', { name: esc(info.name) }), 'warn');
   }
 
   function translate(ids, delta) {
@@ -531,9 +532,9 @@ export function createLab(elements, { onClose }) {
     if (r.kind === 'ionic') {
       const D = lab.get(bench.atoms.get(r.donor).z);
       const C = r.donor === a ? B : A;
-      return `<b>Legame ionico</b>: ${esc(Art(D).toLowerCase())} cede ${r.transfer} elettron${r.transfer === 1 ? 'e' : 'i'} ${C.z === 9 || /^[aeiou]/i.test(C.name) ? 'all\'' : 'al '}${esc(C.name.toLowerCase())} (ΔEN ${r.character.dEN.toFixed(2).replace('.', ',')})`;
+      return tr('ionicBond', { donor: esc(Art(D).toLowerCase()), n: r.transfer, toVowel: C.z === 9 || /^[aeiou]/i.test(C.name), acceptor: esc(C.name.toLowerCase()), den: fmtNumber(r.character.dEN, 2, 2) });
     }
-    return `<b>Legame ${esc(r.character.type)}</b> ${A.symbol}–${B.symbol}${r.character.dEN != null ? ` (ΔEN ${r.character.dEN.toFixed(2).replace('.', ',')})` : ''}${r.warning ? `<br><small>${esc(r.warning)}</small>` : ''}`;
+    return `${tr('bondKind', { type: esc(r.character.type) })} ${A.symbol}–${B.symbol}${r.character.dEN != null ? ` (ΔEN ${fmtNumber(r.character.dEN, 2, 2)})` : ''}${r.warning ? `<br><small>${esc(r.warning)}</small>` : ''}`;
   }
 
   function previewBond(a, b) {
@@ -556,7 +557,8 @@ export function createLab(elements, { onClose }) {
     });
     select([a]);
     const u = state.unitOfAtom.get(a);
-    const done = u.ident.exact ? ` · hai formato <b>${esc(lowerFirst(u.ident.entry.name))}</b> (${esc(u.formula)})!` : '';
+    const done = u.ident.exact ? tr('youMade', { name: esc(lowerFirst(u.ident.entry.name)), formula: esc(u.formula) }) : '';
+    if (u.ident.exact) window.dispatchEvent(new CustomEvent('tp3d:molecule', { detail: { id: u.ident.entry.id } }));
     message(`${bondCheckText(r, a, b)}${done}`, r.warning ? 'warn' : 'ok');
     return true;
   }
@@ -578,7 +580,7 @@ export function createLab(elements, { onClose }) {
     if (state.mode === 'bond') {
       if (!state.pending) {
         setPending(id);
-        message('Ora scegli il secondo atomo (anche della stessa molecola, per chiudere un anello).', 'info', 3500);
+        message(tr('secondAtom'), 'info', 3500);
       } else if (state.pending === id) setPending(null);
       else {
         const first = state.pending;
@@ -588,7 +590,7 @@ export function createLab(elements, { onClose }) {
       return;
     }
     if (state.mode === 'cut') {
-      message('Con le forbici fai clic su un <b>legame</b> per romperlo.', 'info', 3000);
+      message(tr('cutHint'), 'info', 3000);
       return;
     }
     select([id], { add: ev.ctrlKey || ev.metaKey || ev.shiftKey });
@@ -602,7 +604,7 @@ export function createLab(elements, { onClose }) {
   function cycleOrder(bondId) {
     const b = bench.bonds.get(bondId);
     if (!b) return;
-    if (b.ionic) return message('Un legame ionico non ha un ordine: è l\'attrazione tra ioni di carica opposta.', 'info');
+    if (b.ionic) return message(tr('ionicNoOrder'), 'info');
     const seq = [b.order + 1, b.order + 2, b.order + 3].map((o) => ((o - 1) % 3) + 1).filter((o) => o !== b.order);
     let firstFail = null;
     for (const o of seq) {
@@ -615,13 +617,13 @@ export function createLab(elements, { onClose }) {
         const B = lab.get(bench.atoms.get(b.b).z).symbol;
         const u = state.unitOfAtom.get(b.a);
         const done = u.ident.exact ? ` · <b>${esc(u.ident.entry.name)}</b> (${esc(u.formula)})` : '';
-        message(`Legame ${A}–${B} ${ORDER_NAME[o]}${done}`, 'ok', 3000);
+        message(`${tr('bondOrder', { a: A, b: B, order: ORDER_NAME[o] })}${done}`, 'ok', 3000);
         select([b.a]);
         return;
       }
       firstFail ??= r.reason;
     }
-    message(esc(firstFail ?? 'Ordine di legame non modificabile.'), 'bad');
+    message(esc(firstFail ?? tr('orderFixed')), 'bad');
   }
 
   function breakBond(bondId) {
@@ -646,9 +648,7 @@ export function createLab(elements, { onClose }) {
       if (!unitB.includes(b.a)) translate(unitB, d.map((x) => (x / l) * 0.9));
     });
     message(
-      b.ionic
-        ? `Legame ionico rotto: restano gli ioni ${A.symbol} e ${B.symbol} con le loro cariche.`
-        : `Legame ${A.symbol}–${B.symbol} rotto: ogni atomo riprende ${b.order === 1 ? 'il suo elettrone' : 'i suoi elettroni'} (rottura omolitica).`,
+      b.ionic ? tr('ionicBroken', { a: A.symbol, b: B.symbol }) : tr('bondBroken', { a: A.symbol, b: B.symbol, single: b.order === 1 }),
       'ok',
     );
   }
@@ -675,7 +675,7 @@ export function createLab(elements, { onClose }) {
     if (units.reduce((s, u) => s + u.ids.length, 0) < 2) units = state.units.filter((u) => u.ids.length === 1);
     const ids = units.flatMap((u) => u.ids);
     if (ids.length < 2) {
-      return message('Seleziona le molecole da combinare (Ctrl+clic) oppure metti sul banco almeno due atomi liberi.', 'info');
+      return message(tr('combineHint'), 'info');
     }
     const zs = ids.map((id) => bench.atoms.get(id).z);
     const r = combine(lab, library, zs);
@@ -707,21 +707,22 @@ export function createLab(elements, { onClose }) {
       counts.set(name, (counts.get(name) || 0) + 1);
     }
     const list = [...counts].map(([n, c]) => `${c > 1 ? `${c} × ` : ''}<b>${esc(n)}</b>`).join(', ');
-    const radical = r.unpaired ? ` · ${r.unpaired === 1 ? 'resta 1 elettrone spaiato' : `restano ${r.unpaired} elettroni spaiati`}` : '';
+    const radical = r.unpaired ? ` · ${tr('unpaired', { n: r.unpaired })}` : '';
     if (bench.atoms.size <= 40) scene.frameAll(1);
     let energy = '';
     if (energyBefore != null && energyAfter != null && Math.abs(energyBefore - energyAfter) > 1) {
       const dH = energyBefore - energyAfter;
       energy = energyBefore === 0
-        ? `<br><small>Formando i legami da atomi isolati si liberano ≈ ${fmtNumber(Math.round(-dH), 0)} kJ/mol (energie di legame medie).</small>`
-        : `<br><small>ΔH ≈ ${dH > 0 ? '+' : '−'}${fmtNumber(Math.abs(Math.round(dH)), 0)} kJ/mol (legami rotti − legami formati, energie medie): ${dH < 0 ? 'si libera' : 'si assorbe'} energia.</small>`;
+        ? `<br><small>${tr('energyFromAtoms', { kj: fmtNumber(Math.round(-dH), 0) })}</small>`
+        : `<br><small>${tr('energyDelta', { sign: dH > 0 ? '+' : '−', kj: fmtNumber(Math.abs(Math.round(dH)), 0), release: dH < 0 })}</small>`;
     }
-    message(`${made.length === 1 ? 'Formato' : 'Formati'}: ${list}${radical}${r.alternatives?.length ? ' · vedi gli altri isomeri nella scheda' : ''}${energy}`, r.unpaired ? 'warn' : 'ok', 7000);
+    message(`${tr('formed', { n: made.length })}: ${list}${radical}${r.alternatives?.length ? tr('seeIsomers') : ''}${energy}`, r.unpaired ? 'warn' : 'ok', 7000);
+    for (const u of made) if (u.ident.exact) window.dispatchEvent(new CustomEvent('tp3d:molecule', { detail: { id: u.ident.entry.id } }));
   }
 
   function separate({ ions = false } = {}) {
     const units = selectedUnits().filter((u) => (ions ? u.ionic : u.ids.length > 1));
-    if (!units.length) return message(ions ? 'Seleziona un composto ionico.' : 'Seleziona una molecola da separare.', 'info');
+    if (!units.length) return message(ions ? tr('selectIonic') : tr('selectMolecule'), 'info');
     act(() => {
       for (const u of units) {
         const c = centroid(u.ids.map((id) => bench.atoms.get(id).pos));
@@ -752,9 +753,7 @@ export function createLab(elements, { onClose }) {
     });
     state.alternatives.clear();
     message(
-      ions
-        ? 'Ioni separati: ognuno conserva la sua carica (il metallo ha ceduto elettroni, il non metallo li ha acquistati).'
-        : 'Molecola separata in atomi: ogni atomo riprende i suoi elettroni di valenza; quelli con elettroni spaiati sono radicali.',
+      ions ? tr('ionsSeparated') : tr('atomsSeparated'),
       'ok',
     );
   }
@@ -777,13 +776,13 @@ export function createLab(elements, { onClose }) {
         ?? [...cand].sort((a, b) => en(a) - en(b))[0];
     }
     const lw = u.lewisFrags.reduce((s, f) => s + f.electrons, 0);
-    if (delta < 0 && lw <= 0) return message('Non ci sono più elettroni da togliere.', 'bad');
+    if (delta < 0 && lw <= 0) return message(tr('noMoreElectrons'), 'bad');
     act(() => {
       bench.atoms.get(pick.id).extra += delta > 0 ? 1 : -1;
     });
     const nu = state.unitOfAtom.get(pick.id);
     const name = nu.ident.exact ? ` · <b>${esc(nu.ident.entry.name)}</b>` : '';
-    message(`${delta > 0 ? 'Aggiunto' : 'Tolto'} un elettrone (${esc(pick.info.symbol)}): carica totale ${nu.charge ? `${nu.charge > 0 ? '+' : '−'}${Math.abs(nu.charge)}` : '0'}${name}`, 'ok');
+    message(tr('chargeChanged', { add: delta > 0, sym: esc(pick.info.symbol), q: nu.charge ? `${nu.charge > 0 ? '+' : '−'}${Math.abs(nu.charge)}` : '0', name }), 'ok');
   }
 
   function deleteSelected() {
@@ -800,7 +799,7 @@ export function createLab(elements, { onClose }) {
     state.selected.clear();
     state.alternatives.clear();
     refresh();
-    message('Banco svuotato (Ctrl+Z per annullare).', 'info');
+    message(tr('cleared'), 'info');
   }
 
   /** Mette sul banco una specie (voce della libreria o "el:X") centrata in `center`; restituisce gli id. */
@@ -841,7 +840,7 @@ export function createLab(elements, { onClose }) {
   function buildEntry(entry, { at = null, replace = null } = {}) {
     const lib = library.get(entry.id);
     const g = lib.graph;
-    if (bench.atoms.size + g.atoms.length > MAX_ATOMS) return message(`Il banco può contenere al massimo ${MAX_ATOMS} atomi.`, 'bad');
+    if (bench.atoms.size + g.atoms.length > MAX_ATOMS) return message(tr('maxAtoms', { max: MAX_ATOMS }), 'bad');
     let ids;
     act(() => {
       let center = at;
@@ -855,7 +854,8 @@ export function createLab(elements, { onClose }) {
     state.selected = new Set([ids[0]]);
     refresh();
     scene.frameAll(1.1);
-    message(`Costruito: <b>${esc(entry.name)}</b>`, 'ok', 3000);
+    message(tr('built', { name: esc(entry.name) }), 'ok', 3000);
+    window.dispatchEvent(new CustomEvent('tp3d:molecule', { detail: { id: entry.id } }));
     return ids;
   }
 
@@ -934,7 +934,7 @@ export function createLab(elements, { onClose }) {
           return { coef, entry, alternatives: [], atoms: g.atoms.map((a) => ({ z: a.z, charge: 0 })), sp: { coef, counts, charge: 0, pretty } };
         }
         const pf = parseFormula(part, isSymbol);
-        return pf.ok && pf.species.length === 1 ? resolveSpecies(pf.species[0]) : { error: `«${part}»: ${pf.ok ? 'scrivi una sostanza alla volta' : pf.error}` };
+        return pf.ok && pf.species.length === 1 ? resolveSpecies(pf.species[0]) : { error: `«${part}»: ${pf.ok ? tr('writeOne') : pf.error}` };
       });
       const bad = items.find((x) => x.error);
       if (!bad) return { kind: 'formula', items, note: list.note };
@@ -971,13 +971,13 @@ export function createLab(elements, { onClose }) {
     const n = [...x.sp.counts.values()].reduce((a, b) => a + b, 0);
     if (x.entry) {
       const alt = x.alternatives.length;
-      return `<b>${esc(x.entry.name)}</b>${alt ? ` <small>(+${alt} isomer${alt === 1 ? 'o' : 'i'})</small>` : ''}`;
+      return `<b>${esc(x.entry.name)}</b>${alt ? tr('isomers', { n: alt }) : ''}`;
     }
     if (n === 1) {
       const info = lab.bySymbol.get([...x.sp.counts.keys()][0]);
-      return x.sp.charge ? `ione ${esc(ionName(info, x.sp.charge))}` : `atomo di ${esc(info.name.toLowerCase())}`;
+      return x.sp.charge ? tr('ion', { name: esc(ionName(info, x.sp.charge)) }) : tr('atomOf', { name: esc(info.name.toLowerCase()) });
     }
-    if (x.sp.charge) return '<span class="lf-warn">ione non in libreria: atomi da collegare a mano</span>';
+    if (x.sp.charge) return `<span class="lf-warn">${tr('ionNotInLibrary')}</span>`;
     const salt = ionicDecomposition(lab, library, x.atoms.map((a) => a.z));
     if (salt) {
       // es. «Solfato di ferro(III)» (2 Fe³⁺ + 3 SO₄²⁻)
@@ -993,9 +993,9 @@ export function createLab(elements, { onClose }) {
       const ions = new Map();
       for (const q of parts) ions.set(q.text, (ions.get(q.text) || 0) + 1);
       const name = ionicCompoundName(parts);
-      return `<b>${esc(name ?? 'composto ionico')}</b> <small>(${[...ions].map(([t, c]) => `${c > 1 ? `${c} ` : ''}${esc(t)}`).join(' + ')}, nome generato)</small>`;
+      return `<b>${esc(name ?? tr('ionicCompound'))}</b> <small>(${[...ions].map(([t, c]) => `${c > 1 ? `${c} ` : ''}${esc(t)}`).join(' + ')}, ${tr('generatedName')})</small>`;
     }
-    return '<span class="lf-warn">non in libreria: Combina cercherà la struttura più stabile</span>';
+    return `<span class="lf-warn">${tr('combineWillTry')}</span>`;
   }
 
   function renderFormulaPreview() {
@@ -1017,7 +1017,7 @@ export function createLab(elements, { onClose }) {
     if (res.kind === 'error') {
       const sugg = res.suggestions ?? [];
       box.innerHTML = sugg.length
-        ? `<p class="lf-line">Sostanze con questo nome:</p>${chips(sugg)}`
+        ? `<p class="lf-line">${tr('sameName')}</p>${chips(sugg)}`
         : `<p class="lf-line is-bad">${esc(res.error)}</p>`;
       disable(true);
       return;
@@ -1029,14 +1029,14 @@ export function createLab(elements, { onClose }) {
     let counts = null;
     if (res.kind === 'name') {
       const lib = library.get(res.entry.id);
-      lines.push(`<p class="lf-line"><b>${esc(res.entry.name)}</b> <span class="lf-f">${subHtml(res.entry.formula ?? displayFormula(lab, lib.graph.atoms, 0, { ionic: lib.ionic }))}</span> <small>in libreria</small></p>`);
-      if (res.suggestions.length) lines.push(`<p class="lf-sub">Nomi simili:</p>${chips(res.suggestions.slice(0, 6))}`);
+      lines.push(`<p class="lf-line"><b>${esc(res.entry.name)}</b> <span class="lf-f">${subHtml(res.entry.formula ?? displayFormula(lab, lib.graph.atoms, 0, { ionic: lib.ionic }))}</span> <small>${tr('inLibrary')}</small></p>`);
+      if (res.suggestions.length) lines.push(`<p class="lf-sub">${tr('similarNames')}</p>${chips(res.suggestions.slice(0, 6))}`);
       counts = new Map();
       for (const a of lib.graph.atoms) counts.set(lab.get(a.z).symbol, (counts.get(lab.get(a.z).symbol) || 0) + 1);
     } else if (res.kind === 'smiles') {
       const g = res.item.graph;
       const f = displayFormula(lab, g.atoms, res.item.charge, { ionic: res.item.ionic });
-      lines.push(`<p class="lf-line">SMILES: <span class="lf-f">${subHtml(f)}</span>, ${g.atoms.length} atomi → ${res.entry ? `<b>${esc(res.entry.name)}</b> <small>in libreria</small>` : 'non in libreria: costruita così come è scritta'}</p>`);
+      lines.push(`<p class="lf-line">${tr('smilesLine', { f: subHtml(f), n: g.atoms.length, entry: res.entry ? esc(res.entry.name) : null })}</p>`);
       counts = new Map();
       for (const a of g.atoms) counts.set(lab.get(a.z).symbol, (counts.get(lab.get(a.z).symbol) || 0) + 1);
     } else {
@@ -1046,12 +1046,12 @@ export function createLab(elements, { onClose }) {
           <small class="lf-mass">${fmtNumber(massOf(it.sp.counts), 3)} g/mol</small></p>`);
       }
       if (res.items.length === 1) counts = res.items[0].sp.counts;
-      if (res.items.some((it) => it.sp.monoGuess)) lines.push('<p class="lf-sub">In «Fe3+» e «O2-» le cifre prima del segno sono lette come carica dello ione.</p>');
-      if (res.note === 'equation') lines.push('<p class="lf-sub">È un\'equazione: costruisco i reagenti (lato sinistro). Per le reazioni guidate apri <b>Reazioni</b>.</p>');
+      if (res.items.some((it) => it.sp.monoGuess)) lines.push(`<p class="lf-sub">${tr('chargeDigits')}</p>`);
+      if (res.note === 'equation') lines.push(`<p class="lf-sub">${tr('equationNote')}</p>`);
     }
     if (counts && counts.size > 1) {
       const mass = massOf(counts);
-      lines.push(`<div class="lf-comp" aria-label="Composizione percentuale in massa">${[...counts]
+      lines.push(`<div class="lf-comp" aria-label="${tr('composition')}">${[...counts]
         .map(([sym, n]) => {
           const info = lab.bySymbol.get(sym);
           const pct = (100 * info.mass * n) / mass;
@@ -1059,7 +1059,7 @@ export function createLab(elements, { onClose }) {
         })
         .join('')}</div>`);
     }
-    if (over) lines.push(`<p class="lf-line is-bad">Troppi atomi (${total}): il banco ne contiene al massimo ${MAX_ATOMS}${bench.atoms.size ? '; svuotalo prima' : ''}.</p>`);
+    if (over) lines.push(`<p class="lf-line is-bad">${tr('tooManyAtoms', { total, max: MAX_ATOMS, full: bench.atoms.size > 0 })}</p>`);
     box.innerHTML = lines.join('');
     disable(over);
   }
@@ -1083,7 +1083,7 @@ export function createLab(elements, { onClose }) {
     if (res.kind === 'error') return message(esc(res.error), 'bad');
     const jobs = buildJobs(res, { atomsOnly });
     const total = jobs.reduce((t, j) => t + j.count * jobSize(j), 0);
-    if (bench.atoms.size + total > MAX_ATOMS) return message(`Il banco può contenere al massimo ${MAX_ATOMS} atomi: svuotalo o costruisci meno molecole.`, 'bad');
+    if (bench.atoms.size + total > MAX_ATOMS) return message(tr('maxAtomsBuild', { max: MAX_ATOMS }), 'bad');
     const made = [];
     const notes = new Set();
     const ok = act(() => {
@@ -1111,12 +1111,12 @@ export function createLab(elements, { onClose }) {
             const en = (id) => lab.get(bench.atoms.get(id).z).en ?? 0;
             const pick = [...ids].sort((a, b) => (job.charge < 0 ? en(b) - en(a) : en(a) - en(b)))[0];
             bench.atoms.get(pick).extra = -job.charge;
-            notes.add('Ione non in libreria: collega gli atomi con lo strumento Lega.');
+            notes.add(tr('ionToBond'));
             continue;
           }
           const r = combine(lab, library, zs);
           if (!r.ok) {
-            notes.add(`${esc(job.sp.pretty)}: ${esc(r.message)} Gli atomi restano liberi sul banco.`);
+            notes.add(tr('atomsStayFree', { f: esc(job.sp.pretty), msg: esc(r.message) }));
             continue;
           }
           for (const b of r.bonds) {
@@ -1127,14 +1127,14 @@ export function createLab(elements, { onClose }) {
           placeUnits(bench.components(true).filter((c) => set.has(c[0])), center);
           notes.add(
             r.source === 'ions'
-              ? 'Non in libreria: composto ionico ricavato dalle cariche degli ioni (nome generato).'
+              ? tr('fromIons')
               : r.source === 'alkane'
-                ? 'Costruito come alcano a catena lineare: esistono anche isomeri ramificati.'
+                ? tr('linearAlkane')
                 : r.unpaired
-                  ? 'Struttura proposta da Combina: restano elettroni spaiati (radicale).'
+                  ? tr('radicalLeft')
                   : r.source === 'library'
                     ? ''
-                    : 'Non in libreria: struttura proposta da Combina (massima energia di legame), da verificare.',
+                    : tr('proposed'),
           );
         }
       }
@@ -1160,12 +1160,13 @@ export function createLab(elements, { onClose }) {
       const u = state.unitOfAtom.get(ids[0]);
       if (!u) continue;
       const name = u.ident.entry ? lowerFirst(u.ident.entry.name) : u.generatedName && lowerFirst(u.generatedName);
-      const label = atomsOnly ? `${ids.length} atom${ids.length === 1 ? 'o' : 'i'} da collegare` : name ? `${name} (${u.formula})` : u.formula;
+      const label = atomsOnly ? tr('atomsToLink', { n: ids.length }) : name ? `${name} (${u.formula})` : u.formula;
+      if (!atomsOnly && u.ident.exact) window.dispatchEvent(new CustomEvent('tp3d:molecule', { detail: { id: u.ident.entry.id } }));
       counts.set(label, (counts.get(label) || 0) + 1);
     }
     const list = [...counts].map(([k, c]) => `${c > 1 ? `${c} × ` : ''}<b>${esc(k)}</b>`).join(', ');
     notes.delete('');
-    message(`${atomsOnly ? 'Sul banco' : 'Costruito'}: ${list}${notes.size ? `<br><small>${[...notes].join(' ')}</small>` : ''}`, notes.size ? 'warn' : 'ok', 7000);
+    message(`${atomsOnly ? tr('onBench') : tr('builtList')}: ${list}${notes.size ? `<br><small>${[...notes].join(' ')}</small>` : ''}`, notes.size ? 'warn' : 'ok', 7000);
     formulaInput.value = '';
   }
 
@@ -1310,7 +1311,7 @@ export function createLab(elements, { onClose }) {
     const count = re.r.reactants.reduce((t, [c]) => t + c, 0);
     const size = reactantAtoms(re);
     if (bench.atoms.size + size > MAX_ATOMS) {
-      message(size > MAX_ATOMS ? `Troppo grande per il banco: servono ${size} atomi, il massimo è ${MAX_ATOMS}.` : `Il banco può contenere al massimo ${MAX_ATOMS} atomi: svuotalo prima.`, 'bad');
+      message(size > MAX_ATOMS ? tr('tooBigBench', { size, max: MAX_ATOMS }) : tr('clearFirst', { max: MAX_ATOMS }), 'bad');
       return null;
     }
     const groups = [];
@@ -1336,7 +1337,7 @@ export function createLab(elements, { onClose }) {
     if (!groups) {
       groups = prepareReactants(re);
       if (!groups) return;
-      message('Reagenti pronti: la reazione parte…', 'info', 1500);
+      message(tr('reactantsReady'), 'info', 1500);
       setTimeout(() => startAnimation(re, groups), 900);
       return;
     }
@@ -1530,7 +1531,7 @@ export function createLab(elements, { onClose }) {
   function startAnimation(re, groups) {
     if (busy()) return;
     const ev = libraryEvent(re, groups);
-    if (!ev) return message('Gli atomi dei reagenti non corrispondono ai prodotti.', 'bad');
+    if (!ev) return message(tr('atomsMismatch'), 'bad');
     // cronologia: si potrà annullare l'intera reazione
     history.past.push(bench.snapshot());
     history.future = [];
@@ -1538,16 +1539,17 @@ export function createLab(elements, { onClose }) {
     state.sim = null;
     startAnim([ev], {
       say: {
-        start: `<b>${esc(reactionTitle(re))}</b>: le molecole si avvicinano e si urtano…`,
-        break: 'Si <b>rompono</b> i legami dei reagenti (in rosso): serve energia.',
-        form: 'Si <b>formano</b> i nuovi legami dei prodotti (in verde): si libera energia.',
+        start: tr('approach', { title: esc(reactionTitle(re)) }),
+        break: tr('breakBonds'),
+        form: tr('formBonds'),
       },
       onDone: () => {
         state.selected = new Set(ev.ids.slice(0, 1));
         refresh();
         const dH = re.enthalpy.formation.value;
-        const energy = dH == null ? '' : ` · ΔH° = <b>${dH > 0 ? '+' : '−'}${fmtNumber(Math.abs(dH), 1, 1)} kJ</b> (${dH < 0 ? 'esotermica: libera calore' : 'endotermica: assorbe energia'})`;
-        message(`Reazione completata: <b>${esc(reactionTitle(re))}</b>${energy}`, 'ok', 7000);
+        const energy = dH == null ? '' : ` · ΔH° = <b>${dH > 0 ? '+' : '−'}${fmtNumber(Math.abs(dH), 1, 1)} kJ</b> (${dH < 0 ? tr('exoShort') : tr('endoShort')})`;
+        message(tr('done', { title: esc(reactionTitle(re)), energy }), 'ok', 7000);
+        window.dispatchEvent(new CustomEvent('tp3d:reaction', { detail: { id: re.r.id } }));
       },
     });
   }
@@ -1681,13 +1683,13 @@ export function createLab(elements, { onClose }) {
   };
 
   function simulate({ energy = false, atoms = null } = {}) {
-    if (busy()) return message('Attendi la fine della reazione.', 'info', 2000);
+    if (busy()) return message(tr('waitReaction'), 'info', 2000);
     let units = atoms ? state.units.filter((u) => u.ids.some((id) => atoms.has(id))) : selectedUnits();
     if (!atoms && units.length < 2) units = state.units;
     if (units.length < 2) {
-      return message('Per simulare una reazione servono almeno <b>due molecole</b> (o atomi) sul banco: aggiungile con <b>Esempi</b>, <b>Formula</b> o dalla tavolozza.', 'info', 5000);
+      return message(tr('needTwo'), 'info', 5000);
     }
-    if (units.length > 60) return message('Troppe molecole per la simulazione: selezionane alcune (Ctrl+clic) e riprova.', 'bad');
+    if (units.length > 60) return message(tr('tooManyMolecules'), 'bad');
     history.past.push(bench.snapshot()); // Ctrl+Z annulla l'intera simulazione
     if (history.past.length > 120) history.past.shift();
     history.future = [];
@@ -1700,7 +1702,7 @@ export function createLab(elements, { onClose }) {
     state.sim = sim;
     renderPanel();
     updateDock();
-    message(`Simulazione${energy ? ' con energia fornita dall\'esterno' : ''}: ${units.length} unità si muovono e si urtano…`, 'info', 2400);
+    message(tr('simStart', { energy, n: units.length }), 'info', 2400);
     nextRound(sim);
   }
 
@@ -1715,7 +1717,7 @@ export function createLab(elements, { onClose }) {
       state.sim = null;
       state.anim = null;
       refresh();
-      message('Simulazione interrotta da un errore imprevisto.', 'bad');
+      message(tr('simError'), 'bad');
     }
   }
 
@@ -1779,10 +1781,10 @@ export function createLab(elements, { onClose }) {
       executed: records.map((r) => r.re),
       say: {
         start: records.length === 1
-          ? `Passo ${sim.rounds + 1} · <b>${esc(reactionTitle(first.re))}</b>${first.times > 1 ? ` (${first.times} volte)` : ''}: ${esc(equationText(first.re))}`
-          : `Passo ${sim.rounds + 1} · ${records.length} reazioni insieme: ${records.map((r) => `<b>${esc(reactionTitle(r.re))}</b>`).join(', ')}`,
-        break: 'Urto efficace: si <b>rompono</b> i legami dei reagenti (in rosso).',
-        form: `Si <b>formano</b> i legami dei prodotti (in verde): ${exo ? 'si libera energia' : 'l\'energia fornita resta nei prodotti'}.`,
+          ? `${tr('step', { n: sim.rounds + 1 })} · <b>${esc(reactionTitle(first.re))}</b>${first.times > 1 ? tr('timesN', { n: first.times }) : ''}: ${esc(equationText(first.re))}`
+          : `${tr('step', { n: sim.rounds + 1 })} · ${tr('together', { n: records.length })}: ${records.map((r) => `<b>${esc(reactionTitle(r.re))}</b>`).join(', ')}`,
+        break: tr('effectiveBreak'),
+        form: tr('formRelease', { exo }),
       },
     });
     return true;
@@ -1824,9 +1826,9 @@ export function createLab(elements, { onClose }) {
     runRound(sim, events, {
       records: [record],
       say: {
-        start: `Passo ${sim.rounds + 1} · urto ${esc(equationText(stepEquation(record)).split(' → ')[0])}: il modello prevede <b>${esc(lowerFirst(entry.name))}</b>`,
-        break: 'Urto efficace: si <b>rompono</b> i legami dei reagenti (in rosso).',
-        form: `Si forma <b>${esc(lowerFirst(entry.name))}</b> (in verde i nuovi legami): si libera energia.`,
+        start: `${tr('step', { n: sim.rounds + 1 })} · ${tr('modelPredicts', { eq: esc(equationText(stepEquation(record)).split(' → ')[0]), name: esc(lowerFirst(entry.name)) })}`,
+        break: tr('effectiveBreak'),
+        form: tr('modelForms', { name: esc(lowerFirst(entry.name)) }),
       },
     });
     return true;
@@ -1857,7 +1859,7 @@ export function createLab(elements, { onClose }) {
       // nessuna reazione: urti non efficaci, le molecole rimbalzano
       sim.diag = diagnose(new Map([...speciesOf(units)].map(([k, list]) => [k, list.length])), reactions, { energy: sim.energy });
       startAnim([bounceEvent(units.map((u) => u.ids))], {
-        say: { start: 'Le molecole si urtano…' },
+        say: { start: tr('collide') },
         onDone: () => {
           history.past.pop(); // il banco non è cambiato: niente da annullare
           sim.status = 'none';
@@ -1865,11 +1867,11 @@ export function createLab(elements, { onClose }) {
           renderPanel();
           const hint = sim.diag.missing[0];
           const text = hint
-            ? ` Per «${esc(reactionTitle(hint.re))}» ${hint.lack.reduce((t, x) => t + x.count, 0) === 1 ? 'manca' : 'mancano'} ${esc(hint.lack.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', '))}.`
+            ? tr('lacks', { title: esc(reactionTitle(hint.re)), n: hint.lack.reduce((t, x) => t + x.count, 0), list: esc(hint.lack.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', ')) })
             : sim.diag.endothermic.length
-              ? ' Una reazione è possibile solo fornendo energia: vedi la scheda.'
+              ? tr('endoPossible')
               : '';
-          message(`<b>Nessuna reazione</b>: le molecole si urtano ma rimbalzano (urti non efficaci).${text}`, 'warn', 7000);
+          message(tr('noReaction', { text }), 'warn', 7000);
         },
       });
       return;
@@ -1881,13 +1883,9 @@ export function createLab(elements, { onClose }) {
     if (bench.atoms.size <= 60) scene.frameAll(1);
     const eq = sim.steps.map((s) => `${esc(equationText(stepEquation(s)))}${s.times > 1 ? ` (× ${s.times})` : ''}`).join(' · ');
     const dH = sim.steps.reduce((t, s) => t + s.dH * s.times, 0);
-    const left = sim.leftover.length ? `<br><small>Non hanno reagito: ${esc(sim.leftover.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', '))}.</small>` : '';
-    message(
-      `<b>Simulazione completata</b>${sim.rounds > 1 ? ` in ${sim.rounds} passi` : ''}: ${eq}
-        · ΔH ${dH < 0 ? '≈ −' : '≈ +'}${fmtNumber(Math.abs(Math.round(dH)), 0)} kJ (${dH < 0 ? 'esotermica' : 'endotermica'})${left}`,
-      'ok',
-      9000,
-    );
+    const left = sim.leftover.length ? `<br><small>${tr('didNotReact', { list: esc(sim.leftover.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', ')) })}</small>` : '';
+    message(tr('simDone', { rounds: sim.rounds, eq, sign: dH < 0 ? '≈ −' : '≈ +', kj: fmtNumber(Math.abs(Math.round(dH)), 0), exo: dH < 0, left }), 'ok', 9000);
+    for (const s of sim.steps) if (s.kind === 'library') window.dispatchEvent(new CustomEvent('tp3d:reaction', { detail: { id: s.re.r.id } }));
   }
 
   /** Aggiunge i reagenti che mancano a una reazione «quasi pronta» e ripete la simulazione. */
@@ -1896,7 +1894,7 @@ export function createLab(elements, { onClose }) {
     const m = prev?.diag?.missing.find((x) => x.re.r.id === id);
     if (!m) return;
     const size = m.lack.reduce((t, x) => t + x.count * (x.key.startsWith('el:') ? 1 : library.get(x.key).graph.atoms.length), 0);
-    if (bench.atoms.size + size > MAX_ATOMS) return message(`Il banco può contenere al massimo ${MAX_ATOMS} atomi.`, 'bad');
+    if (bench.atoms.size + size > MAX_ATOMS) return message(tr('maxAtoms', { max: MAX_ATOMS }), 'bad');
     const atoms = new Set(prev.atoms);
     const ok = act(() => {
       for (const x of m.lack) {
@@ -1914,11 +1912,11 @@ export function createLab(elements, { onClose }) {
       const la = state.unitOfAtom.get(hit.atomId)?.lewisByAtom.get(hit.atomId);
       const parts = [`<b>${info.symbol}</b> ${esc(info.name.toLowerCase())}`];
       if (la) {
-        if (la.formalCharge) parts.push(`carica ${chargeLabel(hit.atomId)}`);
-        if (la.lonePairs) parts.push(`${la.lonePairs} coppi${la.lonePairs === 1 ? 'a' : 'e'} solitari${la.lonePairs === 1 ? 'a' : 'e'}`);
-        if (la.unpaired) parts.push(`${la.unpaired} elettrone spaiato`);
+        if (la.formalCharge) parts.push(tr('charge', { q: chargeLabel(hit.atomId) }));
+        if (la.lonePairs) parts.push(tr('lonePairs', { n: la.lonePairs }));
+        if (la.unpaired) parts.push(tr('unpairedOne', { n: la.unpaired }));
       }
-      const hint = state.mode === 'bond' ? 'clic per legarlo' : state.mode === 'move' ? 'trascina vicino a un altro atomo per legarli' : '';
+      const hint = state.mode === 'bond' ? tr('clickToBond') : state.mode === 'move' ? tr('dragToBond') : '';
       return `${parts.join(' · ')}${hint ? `<br><small>${hint}</small>` : ''}`;
     }
     const b = bench.bonds.get(hit.bondId);
@@ -1926,8 +1924,8 @@ export function createLab(elements, { onClose }) {
     const A = lab.get(bench.atoms.get(b.a).z);
     const B = lab.get(bench.atoms.get(b.b).z);
     const ch = bondCharacter(A, B);
-    const what = b.ionic ? 'legame ionico' : `legame ${ORDER_NAME[b.order]} · ${ch.type}`;
-    const hint = state.mode === 'cut' ? 'clic per romperlo' : b.ionic ? 'tasto destro per separare gli ioni' : 'clic: cambia ordine · tasto destro: rompi';
+    const what = b.ionic ? tr('ionicBondShort') : tr('bondShort', { order: ORDER_NAME[b.order], type: ch.type });
+    const hint = state.mode === 'cut' ? tr('clickToBreak') : b.ionic ? tr('rightToSeparate') : tr('clickOrder');
     return `<b>${A.symbol}${b.ionic ? '···' : '–'}${B.symbol}</b> ${what}<br><small>${hint}</small>`;
   }
 
@@ -1993,7 +1991,7 @@ export function createLab(elements, { onClose }) {
       case 'rx-run': runReaction(state.rx.current); break;
       case 'rx-prepare': {
         const re = reactionById.get(state.rx.current);
-        if (re && prepareReactants(re)) message('Reagenti sul banco: premi «Avvia la reazione».', 'info', 3000);
+        if (re && prepareReactants(re)) message(tr('reactantsOnBench'), 'info', 3000);
         break;
       }
       case 'rx-solution': {
@@ -2066,11 +2064,7 @@ export function createLab(elements, { onClose }) {
     state.mode = mode;
     setPending(null);
     updateDock();
-    const hints = {
-      move: 'Sposta: trascina un atomo vicino a un altro per legarli; clic su un legame per cambiarne l\'ordine.',
-      bond: 'Lega: fai clic su due atomi (anche della stessa molecola, per chiudere un anello).',
-      cut: 'Forbici: fai clic su un legame per romperlo.',
-    };
+    const hints = { move: tr('hintMove'), bond: tr('hintBond'), cut: tr('hintCut') };
     message(hints[mode], 'info', 3000);
   }
 

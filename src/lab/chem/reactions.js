@@ -3,6 +3,20 @@
 // ΔH° = Σ ν·ΔHf°(prodotti) − Σ ν·ΔHf°(reagenti) con le entalpie di formazione standard a 25 °C;
 // in alternativa, stima dalle energie di legame medie: legami rotti − legami formati (solo molecole covalenti).
 import { bondEnergy } from './bond-energy.js';
+import { createT } from '../../i18n/index.js';
+
+const t = createT({
+  it: {
+    none: 'Non esiste un bilanciamento: gli stessi atomi non compaiono in entrambi i lati nelle giuste proporzioni.',
+    several: 'L\'equazione ammette più bilanciamenti indipendenti: in realtà descrive più reazioni insieme.',
+    positive: 'Non esiste un bilanciamento con tutti i coefficienti positivi: controlla reagenti e prodotti.',
+  },
+  en: {
+    none: 'No balancing exists: the same atoms do not appear on both sides in the right proportions.',
+    several: 'The equation has several independent balancings: it actually describes several reactions at once.',
+    positive: 'No balancing exists with all coefficients positive: check reactants and products.',
+  },
+});
 
 const STATE_MARK = { gas: 'g', liquido: 'l', solido: 's', liquid: 'l', solid: 's' };
 
@@ -19,6 +33,7 @@ export function speciesInfo(lab, library, elements, key) {
       key,
       formula: symbol,
       name: el.name,
+      nameIt: el.nameIt,
       state: el.state,
       mark: STATE_MARK[el.state] ?? '',
       hf: 0, // elemento nel suo stato standard
@@ -35,6 +50,7 @@ export function speciesInfo(lab, library, elements, key) {
     key,
     formula: entry.formula ?? null,
     name: entry.name,
+    nameIt: entry.nameIt,
     state: entry.state,
     mark: STATE_MARK[entry.state] ?? '',
     hf: entry.hf ?? null,
@@ -135,8 +151,8 @@ export function balance(reactants, products) {
     r++;
   }
   const free = [...Array(n).keys()].filter((c) => !pivots.includes(c));
-  if (free.length === 0) return { ok: false, reason: 'Non esiste un bilanciamento: gli stessi atomi non compaiono in entrambi i lati nelle giuste proporzioni.' };
-  if (free.length > 1) return { ok: false, reason: 'L\'equazione ammette più bilanciamenti indipendenti: in realtà descrive più reazioni insieme.' };
+  if (free.length === 0) return { ok: false, reason: t('none') };
+  if (free.length > 1) return { ok: false, reason: t('several') };
   const f = free[0];
   const x = new Array(n).fill(null);
   x[f] = new Frac(1);
@@ -146,7 +162,7 @@ export function balance(reactants, products) {
   const den = x.reduce((acc, v) => lcm(acc, v.d), 1);
   let ints = x.map((v) => (v.n * den) / v.d);
   if (ints.every((v) => v < 0)) ints = ints.map((v) => -v);
-  if (ints.some((v) => v <= 0)) return { ok: false, reason: 'Non esiste un bilanciamento con tutti i coefficienti positivi: controlla reagenti e prodotti.' };
+  if (ints.some((v) => v <= 0)) return { ok: false, reason: t('positive') };
   const g = ints.reduce((acc, v) => gcd(acc, v), 0);
   ints = ints.map((v) => v / g);
   return { ok: true, reactants: ints.slice(0, reactants.length), products: ints.slice(reactants.length) };

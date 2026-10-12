@@ -2,7 +2,18 @@
 // Colori realistici delle sostanze, incandescenza dei corpi caldi (dal punto di Draper, 525 °C), fiamme colorate,
 // scintille, scarica nei gas e vista termica. Riempie due buffer: colore e bagliore (per l'effetto glow).
 import { SOLID, LIQUID, GAS, S, WOOD, CONCRETE, WALL, GENERATOR, SOURCE, DRAIN, SALT, OXIDE, SOLUTION, variantColor } from './substances.js';
-import { C_BURN, C_DISSOLVED, SPARK_ACTIVE, NEUTRON } from './world.js';
+import { C_BURN, C_DISSOLVED, C_POWDER, SPARK_ACTIVE, NEUTRON } from './world.js';
+
+// classi di trama per il disegno dettagliato (preset Professionale)
+const T_EMPTY = 0;
+const T_GAS = 1;
+const T_LIQUID = 2;
+const T_POWDER = 3;
+const T_METAL = 4;
+const T_SOLID = 5;
+const T_FLAT = 6; // fuoco, vista termica, celle speciali: senza trama
+const T_WOOD = 7;
+const T_STONE = 8;
 
 const BG = [6, 9, 14];
 const DRAPER = 798; // K: sotto questa temperatura un corpo caldo non emette luce visibile
@@ -119,10 +130,10 @@ export function createRenderer(world, subs) {
   /**
    * @param {Uint32Array} out pixel ABGR (W×H)
    * @param {Uint32Array} glow pixel ABGR del bagliore (W×H)
-   * @param {{heatView?:boolean, frame?:number}} opts
+   * @param {{heatView?:boolean, frame?:number, cls?:Uint8Array}} opts cls: se c'è, riceve la classe di trama di ogni cella
    * @returns {number} celle occupate
    */
-  function draw(out, glow, { heatView = false, frame = 0 } = {}) {
+  function draw(out, glow, { heatView = false, frame = 0, cls = null } = {}) {
     const { W, N, type, temp, flags: cf, seed, spark, ctype, life, vx } = world;
     const bgPix = (255 << 24) | (BG[2] << 16) | (BG[1] << 8) | BG[0];
     let count = 0;
@@ -131,6 +142,7 @@ export function createRenderer(world, subs) {
       if (!id) {
         out[i] = bgPix;
         glow[i] = 0;
+        if (cls) cls[i] = T_EMPTY;
         continue;
       }
       count++;
@@ -151,6 +163,7 @@ export function createRenderer(world, subs) {
         g = heatLut[k + 1];
         b = heatLut[k + 2];
         a = sf & S.FIRE || T >= bp[id] ? 0.75 : 1;
+        if (cls) cls[i] = T_FLAT;
       } else if (sf & S.FIRE) {
         const k = Math.min(LUT - 1, Math.round((T * 1.15) / 40)) * 3;
         r = bb[k];
@@ -168,9 +181,21 @@ export function createRenderer(world, subs) {
         gg = g;
         gb = b;
         ga = 200 * a;
+        if (cls) cls[i] = T_FLAT;
       } else {
         const isDissolved = cf[i] & C_DISSOLVED;
         const ph = isDissolved ? (T < 271.15 ? SOLID : LIQUID) : T < mp[id] ? SOLID : T < bp[id] ? LIQUID : GAS;
+        if (cls) {
+          cls[i] =
+            ph === GAS ? T_GAS
+            : ph === LIQUID ? T_LIQUID
+            : id === WOOD ? T_WOOD
+            : id === CONCRETE || id === WALL ? T_STONE
+            : id === GENERATOR || id === SOURCE || id === DRAIN ? T_FLAT
+            : cf[i] & C_POWDER ? T_POWDER
+            : sf & S.METAL ? T_METAL
+            : T_SOLID;
+        }
         const o = id * 16 + ph * 4;
         if (isDissolved) {
           const d = id * 3;
@@ -304,5 +329,95 @@ export function createRenderer(world, subs) {
     return count;
   }
 
-  return { draw };
+  /**
+   * Disegno dettagliato (preset Professionale): ogni cella diventa un blocco di k×k pixel con la trama
+   * del suo materiale (grana delle polveri, spazzolatura dei metalli, venature del legno, inerti del
+   * calcestruzzo), i liquidi più scuri in profondità e lucidi in superficie, e un rilievo dove la
+   * materia confina con l'aria (luce dall'alto a sinistra).
+   * @param {Uint32Array} src colori delle celle (da draw)
+   * @param {Uint8Array} cls classi di trama (da draw)
+   * @param {Uint32Array} out pixel (W·k × H·k)
+   */
+  const liquidDepth = new Uint16Array(4096);
+  function drawDetail(src, cls, out, k, frame) {
+    const { W, H, seed } = world;
+    const OW = W * k;
+    const open = (c) => c <= T_GAS; // aria o gas: lì la superficie prende luce
+    liquidDepth.fill(0, 0, W);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        const c = cls[i];
+        const p = src[i];
+        const o = y * k * OW + x * k;
+        if (c === T_LIQUID) liquidDepth[x]++;
+        else liquidDepth[x] = 0;
+        if (c === T_EMPTY || c === T_GAS || c === T_FLAT) {
+          for (let sy = 0; sy < k; sy++) out.fill(p, o + sy * OW, o + sy * OW + k);
+          continue;
+        }
+        const r0 = p & 255;
+        const g0 = (p >> 8) & 255;
+        const b0 = (p >> 16) & 255;
+        const up = y > 0 && open(cls[i - W]);
+        const down = y < H - 1 && open(cls[i + W]);
+        const left = x > 0 && open(cls[i - 1]);
+        const right = x < W - 1 && open(cls[i + 1]);
+        const sd = seed[i];
+        const depth = liquidDepth[x];
+        for (let sy = 0; sy < k; sy++) {
+          const Y = y * k + sy;
+          for (let sx = 0; sx < k; sx++) {
+            const X = x * k + sx;
+            let s;
+            let shine = 0;
+            if (c === T_LIQUID) {
+              // più scuro in profondità, leggere increspature che si muovono
+              s = 1 - Math.min(0.3, depth * 0.011) + 0.022 * Math.sin(X * 0.47 + Y * 0.21 + frame * 0.11) + 0.018 * Math.sin(X * 0.19 - Y * 0.53 - frame * 0.07);
+              if (up && sy === 0) shine = 0.45;
+            } else if (c === T_POWDER) {
+              // granelli: ogni granello porta con sé la sua trama (dipende dal seme della cella)
+              const h = hash(sx + sd * 7, sy + sd * 3);
+              s = h < 0.12 ? 0.62 : 0.8 + 0.38 * h;
+            } else if (c === T_METAL) {
+              // spazzolato: striature orizzontali continue tra le celle
+              s = 0.9 + 0.16 * hash(Y, X >> 3) + 0.05 * hash(Y, X);
+            } else if (c === T_WOOD) {
+              s = 0.86 + 0.14 * Math.sin(Y * 1.1 + 3 * hash(X >> 4, Y >> 3)) + 0.05 * hash(X, Y);
+            } else if (c === T_STONE) {
+              const h = hash(X, Y);
+              s = h > 0.93 ? 1.18 : h < 0.07 ? 0.7 : 0.88 + 0.2 * hash(X >> 1, Y >> 1);
+            } else {
+              // solido cristallino: riflessi sparsi
+              const h = hash(X + sd, Y);
+              s = h > 0.965 ? 1.32 : 0.92 + 0.14 * h;
+            }
+            // rilievo: bordi illuminati in alto e a sinistra, in ombra in basso e a destra
+            if (up && sy === 0) s *= 1.22;
+            else if (down && sy === k - 1) s *= 0.7;
+            if (left && sx === 0) s *= 1.1;
+            else if (right && sx === k - 1) s *= 0.84;
+            let r = r0 * s;
+            let g = g0 * s;
+            let b = b0 * s;
+            if (shine) {
+              r += (255 - r) * shine;
+              g += (255 - g) * shine;
+              b += (255 - b) * shine;
+            }
+            out[o + sy * OW + sx] = (255 << 24) | ((b > 255 ? 255 : b) << 16) | ((g > 255 ? 255 : g) << 8) | (r > 255 ? 255 : r);
+          }
+        }
+      }
+    }
+  }
+
+  return { draw, drawDetail };
+}
+
+/** Numero pseudo-casuale stabile in [0, 1) per una coppia di interi (trame che non tremolano). */
+function hash(x, y) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }

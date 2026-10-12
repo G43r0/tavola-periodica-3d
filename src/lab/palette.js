@@ -3,13 +3,43 @@
 import { CATEGORY } from '../data/categories.js';
 import { normalize, esc } from '../chem/format.js';
 import { TIER } from './chem/elements-lab.js';
+import { createT } from '../i18n/index.js';
+
+const t = createT({
+  it: {
+    unverified: ' — struttura non verificata (metallo del blocco d/f)',
+    unknown: ' — chimica sconosciuta (elemento superpesante)',
+    search: 'Cerca elemento…',
+    searchLabel: 'Cerca un elemento da aggiungere',
+    frequent: 'Più usati',
+    table: 'Tavola periodica',
+    legend: '<i>~</i> struttura non verificata · <i>?</i> chimica sconosciuta',
+    hint: 'Clic per aggiungere un atomo, oppure trascinalo sul banco.',
+  },
+  en: {
+    unverified: ' — structure not verified (d/f-block metal)',
+    unknown: ' — unknown chemistry (superheavy element)',
+    search: 'Search element…',
+    searchLabel: 'Search an element to add',
+    frequent: 'Most used',
+    table: 'Periodic table',
+    legend: '<i>~</i> structure not verified · <i>?</i> unknown chemistry',
+    hint: 'Click to add an atom, or drag it onto the bench.',
+  },
+  eli6: {
+    unverified: ' — per questo metallo le regole semplici non bastano',
+    unknown: ' — nessuno sa come si lega (elemento troppo pesante)',
+    legend: '<i>~</i> regole semplici non bastano · <i>?</i> nessuno lo sa',
+    hint: 'Clicca un elemento per mettere un suo atomo sul banco.',
+  },
+});
 
 const FREQUENT = ['H', 'C', 'N', 'O', 'F', 'P', 'S', 'Cl', 'Br', 'I', 'Na', 'K', 'Mg', 'Ca', 'Al', 'Si', 'B', 'Xe'];
 const TIER_MARK = { [TIER.UNVERIFIED]: '~', [TIER.UNKNOWN]: '?' };
 const TIER_TITLE = {
   [TIER.MAIN]: '',
-  [TIER.UNVERIFIED]: ' — struttura non verificata (metallo del blocco d/f)',
-  [TIER.UNKNOWN]: ' — chimica sconosciuta (elemento superpesante)',
+  [TIER.UNVERIFIED]: t('unverified'),
+  [TIER.UNKNOWN]: t('unknown'),
 };
 
 export function createPalette(host, elements, lab, { onPick }) {
@@ -24,16 +54,16 @@ export function createPalette(host, elements, lab, { onPick }) {
   const bySymbol = new Map(elements.map((e) => [e.symbol, e]));
   host.innerHTML = `
     <div class="pal-search">
-      <input type="search" placeholder="Cerca elemento…" aria-label="Cerca un elemento da aggiungere" spellcheck="false" />
+      <input type="search" placeholder="${t('search')}" aria-label="${t('searchLabel')}" spellcheck="false" />
     </div>
-    <p class="pal-title">Più usati</p>
+    <p class="pal-title">${t('frequent')}</p>
     <div class="pal-frequent">${FREQUENT.map((s) => cell(bySymbol.get(s), 'pal-cell--big')).join('')}</div>
-    <p class="pal-title">Tavola periodica</p>
+    <p class="pal-title">${t('table')}</p>
     <div class="pal-grid">${elements
       .map((el) => cell(el, '', `grid-column:${el.grid.x};grid-row:${el.grid.y}`))
       .join('')}</div>
-    <p class="pal-legend"><i>~</i> struttura non verificata · <i>?</i> chimica sconosciuta</p>
-    <p class="pal-hint">Clic per aggiungere un atomo, oppure trascinalo sul banco.</p>`;
+    <p class="pal-legend">${t('legend')}</p>
+    <p class="pal-hint">${t('hint')}</p>`;
 
   host.addEventListener('click', (ev) => {
     const b = ev.target.closest('.pal-cell');

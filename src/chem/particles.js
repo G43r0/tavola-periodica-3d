@@ -1,44 +1,47 @@
 // Costanti delle particelle: CODATA 2022 (NIST) e Particle Data Group (PDG 2024).
+import { pick } from '../i18n/index.js';
+
+const L = (it, en, eli6) => pick({ it, en, eli6 });
 
 export const ELEMENTARY_CHARGE_C = 1.602176634e-19; // esatta (SI 2019)
 
 export const PARTICLES = {
   proton: {
-    name: 'Protone',
+    name: L('Protone', 'Proton'),
     symbol: 'p⁺',
     charge: +1,
     massKg: 1.67262192595e-27,
     massMeV: 938.27208943,
     massU: 1.0072764665789,
     spin: '½',
-    family: 'Barione (adrone) · fermione',
+    family: L('Barione (adrone) · fermione', 'Baryon (hadron) · fermion'),
     quarks: ['u', 'u', 'd'],
     radiusFm: 0.84075, // raggio di carica (CODATA 2022)
-    magneticMoment: '+2,793 μ_N',
+    magneticMoment: L('+2,793 μ_N', '+2.793 μ_N'),
   },
   neutron: {
-    name: 'Neutrone',
+    name: L('Neutrone', 'Neutron'),
     symbol: 'n⁰',
     charge: 0,
     massKg: 1.67492750056e-27,
     massMeV: 939.56542194,
     massU: 1.00866491606,
     spin: '½',
-    family: 'Barione (adrone) · fermione',
+    family: L('Barione (adrone) · fermione', 'Baryon (hadron) · fermion'),
     quarks: ['u', 'd', 'd'],
     lifetimeS: 878.4, // vita media del neutrone libero (PDG 2024)
-    magneticMoment: '−1,913 μ_N',
+    magneticMoment: L('−1,913 μ_N', '−1.913 μ_N'),
   },
   electron: {
-    name: 'Elettrone',
+    name: L('Elettrone', 'Electron'),
     symbol: 'e⁻',
     charge: -1,
     massKg: 9.1093837139e-31,
     massMeV: 0.51099895069,
     massU: 5.485799090441e-4,
     spin: '½',
-    family: 'Leptone · fermione · particella elementare',
-    magneticMoment: '−1,001 16 μ_B',
+    family: L('Leptone · fermione · particella elementare', 'Lepton · fermion · elementary particle'),
+    magneticMoment: L('−1,001 16 μ_B', '−1.001 16 μ_B'),
   },
 };
 
@@ -53,7 +56,7 @@ export const QUARKS = {
 
 /** Cariche di colore della cromodinamica quantistica (QCD). */
 export const COLOR_CHARGES = [
-  { key: 'r', name: 'rosso', hex: '#ff4b5c' },
-  { key: 'g', name: 'verde', hex: '#3ef08a' },
-  { key: 'b', name: 'blu', hex: '#4d8dff' },
+  { key: 'r', name: L('rosso', 'red'), hex: '#ff4b5c' },
+  { key: 'g', name: L('verde', 'green'), hex: '#3ef08a' },
+  { key: 'b', name: L('blu', 'blue'), hex: '#4d8dff' },
 ];

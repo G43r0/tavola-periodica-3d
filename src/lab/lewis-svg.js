@@ -2,6 +2,7 @@
 // coppie solitarie (due puntini), elettroni spaiati (un puntino), cariche formali, parentesi degli ioni.
 // Il disegno parte dalla proiezione della geometria 3D e si rilassa in 2D distribuendo i domini.
 import { chargeText } from './chem/identify.js';
+import { isItalian } from '../i18n/index.js';
 
 const PX = 46; // pixel per unità di legame
 
@@ -243,5 +244,5 @@ export function lewisSvg(lab, unit) {
   const m = 10;
   const w = maxX - minX + 2 * m;
   const h = maxY - minY + 2 * m;
-  return `<svg class="lewis" viewBox="${(minX - m).toFixed(1)} ${(minY - m).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}" width="${Math.min(Math.max(w * 1.5, 130), 300).toFixed(0)}" role="img" aria-label="Struttura di Lewis">${out.join('')}</svg>`;
+  return `<svg class="lewis" viewBox="${(minX - m).toFixed(1)} ${(minY - m).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}" width="${Math.min(Math.max(w * 1.5, 130), 300).toFixed(0)}" role="img" aria-label="${isItalian() ? 'Struttura di Lewis' : 'Lewis structure'}">${out.join('')}</svg>`;
 }

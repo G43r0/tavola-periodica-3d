@@ -3,6 +3,41 @@
 // più specie separate da + (2 H2 + O2), cariche (NH4+, SO4^2-, SO4(2-), SO4 2-, Fe3+, O2-),
 // pedici e apici Unicode (H₂O, SO₄²⁻). Le equazioni (→, ->) vengono lette solo nel lato dei reagenti.
 
+import { createT } from '../../i18n/index.js';
+
+const t = createT({
+  it: {
+    unclosed: 'Parentesi «{ch}» non chiusa.',
+    notSymbol: '«{s}» non è il simbolo di un elemento.',
+    zeroSub: 'Un pedice non può essere zero.',
+    capital: 'I simboli degli elementi iniziano con la maiuscola (es. NaCl, non nacl).',
+    misplaced: 'Numero fuori posto vicino a «{s}».',
+    badChar: 'Carattere non valido: «{ch}».',
+    missing: 'Parentesi non chiusa: manca «{end}».',
+    write: 'Scrivi una formula.',
+    zeroCoef: 'Il coefficiente non può essere zero.',
+    beforeCharge: 'Manca la formula prima della carica.',
+    oneElement: 'Scrivi almeno un elemento.',
+  },
+  en: {
+    unclosed: 'Bracket «{ch}» not closed.',
+    notSymbol: '«{s}» is not the symbol of an element.',
+    zeroSub: 'A subscript cannot be zero.',
+    capital: 'Element symbols start with a capital letter (e.g. NaCl, not nacl).',
+    misplaced: 'Misplaced number near «{s}».',
+    badChar: 'Invalid character: «{ch}».',
+    missing: 'Bracket not closed: «{end}» is missing.',
+    write: 'Type a formula.',
+    zeroCoef: 'The coefficient cannot be zero.',
+    beforeCharge: 'The formula is missing before the charge.',
+    oneElement: 'Type at least one element.',
+  },
+  eli6: {
+    capital: 'Le sigle degli elementi iniziano con la lettera maiuscola: NaCl, non nacl.',
+    write: 'Scrivi il nome o la formula di una sostanza.',
+  },
+});
+
 const SUB = '₀₁₂₃₄₅₆₇₈₉';
 const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 const SUB_OUT = (n) => String(n).replace(/\d/g, (d) => SUB[d]);
@@ -115,7 +150,7 @@ function parseBody(body, isSymbol) {
       if (close[ch]) {
         i++;
         const inner = group(close[ch]);
-        if (body[i] !== close[ch]) throw new FormulaError(`Parentesi «${ch}» non chiusa.`);
+        if (body[i] !== close[ch]) throw new FormulaError(t('unclosed', { ch }));
         i++;
         const n = readCount();
         for (const [s, c] of inner.counts) counts.set(s, (counts.get(s) || 0) + c * n);
@@ -130,22 +165,22 @@ function parseBody(body, isSymbol) {
         else if (isSymbol(ch)) sym = ch;
         if (!sym) {
           const guess = /^[A-Z][a-z]$/.test(two) ? two : ch;
-          throw new FormulaError(`«${guess}» non è il simbolo di un elemento.`);
+          throw new FormulaError(t('notSymbol', { s: guess }));
         }
         i += sym.length;
-        if (/[a-z]/.test(body[i] ?? '')) throw new FormulaError(`«${sym}${body[i]}» non è il simbolo di un elemento.`);
+        if (/[a-z]/.test(body[i] ?? '')) throw new FormulaError(t('notSymbol', { s: `${sym}${body[i]}` }));
         const n = readCount();
-        if (n === 0) throw new FormulaError('Un pedice non può essere zero.');
+        if (n === 0) throw new FormulaError(t('zeroSub'));
         counts.set(sym, (counts.get(sym) || 0) + n);
         tokens.push({ symbol: sym, count: n });
         pretty += `${sym}${n > 1 ? SUB_OUT(n) : ''}`;
         continue;
       }
-      if (/[a-z]/.test(ch)) throw new FormulaError('I simboli degli elementi iniziano con la maiuscola (es. NaCl, non nacl).');
-      if (/\d/.test(ch)) throw new FormulaError(`Numero fuori posto vicino a «${body.slice(i)}».`);
-      throw new FormulaError(`Carattere non valido: «${ch}».`);
+      if (/[a-z]/.test(ch)) throw new FormulaError(t('capital'));
+      if (/\d/.test(ch)) throw new FormulaError(t('misplaced', { s: body.slice(i) }));
+      throw new FormulaError(t('badChar', { ch }));
     }
-    if (end) throw new FormulaError(`Parentesi non chiusa: manca «${end}».`);
+    if (end) throw new FormulaError(t('missing', { end }));
     return { counts, pretty };
   };
   const res = group(null);
@@ -170,9 +205,9 @@ function splitCoefficient(text) {
  */
 export function parseFormula(text, isSymbol) {
   const clean = normalizeFormulaText(text);
-  if (!clean) return { ok: false, error: 'Scrivi una formula.' };
+  if (!clean) return { ok: false, error: t('write') };
   const { parts, note } = splitSpecies(clean);
-  if (!parts.length) return { ok: false, error: 'Scrivi una formula.' };
+  if (!parts.length) return { ok: false, error: t('write') };
   try {
     const species = parts.map((p) => parseSpecies(p, isSymbol));
     return { ok: true, species, note };
@@ -184,7 +219,7 @@ export function parseFormula(text, isSymbol) {
 
 function parseSpecies(text, isSymbol) {
   const { coef, rest } = splitCoefficient(text);
-  if (coef === 0) throw new FormulaError('Il coefficiente non può essere zero.');
+  if (coef === 0) throw new FormulaError(t('zeroCoef'));
   // idrati: CuSO4·5H2O (anche "." tra due formule)
   const pieces = rest.split(HYDRATE).flatMap((p) => p.split(/(?<=[A-Za-z0-9)\]])\.(?=\d*[A-Z(])/));
   if (pieces.length > 1) {
@@ -201,9 +236,9 @@ function parseSpecies(text, isSymbol) {
     };
   }
   const { body, charge, monoGuess } = splitCharge(rest.trim());
-  if (!body.trim()) throw new FormulaError('Manca la formula prima della carica.');
+  if (!body.trim()) throw new FormulaError(t('beforeCharge'));
   const { counts, pretty, tokens } = parseBody(body.trim(), isSymbol);
-  if (!counts.size) throw new FormulaError('Scrivi almeno un elemento.');
+  if (!counts.size) throw new FormulaError(t('oneElement'));
   // indizi che il testo sia uno SMILES più che una formula (CC, OO, C1CCCCC1)
   const suspicious = tokens.some((t, k) => k > 0 && t.symbol === tokens[k - 1].symbol && t.count === 1 && tokens[k - 1].count === 1)
     || /[A-Za-z]1(?!\d)/.test(body);

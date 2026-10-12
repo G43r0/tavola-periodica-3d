@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { NUCLEON_R, nucleusRadius, packNucleus, relax, randomInBall, shuffled } from './packing.js';
 import { mulberry32 } from './orbital-math.js';
+import { gfx, seg } from '../gfx/preset.js';
 
 export const EXPLODE_FACTOR = 2.7;
 const HIGHLIGHT = new THREE.Color(2.2, 2.2, 2.2);
@@ -9,11 +10,17 @@ const SELECTED = new THREE.Color(1.75, 1.75, 1.75);
 const NORMAL = new THREE.Color(1, 1, 1);
 const _c = new THREE.Color();
 
-const geometry = new THREE.SphereGeometry(NUCLEON_R, 28, 20);
-const protonMaterial = new THREE.MeshStandardMaterial({
+const geometry = new THREE.SphereGeometry(NUCLEON_R, seg(28), seg(20));
+// Professionale: superficie lucida con vernice trasparente che riflette l'ambiente (i colori restano
+// quelli convenzionali: protoni e neutroni sono troppo piccoli per avere un colore visibile)
+const nucleonMaterial = (params) =>
+  gfx().physical
+    ? new THREE.MeshPhysicalMaterial({ ...params, roughness: params.roughness - 0.04, emissiveIntensity: params.emissiveIntensity * 0.5, clearcoat: 0.6, clearcoatRoughness: 0.18 })
+    : new THREE.MeshStandardMaterial(params);
+const protonMaterial = nucleonMaterial({
   color: 0xff4d5e, roughness: 0.36, metalness: 0.05, emissive: 0x4a0812, emissiveIntensity: 0.55,
 });
-const neutronMaterial = new THREE.MeshStandardMaterial({
+const neutronMaterial = nucleonMaterial({
   color: 0xa3b6d3, roughness: 0.42, metalness: 0.08, emissive: 0x0d1626, emissiveIntensity: 0.5,
 });
 
@@ -50,6 +57,14 @@ export class Nucleus {
     this.dim = 0; // 0–1: attenuazione degli altri nucleoni
   }
 
+  /** Occlusione ambientale tra i nucleoni (preset Professionale): ombre di contatto tra le sfere. */
+  useAO(ao) {
+    if (!ao || this.ao) return;
+    this.ao = ao;
+    ao.patch(protonMaterial);
+    ao.patch(neutronMaterial);
+  }
+
   /** Costruisce il nucleo con Z protoni e N neutroni; `capacity` = massimo numero di neutroni tra gli isotopi. */
   build(z, n, capacity, { intro = true } = {}) {
     this.dispose();
@@ -76,6 +91,7 @@ export class Nucleus {
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       for (let i = 0; i < mesh.count; i++) mesh.setColorAt(i, NORMAL);
       mesh.frustumCulled = false;
+      mesh.castShadow = mesh.receiveShadow = gfx().shadows;
       this.group.add(mesh);
     }
     this.protonMesh.userData.kind = 'proton';
@@ -190,6 +206,18 @@ export class Nucleus {
     step(this.protons, this.protonMesh);
     step(this.neutrons, this.neutronMesh);
     step(this.leaving, this.neutronMesh, this.neutrons.length);
+    if (this.ao) {
+      const k = this.size.cur;
+      const inner = 1 - this.innerFade;
+      this.ao.begin();
+      for (const list of [this.protons, this.neutrons, this.leaving]) {
+        for (const p of list) {
+          const r = NUCLEON_R * p.scale * (p === this.selected ? inner : 1) * k;
+          if (r > 0.01) this.ao.add(p.cur.x * k, p.cur.y * k, p.cur.z * k, r);
+        }
+      }
+      this.ao.commit();
+    }
     if (this.leaving.length && this.leaving.every((p) => p.scale < 0.02)) {
       this.leaving = [];
       this.#syncCounts();

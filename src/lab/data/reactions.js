@@ -7,6 +7,7 @@
 // (reactions-catalogo.js, vedi docs/catalogo-reazioni.md) in un unico elenco ordinato come il catalogo.
 
 import { CATALOG, CATALOG_GROUPS } from './reactions-catalogo.js';
+import { localizeReactions } from '../../i18n/lab-data.js';
 
 export const REACTION_GROUPS = CATALOG_GROUPS;
 
@@ -136,3 +137,6 @@ export const REACTIONS = CATALOG.map((c) => {
     desc: c.note ? c.note : `${c.sub}.`,
   };
 });
+
+// testi nella lingua dell'interfaccia (cond e needs restano in italiano per la sandbox: vedi condText)
+localizeReactions(REACTIONS, REACTION_GROUPS);

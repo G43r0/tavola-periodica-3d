@@ -4,6 +4,13 @@
 // di anello 1–9, componenti separate da "." (composti ionici). Niente aromatici minuscoli né
 // stereochimica: si scrivono le strutture di Kekulé (benzene = C1=CC=CC=C1).
 
+import { createT } from '../../i18n/index.js';
+
+const t = createT({
+  it: { invalid: 'SMILES non valido: {s}', unknown: 'Elemento sconosciuto: {s}', near: 'SMILES non valido vicino a "{s}"', ring: 'Anello non chiuso in {s}' },
+  en: { invalid: 'Invalid SMILES: {s}', unknown: 'Unknown element: {s}', near: 'Invalid SMILES near "{s}"', ring: 'Unclosed ring in {s}' },
+});
+
 const ORGANIC = { B: [3], C: [4], N: [3, 5], O: [2], P: [3, 5], S: [2, 4, 6], F: [1], Cl: [1], Br: [1], I: [1] };
 const BOND = { '-': 1, '=': 2, '#': 3 };
 
@@ -58,9 +65,9 @@ export function parseSmiles(smiles, bySymbol) {
       const end = smiles.indexOf(']', i);
       const body = smiles.slice(i + 1, end);
       const m = body.match(/^([A-Z][a-z]?)(H(\d*))?([+-]+\d*|[+-]\d+)?$/);
-      if (!m) throw new Error(`SMILES non valido: [${body}]`);
+      if (!m) throw new Error(t('invalid', { s: `[${body}]` }));
       const el = bySymbol.get(m[1]);
-      if (!el) throw new Error(`Elemento sconosciuto: ${m[1]}`);
+      if (!el) throw new Error(t('unknown', { s: m[1] }));
       let charge = 0;
       if (m[4]) {
         const sign = m[4][0] === '+' ? 1 : -1;
@@ -73,12 +80,12 @@ export function parseSmiles(smiles, bySymbol) {
     } else {
       const two = smiles.slice(i, i + 2);
       const sym = ORGANIC[two] ? two : ch;
-      if (!ORGANIC[sym]) throw new Error(`SMILES non valido vicino a "${smiles.slice(i)}"`);
+      if (!ORGANIC[sym]) throw new Error(t('near', { s: smiles.slice(i) }));
       addAtom({ z: bySymbol.get(sym).z, symbol: sym, charge: 0, hCount: null, organic: true });
       i += sym.length;
     }
   }
-  if (rings.size) throw new Error(`Anello non chiuso in ${smiles}`);
+  if (rings.size) throw new Error(t('ring', { s: smiles }));
 
   // idrogeni impliciti
   const valence = atoms.map(() => 0);

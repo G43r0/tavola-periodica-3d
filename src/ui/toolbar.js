@@ -1,74 +1,226 @@
-// Barra superiore (ricerca, filtri per stato e blocco) e legenda/filtro per categoria.
+// Barra superiore (ricerca, filtri per stato e blocco, lingua, grafica, modalità Spiega) e legenda/filtro per categoria.
 import { CATEGORIES, STATES, BLOCKS } from '../data/categories.js';
 import { computeVisibility } from '../state/query.js';
 import { hasActiveFilters, initialState } from '../state/store.js';
 import { esc } from '../chem/format.js';
+import { createT, LANGS, getLang, setLang, langInfo } from '../i18n/index.js';
+import { PRESETS, getGfx, setGfx } from '../gfx/preset.js';
 import { icons } from './icons.js';
 
-export function createToolbar(header, legend, elements, store, { onOpen, onInfo, onLab, onSandbox, onCategoryHover }) {
+const t = createT({
+  it: {
+    title: 'Tavola Periodica',
+    subtitle: 'Laboratorio interattivo degli elementi',
+    searchPlaceholder: 'Nome, simbolo o numero…',
+    searchLabel: 'Cerca un elemento per nome, simbolo o numero atomico',
+    stateGroup: 'Stato fisico a 25 °C',
+    stateLabel: 'Stato a 25 °C',
+    blockGroup: 'Blocco',
+    reset: 'Azzera',
+    resetTitle: 'Azzera ricerca e filtri',
+    lab: 'Laboratorio',
+    labTitle: 'Laboratorio molecolare: collega gli atomi e costruisci molecole',
+    sandbox: 'Sandbox',
+    sandboxTitle: 'Sandbox degli elementi: polveri, liquidi e gas che fondono, bruciano e reagiscono',
+    explain: 'Spiega',
+    explainTitle: 'Modalità Spiega (F1): evidenzia una parola o fai clic destro su qualcosa per sapere cos\'è',
+    language: 'Lingua',
+    graphics: 'Grafica',
+    graphicsTitle: 'Qualità della grafica',
+    'gfx.simple': 'Semplice',
+    'gfx.simpleText': 'Per computer poco potenti: niente effetti di luce, meno dettagli, animazioni ridotte.',
+    'gfx.medium': 'Medio',
+    'gfx.mediumText': 'L\'equilibrio predefinito tra qualità e velocità.',
+    'gfx.pro': 'Professionale',
+    'gfx.proShort': 'Pro',
+    'gfx.proText': 'Massimo dettaglio: colori e materiali veri degli elementi, riflessi, ombre e antialiasing. Serve una buona scheda grafica.',
+    'gfx.note': 'L\'interfaccia si ricarica per applicare la scelta.',
+    info: 'Fonti dei dati e guida',
+    categories: 'Categorie',
+    categoriesGroup: 'Legenda e filtro per categoria',
+    chipTitle: '{label} — clic per filtrare',
+    legendNote: 'Bordo tratteggiato = proprietà in gran parte previste',
+    countOf: '{n} di {total}',
+    countAll: '{total} elementi',
+    enter: 'Invio',
+    noResults: 'Nessun risultato',
+  },
+  en: {
+    title: 'Periodic Table',
+    subtitle: 'Interactive laboratory of the elements',
+    searchPlaceholder: 'Name, symbol or number…',
+    searchLabel: 'Search an element by name, symbol or atomic number',
+    stateGroup: 'Physical state at 25 °C',
+    stateLabel: 'State at 25 °C',
+    blockGroup: 'Block',
+    reset: 'Reset',
+    resetTitle: 'Clear search and filters',
+    lab: 'Laboratory',
+    labTitle: 'Molecular laboratory: connect atoms and build molecules',
+    sandbox: 'Sandbox',
+    sandboxTitle: 'Element sandbox: powders, liquids and gases that melt, burn and react',
+    explain: 'Explain',
+    explainTitle: 'Explain mode (F1): highlight a word or right-click anything to find out what it is',
+    language: 'Language',
+    graphics: 'Graphics',
+    graphicsTitle: 'Graphics quality',
+    'gfx.simple': 'Simple',
+    'gfx.simpleText': 'For less powerful computers: no lighting effects, fewer details, reduced animations.',
+    'gfx.medium': 'Medium',
+    'gfx.mediumText': 'The default balance between quality and speed.',
+    'gfx.pro': 'Professional',
+    'gfx.proShort': 'Pro',
+    'gfx.proText': 'Maximum detail: the real colours and materials of the elements, reflections, shadows and antialiasing. Needs a good graphics card.',
+    'gfx.note': 'The interface reloads to apply the choice.',
+    info: 'Data sources and guide',
+    categories: 'Categories',
+    categoriesGroup: 'Legend and category filter',
+    chipTitle: '{label} — click to filter',
+    legendNote: 'Dashed border = properties largely predicted',
+    countOf: '{n} of {total}',
+    countAll: '{total} elements',
+    enter: 'Enter',
+    noResults: 'No results',
+  },
+  eli6: {
+    subtitle: 'Gioca e scopri di cosa è fatto il mondo',
+    searchPlaceholder: 'Scrivi nome, sigla o numero…',
+    stateGroup: 'Com\'è a temperatura di casa',
+    stateLabel: 'A casa è…',
+    labTitle: 'Laboratorio: attacca gli atomi tra loro e costruisci molecole',
+    sandboxTitle: 'Sabbiera: versa polveri, liquidi e gas e guarda cosa succede quando li scaldi o li mescoli',
+    explainTitle: 'Modalità Spiega (F1): evidenzia una parola o premi il tasto destro su qualcosa e ti spiego cos\'è',
+    info: 'Da dove vengono i dati, e come si usa',
+    graphicsTitle: 'Quanto è bella la grafica',
+    'gfx.simpleText': 'Per computer lenti: meno luci ed effetti, così tutto va veloce.',
+    'gfx.mediumText': 'Una via di mezzo: bella e veloce.',
+    'gfx.proText': 'La più bella: gli elementi hanno i loro colori veri e sembrano oggetti reali, con riflessi e ombre. Serve un computer potente.',
+    'gfx.note': 'La pagina si ricarica per cambiare la grafica.',
+    legendNote: 'Bordo a trattini = di questi elementi sappiamo poco, molti dati sono ipotesi',
+  },
+});
+
+export function createToolbar(header, legend, elements, store, { onOpen, onInfo, onLab, onSandbox, onCategoryHover, onSearchCommit }) {
   header.innerHTML = `
     <div class="brand">
-      <span class="brand__logo">${icons.atom(26)}</span>
+      <span class="brand__logo" data-help="ui.logo">${icons.atom(26)}</span>
       <div class="brand__text">
-        <h1>Tavola Periodica</h1>
-        <p>Laboratorio interattivo degli elementi</p>
+        <h1>${t('title')}</h1>
+        <p>${t('subtitle')}</p>
       </div>
     </div>
 
     <div class="search" role="search">
       <span class="search__icon">${icons.search(17)}</span>
-      <input id="search" class="search__input" type="search" autocomplete="off" spellcheck="false"
-             placeholder="Nome, simbolo o numero…" aria-label="Cerca un elemento per nome, simbolo o numero atomico" />
+      <input id="search" class="search__input" type="search" autocomplete="off" spellcheck="false" data-help="ui.search"
+             placeholder="${esc(t('searchPlaceholder'))}" aria-label="${esc(t('searchLabel'))}" />
       <span class="search__hint" aria-live="polite"></span>
       <kbd class="search__kbd">/</kbd>
     </div>
 
-    <div class="filter-group" role="group" aria-label="Stato fisico a 25 °C">
-      <span class="filter-group__label">Stato a 25 °C</span>
+    <div class="filter-group" role="group" aria-label="${esc(t('stateGroup'))}" data-help="ui.stateFilter">
+      <span class="filter-group__label">${t('stateLabel')}</span>
       <div class="segmented">
         ${STATES.map(
-          (s) => `<button type="button" class="segmented__btn" data-state="${s.key}" aria-pressed="false" title="${s.label}">
-              ${s.icon ? icons[s.icon](14) : ''}<span>${s.label}</span></button>`,
+          (s) => `<button type="button" class="segmented__btn" data-state="${s.key}" aria-pressed="false" title="${esc(s.label)}">
+              ${s.icon ? icons[s.icon](14) : ''}<span>${esc(s.label)}</span></button>`,
         ).join('')}
       </div>
     </div>
 
-    <div class="filter-group" role="group" aria-label="Blocco">
-      <span class="filter-group__label">Blocco</span>
+    <div class="filter-group" role="group" aria-label="${esc(t('blockGroup'))}" data-help="ui.blockFilter">
+      <span class="filter-group__label">${t('blockGroup')}</span>
       <div class="segmented segmented--blocks">
         ${BLOCKS.map(
-          (b) => `<button type="button" class="segmented__btn" data-block="${b.key}" aria-pressed="false" title="${b.label}: ${b.hint}">${b.key}</button>`,
+          (b) => `<button type="button" class="segmented__btn" data-block="${b.key}" aria-pressed="false" title="${esc(b.label)}: ${esc(b.hint)}">${b.key}</button>`,
         ).join('')}
       </div>
     </div>
 
     <div class="toolbar__end">
       <span class="result-count" aria-live="polite"></span>
-      <button type="button" class="btn-ghost reset" hidden title="Azzera ricerca e filtri">${icons.reset(15)}<span>Azzera</span></button>
-      <button type="button" class="btn-ghost lab-entry" data-action="lab" title="Laboratorio molecolare: collega gli atomi e costruisci molecole">${icons.flask(16)}<span>Laboratorio</span></button>
-      <button type="button" class="btn-ghost lab-entry" data-action="sandbox" title="Sandbox degli elementi: polveri, liquidi e gas che fondono, bruciano e reagiscono">${icons.sand(16)}<span>Sandbox</span></button>
-      <button type="button" class="btn-icon" data-action="info" title="Fonti dei dati e guida">${icons.info(18)}</button>
+      <button type="button" class="btn-ghost reset" hidden title="${esc(t('resetTitle'))}" data-help="ui.reset">${icons.reset(15)}<span>${t('reset')}</span></button>
+      <button type="button" class="btn-ghost lab-entry" data-action="lab" data-help="ui.lab" title="${esc(t('labTitle'))}">${icons.flask(16)}<span>${t('lab')}</span></button>
+      <button type="button" class="btn-ghost lab-entry" data-action="sandbox" data-help="ui.sandbox" title="${esc(t('sandboxTitle'))}">${icons.sand(16)}<span>${t('sandbox')}</span></button>
+      <button type="button" class="btn-ghost explain-toggle" data-action="explain" data-help="ui.explain" aria-pressed="false" title="${esc(t('explainTitle'))}">${icons.explain(16)}<span>${t('explain')}</span></button>
+      <div class="gfx" data-help="ui.graphics">
+        <button type="button" class="btn-ghost gfx__btn" aria-haspopup="menu" aria-expanded="false" title="${esc(t('graphicsTitle'))}">
+          ${icons.display(16)}<span>${esc(t.has(`gfx.${getGfx()}Short`) ? t(`gfx.${getGfx()}Short`) : t(`gfx.${getGfx()}`))}</span></button>
+        <div class="gfx__menu pop-menu" role="menu" hidden>
+          <p class="pop-menu__title">${t('graphicsTitle')}</p>
+          ${PRESETS.map((code) => `<button type="button" role="menuitemradio" class="gfx__item pop-menu__item" data-gfx="${code}" aria-checked="${code === getGfx()}">
+              <b>${esc(t(`gfx.${code}`))}</b><span>${esc(t(`gfx.${code}Text`))}</span></button>`).join('')}
+          <p class="pop-menu__note">${t('gfx.note')}</p>
+        </div>
+      </div>
+      <div class="lang" data-help="ui.language">
+        <button type="button" class="btn-ghost lang__btn" aria-haspopup="menu" aria-expanded="false" title="${esc(t('language'))}">
+          ${icons.globe(16)}<span>${esc(langInfo().short)}</span></button>
+        <div class="lang__menu pop-menu" role="menu" hidden>
+          ${LANGS.map((l) => `<button type="button" role="menuitemradio" class="lang__item pop-menu__item" data-lang="${l.code}" aria-checked="${l.code === getLang()}">
+              <b>${esc(l.short)}</b><span>${esc(l.name)}</span></button>`).join('')}
+        </div>
+      </div>
+      <button type="button" class="btn-icon" data-action="info" data-help="ui.info" title="${esc(t('info'))}">${icons.info(18)}</button>
     </div>`;
 
+  legend.setAttribute('aria-label', t('categoriesGroup'));
   legend.innerHTML = `
-    <span class="legend__label">Categorie</span>
+    <span class="legend__label">${t('categories')}</span>
     <div class="legend__chips">
       ${CATEGORIES.map(
-        (c) => `<button type="button" class="chip" data-cat="${c.key}" aria-pressed="false" style="--c:${c.color}" title="${c.label} — clic per filtrare">
+        (c) => `<button type="button" class="chip" data-cat="${c.key}" aria-pressed="false" style="--c:${c.color}" title="${esc(t('chipTitle', { label: c.label }))}">
             <span class="chip__dot"></span>${esc(c.short)}</button>`,
       ).join('')}
     </div>
-    <span class="legend__note">Bordo tratteggiato = proprietà in gran parte previste</span>`;
+    <span class="legend__note">${t('legendNote')}</span>`;
 
   const input = header.querySelector('#search');
   const hint = header.querySelector('.search__hint');
   const count = header.querySelector('.result-count');
   const reset = header.querySelector('.reset');
 
+  // ---- menu della lingua e della grafica
+  const popMenu = (wrapSel, attr, onPick) => {
+    const wrap = header.querySelector(wrapSel);
+    const btn = wrap.querySelector('[aria-haspopup]');
+    const menu = wrap.querySelector('[role="menu"]');
+    const setMenu = (open) => {
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) menu.querySelector('[aria-checked="true"]')?.focus();
+    };
+    btn.addEventListener('click', () => setMenu(menu.hidden));
+    menu.addEventListener('click', (ev) => {
+      const item = ev.target.closest(`[data-${attr}]`);
+      if (!item || !menu.contains(item)) return;
+      setMenu(false);
+      onPick(item.dataset[attr]);
+    });
+    menu.addEventListener('keydown', (ev) => {
+      const items = [...menu.querySelectorAll(`[data-${attr}]`)];
+      const i = items.indexOf(document.activeElement);
+      if (ev.key === 'Escape') {
+        ev.stopPropagation();
+        setMenu(false);
+        btn.focus();
+      } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+        ev.preventDefault();
+        items[(i + (ev.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+      }
+    });
+    document.addEventListener('pointerdown', (ev) => {
+      if (!menu.hidden && !ev.target.closest(wrapSel)) setMenu(false);
+    });
+  };
+  popMenu('.lang', 'lang', setLang);
+  popMenu('.gfx', 'gfx', setGfx);
+
   // ---- eventi
   input.addEventListener('input', () => store.set({ query: input.value }));
   input.addEventListener('keydown', (ev) => {
     if (ev.key === 'Enter') {
+      if (onSearchCommit?.(input.value, ev)) return;
       const { best } = computeVisibility(elements, store.get());
       if (best) onOpen(best.z);
     } else if (ev.key === 'Escape') {
@@ -123,11 +275,11 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
     const active = hasActiveFilters(s);
     const { count: n, best } = computeVisibility(elements, s);
     reset.hidden = !active;
-    count.textContent = active ? `${n} di ${elements.length}` : `${elements.length} elementi`;
+    count.textContent = active ? t('countOf', { n, total: elements.length }) : t('countAll', { total: elements.length });
     count.classList.toggle('is-empty', active && n === 0);
 
-    if (s.query && best) hint.innerHTML = `<kbd>Invio</kbd> ${esc(best.symbol)} · ${esc(best.name)}`;
-    else if (s.query) hint.textContent = 'Nessun risultato';
+    if (s.query && best) hint.innerHTML = `<kbd>${t('enter')}</kbd> ${esc(best.symbol)} · ${esc(best.name)}`;
+    else if (s.query) hint.textContent = t('noResults');
     else hint.textContent = '';
     if (input.value !== s.query) input.value = s.query;
   }

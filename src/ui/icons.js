@@ -58,4 +58,8 @@ export const icons = {
   eraser: (s) => svg(`<path d="m14.5 4.5 5 5-9.5 9.5H5l-1.5-1.5a2.1 2.1 0 0 1 0-3z"/><path d="m9 10 5 5M10 19h10"/>`, s),
   step: (s) => svg(`<path d="M6 5v14l9-7z" fill="currentColor" stroke="none"/><rect x="16.5" y="5" width="2.5" height="14" rx="1" fill="currentColor" stroke="none"/>`, s),
   keyboard: (s) => svg(`<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>`, s),
+  display: (s) => svg(`<rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8.5 20.5h7M12 16.5v4"/><path d="m8 12.5 2.6-3 2 2 3.4-4"/>`, s),
+  globe: (s) => svg(`<circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.6 4 6 4 9.5s-1.4 6.9-4 9.5c-2.6-2.6-4-6-4-9.5s1.4-6.9 4-9.5z"/>`, s),
+  explain: (s) => svg(`<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5z"/><path d="M10 7.8a2 2 0 1 1 2.8 1.8c-.5.3-.8.7-.8 1.2v.4M12 13.2v.01"/>`, s),
+  sparkle: (s) => svg(`<path d="M12 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/><path d="M19 15.5c.2 1.4 1 2.2 2.5 2.5-1.5.3-2.3 1.1-2.5 2.5-.2-1.4-1-2.2-2.5-2.5 1.5-.3 2.3-1.1 2.5-2.5z"/>`, s),
 };

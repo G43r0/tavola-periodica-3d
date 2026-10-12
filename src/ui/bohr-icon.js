@@ -1,6 +1,13 @@
 // Mini modello di Bohr in SVG: nucleo + gusci con il numero corretto di elettroni.
 // Anteprima 2D; il modello 3D completo è nel visualizzatore (fase 2).
 
+import { createT } from '../i18n/index.js';
+
+const t = createT({
+  it: { label: 'Modello di Bohr: {shells} elettroni per guscio' },
+  en: { label: 'Bohr model: {shells} electrons per shell' },
+});
+
 let uid = 0;
 
 export function bohrSvg(el, { size = 120, animated = true } = {}) {
@@ -42,7 +49,7 @@ export function bohrSvg(el, { size = 120, animated = true } = {}) {
 
   return `
     <svg class="bohr ${animated ? 'is-animated' : ''}" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img"
-         aria-label="Modello di Bohr: ${shells.join(', ')} elettroni per guscio">
+         aria-label="${t('label', { shells: shells.join(', ') })}">
       <defs>
         <radialGradient id="${id}g">
           <stop offset="0" stop-color="var(--c, var(--accent))" stop-opacity="0.35"/>

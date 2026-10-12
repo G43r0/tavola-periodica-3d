@@ -11,28 +11,64 @@ import './styles/base.css';
 import './styles/layout.css';
 import './styles/table.css';
 import './styles/panel.css';
+import './styles/gfx.css';
 
 import data from './data/elements.json';
+import { createT, getLang, langInfo, beforeLangChange } from './i18n/index.js';
+import { getGfx, beforeGfxChange } from './gfx/preset.js';
+import { localizeElements } from './i18n/elements.js';
 import { createStore, initialState } from './state/store.js';
 import { createToolbar } from './ui/toolbar.js';
 import { createPeriodicTable } from './ui/periodic-table.js';
 import { createElementPanel } from './ui/element-panel.js';
 import { createInfoDialog } from './ui/info-dialog.js';
 import { toast } from './ui/toast.js';
+import { createExplain } from './ui/explain.js';
+import { initSparks } from './ui/sparks.js';
 
-const elements = data.elements;
+const t = createT({
+  it: {
+    error3d: 'Impossibile caricare il visualizzatore 3D.',
+    errorLab: 'Impossibile caricare il laboratorio molecolare.',
+    errorSandbox: 'Impossibile caricare la sandbox.',
+  },
+  en: {
+    error3d: 'Could not load the 3D viewer.',
+    errorLab: 'Could not load the molecular laboratory.',
+    errorSandbox: 'Could not load the sandbox.',
+  },
+});
+
+document.documentElement.lang = langInfo().html;
+document.documentElement.dataset.lang = getLang();
+document.documentElement.dataset.gfx = getGfx();
+window.desktop?.setLanguage?.(getLang());
+
+const elements = localizeElements(data.elements);
 const store = createStore({ ...initialState, categories: new Set(), blocks: new Set() });
+
+// dopo il cambio di lingua o di grafica (che ricaricano la pagina) si riapre l'elemento che era selezionato
+const RESUME_KEY = 'tp3d.resume';
+const saveResume = () => {
+  try {
+    sessionStorage.setItem(RESUME_KEY, JSON.stringify({ z: store.get().selectedZ, query: store.get().query }));
+  } catch {
+    /* niente da ripristinare */
+  }
+};
+beforeLangChange(saveResume);
+beforeGfxChange(saveResume);
 
 const app = document.getElementById('app');
 app.innerHTML = `
   <header class="toolbar"></header>
-  <div class="legend" role="group" aria-label="Legenda e filtro per categoria"></div>
+  <div class="legend" role="group" data-help="ui.categories"></div>
   <main class="workspace">
     <div class="stage"></div>
-    <aside class="panel" aria-labelledby="panel-title"></aside>
+    <aside class="panel" data-help="ui.elementPanel" aria-labelledby="panel-title"></aside>
   </main>`;
 
-const info = createInfoDialog(data.meta);
+const info = createInfoDialog();
 const open = (z) => store.set({ selectedZ: z });
 
 const table = createPeriodicTable(app.querySelector('.stage'), elements, store, { onOpen: open });
@@ -43,6 +79,7 @@ const toolbar = createToolbar(app.querySelector('.toolbar'), app.querySelector('
   onLab: () => openLab(),
   onSandbox: () => openSandbox(),
   onCategoryHover: (key) => table.highlightCategory(key),
+  onSearchCommit: (text, ev) => sparks.onSearchCommit(text, ev),
 });
 
 // ------------------------------------------------------------ visualizzatore 3D (caricato su richiesta)
@@ -61,7 +98,7 @@ function open3D(z) {
     .catch((err) => {
       console.error(err);
       viewerLoading = null;
-      toast('Impossibile caricare il visualizzatore 3D.');
+      toast(t('error3d'));
     });
   viewerLoading.then((v) => v?.open(z));
 }
@@ -79,7 +116,7 @@ function openLab(z) {
     .catch((err) => {
       console.error(err);
       labLoading = null;
-      toast('Impossibile caricare il laboratorio molecolare.');
+      toast(t('errorLab'));
     });
   labLoading.then((l) => l?.open(z));
 }
@@ -97,7 +134,7 @@ function openSandbox(z) {
     .catch((err) => {
       console.error(err);
       sandboxLoading = null;
-      toast('Impossibile caricare la sandbox.');
+      toast(t('errorSandbox'));
     });
   sandboxLoading.then((s) => s?.open(z));
 }
@@ -108,6 +145,24 @@ createElementPanel(app.querySelector('.panel'), elements, store, {
   onOpenLab: openLab,
   onOpenSandbox: openSandbox,
 });
+
+// ------------------------------------------------------------ modalità Spiega (F1)
+const explain = createExplain(elements, {
+  onOpenElement: (z) => {
+    if (!viewer?.isOpen() && !lab?.isOpen() && !sandbox?.isOpen()) store.set({ selectedZ: z });
+  },
+});
+
+const sparks = initSparks({ elements, store, table, explain });
+
+try {
+  const resume = JSON.parse(sessionStorage.getItem(RESUME_KEY) || 'null');
+  sessionStorage.removeItem(RESUME_KEY);
+  if (resume?.query) store.set({ query: resume.query });
+  if (resume?.z) store.set({ selectedZ: resume.z });
+} catch {
+  /* nessuno stato da ripristinare */
+}
 
 // ------------------------------------------------------------ scorciatoie globali
 const isTyping = (t) => t instanceof HTMLElement && (t.matches('input, textarea, select') || t.isContentEditable);
