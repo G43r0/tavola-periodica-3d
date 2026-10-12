@@ -53,11 +53,12 @@ export function entry(key) {
 
 export const allKeys = () => [...new Set(chain().flatMap((code) => Object.keys(TABLES[code])))];
 
-let index = null;
+const indexes = new Map();
 /** Indice parola o frase normalizzata → chiave (titoli e sinonimi della lingua corrente). */
 export function wordIndex() {
-  if (index) return index;
-  index = new Map();
+  if (indexes.has(getLang())) return indexes.get(getLang());
+  const index = new Map();
+  indexes.set(getLang(), index);
   const add = (phrase, key) => {
     const n = norm(phrase);
     if (n && !index.has(n)) index.set(n, key);

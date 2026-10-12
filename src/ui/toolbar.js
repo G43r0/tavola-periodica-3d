@@ -63,7 +63,7 @@ const t = createT({
   },
   eli6: {
     subtitle: 'Gioca e scopri di cosa è fatto il mondo',
-    searchPlaceholder: 'Scrivi un nome, una sigla o un numero…',
+    searchPlaceholder: 'Scrivi nome, sigla o numero…',
     stateGroup: 'Com\'è a temperatura di casa',
     stateLabel: 'A casa è…',
     labTitle: 'Laboratorio: attacca gli atomi tra loro e costruisci molecole',

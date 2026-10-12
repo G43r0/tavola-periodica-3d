@@ -11,6 +11,14 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 ## [Non rilasciato]
 
 ### Aggiunto
+- **Lingue**: italiano, inglese e «Spiegamelo come se avessi 6 anni» (italiano con parole semplici), dal globo nella
+  barra in alto. Tradotti interfaccia, schede dei 118 elementi, visualizzatore 3D e analisi delle particelle, laboratorio
+  (554 sostanze, 1349 reazioni, nomi IUPAC generati), sandbox (strumenti, schede, registro, esempi) e menu dell'app
+  desktop. La scelta resta salvata; cambiando lingua l'app riapre l'elemento che si stava guardando.
+- **Modalità Spiega** (`F1` o pulsante a fumetto): evidenziando un testo o facendo clic destro su qualsiasi cosa si apre
+  una scheda che spiega termini di chimica e fisica, famiglie, gruppi, periodi, elementi, sostanze, funzioni
+  dell'interfaccia e tasti, con scorciatoie, «Vedi anche» e cronologia. Glossario di 144 voci in tre lingue.
+- Test delle lingue e del glossario (`tests/i18n/i18n.test.mjs`).
 - **Sandbox degli elementi** (pulsante «Sandbox» nella barra in alto e nella scheda dell'elemento): una sabbiera a
   particelle in stile *The Powder Toy* con i 118 elementi e i materiali di base — legno, carbone, calcestruzzo, muro
   indistruttibile — più generatore elettrico, acqua, sale, ruggine e CO₂.

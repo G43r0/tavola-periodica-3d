@@ -6,6 +6,8 @@ schede informative in italiano e modelli 3D degli atomi esplorabili fino alle si
 molecole e composti e una **sandbox degli elementi** in stile *The Powder Toy*: i 118 elementi, le 554 sostanze della
 libreria e i materiali di base (legno, carbone, calcestruzzo, muro indistruttibile) cadono, fondono, bollono, si sciolgono,
 bruciano e reagiscono secondo i loro dati reali e le reazioni del catalogo.
+L'interfaccia è in **italiano**, in **inglese** e in **«Spiegamelo come se avessi 6 anni»** (le stesse spiegazioni con parole
+semplici), e la **modalità Spiega** (`F1`) apre una scheda su qualsiasi parola evidenziata o cosa cliccata col tasto destro.
 Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 
 | Fase | Contenuto | Stato |
@@ -16,6 +18,7 @@ Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 | 4 | Laboratorio molecolare: costruzione di molecole (3D + Lewis, Combina/Separa, libreria) | ✅ completata |
 | 5 | Laboratorio: reazioni (animazione, bilanciamento, energia di reazione) | ✅ completata |
 | 6 | Sandbox degli elementi: polveri, liquidi e gas con temperatura, reazioni, elettricità, radioattività | ✅ completata |
+| 7 | Lingue (italiano, inglese, «Spiegamelo come se avessi 6 anni») e modalità Spiega | ✅ completata |
 
 ---
 
@@ -345,7 +348,40 @@ generici (sali, ossidi) hanno temperature di fusione indicative; la solubilità 
 equilibri; la radioattività segue il solo isotopo principale. Il motore è un modulo puro (`src/sandbox/world.js`, con
 `chemistry.js` per il catalogo) provato dai test (`npm test`).
 
-## 9. Struttura del progetto
+## 9. Lingue e modalità Spiega
+
+**Lingue.** Il globo nella barra in alto sceglie la lingua; la scelta resta salvata e l'app si ricarica riaprendo
+l'elemento che si stava guardando (anche il menu dell'app desktop cambia lingua).
+
+- **Italiano** e **inglese**: tutta l'interfaccia, le schede dei 118 elementi (origine del nome, scoperta, usi, dove si
+  trova, decadimenti), il visualizzatore 3D e l'analisi delle particelle, il laboratorio con le 554 sostanze e le 1349
+  reazioni (nomi, descrizioni, condizioni, nomi IUPAC generati), la sandbox con le sue schede e il registro.
+  La ricerca trova gli elementi e le sostanze per nome in entrambe le lingue.
+- **«Spiegamelo come se avessi 6 anni»**: italiano con parole semplici e paragoni di tutti i giorni, senza linguaggio
+  infantile. Riscrive le spiegazioni (introduzione semplice di ogni elemento, usi, dove si trova, particelle, strumenti
+  del laboratorio e della sandbox, modalità Spiega); i dati numerici restano quelli veri. Le descrizioni della libreria
+  del laboratorio (sostanze e note delle reazioni) restano nell'italiano normale.
+
+Ogni modulo ha la sua tabella di testi (`createT({ it, en, eli6 })` in `src/i18n/index.js`): la versione semplice ricade
+sull'italiano per i testi che non ridefinisce. I dati tradotti sono in `src/i18n/data/`. I test (`tests/i18n/`) controllano
+che ogni testo italiano abbia la traduzione inglese, che i segnaposto coincidano e che ogni voce dell'interfaccia abbia
+una spiegazione in tutte e tre le lingue.
+
+**Modalità Spiega.** Si attiva con `F1` o con il pulsante a fumetto (nella barra in alto, nel laboratorio e nella
+sandbox). Quando è attiva:
+
+- **evidenzia** una parola o una frase, oppure fai **clic destro** su qualsiasi cosa: si apre una scheda che la spiega;
+- riconosce gli **81 termini** di chimica e fisica del glossario (con sinonimi e plurali), le **famiglie**, i **gruppi** e i
+  **periodi**, i **118 elementi** (con «Apri la scheda»), le **554 sostanze** del laboratorio (con la formula), le
+  **funzioni** dell'interfaccia (ogni pulsante, interruttore e area) e i **tasti**: su un `<kbd>` la scheda dice cosa fa
+  quel tasto in ogni parte dell'app;
+- ogni scheda ha le scorciatoie utili e i «Vedi anche»; anche le parole dentro la scheda si possono spiegare (con
+  «Indietro» per tornare); `Esc` chiude la scheda, `F1` esce dalla modalità;
+- il tasto destro in modalità Spiega non cancella nella sandbox, non ruota la vista e non rompe legami nel laboratorio.
+
+Il glossario (`src/i18n/data/glossary-*.js`) si carica solo al primo uso, come la libreria delle sostanze.
+
+## 10. Struttura del progetto
 
 ```
 electron/
@@ -353,10 +389,14 @@ electron/
   preload.cjs         ponte minimo verso il renderer
 src/
   main.js             avvio dell'interfaccia e scorciatoie globali
+  i18n/               lingue: index.js (lingua corrente, createT, pick), elements.js e lab-data.js (dati tradotti),
+                      glossary.js (voci, indice delle parole e scorciatoie della modalità Spiega)
+    data/             testi tradotti: elementi, sostanze, reazioni, glossario in italiano/inglese/versione semplice
   chem/               logica chimica pura (configurazioni, numeri quantici, regole di Slater, costanti delle particelle, formattazione)
   data/               elements.json (generato) e categorie/colori
   state/              store dello stato e logica di ricerca/filtri
   ui/                 tavola, anteprima, barra filtri, scheda elemento, icone, dialog
+    explain.js        modalità Spiega: riconoscimento di parole e oggetti, scheda di spiegazione
   viewer/             visualizzatore 3D
     atom-viewer.js    interfaccia, stato, raycasting, tastiera
     engine.js         renderer, camera, OrbitControls, bloom, etichette, qualità adattiva
@@ -370,6 +410,7 @@ src/
     selection-marker.js mirino della particella selezionata
   lab/                laboratorio molecolare
     lab-view.js       interfaccia, azioni (Combina, Separa, cariche), annulla/ripeti
+    lab-strings.js    testi dell'interfaccia del laboratorio nelle tre lingue
     bench-scene.js    scena 3D: atomi, legami, coppie solitarie, trascinamento
     palette.js        tavolozza degli elementi
     molecule-panel.js scheda della molecola
@@ -389,11 +430,13 @@ src/
     world.js          motore: movimento, calore, cambi di stato, soluzioni, combustione, reazioni, elettricità, radioattività, esplosioni
     render.js         disegno: colori, incandescenza, fiamme colorate, scariche, vista termica, bagliore
     describe.js       nomi e formule generati, equazioni del registro, note sulle sostanze
+    describe-strings.js, sandbox-strings.js  testi della sandbox nelle tre lingue
     shapes.js         linea, rettangolo, ellisse come elenco di celle
     presets.js        esempi pronti
     sandbox-view.js   interfaccia: tavolozza, strumenti, pennello, scheda, registro, tastiera
 tests/lab/            test del motore chimico (npm test)
 tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo, strumenti)
+tests/i18n/           test delle lingue e del glossario della modalità Spiega
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json
@@ -403,7 +446,7 @@ data-sources/         dati di origine (PubChem + dati curati in italiano)
 build/icon.png        icona usata da electron-builder
 ```
 
-## 10. Uso
+## 11. Uso
 
 - **Passa il mouse** su un elemento: anteprima in alto e cella in rilievo.
   Passando su un numero di gruppo/periodo o su una categoria della legenda si evidenzia l'intera colonna/riga/categoria.
@@ -418,6 +461,7 @@ build/icon.png        icona usata da electron-builder
 | `Invio` | apri la scheda |
 | `Esc` | chiudi la scheda / svuota la ricerca |
 | `F11` | schermo intero |
+| `F1` | modalità Spiega: poi evidenzia una parola o fai clic destro su qualsiasi cosa |
 | `B` / `Q` | (3D) modello di Bohr / quantistico |
 | `E` | (3D) esplodi o ricompatta il nucleo |
 | `L` | (3D) etichette |
