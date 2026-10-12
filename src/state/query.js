@@ -4,7 +4,7 @@ import { normalize } from '../chem/format.js';
 /**
  * Punteggio di corrispondenza tra elemento e testo cercato.
  * 4 = numero atomico o simbolo esatto, 3 = nome che inizia con il testo,
- * 2 = nome che contiene il testo, 1 = nome inglese, 0 = nessuna corrispondenza.
+ * 2 = nome che contiene il testo, 1 = nome nell'altra lingua (inglese/italiano), 0 = nessuna corrispondenza.
  */
 export function searchScore(el, rawQuery) {
   const q = normalize(rawQuery);
@@ -14,7 +14,7 @@ export function searchScore(el, rawQuery) {
   const name = normalize(el.name);
   if (name.startsWith(q)) return 3;
   if (name.includes(q)) return 2;
-  if (normalize(el.nameEn).includes(q) || normalize(el.symbol).startsWith(q)) return 1;
+  if (normalize(el.nameEn).includes(q) || normalize(el.nameIt ?? el.name).includes(q) || normalize(el.symbol).startsWith(q)) return 1;
   return 0;
 }
 

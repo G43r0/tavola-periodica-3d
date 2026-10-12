@@ -1,5 +1,5 @@
 // Processo principale Electron: crea la finestra e carica l'interfaccia (offline).
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain } = require('electron');
 const path = require('node:path');
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
@@ -45,28 +45,37 @@ function createWindow() {
   else mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
 }
 
-function buildMenu() {
+// Voci del menu nella lingua scelta nell'app («eli6» usa l'italiano).
+const MENU_TEXT = {
+  it: { quit: 'Esci', view: 'Visualizza', reload: 'Ricarica', resetZoom: 'Zoom predefinito', zoomIn: 'Aumenta zoom', zoomOut: 'Riduci zoom', fullscreen: 'Schermo intero', devTools: 'Strumenti per sviluppatori' },
+  en: { quit: 'Quit', view: 'View', reload: 'Reload', resetZoom: 'Actual size', zoomIn: 'Zoom in', zoomOut: 'Zoom out', fullscreen: 'Full screen', devTools: 'Developer tools' },
+};
+
+function buildMenu(lang = 'it') {
+  const m = MENU_TEXT[lang] ?? MENU_TEXT.it;
   const template = [
     {
       label: 'File',
-      submenu: [{ role: 'quit', label: 'Esci' }],
+      submenu: [{ role: 'quit', label: m.quit }],
     },
     {
-      label: 'Visualizza',
+      label: m.view,
       submenu: [
-        { role: 'reload', label: 'Ricarica' },
+        { role: 'reload', label: m.reload },
         { type: 'separator' },
-        { role: 'resetZoom', label: 'Zoom predefinito' },
-        { role: 'zoomIn', label: 'Aumenta zoom' },
-        { role: 'zoomOut', label: 'Riduci zoom' },
+        { role: 'resetZoom', label: m.resetZoom },
+        { role: 'zoomIn', label: m.zoomIn },
+        { role: 'zoomOut', label: m.zoomOut },
         { type: 'separator' },
-        { role: 'togglefullscreen', label: 'Schermo intero' },
-        ...(isDev ? [{ type: 'separator' }, { role: 'toggleDevTools', label: 'Strumenti per sviluppatori' }] : []),
+        { role: 'togglefullscreen', label: m.fullscreen },
+        ...(isDev ? [{ type: 'separator' }, { role: 'toggleDevTools', label: m.devTools }] : []),
       ],
     },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
+
+ipcMain.on('set-language', (_event, code) => buildMenu(code === 'en' ? 'en' : 'it'));
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();

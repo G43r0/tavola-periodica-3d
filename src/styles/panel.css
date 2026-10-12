@@ -289,6 +289,20 @@
   color: var(--text-1);
   line-height: 1.6;
 }
+/* «Spiegamelo come se avessi 6 anni»: la frase semplice in evidenza */
+.psec--simple {
+  padding: 14px 16px;
+  background: color-mix(in oklab, var(--c, var(--accent)) 9%, var(--bg-2));
+  border: 1px solid color-mix(in oklab, var(--c, var(--accent)) 30%, transparent);
+  border-radius: var(--r-md);
+}
+.psec--simple .psec__title {
+  margin-bottom: 8px;
+}
+.prose--big {
+  font-size: 15px;
+  color: var(--text-0);
+}
 
 /* tile dei dati di base */
 .tiles {

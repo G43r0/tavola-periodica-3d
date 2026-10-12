@@ -290,6 +290,13 @@
 .inspector__keys > svg {
   color: var(--text-3);
 }
+.inspector__tip {
+  font-size: 0.88em;
+  color: color-mix(in oklab, var(--warn) 70%, var(--text-2));
+}
+.ptable.is-compact .inspector__tip {
+  display: none;
+}
 
 .inspector__card {
   display: grid;

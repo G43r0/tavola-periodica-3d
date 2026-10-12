@@ -3,6 +3,33 @@ import { CATEGORY } from '../data/categories.js';
 import { fmtMass, esc } from '../chem/format.js';
 import { computeVisibility } from '../state/query.js';
 import { createInspector } from './inspector.js';
+import { createT } from '../i18n/index.js';
+
+const t = createT({
+  it: {
+    lanthanides: 'Lantanidi',
+    actinides: 'Attinidi',
+    tableLabel: 'Tavola periodica degli elementi',
+    group: 'Gruppo {n}',
+    period: 'Periodo {n}',
+    seriesBelow: '{label} ({range}): vedi la riga in basso',
+    cellLabel: '{name}, simbolo {symbol}, numero atomico {z}, massa atomica {mass}',
+  },
+  en: {
+    lanthanides: 'Lanthanides',
+    actinides: 'Actinides',
+    tableLabel: 'Periodic table of the elements',
+    group: 'Group {n}',
+    period: 'Period {n}',
+    seriesBelow: '{label} ({range}): see the row below',
+    cellLabel: '{name}, symbol {symbol}, atomic number {z}, atomic mass {mass}',
+  },
+  eli6: {
+    group: 'Colonna (gruppo) {n}: gli elementi qui sotto si comportano in modo simile',
+    period: 'Riga (periodo) {n}: gli atomi di questa riga hanno {n} «strati» di elettroni',
+    seriesBelow: '{label} ({range}): sono nella riga in basso, per non allungare troppo la tavola',
+  },
+});
 
 // Proporzioni della griglia rispetto al lato della cella
 const LABEL_W = 0.42; // colonna dei numeri di periodo
@@ -13,8 +40,8 @@ const MIN_CELL = 32;
 const MAX_CELL = 116;
 
 const SERIES = {
-  lanthanide: { label: 'Lantanidi', range: '57–71', from: 'La', to: 'Lu', y: 9, period: 6 },
-  actinide: { label: 'Attinidi', range: '89–103', from: 'Ac', to: 'Lr', y: 10, period: 7 },
+  lanthanide: { label: t('lanthanides'), range: '57–71', from: 'La', to: 'Lu', y: 9, period: 6 },
+  actinide: { label: t('actinides'), range: '89–103', from: 'Ac', to: 'Lr', y: 10, period: 7 },
 };
 
 // riga 1 = numeri di gruppo, righe 2–8 = periodi, riga 9 = spazio, righe 10–11 = lantanidi/attinidi
@@ -29,7 +56,7 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
   const grid = document.createElement('div');
   grid.className = 'ptable is-entering';
   grid.setAttribute('role', 'group');
-  grid.setAttribute('aria-label', 'Tavola periodica degli elementi');
+  grid.setAttribute('aria-label', t('tableLabel'));
 
   // ---- intestazioni di gruppo e periodo
   const groupHeads = new Map();
@@ -39,7 +66,7 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
     h.style.gridArea = `1 / ${gridCol(g)}`;
     h.textContent = g;
     h.dataset.group = g;
-    h.title = `Gruppo ${g}`;
+    h.title = t('group', { n: g });
     grid.append(h);
     groupHeads.set(g, h);
   }
@@ -50,7 +77,7 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
     h.style.gridArea = `${gridRow(p)} / 1`;
     h.textContent = p;
     h.dataset.period = p;
-    h.title = `Periodo ${p}`;
+    h.title = t('period', { n: p });
     grid.append(h);
     periodHeads.set(p, h);
   }
@@ -73,7 +100,7 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
     ph.style.gridArea = `${gridRow(s.period)} / ${gridCol(3)}`;
     ph.style.setProperty('--c', CATEGORY[key].color);
     ph.dataset.series = key;
-    ph.title = `${s.label} (${s.range}): vedi la riga in basso`;
+    ph.title = t('seriesBelow', { label: s.label, range: s.range });
     ph.innerHTML = `<span class="cell__range">${s.range}</span><span class="cell__name">${s.from}–${s.to}</span>`;
     grid.append(ph);
     placeholders.set(key, ph);
@@ -98,10 +125,7 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
     btn.style.setProperty('--i', el.grid.x + el.grid.y * 1.6);
     btn.tabIndex = el.z === 1 ? 0 : -1;
     if (el.dataQuality === 'predicted') btn.classList.add('cell--predicted');
-    btn.setAttribute(
-      'aria-label',
-      `${el.name}, simbolo ${el.symbol}, numero atomico ${el.z}, massa atomica ${fmtMass(el.atomicMass)}`,
-    );
+    btn.setAttribute('aria-label', t('cellLabel', { name: el.name, symbol: el.symbol, z: el.z, mass: fmtMass(el.atomicMass) }));
     btn.innerHTML = `
       <span class="cell__z">${el.z}</span>
       <span class="cell__sym">${esc(el.symbol)}</span>
