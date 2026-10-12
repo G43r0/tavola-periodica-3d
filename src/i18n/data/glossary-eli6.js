@@ -316,6 +316,12 @@ export const GLOSSARY_ELI6 = {
   'ui.language': {
     d: 'Cambia la lingua: italiano, inglese o questa, che spiega le stesse cose con parole più semplici.',
   },
+  'ui.graphics': {
+    d: 'Sceglie quanto è bella la grafica. Semplice va bene sui computer lenti. Medio è la via di mezzo. Professionale è la più bella: gli elementi hanno i loro colori veri e sembrano oggetti reali, con riflessi e ombre, ma serve un computer potente.',
+  },
+  'ui.specimen': {
+    d: 'Con la grafica Professionale vedi un pezzetto dell\'elemento com\'è davvero: l\'oro giallo e lucido, il rame arancione, lo zolfo giallo, i gas chiusi in una pallina di vetro che si accendono di colori diversi. Puoi trascinarlo per girarlo.',
+  },
   'ui.explain': {
     d: 'Quando è accesa, puoi evidenziare una parola o premere il tasto destro su qualsiasi cosa e ti spiego cos\'è e a cosa serve. Funziona anche con le parole dentro le spiegazioni.',
   },

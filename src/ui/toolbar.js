@@ -1,9 +1,10 @@
-// Barra superiore (ricerca, filtri per stato e blocco, lingua, modalità Spiega) e legenda/filtro per categoria.
+// Barra superiore (ricerca, filtri per stato e blocco, lingua, grafica, modalità Spiega) e legenda/filtro per categoria.
 import { CATEGORIES, STATES, BLOCKS } from '../data/categories.js';
 import { computeVisibility } from '../state/query.js';
 import { hasActiveFilters, initialState } from '../state/store.js';
 import { esc } from '../chem/format.js';
 import { createT, LANGS, getLang, setLang, langInfo } from '../i18n/index.js';
+import { PRESETS, getGfx, setGfx } from '../gfx/preset.js';
 import { icons } from './icons.js';
 
 const t = createT({
@@ -24,6 +25,16 @@ const t = createT({
     explain: 'Spiega',
     explainTitle: 'Modalità Spiega (F1): evidenzia una parola o fai clic destro su qualcosa per sapere cos\'è',
     language: 'Lingua',
+    graphics: 'Grafica',
+    graphicsTitle: 'Qualità della grafica',
+    'gfx.simple': 'Semplice',
+    'gfx.simpleText': 'Per computer poco potenti: niente effetti di luce, meno dettagli, animazioni ridotte.',
+    'gfx.medium': 'Medio',
+    'gfx.mediumText': 'L\'equilibrio predefinito tra qualità e velocità.',
+    'gfx.pro': 'Professionale',
+    'gfx.proShort': 'Pro',
+    'gfx.proText': 'Massimo dettaglio: colori e materiali veri degli elementi, riflessi, ombre e antialiasing. Serve una buona scheda grafica.',
+    'gfx.note': 'L\'interfaccia si ricarica per applicare la scelta.',
     info: 'Fonti dei dati e guida',
     categories: 'Categorie',
     categoriesGroup: 'Legenda e filtro per categoria',
@@ -51,6 +62,16 @@ const t = createT({
     explain: 'Explain',
     explainTitle: 'Explain mode (F1): highlight a word or right-click anything to find out what it is',
     language: 'Language',
+    graphics: 'Graphics',
+    graphicsTitle: 'Graphics quality',
+    'gfx.simple': 'Simple',
+    'gfx.simpleText': 'For less powerful computers: no lighting effects, fewer details, reduced animations.',
+    'gfx.medium': 'Medium',
+    'gfx.mediumText': 'The default balance between quality and speed.',
+    'gfx.pro': 'Professional',
+    'gfx.proShort': 'Pro',
+    'gfx.proText': 'Maximum detail: the real colours and materials of the elements, reflections, shadows and antialiasing. Needs a good graphics card.',
+    'gfx.note': 'The interface reloads to apply the choice.',
     info: 'Data sources and guide',
     categories: 'Categories',
     categoriesGroup: 'Legend and category filter',
@@ -70,6 +91,11 @@ const t = createT({
     sandboxTitle: 'Sabbiera: versa polveri, liquidi e gas e guarda cosa succede quando li scaldi o li mescoli',
     explainTitle: 'Modalità Spiega (F1): evidenzia una parola o premi il tasto destro su qualcosa e ti spiego cos\'è',
     info: 'Da dove vengono i dati, e come si usa',
+    graphicsTitle: 'Quanto è bella la grafica',
+    'gfx.simpleText': 'Per computer lenti: meno luci ed effetti, così tutto va veloce.',
+    'gfx.mediumText': 'Una via di mezzo: bella e veloce.',
+    'gfx.proText': 'La più bella: gli elementi hanno i loro colori veri e sembrano oggetti reali, con riflessi e ombre. Serve un computer potente.',
+    'gfx.note': 'La pagina si ricarica per cambiare la grafica.',
     legendNote: 'Bordo a trattini = di questi elementi sappiamo poco, molti dati sono ipotesi',
   },
 });
@@ -117,11 +143,21 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
       <button type="button" class="btn-ghost lab-entry" data-action="lab" data-help="ui.lab" title="${esc(t('labTitle'))}">${icons.flask(16)}<span>${t('lab')}</span></button>
       <button type="button" class="btn-ghost lab-entry" data-action="sandbox" data-help="ui.sandbox" title="${esc(t('sandboxTitle'))}">${icons.sand(16)}<span>${t('sandbox')}</span></button>
       <button type="button" class="btn-ghost explain-toggle" data-action="explain" data-help="ui.explain" aria-pressed="false" title="${esc(t('explainTitle'))}">${icons.explain(16)}<span>${t('explain')}</span></button>
+      <div class="gfx" data-help="ui.graphics">
+        <button type="button" class="btn-ghost gfx__btn" aria-haspopup="menu" aria-expanded="false" title="${esc(t('graphicsTitle'))}">
+          ${icons.display(16)}<span>${esc(t.has(`gfx.${getGfx()}Short`) ? t(`gfx.${getGfx()}Short`) : t(`gfx.${getGfx()}`))}</span></button>
+        <div class="gfx__menu pop-menu" role="menu" hidden>
+          <p class="pop-menu__title">${t('graphicsTitle')}</p>
+          ${PRESETS.map((code) => `<button type="button" role="menuitemradio" class="gfx__item pop-menu__item" data-gfx="${code}" aria-checked="${code === getGfx()}">
+              <b>${esc(t(`gfx.${code}`))}</b><span>${esc(t(`gfx.${code}Text`))}</span></button>`).join('')}
+          <p class="pop-menu__note">${t('gfx.note')}</p>
+        </div>
+      </div>
       <div class="lang" data-help="ui.language">
         <button type="button" class="btn-ghost lang__btn" aria-haspopup="menu" aria-expanded="false" title="${esc(t('language'))}">
           ${icons.globe(16)}<span>${esc(langInfo().short)}</span></button>
-        <div class="lang__menu" role="menu" hidden>
-          ${LANGS.map((l) => `<button type="button" role="menuitemradio" class="lang__item" data-lang="${l.code}" aria-checked="${l.code === getLang()}">
+        <div class="lang__menu pop-menu" role="menu" hidden>
+          ${LANGS.map((l) => `<button type="button" role="menuitemradio" class="lang__item pop-menu__item" data-lang="${l.code}" aria-checked="${l.code === getLang()}">
               <b>${esc(l.short)}</b><span>${esc(l.name)}</span></button>`).join('')}
         </div>
       </div>
@@ -144,36 +180,41 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
   const count = header.querySelector('.result-count');
   const reset = header.querySelector('.reset');
 
-  // ---- menu della lingua
-  const langBtn = header.querySelector('.lang__btn');
-  const langMenu = header.querySelector('.lang__menu');
-  const setMenu = (open) => {
-    langMenu.hidden = !open;
-    langBtn.setAttribute('aria-expanded', String(open));
-    if (open) langMenu.querySelector('[aria-checked="true"]')?.focus();
-  };
-  langBtn.addEventListener('click', () => setMenu(langMenu.hidden));
-  langMenu.addEventListener('click', (ev) => {
-    const item = ev.target.closest('[data-lang]');
-    if (!item) return;
-    setMenu(false);
-    setLang(item.dataset.lang);
-  });
-  langMenu.addEventListener('keydown', (ev) => {
-    const items = [...langMenu.querySelectorAll('[data-lang]')];
-    const i = items.indexOf(document.activeElement);
-    if (ev.key === 'Escape') {
-      ev.stopPropagation();
+  // ---- menu della lingua e della grafica
+  const popMenu = (wrapSel, attr, onPick) => {
+    const wrap = header.querySelector(wrapSel);
+    const btn = wrap.querySelector('[aria-haspopup]');
+    const menu = wrap.querySelector('[role="menu"]');
+    const setMenu = (open) => {
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) menu.querySelector('[aria-checked="true"]')?.focus();
+    };
+    btn.addEventListener('click', () => setMenu(menu.hidden));
+    menu.addEventListener('click', (ev) => {
+      const item = ev.target.closest(`[data-${attr}]`);
+      if (!item || !menu.contains(item)) return;
       setMenu(false);
-      langBtn.focus();
-    } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
-      ev.preventDefault();
-      items[(i + (ev.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
-    }
-  });
-  document.addEventListener('pointerdown', (ev) => {
-    if (!langMenu.hidden && !ev.target.closest('.lang')) setMenu(false);
-  });
+      onPick(item.dataset[attr]);
+    });
+    menu.addEventListener('keydown', (ev) => {
+      const items = [...menu.querySelectorAll(`[data-${attr}]`)];
+      const i = items.indexOf(document.activeElement);
+      if (ev.key === 'Escape') {
+        ev.stopPropagation();
+        setMenu(false);
+        btn.focus();
+      } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+        ev.preventDefault();
+        items[(i + (ev.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+      }
+    });
+    document.addEventListener('pointerdown', (ev) => {
+      if (!menu.hidden && !ev.target.closest(wrapSel)) setMenu(false);
+    });
+  };
+  popMenu('.lang', 'lang', setLang);
+  popMenu('.gfx', 'gfx', setGfx);
 
   // ---- eventi
   input.addEventListener('input', () => store.set({ query: input.value }));

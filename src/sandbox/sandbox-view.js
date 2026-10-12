@@ -5,6 +5,7 @@ import '../styles/sandbox.css';
 import { CATEGORY } from '../data/categories.js';
 import { esc, normalize, fmtNumber } from '../chem/format.js';
 import { createT, isItalian } from '../i18n/index.js';
+import { gfx } from '../gfx/preset.js';
 import { icons } from '../ui/icons.js';
 import {
   createSubstances, AMBIENT, T_MAX, SOLID, LIQUID, GAS, S, WOOD, COAL, CONCRETE, WALL, GENERATOR, SOURCE, DRAIN, WATER, SALT, OXIDE, CO2,
@@ -98,7 +99,7 @@ const TEMPLATE = () => `
       <button type="button" class="segmented__btn" data-view="heat" aria-pressed="false" title="${t('viewHeatTitle')}">${icons.thermo(14)}<span>${t('viewHeat')}</span></button>
     </div>
     <div class="sbx-top__end">
-      <label class="sbx-toggle" data-help="sandbox.glow" title="${t('glowTitle')}"><input type="checkbox" data-opt="glow" checked /><span>${t('glow')}</span></label>
+      <label class="sbx-toggle" data-help="sandbox.glow" title="${t('glowTitle')}"><input type="checkbox" data-opt="glow" ${gfx().sandbox.glow ? 'checked' : ''} /><span>${t('glow')}</span></label>
       <label class="sbx-toggle" data-help="sandbox.edges" title="${t('edgesTitle')}"><input type="checkbox" data-opt="edges" /><span>${t('edges')}</span></label>
       <div class="sbx-history" role="group" aria-label="${t('history')}" data-help="sandbox.undo">
         <button type="button" class="sbx-icon-btn" data-act="undo" title="${t('undoTitle')}" aria-label="${t('undo')}" disabled>${icons.undo(16)}</button>
@@ -210,7 +211,7 @@ export function createSandbox(elements, { onClose } = {}) {
     running: true,
     speed: 1,
     heatView: false,
-    glow: true,
+    glow: gfx().sandbox.glow, // il preset Semplice parte senza bagliore
     place: { temp: AMBIENT, form: 'powder', dissolved: false },
     mode: 'brush', // brush | fill | line | rect | ellipse
     filled: false,
@@ -463,7 +464,12 @@ export function createSandbox(elements, { onClose } = {}) {
   let glowPix;
   let blurCanvas;
   let blurCtx;
+  let wideCanvas;
+  let wideCtx;
   let view = { scale: 4, cw: 0, ch: 0, dpr: 1 };
+  // preset Professionale: immagine dettagliata con k×k pixel per cella (trame e rilievo)
+  const DETAIL = gfx().sandbox.texture;
+  let detail = null; // { k, canvas, ctx, img, pix, cls }
 
   function allocBuffers() {
     const { W, H } = world;
@@ -476,6 +482,7 @@ export function createSandbox(elements, { onClose } = {}) {
     [off, offCtx] = mk();
     [glowCanvas, glowCtx] = mk();
     [blurCanvas, blurCtx] = mk();
+    [wideCanvas, wideCtx] = mk();
     img = offCtx.createImageData(W, H);
     pix = new Uint32Array(img.data.buffer);
     glowImg = glowCtx.createImageData(W, H);
@@ -490,12 +497,24 @@ export function createSandbox(elements, { onClose } = {}) {
     const scale = Math.max(1, Math.min((r.width - pad * 2) / world.W, (r.height - pad * 2) / world.H));
     const cssW = Math.floor(world.W * scale);
     const cssH = Math.floor(world.H * scale);
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(gfx().sandbox.dpr, window.devicePixelRatio || 1);
     canvas.style.width = `${cssW}px`;
     canvas.style.height = `${cssH}px`;
     canvas.width = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
     view = { scale, cw: canvas.width, ch: canvas.height, dpr };
+    if (DETAIL) {
+      // circa un pixel dello schermo per pixel della trama, senza superare ~1 milione di pixel
+      const k = Math.max(2, Math.min(4, Math.round((scale * dpr) / 1.5), Math.floor(Math.sqrt(1e6 / (world.W * world.H)))));
+      if (!detail || detail.k !== k || detail.W !== world.W || detail.H !== world.H) {
+        const c = document.createElement('canvas');
+        c.width = world.W * k;
+        c.height = world.H * k;
+        const dctx = c.getContext('2d');
+        const dimg = dctx.createImageData(c.width, c.height);
+        detail = { k, W: world.W, H: world.H, canvas: c, ctx: dctx, img: dimg, pix: new Uint32Array(dimg.data.buffer), cls: new Uint8Array(world.W * world.H) };
+      }
+    }
   }
   window.addEventListener('resize', () => !root.hidden && layout());
 
@@ -503,12 +522,21 @@ export function createSandbox(elements, { onClose } = {}) {
   let cellCount = 0;
   function render() {
     frame++;
-    cellCount = renderer.draw(pix, glowPix, { heatView: state.heatView, frame });
-    offCtx.putImageData(img, 0, 0);
+    const fine = DETAIL && detail && detail.W === world.W && detail.H === world.H && !state.heatView;
+    cellCount = renderer.draw(pix, glowPix, { heatView: state.heatView, frame, cls: fine ? detail.cls : null });
     const { cw, ch, dpr } = view;
     ctx.globalCompositeOperation = 'source-over';
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(off, 0, 0, cw, ch);
+    if (fine) {
+      renderer.drawDetail(pix, detail.cls, detail.pix, detail.k, frame);
+      detail.ctx.putImageData(detail.img, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(detail.canvas, 0, 0, cw, ch);
+    } else {
+      offCtx.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(off, 0, 0, cw, ch);
+    }
     if (state.glow && !state.heatView) {
       glowCtx.putImageData(glowImg, 0, 0);
       blurCtx.clearRect(0, 0, world.W, world.H);
@@ -519,6 +547,15 @@ export function createSandbox(elements, { onClose } = {}) {
       ctx.imageSmoothingEnabled = true;
       ctx.globalAlpha = 0.75;
       ctx.drawImage(blurCanvas, 0, 0, cw, ch);
+      if (DETAIL) {
+        // Professionale: alone ampio intorno alle fonti di luce (fiamme, metalli incandescenti, scariche)
+        wideCtx.clearRect(0, 0, world.W, world.H);
+        wideCtx.filter = 'blur(6px)';
+        wideCtx.drawImage(glowCanvas, 0, 0);
+        wideCtx.filter = 'none';
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(wideCanvas, 0, 0, cw, ch);
+      }
       ctx.globalAlpha = 0.45;
       ctx.drawImage(glowCanvas, 0, 0, cw, ch);
       ctx.globalAlpha = 1;

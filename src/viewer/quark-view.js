@@ -9,13 +9,14 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { NUCLEON_R } from './packing.js';
 import { QUARKS, COLOR_CHARGES } from '../chem/particles.js';
 import { mulberry32 } from './orbital-math.js';
+import { gfx, seg } from '../gfx/preset.js';
 
 export const QUARK_R = 0.066;
-const GLUON_POINTS = 120;
+const GLUON_POINTS = seg(120, 60);
 const PAIRS = [[0, 1], [1, 2], [2, 0]];
 const COLORS = COLOR_CHARGES.map((c) => new THREE.Color(c.hex));
 const ANTI = COLORS.map((c) => new THREE.Color(1 - c.r * 0.6, 1 - c.g * 0.6, 1 - c.b * 0.6)); // anticolori (ciano, magenta, giallo)
-const SEA_PAIRS = 26;
+const SEA_PAIRS = Math.round(26 * Math.sqrt(gfx().points));
 const BAG_COLOR = { proton: new THREE.Color('#ff5d6c'), neutron: new THREE.Color('#9fb4d6') };
 
 const _a = new THREE.Vector3();
@@ -97,11 +98,11 @@ export class QuarkView {
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
-    this.bag = new THREE.Mesh(new THREE.SphereGeometry(NUCLEON_R, 48, 32), this.bagMaterial);
+    this.bag = new THREE.Mesh(new THREE.SphereGeometry(NUCLEON_R, seg(48), seg(32)), this.bagMaterial);
     this.group.add(this.bag);
 
     const rand = mulberry32(2718);
-    const quarkGeometry = new THREE.SphereGeometry(QUARK_R, 28, 20);
+    const quarkGeometry = new THREE.SphereGeometry(QUARK_R, seg(28), seg(20));
     this.quarks = [0, 1, 2].map((i) => {
       const material = new THREE.MeshStandardMaterial({
         color: COLORS[i].clone(),

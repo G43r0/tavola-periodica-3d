@@ -1,5 +1,7 @@
-// Motore 3D: renderer, camera, controlli orbitali, post-processing (bloom),
-// etichette HTML (CSS2D), ciclo di rendering e qualità adattiva.
+// Motore 3D: renderer, camera, controlli orbitali, post-processing (bloom), etichette HTML (CSS2D),
+// ciclo di rendering e qualità adattiva. Il dettaglio dipende dal preset grafico: Semplice disegna
+// senza post-processing, Professionale aggiunge antialiasing MSAA, sovracampionamento, riflessi
+// dell'ambiente, ombre morbide e occlusione ambientale tra le sfere (sphere-ao.js).
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -7,22 +9,33 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { gfx } from '../gfx/preset.js';
+import { SphereAO } from './sphere-ao.js';
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 const _follow = new THREE.Vector3();
 const _delta = new THREE.Vector3();
 const _to = new THREE.Vector3();
+const KEY_DIR = new THREE.Vector3(6, 10, 8).normalize();
 
 export class Engine {
   constructor(host) {
+    const G = gfx();
+    this.gfx = G;
     this.host = host;
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({ antialias: G.antialias, powerPreference: 'high-performance' });
     this.renderer.setClearColor(0x04070c, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
-    this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    this.renderer.toneMapping = G.toneMapping === 'neutral' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = G.exposure;
+    this.devicePixelRatio = window.devicePixelRatio || 1;
+    this.pixelRatio = G.pixelRatio(this.devicePixelRatio);
     this.renderer.setPixelRatio(this.pixelRatio);
+    if (G.shadows) {
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    }
     this.renderer.domElement.className = 'av-canvas';
     host.append(this.renderer.domElement);
 
@@ -50,21 +63,48 @@ export class Engine {
     this.controls.addEventListener('end', () => (this.dragging = false));
 
     // luci: chiave calda, contro-luce ciano, ambiente tenue
-    this.scene.add(new THREE.HemisphereLight(0xbfd8ff, 0x0b1020, 0.9));
+    this.scene.add(new THREE.HemisphereLight(0xbfd8ff, 0x0b1020, G.env ? 0.45 : 0.9));
     const key = new THREE.DirectionalLight(0xffffff, 2.2);
-    key.position.set(6, 10, 8);
-    this.scene.add(key);
-    const rim = new THREE.PointLight(0x5ce1ff, 60, 0, 1.6);
+    key.position.copy(KEY_DIR).multiplyScalar(14);
+    this.scene.add(key, key.target);
+    this.key = key;
+    if (G.shadows) {
+      key.castShadow = true;
+      key.shadow.mapSize.set(2048, 2048);
+      key.shadow.radius = 4;
+      key.shadow.blurSamples = 16;
+      key.shadow.bias = -0.0004;
+      key.shadow.normalBias = 0.02;
+      this.setShadowFocus(new THREE.Vector3(), 6);
+    }
+    const rim = new THREE.PointLight(0x5ce1ff, G.env ? 35 : 60, 0, 1.6);
     rim.position.set(-8, -4, -6);
     this.scene.add(rim);
-    this.scene.add(this.#dust());
+    if (G.env) {
+      // riflessi di uno studio fotografico: le superfici lucide mostrano finestre e pannelli luminosi
+      const pmrem = new THREE.PMREMGenerator(this.renderer);
+      const room = new RoomEnvironment();
+      this.scene.environment = pmrem.fromScene(room, 0.03).texture;
+      this.scene.environmentIntensity = 0.22;
+      room.dispose();
+      pmrem.dispose();
+    }
+    if (G.dust) this.scene.add(this.#dust(G.dust));
+
+    // occlusione ambientale tra le sfere: le scene registrano qui le loro sfere a ogni fotogramma
+    this.sphereAO = G.ao ? new SphereAO() : null;
 
     // post-processing
-    this.composer = new EffectComposer(this.renderer);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.42, 0.35, 0.82);
-    this.composer.addPass(this.bloom);
-    this.composer.addPass(new OutputPass());
+    this.bloom = null;
+    if (G.post) {
+      const target = G.msaa ? new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: G.msaa }) : undefined;
+      this.composer = new EffectComposer(this.renderer, target);
+      this.composer.setPixelRatio(this.pixelRatio);
+      this.composer.addPass(new RenderPass(this.scene, this.camera));
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.42, 0.35, 0.82);
+      this.composer.addPass(this.bloom);
+      this.composer.addPass(new OutputPass());
+    }
 
     this.insets = { left: 0, right: 0 }; // spazio occupato dai pannelli laterali (px)
     this.viewShift = 0;
@@ -77,16 +117,41 @@ export class Engine {
     this.running = false;
     this.cameraTween = null;
     this.frameTimes = [];
-    this.quality = 2; // 2 = alta, 1 = senza bloom, 0 = pixel ratio 1
+    this.steps = 0; // passi di riduzione della qualità già fatti (vedi gfx().adapt)
     this.onFps = null;
 
     new ResizeObserver(() => requestAnimationFrame(() => this.resize())).observe(host);
     this.resize();
   }
 
+  /** Livello di qualità per l'indicatore degli fps: 0 bassa, 1 media, 2 alta, 3 massima. */
+  get quality() {
+    return Math.max(0, this.gfx.baseLevel - this.steps);
+  }
+
+  /**
+   * Zona da coprire con le ombre (preset Professionale): sfera di centro `center` e raggio `radius`.
+   * La luce chiave mantiene la sua direzione, cambia solo l'area della mappa delle ombre.
+   */
+  setShadowFocus(center, radius) {
+    if (!this.key.castShadow) return;
+    const r = Math.max(radius, 0.6);
+    const s = this.shadowFocus;
+    if (s && s.r === r && s.c.distanceToSquared(center) < 1e-6) return;
+    this.shadowFocus = { c: center.clone(), r };
+    const cam = this.key.shadow.camera;
+    this.key.target.position.copy(center);
+    this.key.position.copy(center).addScaledVector(KEY_DIR, r * 3 + 2);
+    cam.left = cam.bottom = -r;
+    cam.right = cam.top = r;
+    cam.near = 0.1;
+    cam.far = r * 6 + 4;
+    cam.updateProjectionMatrix();
+    this.key.target.updateMatrixWorld();
+  }
+
   /** Polvere di fondo per dare profondità alla scena. */
-  #dust() {
-    const count = 900;
+  #dust(count) {
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
       const r = 120 + Math.random() * 380;
@@ -114,7 +179,7 @@ export class Engine {
     this.width = w;
     this.height = h;
     this.renderer.setSize(w, h, false);
-    this.composer.setSize(w, h);
+    this.composer?.setSize(w, h);
     this.labels.setSize(w, h);
     this.camera.aspect = w / h;
     // con i pannelli laterali aperti il centro della vista si sposta nello spazio libero
@@ -218,7 +283,7 @@ export class Engine {
     for (const fn of this.updaters) fn(dt);
     this.#updateCamera(dt);
 
-    if (this.quality >= 1) this.composer.render();
+    if (this.composer && this.bloom.enabled) this.composer.render();
     else this.renderer.render(this.scene, this.camera);
     this.labels.render(this.scene, this.camera);
     this.#adapt(dt);
@@ -261,7 +326,10 @@ export class Engine {
     this.controls.update();
   }
 
-  /** Qualità adattiva: se si scende sotto ~45 fps si disattiva il bloom, poi si riduce la risoluzione. */
+  /**
+   * Qualità adattiva: se si scende sotto la soglia del preset si toglie un effetto alla volta
+   * (sovracampionamento, occlusione ambientale, ombre, bloom) e alla fine si riduce la risoluzione.
+   */
   #adapt(dt) {
     this.frameTimes.push(dt);
     if (this.frameTimes.length < 90) return;
@@ -269,20 +337,35 @@ export class Engine {
     this.frameTimes.length = 0;
     const fps = 1 / avg;
     this.onFps?.(fps, this.quality);
-    if (fps < 45 && this.quality > 0) {
-      this.quality -= 1;
-      if (this.quality === 1) this.bloom.enabled = false;
-      if (this.quality === 0) {
-        this.renderer.setPixelRatio(1);
-        this.resize();
-      }
+    const step = this.gfx.adapt[this.steps];
+    if (fps < this.gfx.adaptFps && step) {
+      this.steps += 1;
+      this.#apply();
     }
   }
 
-  resetQuality() {
-    this.quality = 2;
-    this.bloom.enabled = true;
-    this.renderer.setPixelRatio(this.pixelRatio);
+  /** Applica i passi di riduzione fatti finora (o li annulla tutti se steps = 0). */
+  #apply() {
+    const done = new Set(this.gfx.adapt.slice(0, this.steps));
+    if (this.bloom) this.bloom.enabled = !done.has('bloom');
+    if (this.sphereAO) this.sphereAO.enabled = !done.has('ao');
+    if (this.gfx.shadows) {
+      this.renderer.shadowMap.enabled = !done.has('shadows');
+      this.key.castShadow = !done.has('shadows');
+    }
+    let ratio = this.pixelRatio;
+    if (done.has('supersample')) ratio = Math.min(this.devicePixelRatio, 2);
+    if (done.has('dpr1')) ratio = 1;
+    if (ratio !== this.renderer.getPixelRatio()) {
+      this.renderer.setPixelRatio(ratio);
+      this.composer?.setPixelRatio(ratio);
+    }
     this.resize();
+  }
+
+  resetQuality() {
+    if (!this.steps) return;
+    this.steps = 0;
+    this.#apply();
   }
 }

@@ -5,6 +5,8 @@ import {
   fmtAbundance, isotopeNotation, isotopeName,
 } from '../chem/format.js';
 import { createT, isSimple } from '../i18n/index.js';
+import { gfx } from '../gfx/preset.js';
+import { appearanceTitle, appearanceCaption, describeAppearance } from '../gfx/appearance.js';
 import { bohrSvg } from './bohr-icon.js';
 import { icons } from './icons.js';
 
@@ -296,6 +298,7 @@ export function createElementPanel(host, elements, store, { onOpen3D, onOpenLab,
     content.innerHTML = [
       qualityBanner(el),
       heroSection(el),
+      specimenSection(el),
       simpleSection(el),
       basicSection(el, cat, series),
       structureSection(el, est),
@@ -311,6 +314,22 @@ export function createElementPanel(host, elements, store, { onOpen3D, onOpenLab,
     ].join('');
     scroll.replaceChildren(content);
     scroll.scrollTop = 0;
+    const spec = content.querySelector('.specimen');
+    if (spec) mountSpecimen(spec, el.z);
+  }
+
+  // campione realistico dell'elemento (preset Professionale), caricato su richiesta
+  let specimenLoading = null;
+  function mountSpecimen(target, z) {
+    specimenLoading ??= import('../gfx/specimen.js').then((m) => m.createSpecimenView());
+    specimenLoading
+      .then((view) => {
+        if (target.isConnected) view.show(target, z);
+      })
+      .catch((err) => {
+        console.error(err);
+        target.closest('.psec')?.remove();
+      });
   }
 
   // ---------------------------------------------------------- apertura / chiusura
@@ -356,7 +375,7 @@ function heroSection(el) {
   return `
     <section class="hero">
       <button type="button" class="hero__atom" data-action="open-3d" title="${esc(t('view3d'))}">
-        ${bohrSvg(el, { size: 132, animated: true })}
+        ${bohrSvg(el, { size: 132, animated: gfx().animatedIcons })}
         <span class="hero__atom-hint">${icons.cube(13)} 3D</span>
       </button>
       <div class="counters">
@@ -370,6 +389,17 @@ function heroSection(el) {
         <button type="button" class="btn-ghost hero__lab" data-action="open-lab" data-help="ui.lab" title="${esc(t('ctaLabTitle'))}">${icons.flask(16)}<span>${t('ctaLab')}</span></button>
         <button type="button" class="btn-ghost hero__lab" data-action="open-sandbox" data-help="ui.sandbox" title="${esc(t('ctaSandboxTitle'))}">${icons.sand(16)}<span>${t('ctaSandbox')}</span></button>
       </div>
+    </section>`;
+}
+
+/** Preset Professionale: campione 3D dell'elemento con il suo aspetto reale (colori e materiali veri). */
+function specimenSection(el) {
+  if (!gfx().specimens) return '';
+  return `<section class="psec psec--specimen" data-help="ui.specimen">
+      <h3 class="psec__title">${appearanceTitle()}</h3>
+      <div class="specimen" role="img" aria-label="${esc(describeAppearance(el.z))}"></div>
+      <p class="prose specimen__text">${esc(describeAppearance(el.z))}</p>
+      <p class="specimen__note">${appearanceCaption()}</p>
     </section>`;
 }
 

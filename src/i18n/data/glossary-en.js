@@ -623,6 +623,18 @@ export const GLOSSARY_EN = {
     t: 'Language',
     d: 'Changes the app language: Italian, English or «Spiegamelo come se avessi 6 anni» (“explain it like I’m 6”, in Italian), which explains the same ideas with simpler words. The app reloads and reopens the element you were looking at.',
   },
+  'ui.graphics': {
+    t: 'Graphics',
+    w: 'graphics preset|graphics presets|graphics quality|professional',
+    d: 'Chooses how detailed the graphics are. Simple: no lighting effects and fewer details, for less powerful computers. Medium: the default balance. Professional: maximum detail, with the real colours and materials of the elements (shiny metals, crystals, gases glowing in glass ampoules), reflections, soft shadows, ambient occlusion and antialiasing; in the sandbox the materials get a realistic texture. If the computer cannot keep up, the quality lowers by itself. The app reloads and reopens the element you were looking at.',
+    s: ['ui.specimen'],
+  },
+  'ui.specimen': {
+    t: 'Real appearance',
+    w: 'appearance|specimen|sample',
+    d: 'With Professional graphics the card shows a 3D sample of the pure element as it really looks at 25 °C: metals as brushed or polished cubes with their measured colour (golden gold, reddish-orange copper, bluish osmium), non-metals as lumps or crystals, gases in a glass ampoule glowing with the colour of their electric discharge. The sample turns by itself and can be dragged. The same thumbnails appear in the cells of the table.',
+    s: ['ui.graphics', 'term.state'],
+  },
   'ui.info': {
     t: 'About',
     d: 'Data sources, conventions used (temperatures, masses, states), the physical models of the viewer and all the keyboard shortcuts.',

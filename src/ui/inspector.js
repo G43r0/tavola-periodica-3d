@@ -42,7 +42,7 @@ const INTRO = () => `
     <p class="inspector__tip">${t('explainTip')}</p>
   </div>`;
 
-export function createInspector(host) {
+export function createInspector(host, { thumb } = {}) {
   let currentZ = undefined;
 
   function show(el, { pinned = false } = {}) {
@@ -79,7 +79,7 @@ export function createInspector(host) {
             <div><dt>${t('en')}</dt><dd>${en}</dd></div>
           </dl>
         </div>
-        <div class="inspector__atom">${bohrSvg(el, { size: 120, animated: false })}</div>
+        <div class="inspector__atom">${thumb?.(el.z) ? `<img class="inspector__spec" src="${thumb(el.z)}" alt="" />` : bohrSvg(el, { size: 120, animated: false })}</div>
       </div>`;
   }
 

@@ -1,0 +1,94 @@
+/* Preset grafici: regole che dipendono da <html data-gfx="simple|medium|pro"> */
+
+/* ---------------------------------------------------------------- Semplice
+   niente sfocature dietro i pannelli (costose da ridisegnare), niente animazioni decorative
+   continue, entrate e transizioni più brevi */
+html[data-gfx='simple'] {
+  --glass: rgba(10, 16, 26, 0.97);
+  --t-med: 120ms;
+  --t-slow: 180ms;
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+html[data-gfx='simple'] *,
+html[data-gfx='simple'] *::before,
+html[data-gfx='simple'] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-gfx='simple'] .brand__logo svg,
+html[data-gfx='simple'] .bohr.is-animated *,
+html[data-gfx='simple'] .ptable.is-entering .cell {
+  animation: none !important;
+}
+
+/* ---------------------------------------------------------------- Professionale
+   tasselli con un riflesso lucido in alto e un'ombra morbida in basso, come una stampa su carta patinata */
+html[data-gfx='pro'] .cell:not(.is-selected)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 38%, transparent 39%),
+    radial-gradient(120% 90% at 100% 120%, rgba(0, 0, 0, 0.28), transparent 60%);
+  pointer-events: none;
+}
+
+/* campione realistico dell'elemento nella scheda (si trascina per ruotarlo) */
+.specimen {
+  position: relative;
+  height: 240px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: radial-gradient(70% 70% at 50% 42%, #2a3546, #141c28 55%, #070b11);
+  cursor: grab;
+  touch-action: none;
+}
+.specimen:active {
+  cursor: grabbing;
+}
+.specimen__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.specimen__text {
+  margin: 12px 0 0;
+}
+.specimen__note {
+  margin: 6px 0 0;
+  color: var(--text-3);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+/* miniature realistiche nelle celle della tavola e nell'anteprima */
+.cell__spec {
+  position: absolute;
+  top: calc(var(--cell) * 0.07);
+  right: calc(var(--cell) * 0.07);
+  width: calc(var(--cell) * 0.36);
+  height: calc(var(--cell) * 0.36);
+  border-radius: 50%;
+  background: var(--spec) center / 118% no-repeat, #0b111a;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 6px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 500ms var(--ease-out), transform 500ms var(--ease-out);
+  pointer-events: none;
+}
+.cell.has-spec .cell__spec {
+  opacity: 1;
+  transform: none;
+}
+.ptable.is-mini .cell__spec {
+  display: none;
+}
+.inspector__spec {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--r-lg);
+  object-fit: cover;
+  box-shadow: 0 0 0 1px var(--line-2), 0 10px 30px rgba(0, 0, 0, 0.45);
+}

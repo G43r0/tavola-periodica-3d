@@ -4,6 +4,7 @@ import { fmtMass, esc } from '../chem/format.js';
 import { computeVisibility } from '../state/query.js';
 import { createInspector } from './inspector.js';
 import { createT } from '../i18n/index.js';
+import { gfx } from '../gfx/preset.js';
 
 const t = createT({
   it: {
@@ -112,7 +113,9 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
   inspectorHost.className = 'ptable__inspector';
   inspectorHost.style.gridArea = `${gridRow(1)} / ${gridCol(3)} / span 3 / span 10`;
   grid.append(inspectorHost);
-  const inspector = createInspector(inspectorHost);
+  // preset Professionale: miniature realistiche degli elementi (generate dopo l'avvio, poche alla volta)
+  const thumbs = new Map();
+  const inspector = createInspector(inspectorHost, { thumb: (z) => thumbs.get(z) });
 
   // ---- celle degli elementi
   const cells = new Map();
@@ -138,6 +141,28 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
 
   stage.append(grid);
   setTimeout(() => grid.classList.remove('is-entering'), 1400);
+
+  if (gfx().specimens) {
+    for (const cell of cells.values()) cell.insertAdjacentHTML('beforeend', '<span class="cell__spec" aria-hidden="true"></span>');
+    const run = () =>
+      import('../gfx/specimen.js')
+        .then((m) =>
+          m.renderThumbnails(
+            elements.map((e) => e.z),
+            224,
+            (z, url) => {
+              thumbs.set(z, url);
+              const cell = cells.get(z);
+              cell.style.setProperty('--spec', `url("${url}")`);
+              cell.classList.add('has-spec');
+            },
+          ),
+        )
+        .catch((err) => console.error(err));
+    // dopo l'animazione di entrata, quando il computer è libero
+    if ('requestIdleCallback' in window) setTimeout(() => requestIdleCallback(run, { timeout: 2500 }), 1500);
+    else setTimeout(run, 2000);
+  }
 
   // ---------------------------------------------------------- dimensionamento
   const fit = () => {

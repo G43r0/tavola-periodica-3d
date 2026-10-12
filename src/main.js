@@ -11,9 +11,11 @@ import './styles/base.css';
 import './styles/layout.css';
 import './styles/table.css';
 import './styles/panel.css';
+import './styles/gfx.css';
 
 import data from './data/elements.json';
 import { createT, getLang, langInfo, beforeLangChange } from './i18n/index.js';
+import { getGfx, beforeGfxChange } from './gfx/preset.js';
 import { localizeElements } from './i18n/elements.js';
 import { createStore, initialState } from './state/store.js';
 import { createToolbar } from './ui/toolbar.js';
@@ -39,20 +41,23 @@ const t = createT({
 
 document.documentElement.lang = langInfo().html;
 document.documentElement.dataset.lang = getLang();
+document.documentElement.dataset.gfx = getGfx();
 window.desktop?.setLanguage?.(getLang());
 
 const elements = localizeElements(data.elements);
 const store = createStore({ ...initialState, categories: new Set(), blocks: new Set() });
 
-// dopo il cambio di lingua (che ricarica la pagina) si riapre l'elemento che era selezionato
+// dopo il cambio di lingua o di grafica (che ricaricano la pagina) si riapre l'elemento che era selezionato
 const RESUME_KEY = 'tp3d.resume';
-beforeLangChange(() => {
+const saveResume = () => {
   try {
     sessionStorage.setItem(RESUME_KEY, JSON.stringify({ z: store.get().selectedZ, query: store.get().query }));
   } catch {
     /* niente da ripristinare */
   }
-});
+};
+beforeLangChange(saveResume);
+beforeGfxChange(saveResume);
 
 const app = document.getElementById('app');
 app.innerHTML = `

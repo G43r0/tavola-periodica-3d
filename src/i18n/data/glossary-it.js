@@ -625,6 +625,18 @@ export const GLOSSARY_IT = {
     t: 'Lingua',
     d: 'Cambia la lingua dell\'app: italiano, inglese o «Spiegamelo come se avessi 6 anni», che spiega gli stessi concetti con parole più semplici. L\'app si ricarica e riapre l\'elemento che stavi guardando.',
   },
+  'ui.graphics': {
+    t: 'Grafica',
+    w: 'preset grafico|preset grafici|qualità della grafica|qualità grafica|professionale',
+    d: 'Sceglie quanto è dettagliata la grafica. Semplice: niente effetti di luce e meno dettagli, per i computer poco potenti. Medio: l\'equilibrio predefinito. Professionale: il massimo dettaglio, con i colori e i materiali veri degli elementi (metalli lucidi, cristalli, gas che brillano nelle ampolle), riflessi, ombre morbide, occlusione ambientale e antialiasing; nella sandbox i materiali hanno una trama realistica. Se il computer non regge, la qualità scende da sola. L\'app si ricarica e riapre l\'elemento che stavi guardando.',
+    s: ['ui.specimen'],
+  },
+  'ui.specimen': {
+    t: 'Aspetto reale',
+    w: 'aspetto|campione|campione dell\'elemento',
+    d: 'Con la grafica Professionale la scheda mostra un campione 3D dell\'elemento puro com\'è davvero a 25 °C: i metalli come cubetti spazzolati o lucidati con il loro colore misurato (l\'oro giallo, il rame rosso-arancio, l\'osmio bluastro), i non metalli come pezzi o cristalli, i gas in un\'ampolla di vetro che brilla del colore della loro scarica elettrica. Il campione ruota da solo e si può trascinare. Le stesse miniature compaiono nelle celle della tavola.',
+    s: ['ui.graphics', 'term.state'],
+  },
   'ui.info': {
     t: 'Informazioni',
     d: 'Fonti dei dati, convenzioni usate (temperature, masse, stati), modelli fisici del visualizzatore e tutte le scorciatoie da tastiera.',

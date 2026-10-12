@@ -8,6 +8,8 @@ libreria e i materiali di base (legno, carbone, calcestruzzo, muro indistruttibi
 bruciano e reagiscono secondo i loro dati reali e le reazioni del catalogo.
 L'interfaccia è in **italiano**, in **inglese** e in **«Spiegamelo come se avessi 6 anni»** (le stesse spiegazioni con parole
 semplici), e la **modalità Spiega** (`F1`) apre una scheda su qualsiasi parola evidenziata o cosa cliccata col tasto destro.
+Tre **preset grafici** (Semplice, Medio, Professionale) adattano la grafica al computer; il Professionale mostra anche
+l'**aspetto reale** di ogni elemento (colori e materiali veri) in un campione 3D.
 Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 
 | Fase | Contenuto | Stato |
@@ -19,6 +21,7 @@ Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 | 5 | Laboratorio: reazioni (animazione, bilanciamento, energia di reazione) | ✅ completata |
 | 6 | Sandbox degli elementi: polveri, liquidi e gas con temperatura, reazioni, elettricità, radioattività | ✅ completata |
 | 7 | Lingue (italiano, inglese, «Spiegamelo come se avessi 6 anni») e modalità Spiega | ✅ completata |
+| 8 | Preset grafici (Semplice, Medio, Professionale) e aspetto reale degli elementi | ✅ completata |
 
 ---
 
@@ -381,7 +384,43 @@ sandbox). Quando è attiva:
 
 Il glossario (`src/i18n/data/glossary-*.js`) si carica solo al primo uso, come la libreria delle sostanze.
 
-## 10. Struttura del progetto
+## 10. Grafica: Semplice, Medio, Professionale
+
+Il pulsante con lo schermo nella barra in alto sceglie il preset grafico; la scelta resta salvata e l'app si ricarica
+riaprendo l'elemento che si stava guardando. Se il computer scende sotto una soglia di fotogrammi al secondo, il
+visualizzatore 3D e il laboratorio tolgono da soli un effetto alla volta (`F` nel visualizzatore mostra fps e qualità).
+
+| | Semplice | Medio (predefinito) | Professionale |
+|---|---|---|---|
+| Risoluzione 3D | 1 pixel per pixel | come lo schermo (max 2×) | sovracampionata (almeno 1,5×, max 2,5×) |
+| Antialiasing | — | del canvas | MSAA 4× sulle immagini intermedie |
+| Effetti | nessun post-processing | bloom | bloom, riflessi di uno studio fotografico, ombre morbide, occlusione ambientale tra le sfere |
+| Materiali | standard | standard | fisici con vernice trasparente (nucleoni, modellini molecolari in plastica lucida) |
+| Dettaglio | sfere e anelli con meno segmenti, metà dei punti negli orbitali | — | sfere con il doppio dei segmenti, 2,2× punti più fini negli orbitali, più coppie virtuali nei nucleoni |
+| Colore | ACES | ACES | *Khronos PBR Neutral*: tinta e saturazione dei colori di base restano quelle vere |
+| Sandbox | senza bagliore, 1 pixel per pixel | bagliore | trame dei materiali (3×3 pixel per granello), rilievo, liquidi più scuri in profondità e lucidi in superficie, alone ampio |
+| Interfaccia | niente sfocature dietro i pannelli né animazioni continue | — | tasselli con riflesso lucido |
+
+**Aspetto reale (solo Professionale).** La scheda dell'elemento ha un campione 3D dell'elemento puro a 25 °C, che ruota da
+solo e si trascina, con una didascalia; le stesse immagini compaiono in piccolo nelle celle della tavola e in grande
+nell'anteprima. I dati sono in `src/gfx/appearance.js`:
+
+- **metalli**: cubetti da collezione spazzolati, lucidati o grezzi, con la riflettanza misurata della superficie (i valori
+  «F0» del rendering fisico): solo oro, rame, cesio e osmio sono colorati; il bismuto ha i cristalli a gradini con i
+  colori iridescenti dell'ossido; i metalli alcalini sono sotto vetro, il mercurio è una goccia a specchio;
+- **non metalli**: grafite nera e lucida, zolfo in cristalli gialli, fosforo bianco ceroso e traslucido, iodio in scaglie
+  viola-nere, silicio e boro in pezzi dalla lucentezza metallica;
+- **gas**: ampolle di vetro (con rifrazione) in cui il gas brilla del colore della sua scarica elettrica (neon rosso-arancio,
+  argon viola, xeno blu…); cloro e fluoro sono gas colorati; il bromo è un liquido rosso-bruno con i suoi vapori;
+- gli elementi molto radioattivi (radio, attinio, polonio, einsteinio…) hanno la loro debole luce propria; quelli mai visti
+  in quantità visibili sono un cubo di vetro smerigliato con un punto interrogativo.
+
+I campioni si disegnano in `src/gfx/specimen.js` (studio con `RoomEnvironment`, ombre, materiali fisici con anisotropia,
+iridescenza e trasmissione); le miniature si generano all'avvio, poche per fotogramma, poi il contesto grafico si libera.
+Protoni, neutroni ed elettroni mantengono invece i colori convenzionali: sono molto più piccoli della lunghezza d'onda
+della luce e quindi non hanno un colore visibile.
+
+## 11. Struttura del progetto
 
 ```
 electron/
@@ -389,6 +428,10 @@ electron/
   preload.cjs         ponte minimo verso il renderer
 src/
   main.js             avvio dell'interfaccia e scorciatoie globali
+  gfx/                preset grafici e aspetto reale degli elementi
+    preset.js         impostazioni di Semplice, Medio e Professionale; scelta salvata
+    appearance.js     aspetto reale dei 118 elementi (forma, colore, materiale) e didascalie
+    specimen.js       campioni 3D realistici: vista nella scheda e miniature della tavola
   i18n/               lingue: index.js (lingua corrente, createT, pick), elements.js e lab-data.js (dati tradotti),
                       glossary.js (voci, indice delle parole e scorciatoie della modalità Spiega)
     data/             testi tradotti: elementi, sostanze, reazioni, glossario in italiano/inglese/versione semplice
@@ -399,7 +442,8 @@ src/
     explain.js        modalità Spiega: riconoscimento di parole e oggetti, scheda di spiegazione
   viewer/             visualizzatore 3D
     atom-viewer.js    interfaccia, stato, raycasting, tastiera
-    engine.js         renderer, camera, OrbitControls, bloom, etichette, qualità adattiva
+    engine.js         renderer, camera, OrbitControls, bloom, etichette, qualità adattiva; effetti per preset
+    sphere-ao.js      occlusione ambientale analitica tra sfere (preset Professionale)
     nucleus.js        protoni/neutroni (InstancedMesh), isotopi, esplosione
     packing.js        impacchettamento dei nucleoni
     bohr-model.js     gusci ed elettroni del modello di Bohr
@@ -437,6 +481,7 @@ src/
 tests/lab/            test del motore chimico (npm test)
 tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo, strumenti)
 tests/i18n/           test delle lingue e del glossario della modalità Spiega
+tests/gfx/            test dei preset grafici e dell'aspetto reale degli elementi
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json
@@ -446,7 +491,7 @@ data-sources/         dati di origine (PubChem + dati curati in italiano)
 build/icon.png        icona usata da electron-builder
 ```
 
-## 11. Uso
+## 12. Uso
 
 - **Passa il mouse** su un elemento: anteprima in alto e cella in rilievo.
   Passando su un numero di gruppo/periodo o su una categoria della legenda si evidenzia l'intera colonna/riga/categoria.

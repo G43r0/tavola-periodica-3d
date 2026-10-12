@@ -18,6 +18,8 @@ import { esc, fmtNumber, fmtAbundance, isotopeNotation } from '../chem/format.js
 import { icons } from '../ui/icons.js';
 import { createT } from '../i18n/index.js';
 
+const ORIGIN = new THREE.Vector3();
+
 const t = createT({
   it: {
     back: 'Tavola periodica',
@@ -74,7 +76,7 @@ const t = createT({
     tipElectron: (p) => `<b class="e">Elettrone</b> e⁻ · guscio ${p.shell} (n = ${p.n}) · orbitale ${p.orbital}`,
     tipQn: 'numeri quantici',
     fps: '{fps} fps · qualità {q}',
-    quality: ['bassa', 'media', 'alta'],
+    quality: ['bassa', 'media', 'alta', 'massima'],
   },
   en: {
     back: 'Periodic table',
@@ -131,7 +133,7 @@ const t = createT({
     tipElectron: (p) => `<b class="e">Electron</b> e⁻ · shell ${p.shell} (n = ${p.n}) · orbital ${p.orbital}`,
     tipQn: 'quantum numbers',
     fps: '{fps} fps · {q} quality',
-    quality: ['low', 'medium', 'high'],
+    quality: ['low', 'medium', 'high', 'maximum'],
   },
   eli6: {
     bohr: 'Elettroni sui cerchi',
@@ -290,6 +292,7 @@ export function createAtomViewer(elements, { onClose }) {
   }
 
   const nucleus = new Nucleus(engine.scene);
+  nucleus.useAO(engine.sphereAO);
   const bohr = new BohrModel(engine.scene);
   const clouds = new OrbitalClouds(engine.scene);
   const quarks = new QuarkView(nucleus.group);
@@ -842,6 +845,8 @@ export function createAtomViewer(elements, { onClose }) {
     state.wall += dt;
     nucleus.update(dt, state.time);
     bohr.update(dt, state.time);
+    // ombre (preset Professionale): la mappa copre solo il nucleo, a passi di 0,25 per non farla tremolare
+    engine.setShadowFocus(ORIGIN, Math.ceil((nucleus.displayRadius + NUCLEON_R) * 4) / 4);
     const viewportPx = stage.clientHeight * engine.renderer.getPixelRatio();
     clouds.setViewportHeight(viewportPx, engine.camera.fov);
     quarks.setViewportHeight(viewportPx, engine.camera.fov);
