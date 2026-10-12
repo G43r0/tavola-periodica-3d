@@ -998,3 +998,14 @@
     bottom: calc(55vh + 24px);
   }
 }
+
+/* «Spiegamelo come se avessi 6 anni»: riquadro introduttivo della particella */
+.pp-sec--simple {
+  padding: 10px 12px;
+  background: rgba(92, 225, 255, 0.07);
+  border: 1px solid rgba(92, 225, 255, 0.22);
+  border-radius: var(--r-md);
+}
+.pp-sec--simple p {
+  color: var(--text-0);
+}
