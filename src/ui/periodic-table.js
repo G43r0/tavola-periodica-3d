@@ -55,6 +55,7 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
 
   const grid = document.createElement('div');
   grid.className = 'ptable is-entering';
+  grid.dataset.help = 'ui.table';
   grid.setAttribute('role', 'group');
   grid.setAttribute('aria-label', t('tableLabel'));
 

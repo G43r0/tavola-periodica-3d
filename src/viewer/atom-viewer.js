@@ -170,7 +170,7 @@ const lastSubshell = (occupancy) =>
 const SPIN = { 1: '↑', 2: '↑↓' };
 
 const TEMPLATE = () => `
-  <div class="av-stage"></div>
+  <div class="av-stage" data-help="viewer.stage"></div>
   <div class="av-vignette" aria-hidden="true"></div>
 
   <header class="av-top">

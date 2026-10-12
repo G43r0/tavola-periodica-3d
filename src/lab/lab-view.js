@@ -37,7 +37,7 @@ const PALETTE_W = 318;
 const PANEL_W = 356;
 
 const TEMPLATE = () => `
-  <div class="lab-stage"></div>
+  <div class="lab-stage" data-help="lab.bench"></div>
   <header class="lab-top">
     <button type="button" class="btn-ghost lab-back" data-act="close">${icons.prev(16)}<span>${tr('back')}</span><kbd>Esc</kbd></button>
     <div class="lab-title">

@@ -129,7 +129,7 @@ const TEMPLATE = () => `
   </aside>
 
   <main class="sbx-stage">
-    <canvas class="sbx-canvas" aria-label="${t('canvas')}"></canvas>
+    <canvas class="sbx-canvas" data-help="sandbox.canvas" aria-label="${t('canvas')}"></canvas>
     <div class="sbx-paused" hidden>${icons.pause(14)} ${t('paused')}</div>
     <div class="sbx-msg" role="status" hidden></div>
     <div class="sbx-intro" hidden>

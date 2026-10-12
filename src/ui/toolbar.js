@@ -74,7 +74,7 @@ const t = createT({
   },
 });
 
-export function createToolbar(header, legend, elements, store, { onOpen, onInfo, onLab, onSandbox, onExplain, onCategoryHover, onSearchCommit }) {
+export function createToolbar(header, legend, elements, store, { onOpen, onInfo, onLab, onSandbox, onCategoryHover, onSearchCommit }) {
   header.innerHTML = `
     <div class="brand">
       <span class="brand__logo" data-help="ui.logo">${icons.atom(26)}</span>
@@ -143,7 +143,6 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
   const hint = header.querySelector('.search__hint');
   const count = header.querySelector('.result-count');
   const reset = header.querySelector('.reset');
-  const explainBtn = header.querySelector('[data-action="explain"]');
 
   // ---- menu della lingua
   const langBtn = header.querySelector('.lang__btn');
@@ -209,7 +208,6 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
     if (ev.target.closest('[data-action="info"]')) onInfo();
     if (ev.target.closest('[data-action="lab"]')) onLab?.();
     if (ev.target.closest('[data-action="sandbox"]')) onSandbox?.();
-    if (ev.target.closest('[data-action="explain"]')) onExplain?.();
   });
 
   legend.addEventListener('click', (ev) => {
@@ -251,9 +249,6 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
     focusSearch() {
       input.focus();
       input.select();
-    },
-    setExplain(on) {
-      explainBtn.setAttribute('aria-pressed', String(on));
     },
   };
 }

@@ -57,10 +57,10 @@ beforeLangChange(() => {
 const app = document.getElementById('app');
 app.innerHTML = `
   <header class="toolbar"></header>
-  <div class="legend" role="group"></div>
+  <div class="legend" role="group" data-help="ui.categories"></div>
   <main class="workspace">
     <div class="stage"></div>
-    <aside class="panel" aria-labelledby="panel-title"></aside>
+    <aside class="panel" data-help="ui.elementPanel" aria-labelledby="panel-title"></aside>
   </main>`;
 
 const info = createInfoDialog();
@@ -73,7 +73,6 @@ const toolbar = createToolbar(app.querySelector('.toolbar'), app.querySelector('
   onInfo: info.open,
   onLab: () => openLab(),
   onSandbox: () => openSandbox(),
-  onExplain: () => explain.toggle(),
   onCategoryHover: (key) => table.highlightCategory(key),
   onSearchCommit: (text, ev) => sparks.onSearchCommit(text, ev),
 });
@@ -144,7 +143,6 @@ createElementPanel(app.querySelector('.panel'), elements, store, {
 
 // ------------------------------------------------------------ modalità Spiega (F1)
 const explain = createExplain(elements, {
-  onModeChange: (on) => toolbar.setExplain(on),
   onOpenElement: (z) => {
     if (!viewer?.isOpen() && !lab?.isOpen() && !sandbox?.isOpen()) store.set({ selectedZ: z });
   },
