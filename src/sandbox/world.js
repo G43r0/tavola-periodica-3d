@@ -39,6 +39,10 @@ const C_RAD2_DX = [];
 const C_RAD2_DY = [];
 for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (dx || dy) (C_RAD2_DX.push(dx), C_RAD2_DY.push(dy));
 
+const FIXED = S.WALL | S.GENERATOR | S.SOURCE | S.DRAIN; // blocchi che nessuna sostanza sposta o attraversa
+const SOURCE_PERIOD = 1; // una cella clonata a ogni passo
+const FILL_CAP = 10000; // celle al massimo per un riempimento con il secchiello
+const MAX_WIND = 5; // celle per passo, al massimo, date dal vento
 const DX = [-1, 0, 1, -1, 1, -1, 0, 1];
 const DY = [-1, -1, -1, 0, 0, 1, 1, 1];
 const ORTHO = [1, 3, 4, 6]; // su, sinistra, destra, giù
@@ -367,7 +371,11 @@ export class World {
     const id = this.type[i];
     this.clock[i] = this.tick;
     const sf = P.flags[id];
-    if (sf & (S.WALL | S.GENERATOR)) return;
+    if (sf & FIXED) {
+      if (sf & S.SOURCE) this.runSource(i, x, y);
+      else if (sf & S.DRAIN) this.runDrain(i, x, y);
+      return;
+    }
     if (sf & S.FIRE) {
       this.updateFire(i, x, y);
       return;
@@ -1059,7 +1067,7 @@ export class World {
     const P = this.P;
     const nf = P.flags[nid];
     if (nf & S.FIRE) return 2;
-    if (nf & (S.WALL | S.GENERATOR)) return 0;
+    if (nf & FIXED) return 0;
     const T = this.temp[j];
     if (this.flags[j] & C_DISSOLVED) return T >= FREEZE_AQ && P.dissDens[nid] < d ? 2 : 0;
     if (T < P.mp[nid]) return 0;
@@ -1194,7 +1202,7 @@ export class World {
       return;
     }
     const nf = P.flags[nid];
-    if (nid === id || nf & (S.WALL | S.GENERATOR)) return;
+    if (nid === id || nf & FIXED) return;
     const nT = this.temp[j];
     const nph = nf & S.FIRE ? GAS : this.flags[j] & C_DISSOLVED ? LIQUID : nT < P.mp[nid] ? SOLID : nT < P.bp[nid] ? LIQUID : GAS;
     if (nph === GAS) {
@@ -1447,23 +1455,68 @@ export class World {
 
   /**
    * Dipinge una sostanza nelle celle vuote del pennello (o su tutte con `replace`).
-   * @param {{temp?:number, powder?:boolean, ctype?:number, replace?:boolean}} opts
+   * @param {{temp?:number, powder?:boolean, ctype?:number, replace?:boolean, dissolved?:boolean}} opts
    */
-  paint(cx, cy, r, id, { temp = AMBIENT, powder, ctype = 0, replace = false, dissolved = false } = {}) {
-    const P = this.P;
+  paint(cx, cy, r, id, opts = {}) {
     this.brush(cx, cy, r, (i) => {
-      if (this.type[i] && !replace) return;
-      this.setType(i, id, temp, ctype);
-      if (id === FIRE) return;
-      if (dissolved && P.flags[id] & S.SOLUBLE) {
-        this.flags[i] = (this.flags[i] & ~(C_POWDER | PHASE_MASK)) | C_DISSOLVED | ((this.temp[i] < FREEZE_AQ ? SOLID : LIQUID) << 2);
-        return;
-      }
-      if (this.phaseOf(id, this.temp[i]) === SOLID && powder !== undefined && !(P.flags[id] & S.BLOCK_ONLY)) {
-        if (powder) this.flags[i] |= C_POWDER;
-        else this.flags[i] &= ~C_POWDER;
-      }
+      if (this.type[i] && !opts.replace) return;
+      this.paintCell(i, id, opts);
     });
+  }
+
+  /** Mette `id` nella cella i con lo stato scelto (polvere o blocco, sciolto in acqua). */
+  paintCell(i, id, { temp = AMBIENT, powder, ctype = 0, dissolved = false } = {}) {
+    this.setType(i, id, temp, ctype);
+    if (this.P.flags[id] & S.SOURCE && ctype) this.loadSource(i, ctype, 0, temp, (powder ? C_POWDER : 0) | (dissolved ? C_DISSOLVED : 0));
+    else this.formCell(i, id, powder, dissolved);
+  }
+
+  /** Stato fisico di una cella appena creata: sciolta in acqua, polvere o blocco. */
+  formCell(i, id, powder, dissolved) {
+    const P = this.P;
+    if (id === FIRE) return;
+    if (dissolved && P.flags[id] & S.SOLUBLE) {
+      this.flags[i] = (this.flags[i] & ~(C_POWDER | PHASE_MASK)) | C_DISSOLVED | ((this.temp[i] < FREEZE_AQ ? SOLID : LIQUID) << 2);
+      return;
+    }
+    if (this.phaseOf(id, this.temp[i]) === SOLID && powder !== undefined && !(P.flags[id] & S.BLOCK_ONLY)) {
+      if (powder) this.flags[i] |= C_POWDER;
+      else this.flags[i] &= ~C_POWDER;
+    }
+  }
+
+  /** Riempie la regione connessa di celle uguali a quella cliccata (secchiello). Restituisce le celle cambiate. */
+  fill(x, y, id, opts = {}) {
+    const { W, H, N, type } = this;
+    if (x < 0 || y < 0 || x >= W || y >= H) return 0;
+    const start = y * W + x;
+    const target = type[start];
+    if (target === id && !(opts.dissolved ?? false) && !(this.flags[start] & C_DISSOLVED)) return 0;
+    const seen = new Uint8Array(N);
+    const queue = new Int32Array(N);
+    let head = 0;
+    let tail = 0;
+    queue[tail++] = start;
+    seen[start] = 1;
+    while (head < tail) {
+      const i = queue[head++];
+      const cx = i % W;
+      const cy = (i / W) | 0;
+      for (const k of ORTHO) {
+        const nx = cx + DX[k];
+        const ny = cy + DY[k];
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const j = ny * W + nx;
+        if (seen[j] || type[j] !== target) continue;
+        seen[j] = 1;
+        queue[tail++] = j;
+      }
+    }
+    let cells = Array.from(queue.subarray(0, tail));
+    // una regione troppo grande si riempie dal basso, come versando un liquido
+    if (cells.length > FILL_CAP) cells = cells.sort((a, b) => ((b / W) | 0) - ((a / W) | 0)).slice(0, FILL_CAP);
+    for (const i of cells) this.paintCell(i, id, opts);
+    return cells.length;
   }
 
   erase(cx, cy, r) {
@@ -1511,6 +1564,168 @@ export class World {
       const d = this.rand() * r;
       this.emit(cx + 0.5 + Math.cos(a) * d, cy + 0.5 + Math.sin(a) * d, NEUTRON, this.rand() * Math.PI * 2, 3, 200);
     }
+  }
+
+  /**
+   * Mescola: rimescola a caso le celle mobili del pennello (polveri, liquidi, gas, soluzioni) e ne uguaglia in parte
+   * la temperatura. I blocchi, il fuoco e i materiali fissi restano dove sono. Restituisce le celle rimescolate.
+   */
+  stir(cx, cy, r) {
+    const { type, flags, P } = this;
+    const cells = [];
+    this.brush(cx, cy, r, (i) => {
+      const id = type[i];
+      if (!id || P.flags[id] & (FIXED | S.FIRE)) return;
+      if (this.cellPhase(i) === SOLID && !(flags[i] & C_POWDER)) return;
+      cells.push(i);
+    });
+    if (cells.length < 2) return 0;
+    for (let k = cells.length - 1; k > 0; k--) {
+      const j = (this.rand() * (k + 1)) | 0;
+      if (j !== k) this.swap(cells[k], cells[j]);
+    }
+    let mean = 0;
+    for (const i of cells) mean += this.temp[i];
+    mean /= cells.length;
+    for (const i of cells) this.temp[i] += (mean - this.temp[i]) * 0.5;
+    return cells.length;
+  }
+
+  /**
+   * Vento: spinge nella direzione (ux, uy) le celle mobili del pennello (gas, polveri, liquidi);
+   * senza direzione le spinge via dal centro.
+   */
+  blow(cx, cy, r, ux, uy, power = 2.5) {
+    const { type, flags, P } = this;
+    const len = Math.hypot(ux, uy);
+    let n = 0;
+    this.brush(cx, cy, r, (i, x, y) => {
+      const id = type[i];
+      if (!id || P.flags[id] & (FIXED | S.FIRE)) return;
+      if (this.cellPhase(i) === SOLID && !(flags[i] & C_POWDER)) return;
+      let dx = ux;
+      let dy = uy;
+      if (len) {
+        dx /= len;
+        dy /= len;
+      } else {
+        dx = x - cx;
+        dy = y - cy;
+        const d = Math.hypot(dx, dy);
+        if (d) {
+          dx /= d;
+          dy /= d;
+        } else dy = -1;
+      }
+      const k = power * (0.6 + 0.8 * this.rand());
+      this.vx[i] = Math.max(-MAX_WIND, Math.min(MAX_WIND, this.vx[i] + dx * k));
+      this.vy[i] = Math.max(-MAX_WIND, Math.min(MAX_WIND, this.vy[i] + dy * k));
+      n++;
+    });
+    return n;
+  }
+
+  /** Ambiente: riporta le celle del pennello alla temperatura dell'aria (22 °C) e le spegne. */
+  equalize(cx, cy, r) {
+    const P = this.P;
+    this.brush(cx, cy, r, (i) => {
+      const id = this.type[i];
+      if (!id || P.flags[id] & (S.WALL | S.FIRE)) return;
+      this.temp[i] = AMBIENT;
+      this.flags[i] &= ~C_BURN;
+    });
+  }
+
+  /** Estintore: spegne le fiamme e le braci, e raffredda sotto l'accensione ciò che è infiammabile. */
+  extinguish(cx, cy, r) {
+    const P = this.P;
+    this.brush(cx, cy, r, (i) => {
+      const id = this.type[i];
+      if (!id) return;
+      const f = P.flags[id];
+      if (f & S.FIRE) {
+        this.clearCell(i);
+        return;
+      }
+      if (f & S.WALL) return;
+      this.flags[i] &= ~C_BURN;
+      if (f & S.FLAMMABLE && this.temp[i] > P.ignite[id] - 40) this.temp[i] = Math.max(AMBIENT, P.ignite[id] - 40);
+    });
+  }
+
+  /** Sorgente: ricorda `id` (con temperatura e forma) e lo rimette in cella all'infinito. */
+  loadSource(i, id, ctype, T, bits) {
+    this.ctype[i] = id;
+    this.vx[i] = T;
+    this.vy[i] = ctype;
+    this.life[i] = bits;
+    this.temp[i] = AMBIENT;
+  }
+
+  runSource(i, x, y) {
+    const { W, H, type, P } = this;
+    const mem = this.ctype[i];
+    if (!mem) {
+      // sceglie la prima sostanza che tocca (come il «clone» di The Powder Toy)
+      for (let k = 0; k < 8; k++) {
+        const nx = x + DX[k];
+        const ny = y + DY[k];
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const j = ny * W + nx;
+        const id = type[j];
+        if (!id || P.flags[id] & (FIXED | S.FIRE)) continue;
+        this.loadSource(i, id, this.ctype[j], this.temp[j], this.flags[j] & (C_POWDER | C_DISSOLVED));
+        return;
+      }
+      return;
+    }
+    if (this.tick % SOURCE_PERIOD) return;
+    const T = this.vx[i];
+    const j = this.spawnNear(x, y, mem, T, this.vy[i]);
+    if (j < 0) return;
+    const bits = this.life[i];
+    this.formCell(j, mem, Boolean(bits & C_POWDER), Boolean(bits & C_DISSOLVED));
+  }
+
+  /** Pozzo: cancella tutto ciò che lo tocca (e le particelle libere che gli passano accanto). */
+  runDrain(i, x, y) {
+    const { W, H, type, P } = this;
+    for (let k = 0; k < 8; k++) {
+      const nx = x + DX[k];
+      const ny = y + DY[k];
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+      const j = ny * W + nx;
+      const id = type[j];
+      if (id && !(P.flags[id] & FIXED)) this.clearCell(j);
+    }
+    if (this.particles.length) this.particles = this.particles.filter((p) => (p.x - x - 0.5) ** 2 + (p.y - y - 0.5) ** 2 > 4);
+  }
+
+  /** Copia dello stato (per «Annulla»). */
+  snapshot() {
+    return {
+      W: this.W,
+      H: this.H,
+      type: this.type.slice(),
+      temp: this.temp.slice(),
+      life: this.life.slice(),
+      ctype: this.ctype.slice(),
+      flags: this.flags.slice(),
+      seed: this.seed.slice(),
+      vx: this.vx.slice(),
+      vy: this.vy.slice(),
+      spark: this.spark.slice(),
+      particles: this.particles.map((p) => ({ ...p })),
+    };
+  }
+
+  /** Ripristina una copia fatta con snapshot(); false se la griglia ha un'altra dimensione. */
+  restore(s) {
+    if (s.W !== this.W || s.H !== this.H) return false;
+    for (const k of ['type', 'temp', 'life', 'ctype', 'flags', 'seed', 'vx', 'vy', 'spark']) this[k].set(s[k]);
+    this.clock.fill(0);
+    this.particles = s.particles.map((p) => ({ ...p }));
+    return true;
   }
 
   /** Accende subito una cella infiammabile (usato dagli esempi). */

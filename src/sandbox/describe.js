@@ -346,6 +346,8 @@ export function substanceNotes(subs, id, ctype = 0) {
   if (s.kind === 'compound') return compoundNotes(subs, s);
   const f = s.flags;
   if (f & S.WALL) return ['Indistruttibile: non brucia, non fonde, isola dal calore, resiste alle esplosioni e ferma radiazioni e neutroni.'];
+  if (f & S.SOURCE) return ['Clona all\'infinito la prima sostanza che tocca: posala accanto a ciò che vuoi moltiplicare (acqua, sabbia, gas…).', 'Ne mette una cella a ogni passo attorno a sé; non brucia e non fonde. La gomma la ferma.'];
+  if (f & S.DRAIN) return ['Cancella tutto ciò che lo tocca: liquidi, polveri e gas spariscono. Serve a svuotare vasche e smaltire i gas.', 'Non brucia e non fonde.'];
   if (f & S.GENERATOR) return ['Genera una scintilla ogni 0,2 s nei conduttori che tocca: metalli, grafite, acqua, gas nobili.', 'Non brucia e non fonde.'];
   const phase = phaseAt(s, AMBIENT);
   if (s.kind === 'element') notes.push(`${cap(CATEGORY[s.category]?.singular ?? '')}. A 22 °C è ${PHASE_NAME[phase] === 'gas' ? 'un gas' : PHASE_NAME[phase]}.`);

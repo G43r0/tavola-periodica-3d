@@ -1,6 +1,6 @@
 // Esempi pronti della sandbox: esperimenti classici costruiti sulla griglia (coordinate pensate per 320 × 180
 // e riscalate sulla griglia scelta). Ogni esempio restituisce le etichette da disegnare e un suggerimento.
-import { AMBIENT, SOLID, WOOD, COAL, CONCRETE, WALL, WATER, SALT, GENERATOR, saltCtype } from './substances.js';
+import { AMBIENT, SOLID, WOOD, COAL, CONCRETE, WALL, WATER, SALT, GENERATOR, SOURCE, DRAIN, saltCtype } from './substances.js';
 import { C_POWDER, C_DISSOLVED } from './world.js';
 
 function tools(world) {
@@ -47,8 +47,12 @@ function tools(world) {
       }
     }
   };
+  /** Sorgente già carica: clona `id` (con temperatura e forma) senza aspettare un vicino. */
+  const source = (x, y, id, o = {}) => {
+    if (x >= 0 && y >= 0 && x < W && y < H) world.paintCell(y * W + x, SOURCE, { ctype: id, temp: o.temp ?? AMBIENT, powder: o.powder, dissolved: o.dissolved });
+  };
   const ground = () => rect(0, H - Y(6), W - 1, H - 1, CONCRETE);
-  return { W, H, X, Y, set, rect, box, mixture, ground };
+  return { W, H, X, Y, set, rect, box, mixture, source, ground };
 }
 
 const Z = (subs, symbol) => subs.byKey.get(symbol).id;
@@ -401,6 +405,59 @@ export const PRESETS = [
         labels: [{ x: X(85), y: t.H - Y(32), text: 'TNT' }, { x: X(160), y: t.H - Y(46), text: 'nitroglicerina' }, { x: X(235), y: t.H - Y(30), text: 'nitrometano' }],
         hint: 'La miccia di legno brucia fino al TNT. Il muro indistruttibile non si scalfisce, il calcestruzzo resiste solo in parte.',
       };
+    },
+  },
+  {
+    id: 'miscele',
+    name: 'Miscele con Mescola',
+    description: 'Ferro e zolfo a strati, olio sull\'acqua, polvere nera: lo strumento Mescola li rimescola, poi scalda e guarda reagire.',
+    build(world, subs) {
+      const t = tools(world);
+      const { X, Y } = t;
+      const k = (key) => subs.byKey.get(key).id;
+      t.ground();
+      const labels = [];
+      const top = t.H - Y(6);
+      // ferro e zolfo: già mescolati, restano una miscela finché non li scaldi
+      t.box(X(20), Y(100), X(90), top, CONCRETE, { open: true, t: 2 });
+      t.rect(X(20) + 2, Y(135), X(90) - 2, top - 2, k('S'), { powder: true });
+      t.rect(X(20) + 2, Y(118), X(90) - 2, Y(134), k('Fe'), { powder: true });
+      for (let n = 0; n < 6; n++) world.stir(X(55), Y(138), X(28));
+      labels.push({ x: X(55), y: Y(92), text: 'ferro + zolfo' });
+      // due liquidi che non si mescolano
+      t.box(X(120), Y(100), X(190), top, CONCRETE, { open: true, t: 2 });
+      t.rect(X(120) + 2, Y(140), X(190) - 2, top - 2, WATER);
+      t.rect(X(120) + 2, Y(122), X(190) - 2, Y(139), k('ottano'));
+      labels.push({ x: X(155), y: Y(92), text: 'ottano sull\'acqua' });
+      // polvere nera: nitrato di potassio, carbone e zolfo
+      t.box(X(220), Y(100), X(290), top, CONCRETE, { open: true, t: 2 });
+      t.rect(X(220) + 2, Y(137), X(290) - 2, top - 2, subs.libraryId.get('kno3'), { powder: true });
+      t.rect(X(220) + 2, Y(126), X(290) - 2, Y(136), COAL, { powder: true });
+      t.rect(X(220) + 2, Y(120), X(290) - 2, Y(125), k('S'), { powder: true });
+      labels.push({ x: X(255), y: Y(92), text: 'nitrato + carbone + zolfo' });
+      return { labels, hint: 'Passa Mescola sulle polveri per rimescolarle, poi dai Calore: il ferro con lo zolfo forma solfuro di ferro. Nell\'ottano e nell\'acqua, invece, il rimescolamento dura poco: si separano di nuovo.' };
+    },
+  },
+  {
+    id: 'sorgenti',
+    name: 'Sorgenti, pozzi e vento',
+    description: 'Una Sorgente versa acqua in una vasca con il Pozzo che la svuota; un\'altra fa una montagna di sabbia: sposta tutto con il Vento.',
+    build(world, subs) {
+      const t = tools(world);
+      const { X, Y } = t;
+      const k = (key) => subs.byKey.get(key).id;
+      t.ground();
+      const top = t.H - Y(6);
+      // cascata che si svuota da sola
+      t.source(X(50), Y(30), WATER);
+      t.box(X(20), Y(110), X(100), top, CONCRETE, { open: true, t: 2 });
+      world.paintCell((top - Y(18)) * t.W + X(20) + 2, DRAIN, {});
+      // montagna di polvere
+      t.source(X(170), Y(40), k('S'), { powder: true });
+      // gas leggero che sale
+      t.box(X(240), Y(70), X(300), top, CONCRETE, { open: true, t: 2 });
+      t.source(X(270), top - 4, k('H'));
+      return { labels: [{ x: X(60), y: Y(20), text: 'sorgente d\'acqua' }, { x: X(170), y: Y(28), text: 'sorgente di zolfo' }, { x: X(270), y: Y(60), text: 'sorgente di idrogeno' }], hint: 'La Sorgente clona all\'infinito: posala accanto a una sostanza qualsiasi. Il Pozzo cancella ciò che lo tocca. Prova il Vento (trascina il cursore) sul gas e sulla polvere.' };
     },
   },
   {

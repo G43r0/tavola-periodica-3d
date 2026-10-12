@@ -958,3 +958,29 @@
     display: none;
   }
 }
+
+/* utilità, cronologia e modi di disegno */
+.sbx-tools--util {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0;
+}
+.sbx-history {
+  display: inline-flex;
+  gap: 4px;
+}
+.sbx-history .sbx-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.sbx-modes {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
+.sbx-modes .segmented__btn {
+  padding-inline: 8px;
+}
+.sbx-modes .sbx-filled[hidden] {
+  display: none;
+}

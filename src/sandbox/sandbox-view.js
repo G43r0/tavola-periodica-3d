@@ -6,19 +6,21 @@ import { CATEGORY } from '../data/categories.js';
 import { esc, normalize, fmtNumber } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
 import {
-  createSubstances, AMBIENT, T_MAX, SOLID, LIQUID, GAS, S, WOOD, COAL, CONCRETE, WALL, GENERATOR, WATER, SALT, OXIDE, CO2,
+  createSubstances, AMBIENT, T_MAX, SOLID, LIQUID, GAS, S, WOOD, COAL, CONCRETE, WALL, GENERATOR, SOURCE, DRAIN, WATER, SALT, OXIDE, CO2,
   phaseAt,
 } from './substances.js';
 import { World } from './world.js';
 import { createRenderer, heatScale } from './render.js';
 import { describeEvent, substanceLabel, ALIAS_FORMULA, substanceNotes, fmtCelsius, PHASE_NAME } from './describe.js';
 import { PRESETS } from './presets.js';
+import { shapeCells } from './shapes.js';
 
 const GRIDS = { small: [240, 135], medium: [320, 180], large: [400, 225] };
 const MAX_STEPS_PER_FRAME = 4;
 const HEAT_RATE = 30; // K per passo con gli strumenti Calore / Freddo
 const LOG_ITEMS = 6; // voci mostrate per gruppo nel registro delle reazioni
 const PHASES_GROUP = 'Cambiamenti di stato';
+const UNDO_MAX = 12;
 
 const TOOLS = [
   { key: 'erase', name: 'Gomma', icon: 'eraser', color: '#e8eef6', text: 'Cancella tutto ciò che tocca, anche il muro. Il tasto destro cancella sempre.' },
@@ -29,7 +31,24 @@ const TOOLS = [
   { key: 'neutron', name: 'Neutroni', icon: 'atom', color: '#cfe6ff', text: 'Sorgente di neutroni veloci: spezzano uranio e plutonio (fissione). Acqua e grafite li rallentano, cadmio e boro li assorbono.' },
   { key: 'bomb', name: 'Esplosione', icon: 'explode', color: '#ff5d6c', text: 'Un clic, un\'esplosione: il calcestruzzo resiste, il muro indistruttibile non si scalfisce.' },
 ];
-const TOOL = Object.fromEntries(TOOLS.map((t) => [t.key, t]));
+// utilità per costruire e preparare gli esperimenti
+const UTILITIES = [
+  { key: 'stir', name: 'Mescola', icon: 'stir', color: '#b58cff', text: 'Rimescola polveri, liquidi, gas e soluzioni nel pennello e ne uguaglia in parte la temperatura: forma miscele (zolfo e ferro, polvere nera…) che poi reagiscono. I blocchi non si muovono; i liquidi di densità diversa si separano di nuovo da soli.' },
+  { key: 'wind', name: 'Vento', icon: 'wind', color: '#8fd3d8', text: 'Soffia: trascina il cursore per spingere gas, polveri e liquidi in quella direzione; tenendolo fermo li spinge via dal centro.' },
+  { key: 'equalize', name: 'Ambiente', icon: 'ambient', color: '#e6c36a', text: 'Riporta le celle alla temperatura dell\'aria (22 °C) e ne spegne le braci: per ripartire da zero dopo un esperimento.' },
+  { key: 'extinguish', name: 'Estintore', icon: 'extinguisher', color: '#ff6a6a', text: 'Spegne fiamme e braci e raffredda sotto l\'accensione ciò che è infiammabile.' },
+  { key: 'pick', name: 'Pipetta', icon: 'pipette', color: '#9aefff', text: 'Clicca una sostanza nella sandbox per sceglierla, con la sua temperatura e il suo stato (come il clic centrale o Alt + clic).' },
+];
+const TOOL = Object.fromEntries([...TOOLS, ...UTILITIES].map((t) => [t.key, t]));
+// strumenti che si possono applicare anche a una forma (linea, rettangolo, ellisse)
+const SHAPE_TOOLS = new Set(['erase', 'heat', 'cool', 'equalize', 'extinguish']);
+const MODES = [
+  { key: 'brush', icon: 'brushMode', name: 'Pennello', text: 'A mano libera (Maiusc + clic: linea dal punto precedente)' },
+  { key: 'fill', icon: 'bucket', name: 'Riempi', text: 'Secchiello: riempie la regione chiusa che tocca con la sostanza scelta (clic destro: svuota la regione)' },
+  { key: 'line', icon: 'line', name: 'Linea', text: 'Trascina per tracciare una linea' },
+  { key: 'rect', icon: 'rect', name: 'Rettangolo', text: 'Trascina per disegnare un rettangolo (vasche, muri, contenitori)' },
+  { key: 'ellipse', icon: 'ellipse', name: 'Ellisse', text: 'Trascina per disegnare un\'ellisse' },
+];
 
 // materiali richiesti e composti utili agli esperimenti
 const MATERIALS = [
@@ -38,6 +57,8 @@ const MATERIALS = [
   { id: CONCRETE, ctype: 0 },
   { id: WALL, ctype: 0 },
   { id: GENERATOR, ctype: 0 },
+  { id: SOURCE, ctype: 0 },
+  { id: DRAIN, ctype: 0 },
 ];
 const COMPOUNDS = (subs) => [
   { id: WATER, ctype: 0 },
@@ -67,6 +88,10 @@ const TEMPLATE = `
     <div class="sbx-top__end">
       <label class="sbx-toggle" title="Bagliore di fiamme, scintille e corpi incandescenti (G)"><input type="checkbox" data-opt="glow" checked /><span>Bagliore</span></label>
       <label class="sbx-toggle" title="Con i bordi aperti ciò che esce dallo schermo sparisce"><input type="checkbox" data-opt="edges" /><span>Bordi aperti</span></label>
+      <div class="sbx-history" role="group" aria-label="Cronologia">
+        <button type="button" class="sbx-icon-btn" data-act="undo" title="Annulla (Ctrl + Z)" aria-label="Annulla" disabled>${icons.undo(16)}</button>
+        <button type="button" class="sbx-icon-btn" data-act="redo" title="Ripeti (Ctrl + Y)" aria-label="Ripeti" disabled>${icons.redo(16)}</button>
+      </div>
       <button type="button" class="btn-ghost" data-act="examples" aria-expanded="false">${icons.book(16)}<span>Esempi</span></button>
       <button type="button" class="btn-ghost" data-act="clear" title="Svuota la sandbox">${icons.broom(16)}<span>Svuota</span></button>
       <button type="button" class="btn-icon" data-act="help" aria-expanded="false" title="Comandi">${icons.keyboard(18)}</button>
@@ -76,6 +101,8 @@ const TEMPLATE = `
   <aside class="sbx-palette" aria-label="Sostanze e strumenti">
     <p class="sbx-sec">Strumenti</p>
     <div class="sbx-tools"></div>
+    <p class="sbx-sec">Utilità</p>
+    <div class="sbx-tools sbx-tools--util"></div>
     <p class="sbx-sec">Materiali</p>
     <div class="sbx-mats"></div>
     <p class="sbx-sec">Composti</p>
@@ -118,6 +145,12 @@ const TEMPLATE = `
       <button type="button" class="sbx-mini" data-act="brush+" title="Pennello più grande (])">${icons.plus(14)}</button>
       <output class="sbx-brush__val">3</output>
     </div>
+    <div class="sbx-modes">
+      <div class="segmented" role="group" aria-label="Modo di disegno">
+        ${MODES.map((m) => `<button type="button" class="segmented__btn" data-mode="${m.key}" aria-pressed="${m.key === 'brush'}" title="${esc(m.name)}: ${esc(m.text)}" aria-label="${esc(m.name)}">${icons[m.icon](14)}</button>`).join('')}
+      </div>
+      <label class="sbx-toggle sbx-filled" hidden title="Disegna la forma piena invece del solo contorno"><input type="checkbox" data-opt="filled" /><span>Pieno</span></label>
+    </div>
     <div class="sbx-hover" aria-live="off"></div>
     <div class="sbx-stats"></div>
     <label class="sbx-gridsize">Griglia
@@ -136,7 +169,8 @@ const TEMPLATE = `
     <h4>Mouse</h4>
     <dl>
       <dt>Clic sinistro</dt><dd>disegna con la sostanza o lo strumento scelto (tenendo premuto, continua)</dd>
-      <dt>Maiusc + clic</dt><dd>linea dal punto precedente</dd>
+      <dt>Maiusc + clic</dt><dd>linea dal punto precedente (modo Pennello)</dd>
+      <dt>Modi in basso</dt><dd>Pennello, Riempi (secchiello), Linea, Rettangolo, Ellisse (con «Pieno» per i solidi)</dd>
       <dt>Clic destro</dt><dd>cancella</dd>
       <dt>Clic centrale / Alt + clic</dt><dd>preleva la sostanza sotto il cursore</dd>
       <dt>Rotella</dt><dd>dimensione del pennello</dd>
@@ -148,6 +182,8 @@ const TEMPLATE = `
       <dt><kbd>H</kbd></dt><dd>vista termica</dd>
       <dt><kbd>G</kbd></dt><dd>bagliore</dd>
       <dt><kbd>E</kbd></dt><dd>gomma</dd>
+      <dt><kbd>M</kbd> <kbd>W</kbd></dt><dd>mescola / vento</dd>
+      <dt><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Y</kbd></dt><dd>annulla / ripeti</dd>
       <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>pennello più piccolo / più grande</dd>
       <dt><kbd>Esc</kbd></dt><dd>chiude i menu, poi torna alla tavola</dd>
     </dl>
@@ -180,6 +216,10 @@ export function createSandbox(elements, { onClose } = {}) {
     heatView: false,
     glow: true,
     place: { temp: AMBIENT, form: 'powder', dissolved: false },
+    mode: 'brush', // brush | fill | line | rect | ellipse
+    filled: false,
+    wind: [0, 0], // direzione del vento (ultimo spostamento del cursore)
+    windAge: 0,
     labels: [],
     hover: null, // { x, y } in celle
     drawing: null, // { mode: 'primary'|'erase', last: [x, y] }
@@ -201,7 +241,9 @@ export function createSandbox(elements, { onClose } = {}) {
     return `<button type="button" class="sbx-item" data-id="${id}" data-ctype="${ctype}" style="--sw:${swatchColor(id)}" title="${esc(label.name)}${label.formula ? ` (${esc(label.formula)})` : ''}">
       <span class="sbx-item__sw"></span><span class="sbx-item__name">${esc(short ?? (id === GENERATOR ? 'Generatore' : id === WALL ? 'Muro' : s.name))}</span></button>`;
   };
-  $('.sbx-tools').innerHTML = TOOLS.map((t) => `<button type="button" class="sbx-tool" data-tool="${t.key}" style="--tc:${t.color}" title="${esc(t.name)}: ${esc(t.text)}">${icons[t.icon](17)}<span>${t.name}</span></button>`).join('');
+  const toolButton = (t) => `<button type="button" class="sbx-tool" data-tool="${t.key}" style="--tc:${t.color}" title="${esc(t.name)}: ${esc(t.text)}">${icons[t.icon](17)}<span>${t.name}</span></button>`;
+  $('.sbx-tools:not(.sbx-tools--util)').innerHTML = TOOLS.map(toolButton).join('');
+  $('.sbx-tools--util').innerHTML = UTILITIES.map(toolButton).join('');
   $('.sbx-mats').innerHTML = MATERIALS.map((m) => swatch(m.id, m.ctype)).join('');
   $('.sbx-comps').innerHTML = COMPOUNDS(subs).map((m) => swatch(m.id, m.ctype, m.label)).join('');
   // le 554 sostanze della libreria del laboratorio, per gruppi (alcune sono elementi o sostanze già presenti: H₂, H₂O…)
@@ -485,10 +527,28 @@ export function createSandbox(elements, { onClose } = {}) {
         ctx.fillText(l.text, l.x * k, l.y * k);
       }
     }
+    const color = state.sel.kind === 'tool' ? TOOL[state.sel.key].color : '#9aefff';
+    // anteprima della forma trascinata
+    const shape = state.drawing?.shape ? state.drawing : null;
+    if (shape) {
+      const filled = isFilled();
+      const r = filled ? 0 : state.brush;
+      ctx.fillStyle = shape.mode === 'erase' ? '#ff6a6a' : color;
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      for (const [x, y] of shapeCells(shape.shape, shape.start[0], shape.start[1], shape.cur[0], shape.cur[1], filled)) {
+        if (!r) ctx.rect(x * k, y * k, k, k);
+        else {
+          ctx.moveTo((x + 0.5 + r + 0.5) * k, (y + 0.5) * k);
+          ctx.arc((x + 0.5) * k, (y + 0.5) * k, (r + 0.5) * k, 0, Math.PI * 2);
+        }
+      }
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     // pennello
     if (state.hover) {
-      const color = state.sel.kind === 'tool' ? TOOL[state.sel.key].color : '#9aefff';
-      const rad = state.sel.kind === 'tool' && state.sel.key === 'bomb' ? bombRadius() : state.brush + 0.5;
+      const rad = state.sel.kind === 'tool' && state.sel.key === 'bomb' ? bombRadius() : state.mode === 'fill' ? 1.5 : state.brush + 0.5;
       ctx.strokeStyle = color;
       ctx.globalAlpha = 0.85;
       ctx.lineWidth = Math.max(1, dpr);
@@ -502,26 +562,99 @@ export function createSandbox(elements, { onClose } = {}) {
   // ---------------------------------------------------------------- strumenti
   const bombRadius = () => Math.max(5, state.brush * 2);
 
-  function apply(x, y, mode) {
+  function apply(x, y, mode, r = state.brush) {
     if (mode === 'erase') {
-      world.erase(x, y, state.brush);
+      world.erase(x, y, r);
       return;
     }
     const sel = state.sel;
     if (sel.kind === 'sub') {
       const temp = state.place.dissolved ? Math.min(state.place.temp, 372) : state.place.temp;
-      world.paint(x, y, state.brush, sel.id, { temp, powder: state.place.form === 'powder', ctype: sel.ctype, dissolved: state.place.dissolved });
+      world.paint(x, y, r, sel.id, { temp, powder: state.place.form === 'powder', ctype: sel.ctype, dissolved: state.place.dissolved });
       return;
     }
     switch (sel.key) {
-      case 'erase': world.erase(x, y, state.brush); break;
-      case 'heat': world.heat(x, y, state.brush, HEAT_RATE); break;
-      case 'cool': world.heat(x, y, state.brush, -HEAT_RATE); break;
-      case 'fire': world.ignite(x, y, state.brush); break;
-      case 'spark': world.sparkAt(x, y, state.brush); break;
-      case 'neutron': world.emitNeutrons(x, y, state.brush, Math.min(6, 1 + (state.brush >> 1))); break;
+      case 'erase': world.erase(x, y, r); break;
+      case 'heat': world.heat(x, y, r, HEAT_RATE); break;
+      case 'cool': world.heat(x, y, r, -HEAT_RATE); break;
+      case 'fire': world.ignite(x, y, r); break;
+      case 'spark': world.sparkAt(x, y, r); break;
+      case 'neutron': world.emitNeutrons(x, y, r, Math.min(6, 1 + (r >> 1))); break;
+      case 'stir': world.stir(x, y, r); break;
+      case 'wind': world.blow(x, y, r, state.wind[0], state.wind[1]); break;
+      case 'equalize': world.equalize(x, y, r); break;
+      case 'extinguish': world.extinguish(x, y, r); break;
       default: break;
     }
+  }
+
+  // ---------------------------------------------------------------- annulla / ripeti
+  const history = { undo: [], redo: [] };
+  function syncHistory() {
+    $('[data-act="undo"]').disabled = !history.undo.length;
+    $('[data-act="redo"]').disabled = !history.redo.length;
+  }
+  /** Da chiamare prima di ogni modifica fatta dall'utente. */
+  function remember() {
+    history.undo.push(world.snapshot());
+    if (history.undo.length > UNDO_MAX) history.undo.shift();
+    history.redo.length = 0;
+    syncHistory();
+  }
+  function resetHistory() {
+    history.undo.length = 0;
+    history.redo.length = 0;
+    syncHistory();
+  }
+  function travel(from, to, label) {
+    const snap = from.pop();
+    if (!snap) return;
+    to.push(world.snapshot());
+    world.restore(snap);
+    syncHistory();
+    message(label, 1500);
+  }
+  const undo = () => travel(history.undo, history.redo, 'Annullato.');
+  const redo = () => travel(history.redo, history.undo, 'Ripetuto.');
+
+  // ---------------------------------------------------------------- modi di disegno (forme, secchiello)
+  /** La forma trascinata si usa con le sostanze e con gli strumenti che hanno senso su un'area. */
+  const shapeable = (mode) => ['line', 'rect', 'ellipse'].includes(state.mode) && (mode === 'erase' || state.sel.kind === 'sub' || SHAPE_TOOLS.has(state.sel.key));
+  const isFilled = () => state.filled && state.mode !== 'line';
+
+  function commitShape(d) {
+    const [x0, y0] = d.start;
+    const [x1, y1] = d.cur;
+    remember();
+    const r = isFilled() ? 0 : state.brush;
+    for (const [x, y] of shapeCells(d.shape, x0, y0, x1, y1, isFilled())) apply(x, y, d.mode, r);
+  }
+
+  function bucket(x, y, mode) {
+    if (mode === 'erase') {
+      remember();
+      world.fill(x, y, 0);
+      return;
+    }
+    const sel = state.sel;
+    if (sel.kind !== 'sub') {
+      message('Il secchiello riempie con una sostanza: sceglila a sinistra.', 3000);
+      return;
+    }
+    remember();
+    const temp = state.place.dissolved ? Math.min(state.place.temp, 372) : state.place.temp;
+    const n = world.fill(x, y, sel.id, { temp, powder: state.place.form === 'powder', ctype: sel.ctype, dissolved: state.place.dissolved });
+    if (!n) {
+      history.undo.pop(); // niente da riempire: non c'è nulla da annullare
+      syncHistory();
+    }
+  }
+
+  function setMode(key) {
+    state.mode = key;
+    root.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === key)));
+    $('.sbx-filled').hidden = key !== 'rect' && key !== 'ellipse';
+    state.drawing = null;
   }
 
   /** Applica lo strumento lungo il segmento (x0,y0)→(x1,y1), a passi di metà pennello. */
@@ -567,13 +700,31 @@ export function createSandbox(elements, { onClose } = {}) {
       return;
     }
     if (ev.button !== 0 && ev.button !== 2) return;
-    canvas.setPointerCapture(ev.pointerId);
     const mode = ev.button === 2 ? 'erase' : 'primary';
-    if (mode === 'primary' && state.sel.kind === 'tool' && state.sel.key === 'bomb') {
+    const tool = state.sel.kind === 'tool' && mode === 'primary' ? state.sel.key : '';
+    if (tool === 'pick') {
+      pick(x, y);
+      return;
+    }
+    canvas.setPointerCapture(ev.pointerId);
+    if (tool === 'bomb') {
+      remember();
       world.explode(x, y, bombRadius(), 1, 700);
       state.lastPoint = [x, y];
       return;
     }
+    if (state.mode === 'fill') {
+      bucket(x, y, mode);
+      state.lastPoint = [x, y];
+      return;
+    }
+    if (shapeable(mode)) {
+      state.drawing = { mode, shape: state.mode, start: [x, y], cur: [x, y], last: [x, y] };
+      return;
+    }
+    remember();
+    state.wind = [0, 0];
+    state.windAge = 0;
     if (ev.shiftKey && state.lastPoint) applyLine(state.lastPoint[0], state.lastPoint[1], x, y, mode);
     else apply(x, y, mode);
     state.drawing = { mode, last: [x, y] };
@@ -582,17 +733,32 @@ export function createSandbox(elements, { onClose } = {}) {
   canvas.addEventListener('pointermove', (ev) => {
     const c = cellAt(ev);
     state.hover = c.inside ? { x: c.x, y: c.y } : null;
-    if (state.drawing) {
-      const [lx, ly] = state.drawing.last;
-      if (lx !== c.x || ly !== c.y) {
-        applyLine(lx, ly, c.x, c.y, state.drawing.mode);
-        state.drawing.last = [c.x, c.y];
-        state.lastPoint = [c.x, c.y];
+    const d = state.drawing;
+    if (!d) return;
+    if (d.shape) {
+      d.cur = [c.x, c.y];
+      return;
+    }
+    const [lx, ly] = d.last;
+    if (lx !== c.x || ly !== c.y) {
+      if (state.sel.kind === 'tool' && state.sel.key === 'wind') {
+        state.wind = [c.x - lx, c.y - ly];
+        state.windAge = 0;
       }
+      applyLine(lx, ly, c.x, c.y, d.mode);
+      d.last = [c.x, c.y];
+      state.lastPoint = [c.x, c.y];
     }
   });
   const endDraw = () => (state.drawing = null);
-  canvas.addEventListener('pointerup', endDraw);
+  canvas.addEventListener('pointerup', () => {
+    const d = state.drawing;
+    if (d?.shape) {
+      commitShape(d);
+      state.lastPoint = d.cur;
+    }
+    endDraw();
+  });
   canvas.addEventListener('pointercancel', endDraw);
   canvas.addEventListener('pointerleave', () => (state.hover = null));
   canvas.addEventListener(
@@ -652,6 +818,7 @@ export function createSandbox(elements, { onClose } = {}) {
   }
 
   function clearAll() {
+    remember();
     world.clear();
     state.labels = [];
     state.logKeys = [];
@@ -662,7 +829,7 @@ export function createSandbox(elements, { onClose } = {}) {
   function loadPreset(id) {
     const p = PRESETS.find((x) => x.id === id);
     if (!p) return;
-    clearAll();
+    clearAll(); // anche l'esempio si può annullare
     const out = p.build(world, subs) ?? {};
     state.labels = out.labels ?? [];
     togglePop('.sbx-examples', '[data-act="examples"]', false);
@@ -676,6 +843,8 @@ export function createSandbox(elements, { onClose } = {}) {
     const sp = ev.target.closest('[data-speed]');
     const vw = ev.target.closest('[data-view]');
     const pr = ev.target.closest('[data-preset]');
+    const md = ev.target.closest('[data-mode]');
+    if (md) setMode(md.dataset.mode);
     if (sp) {
       state.speed = Number(sp.dataset.speed);
       root.querySelectorAll('[data-speed]').forEach((b) => b.setAttribute('aria-pressed', String(b === sp)));
@@ -692,7 +861,9 @@ export function createSandbox(elements, { onClose } = {}) {
       case 'step': setRunning(false); stepOnce(); break;
       case 'examples': togglePop('.sbx-examples', '[data-act="examples"]'); break;
       case 'help': togglePop('.sbx-help', '[data-act="help"]'); break;
-      case 'clear': clearAll(); message('Sandbox svuotata.', 2000); break;
+      case 'clear': clearAll(); message('Sandbox svuotata (Ctrl + Z annulla).', 2500); break;
+      case 'undo': undo(); break;
+      case 'redo': redo(); break;
       case 'log-clear': world.events.clear(); state.logKeys = []; state.logSeen = -1; renderLog(); break;
       case 'brush-': setBrush(state.brush - 1); break;
       case 'brush+': setBrush(state.brush + 1); break;
@@ -704,9 +875,11 @@ export function createSandbox(elements, { onClose } = {}) {
     const opt = ev.target.dataset?.opt;
     if (opt === 'glow') state.glow = ev.target.checked;
     if (opt === 'edges') world.openEdges = ev.target.checked;
+    if (opt === 'filled') state.filled = ev.target.checked;
     if (ev.target.matches('.sbx-gridsize select')) {
       const [W, H] = GRIDS[ev.target.value];
       world.resize(W, H);
+      resetHistory();
       world.openEdges = $('[data-opt="edges"]').checked;
       state.labels = [];
       state.logKeys = [];
@@ -798,9 +971,11 @@ export function createSandbox(elements, { onClose } = {}) {
   let lastUi = 0;
 
   function stepOnce() {
-    if (state.drawing) {
-      const [x, y] = state.drawing.last;
-      apply(x, y, state.drawing.mode);
+    const d = state.drawing;
+    if (d && !d.shape) {
+      const [x, y] = d.last;
+      if (++state.windAge > 6) state.wind = [0, 0]; // il cursore è fermo: il vento soffia dal centro
+      apply(x, y, d.mode);
     }
     world.step();
   }
@@ -843,7 +1018,14 @@ export function createSandbox(elements, { onClose } = {}) {
       else close();
       return;
     }
-    if (typing || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    const mod = ev.ctrlKey || ev.metaKey;
+    if (mod && !typing && !ev.altKey && (ev.key.toLowerCase() === 'z' || ev.key.toLowerCase() === 'y')) {
+      ev.preventDefault();
+      if (ev.key.toLowerCase() === 'y' || ev.shiftKey) redo();
+      else undo();
+      return;
+    }
+    if (typing || mod || ev.altKey) return;
     const key = ev.key.toLowerCase();
     if (key === ' ') {
       ev.preventDefault();
@@ -855,6 +1037,8 @@ export function createSandbox(elements, { onClose } = {}) {
     } else if (key === 'h') setHeatView(!state.heatView);
     else if (key === 'g') setGlow(!state.glow);
     else if (key === 'e') selectTool('erase');
+    else if (key === 'm') selectTool('stir');
+    else if (key === 'w') selectTool('wind');
     else if (key === '[' || key === '-') setBrush(state.brush - 1);
     else if (key === ']' || key === '+') setBrush(state.brush + 1);
   }

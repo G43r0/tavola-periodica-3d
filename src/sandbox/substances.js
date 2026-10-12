@@ -49,6 +49,8 @@ export const S = {
   EXPLOSIVE: 1 << 27, // detona col calore o con un'esplosione
   DECOMPOSES: 1 << 28, // si decompone invece di bollire
   ORGANIC: 1 << 29, // composto organico (scaldato troppo carbonizza)
+  SOURCE: 1 << 30, // clona all'infinito la sostanza che tocca
+  DRAIN: 2 ** 31, // elimina tutto ciò che lo tocca
 };
 
 // ------------------------------------------------------------------ identificativi
@@ -67,7 +69,9 @@ export const SALT = 129; // ctype = Z del metallo × 128 + Z dell'alogeno
 export const OXIDE = 130; // ctype = Z dell'elemento ossidato
 export const SOLUTION = 131; // idrossido in soluzione; ctype = Z del metallo
 export const GENERATOR = 132;
-export const FIRST_COMPOUND = 133; // da qui le sostanze della libreria del laboratorio
+export const SOURCE = 133;
+export const DRAIN = 134;
+export const FIRST_COMPOUND = 135; // da qui le sostanze della libreria del laboratorio
 
 export const saltCtype = (metal, halogen) => metal * 128 + halogen;
 export const saltParts = (ctype) => [ctype >> 7, ctype & 127];
@@ -402,6 +406,16 @@ function makeOthers() {
       ...base, id: GENERATOR, key: 'generator', name: 'Generatore elettrico', symbol: 'Gen', mp: Infinity, bp: Infinity, densS: 5, densL: 5, densG: 5,
       cond: 0.05, hardness: 0.9, flags: S.GENERATOR | S.BLOCK_ONLY | S.BLOCK_DEFAULT,
       colors: { [SOLID]: [214, 170, 40, 1], [LIQUID]: [214, 170, 40, 1], [GAS]: [214, 170, 40, 1] },
+    },
+    {
+      ...base, id: SOURCE, key: 'source', name: 'Sorgente', symbol: 'Sorg', mp: Infinity, bp: Infinity, densS: 5, densL: 5, densG: 5,
+      cond: 0, hardness: 0.9, flags: S.SOURCE | S.BLOCK_ONLY | S.BLOCK_DEFAULT,
+      colors: { [SOLID]: [58, 170, 140, 1], [LIQUID]: [58, 170, 140, 1], [GAS]: [58, 170, 140, 1] },
+    },
+    {
+      ...base, id: DRAIN, key: 'drain', name: 'Pozzo', symbol: 'Pozzo', mp: Infinity, bp: Infinity, densS: 5, densL: 5, densG: 5,
+      cond: 0, hardness: 0.9, flags: S.DRAIN | S.BLOCK_ONLY | S.BLOCK_DEFAULT,
+      colors: { [SOLID]: [96, 52, 120, 1], [LIQUID]: [96, 52, 120, 1], [GAS]: [96, 52, 120, 1] },
     },
     {
       ...base, kind: 'compound', id: WATER, key: 'water', name: 'Acqua', symbol: 'H₂O', mp: 273.15, bp: 373.15, densS: 0.917, densL: 0.998, densG: gasOf(18.015),
