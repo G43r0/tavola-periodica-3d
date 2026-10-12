@@ -4,6 +4,7 @@
 import '../styles/sandbox.css';
 import { CATEGORY } from '../data/categories.js';
 import { esc, normalize, fmtNumber } from '../chem/format.js';
+import { createT, isItalian } from '../i18n/index.js';
 import { icons } from '../ui/icons.js';
 import {
   createSubstances, AMBIENT, T_MAX, SOLID, LIQUID, GAS, S, WOOD, COAL, CONCRETE, WALL, GENERATOR, SOURCE, DRAIN, WATER, SALT, OXIDE, CO2,
@@ -14,40 +15,46 @@ import { createRenderer, heatScale } from './render.js';
 import { describeEvent, substanceLabel, ALIAS_FORMULA, substanceNotes, fmtCelsius, PHASE_NAME } from './describe.js';
 import { PRESETS } from './presets.js';
 import { shapeCells } from './shapes.js';
+import { SANDBOX_STRINGS } from './sandbox-strings.js';
+import { SANDBOX_DESCRIBE } from './describe-strings.js';
+
+const t = createT(SANDBOX_STRINGS);
 
 const GRIDS = { small: [240, 135], medium: [320, 180], large: [400, 225] };
 const MAX_STEPS_PER_FRAME = 4;
 const HEAT_RATE = 30; // K per passo con gli strumenti Calore / Freddo
 const LOG_ITEMS = 6; // voci mostrate per gruppo nel registro delle reazioni
-const PHASES_GROUP = 'Cambiamenti di stato';
+const PHASES_GROUP = createT(SANDBOX_DESCRIBE)('gPhase'); // deve coincidere con il gruppo di describe.js
 const UNDO_MAX = 12;
 
+const tool = (key, icon, color) => ({ key, icon, color, name: t(key), text: t(`${key}Text`) });
 const TOOLS = [
-  { key: 'erase', name: 'Gomma', icon: 'eraser', color: '#e8eef6', text: 'Cancella tutto ciò che tocca, anche il muro. Il tasto destro cancella sempre.' },
-  { key: 'heat', name: 'Calore', icon: 'thermo', color: '#ff7a3d', text: 'Scalda di 30 K per passo: fonde, fa bollire, accende.' },
-  { key: 'cool', name: 'Freddo', icon: 'snow', color: '#7cc8ff', text: 'Raffredda di 30 K per passo, fino allo zero assoluto: condensa i gas e solidifica i liquidi.' },
-  { key: 'fire', name: 'Fuoco', icon: 'flame', color: '#ffb340', text: 'Fiamme a circa 900 °C: accende ciò che è infiammabile e c\'è aria.' },
-  { key: 'spark', name: 'Scintilla', icon: 'bolt', color: '#fff27a', text: 'Scarica elettrica nei conduttori: metalli, grafite, acqua, sali fusi e gas nobili. Accende l\'idrogeno.' },
-  { key: 'neutron', name: 'Neutroni', icon: 'atom', color: '#cfe6ff', text: 'Sorgente di neutroni veloci: spezzano uranio e plutonio (fissione). Acqua e grafite li rallentano, cadmio e boro li assorbono.' },
-  { key: 'bomb', name: 'Esplosione', icon: 'explode', color: '#ff5d6c', text: 'Un clic, un\'esplosione: il calcestruzzo resiste, il muro indistruttibile non si scalfisce.' },
+  tool('erase', 'eraser', '#e8eef6'),
+  tool('heat', 'thermo', '#ff7a3d'),
+  tool('cool', 'snow', '#7cc8ff'),
+  tool('fire', 'flame', '#ffb340'),
+  tool('spark', 'bolt', '#fff27a'),
+  tool('neutron', 'atom', '#cfe6ff'),
+  tool('bomb', 'explode', '#ff5d6c'),
 ];
 // utilità per costruire e preparare gli esperimenti
 const UTILITIES = [
-  { key: 'stir', name: 'Mescola', icon: 'stir', color: '#b58cff', text: 'Rimescola polveri, liquidi, gas e soluzioni nel pennello e ne uguaglia in parte la temperatura: forma miscele (zolfo e ferro, polvere nera…) che poi reagiscono. I blocchi non si muovono; i liquidi di densità diversa si separano di nuovo da soli.' },
-  { key: 'wind', name: 'Vento', icon: 'wind', color: '#8fd3d8', text: 'Soffia: trascina il cursore per spingere gas, polveri e liquidi in quella direzione; tenendolo fermo li spinge via dal centro.' },
-  { key: 'equalize', name: 'Ambiente', icon: 'ambient', color: '#e6c36a', text: 'Riporta le celle alla temperatura dell\'aria (22 °C) e ne spegne le braci: per ripartire da zero dopo un esperimento.' },
-  { key: 'extinguish', name: 'Estintore', icon: 'extinguisher', color: '#ff6a6a', text: 'Spegne fiamme e braci e raffredda sotto l\'accensione ciò che è infiammabile.' },
-  { key: 'pick', name: 'Pipetta', icon: 'pipette', color: '#9aefff', text: 'Clicca una sostanza nella sandbox per sceglierla, con la sua temperatura e il suo stato (come il clic centrale o Alt + clic).' },
+  tool('stir', 'stir', '#b58cff'),
+  tool('wind', 'wind', '#8fd3d8'),
+  tool('equalize', 'ambient', '#e6c36a'),
+  tool('extinguish', 'extinguisher', '#ff6a6a'),
+  tool('pick', 'pipette', '#9aefff'),
 ];
 const TOOL = Object.fromEntries([...TOOLS, ...UTILITIES].map((t) => [t.key, t]));
 // strumenti che si possono applicare anche a una forma (linea, rettangolo, ellisse)
 const SHAPE_TOOLS = new Set(['erase', 'heat', 'cool', 'equalize', 'extinguish']);
+const mode = (key, icon, id) => ({ key, icon, name: t(`mode${id}`), text: t(`mode${id}Text`) });
 const MODES = [
-  { key: 'brush', icon: 'brushMode', name: 'Pennello', text: 'A mano libera (Maiusc + clic: linea dal punto precedente)' },
-  { key: 'fill', icon: 'bucket', name: 'Riempi', text: 'Secchiello: riempie la regione chiusa che tocca con la sostanza scelta (clic destro: svuota la regione)' },
-  { key: 'line', icon: 'line', name: 'Linea', text: 'Trascina per tracciare una linea' },
-  { key: 'rect', icon: 'rect', name: 'Rettangolo', text: 'Trascina per disegnare un rettangolo (vasche, muri, contenitori)' },
-  { key: 'ellipse', icon: 'ellipse', name: 'Ellisse', text: 'Trascina per disegnare un\'ellisse' },
+  mode('brush', 'brushMode', 'Brush'),
+  mode('fill', 'bucket', 'Fill'),
+  mode('line', 'line', 'Line'),
+  mode('rect', 'rect', 'Rect'),
+  mode('ellipse', 'ellipse', 'Ellipse'),
 ];
 
 // materiali richiesti e composti utili agli esperimenti
@@ -62,98 +69,102 @@ const MATERIALS = [
 ];
 const COMPOUNDS = (subs) => [
   { id: WATER, ctype: 0 },
-  { id: subs.byKey.get('nacl').id, ctype: 0, label: 'Sale' },
-  { id: subs.byKey.get('fe2o3').id, ctype: 0, label: 'Ruggine' },
+  { id: subs.byKey.get('nacl').id, ctype: 0, label: t('salt') },
+  { id: subs.byKey.get('fe2o3').id, ctype: 0, label: t('rust') },
   { id: CO2, ctype: 0, label: 'CO₂' },
 ];
 
-const TEMPLATE = `
+const speedLabel = (v) => (isItalian() ? String(v).replace('.', ',') : String(v));
+const helpRows = (rows) => rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+
+const TEMPLATE = () => `
   <header class="sbx-top">
-    <button type="button" class="btn-ghost sbx-back" data-act="close">${icons.prev(16)}<span>Tavola periodica</span><kbd>Esc</kbd></button>
+    <button type="button" class="btn-ghost sbx-back" data-act="close">${icons.prev(16)}<span>${t('back')}</span><kbd>Esc</kbd></button>
     <div class="sbx-title">
       <span class="sbx-title__icon">${icons.sand(22)}</span>
-      <div><p class="sbx-eyebrow">Simulatore a particelle</p><h2 id="sbx-title">Sandbox degli elementi</h2></div>
+      <div><p class="sbx-eyebrow">${t('eyebrow')}</p><h2 id="sbx-title">${t('title')}</h2></div>
     </div>
     <div class="sbx-transport">
-      <button type="button" class="sbx-icon-btn sbx-play" data-act="play" title="Pausa / riprendi (Spazio)"></button>
-      <button type="button" class="sbx-icon-btn" data-act="step" title="Avanza di un passo (F)">${icons.step(16)}</button>
-      <div class="segmented sbx-speed" role="group" aria-label="Velocità">
-        ${[0.5, 1, 2, 4].map((v) => `<button type="button" class="segmented__btn" data-speed="${v}" aria-pressed="${v === 1}">${String(v).replace('.', ',')}×</button>`).join('')}
+      <button type="button" class="sbx-icon-btn sbx-play" data-act="play" data-help="sandbox.play" title="${t('playTitle')}"></button>
+      <button type="button" class="sbx-icon-btn" data-act="step" data-help="sandbox.step" title="${t('stepTitle')}">${icons.step(16)}</button>
+      <div class="segmented sbx-speed" role="group" aria-label="${t('speed')}" data-help="sandbox.speed">
+        ${[0.5, 1, 2, 4].map((v) => `<button type="button" class="segmented__btn" data-speed="${v}" aria-pressed="${v === 1}">${speedLabel(v)}×</button>`).join('')}
       </div>
     </div>
-    <div class="segmented sbx-view" role="group" aria-label="Vista">
-      <button type="button" class="segmented__btn" data-view="normal" aria-pressed="true">Normale</button>
-      <button type="button" class="segmented__btn" data-view="heat" aria-pressed="false" title="Vista termica (H)">${icons.thermo(14)}<span>Calore</span></button>
+    <div class="segmented sbx-view" role="group" aria-label="${t('view')}" data-help="sandbox.heatView">
+      <button type="button" class="segmented__btn" data-view="normal" aria-pressed="true">${t('viewNormal')}</button>
+      <button type="button" class="segmented__btn" data-view="heat" aria-pressed="false" title="${t('viewHeatTitle')}">${icons.thermo(14)}<span>${t('viewHeat')}</span></button>
     </div>
     <div class="sbx-top__end">
-      <label class="sbx-toggle" title="Bagliore di fiamme, scintille e corpi incandescenti (G)"><input type="checkbox" data-opt="glow" checked /><span>Bagliore</span></label>
-      <label class="sbx-toggle" title="Con i bordi aperti ciò che esce dallo schermo sparisce"><input type="checkbox" data-opt="edges" /><span>Bordi aperti</span></label>
-      <div class="sbx-history" role="group" aria-label="Cronologia">
-        <button type="button" class="sbx-icon-btn" data-act="undo" title="Annulla (Ctrl + Z)" aria-label="Annulla" disabled>${icons.undo(16)}</button>
-        <button type="button" class="sbx-icon-btn" data-act="redo" title="Ripeti (Ctrl + Y)" aria-label="Ripeti" disabled>${icons.redo(16)}</button>
+      <label class="sbx-toggle" data-help="sandbox.glow" title="${t('glowTitle')}"><input type="checkbox" data-opt="glow" checked /><span>${t('glow')}</span></label>
+      <label class="sbx-toggle" data-help="sandbox.edges" title="${t('edgesTitle')}"><input type="checkbox" data-opt="edges" /><span>${t('edges')}</span></label>
+      <div class="sbx-history" role="group" aria-label="${t('history')}" data-help="sandbox.undo">
+        <button type="button" class="sbx-icon-btn" data-act="undo" title="${t('undoTitle')}" aria-label="${t('undo')}" disabled>${icons.undo(16)}</button>
+        <button type="button" class="sbx-icon-btn" data-act="redo" title="${t('redoTitle')}" aria-label="${t('redo')}" disabled>${icons.redo(16)}</button>
       </div>
-      <button type="button" class="btn-ghost" data-act="examples" aria-expanded="false">${icons.book(16)}<span>Esempi</span></button>
-      <button type="button" class="btn-ghost" data-act="clear" title="Svuota la sandbox">${icons.broom(16)}<span>Svuota</span></button>
-      <button type="button" class="btn-icon" data-act="help" aria-expanded="false" title="Comandi">${icons.keyboard(18)}</button>
+      <button type="button" class="btn-ghost" data-act="examples" data-help="sandbox.examples" aria-expanded="false">${icons.book(16)}<span>${t('examples')}</span></button>
+      <button type="button" class="btn-ghost" data-act="clear" data-help="sandbox.clear" title="${t('clearTitle')}">${icons.broom(16)}<span>${t('clear')}</span></button>
+      <button type="button" class="btn-icon" data-act="help" data-help="sandbox.help" aria-expanded="false" title="${t('help')}">${icons.keyboard(18)}</button>
+      <button type="button" class="btn-ghost explain-toggle" data-action="explain" data-help="ui.explain" aria-pressed="false" title="${t('explainTitle')}">${icons.explain(16)}</button>
     </div>
   </header>
 
-  <aside class="sbx-palette" aria-label="Sostanze e strumenti">
-    <p class="sbx-sec">Strumenti</p>
+  <aside class="sbx-palette" aria-label="${t('palette')}">
+    <p class="sbx-sec" data-help="sandbox.tools">${t('secTools')}</p>
     <div class="sbx-tools"></div>
-    <p class="sbx-sec">Utilità</p>
+    <p class="sbx-sec" data-help="sandbox.utilities">${t('secUtil')}</p>
     <div class="sbx-tools sbx-tools--util"></div>
-    <p class="sbx-sec">Materiali</p>
+    <p class="sbx-sec" data-help="sandbox.materials">${t('secMaterials')}</p>
     <div class="sbx-mats"></div>
-    <p class="sbx-sec">Composti</p>
+    <p class="sbx-sec" data-help="term.compound">${t('secCompounds')}</p>
     <div class="sbx-comps"></div>
-    <p class="sbx-sec">Elementi</p>
-    <div class="sbx-search"><input type="search" placeholder="Cerca elemento…" aria-label="Cerca un elemento" spellcheck="false" /></div>
+    <p class="sbx-sec" data-help="term.element">${t('secElements')}</p>
+    <div class="sbx-search"><input type="search" placeholder="${t('searchElement')}" aria-label="${t('searchElementLabel')}" spellcheck="false" /></div>
     <div class="sbx-grid"></div>
-    <p class="sbx-sec">Sostanze della libreria <span class="sbx-sec__count"></span></p>
-    <div class="sbx-search sbx-libsearch"><input type="search" placeholder="Cerca per nome o formula…" aria-label="Cerca una sostanza della libreria" spellcheck="false" /></div>
+    <p class="sbx-sec" data-help="sandbox.library">${t('secLibrary')} <span class="sbx-sec__count"></span></p>
+    <div class="sbx-search sbx-libsearch"><input type="search" placeholder="${t('searchLibrary')}" aria-label="${t('searchLibraryLabel')}" spellcheck="false" /></div>
     <div class="sbx-lib"></div>
-    <p class="sbx-lib__empty" hidden>Nessuna sostanza trovata.</p>
-    <p class="sbx-palette__hint">Clic sinistro: disegna · destro: cancella · rotella: pennello · clic centrale o Alt+clic: preleva.</p>
+    <p class="sbx-lib__empty" hidden>${t('libraryEmpty')}</p>
+    <p class="sbx-palette__hint">${t('paletteHint')}</p>
   </aside>
 
   <main class="sbx-stage">
-    <canvas class="sbx-canvas" aria-label="Sandbox: area di disegno"></canvas>
-    <div class="sbx-paused" hidden>${icons.pause(14)} In pausa</div>
+    <canvas class="sbx-canvas" aria-label="${t('canvas')}"></canvas>
+    <div class="sbx-paused" hidden>${icons.pause(14)} ${t('paused')}</div>
     <div class="sbx-msg" role="status" hidden></div>
     <div class="sbx-intro" hidden>
-      <h3>Una sandbox con la tavola periodica</h3>
-      <p>Scegli un elemento o un materiale a sinistra e disegna. Ogni elemento fonde, bolle, brucia e reagisce secondo i suoi dati reali.</p>
+      <h3>${t('introTitle')}</h3>
+      <p>${t('introText')}</p>
       <div class="sbx-intro__list"></div>
-      <button type="button" class="btn-ghost" data-act="intro-close">Inizia dal foglio bianco</button>
+      <button type="button" class="btn-ghost" data-act="intro-close">${t('introClose')}</button>
     </div>
   </main>
 
   <aside class="sbx-side" aria-live="polite">
     <section class="sbx-card"></section>
     <section class="sbx-log">
-      <header class="sbx-log__head"><h3>Reazioni osservate</h3><button type="button" class="sbx-link" data-act="log-clear">Azzera</button></header>
+      <header class="sbx-log__head"><h3 data-help="sandbox.log">${t('logTitle')}</h3><button type="button" class="sbx-link" data-act="log-clear">${t('logClear')}</button></header>
       <div class="sbx-log__body"></div>
     </section>
   </aside>
 
   <footer class="sbx-status">
-    <div class="sbx-brush">
-      <span>Pennello</span>
-      <button type="button" class="sbx-mini" data-act="brush-" title="Pennello più piccolo ([)">${icons.minus(14)}</button>
-      <input type="range" min="0" max="30" value="3" aria-label="Dimensione del pennello" />
-      <button type="button" class="sbx-mini" data-act="brush+" title="Pennello più grande (])">${icons.plus(14)}</button>
+    <div class="sbx-brush" data-help="sandbox.brush">
+      <span>${t('brush')}</span>
+      <button type="button" class="sbx-mini" data-act="brush-" title="${t('brushSmaller')}">${icons.minus(14)}</button>
+      <input type="range" min="0" max="30" value="3" aria-label="${t('brushSize')}" />
+      <button type="button" class="sbx-mini" data-act="brush+" title="${t('brushBigger')}">${icons.plus(14)}</button>
       <output class="sbx-brush__val">3</output>
     </div>
     <div class="sbx-modes">
-      <div class="segmented" role="group" aria-label="Modo di disegno">
-        ${MODES.map((m) => `<button type="button" class="segmented__btn" data-mode="${m.key}" aria-pressed="${m.key === 'brush'}" title="${esc(m.name)}: ${esc(m.text)}" aria-label="${esc(m.name)}">${icons[m.icon](14)}</button>`).join('')}
+      <div class="segmented" role="group" aria-label="${t('drawMode')}">
+        ${MODES.map((m) => `<button type="button" class="segmented__btn" data-mode="${m.key}" data-help="sandbox.mode.${m.key}" aria-pressed="${m.key === 'brush'}" title="${esc(m.name)}: ${esc(m.text)}" aria-label="${esc(m.name)}">${icons[m.icon](14)}</button>`).join('')}
       </div>
-      <label class="sbx-toggle sbx-filled" hidden title="Disegna la forma piena invece del solo contorno"><input type="checkbox" data-opt="filled" /><span>Pieno</span></label>
+      <label class="sbx-toggle sbx-filled" hidden title="${t('filledTitle')}"><input type="checkbox" data-opt="filled" /><span>${t('filled')}</span></label>
     </div>
     <div class="sbx-hover" aria-live="off"></div>
     <div class="sbx-stats"></div>
-    <label class="sbx-gridsize">Griglia
+    <label class="sbx-gridsize" data-help="sandbox.grid">${t('grid')}
       <select>
         <option value="small">240 × 135</option>
         <option value="medium" selected>320 × 180</option>
@@ -162,32 +173,15 @@ const TEMPLATE = `
     </label>
   </footer>
 
-  <div class="sbx-pop sbx-examples" hidden role="dialog" aria-label="Esempi">
+  <div class="sbx-pop sbx-examples" hidden role="dialog" aria-label="${t('examples')}">
     ${PRESETS.map((p) => `<button type="button" class="sbx-example" data-preset="${p.id}"><b>${esc(p.name)}</b><span>${esc(p.description)}</span></button>`).join('')}
   </div>
-  <div class="sbx-pop sbx-help" hidden role="dialog" aria-label="Comandi">
-    <h4>Mouse</h4>
-    <dl>
-      <dt>Clic sinistro</dt><dd>disegna con la sostanza o lo strumento scelto (tenendo premuto, continua)</dd>
-      <dt>Maiusc + clic</dt><dd>linea dal punto precedente (modo Pennello)</dd>
-      <dt>Modi in basso</dt><dd>Pennello, Riempi (secchiello), Linea, Rettangolo, Ellisse (con «Pieno» per i solidi)</dd>
-      <dt>Clic destro</dt><dd>cancella</dd>
-      <dt>Clic centrale / Alt + clic</dt><dd>preleva la sostanza sotto il cursore</dd>
-      <dt>Rotella</dt><dd>dimensione del pennello</dd>
-    </dl>
-    <h4>Tastiera</h4>
-    <dl>
-      <dt><kbd>Spazio</kbd></dt><dd>pausa / riprendi</dd>
-      <dt><kbd>F</kbd></dt><dd>avanza di un passo</dd>
-      <dt><kbd>H</kbd></dt><dd>vista termica</dd>
-      <dt><kbd>G</kbd></dt><dd>bagliore</dd>
-      <dt><kbd>E</kbd></dt><dd>gomma</dd>
-      <dt><kbd>M</kbd> <kbd>W</kbd></dt><dd>mescola / vento</dd>
-      <dt><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Y</kbd></dt><dd>annulla / ripeti</dd>
-      <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>pennello più piccolo / più grande</dd>
-      <dt><kbd>Esc</kbd></dt><dd>chiude i menu, poi torna alla tavola</dd>
-    </dl>
-    <p>Il tempo della radioattività è accelerato in scala logaritmica; le reazioni sono semplificate (una cella è un «granello» di sostanza, non un atomo).</p>
+  <div class="sbx-pop sbx-help" hidden role="dialog" aria-label="${t('help')}">
+    <h4>${t('helpMouse')}</h4>
+    <dl>${helpRows(t('helpMouseRows'))}</dl>
+    <h4>${t('helpKeyboard')}</h4>
+    <dl>${helpRows(t('helpKeys'))}</dl>
+    <p>${t('helpNote')}</p>
   </div>`;
 
 export function createSandbox(elements, { onClose } = {}) {
@@ -202,7 +196,7 @@ export function createSandbox(elements, { onClose } = {}) {
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
   root.setAttribute('aria-labelledby', 'sbx-title');
-  root.innerHTML = TEMPLATE;
+  root.innerHTML = TEMPLATE();
   document.body.append(root);
   const $ = (s) => root.querySelector(s);
   const canvas = $('.sbx-canvas');
@@ -239,9 +233,9 @@ export function createSandbox(elements, { onClose } = {}) {
     const s = L[id];
     const label = substanceLabel(subs, id, ctype);
     return `<button type="button" class="sbx-item" data-id="${id}" data-ctype="${ctype}" style="--sw:${swatchColor(id)}" title="${esc(label.name)}${label.formula ? ` (${esc(label.formula)})` : ''}">
-      <span class="sbx-item__sw"></span><span class="sbx-item__name">${esc(short ?? (id === GENERATOR ? 'Generatore' : id === WALL ? 'Muro' : s.name))}</span></button>`;
+      <span class="sbx-item__sw"></span><span class="sbx-item__name">${esc(short ?? (id === GENERATOR ? t('generator') : id === WALL ? t('wall') : s.name))}</span></button>`;
   };
-  const toolButton = (t) => `<button type="button" class="sbx-tool" data-tool="${t.key}" style="--tc:${t.color}" title="${esc(t.name)}: ${esc(t.text)}">${icons[t.icon](17)}<span>${t.name}</span></button>`;
+  const toolButton = (x) => `<button type="button" class="sbx-tool" data-tool="${x.key}" data-help="sandbox.tool.${x.key}" style="--tc:${x.color}" title="${esc(x.name)}: ${esc(x.text)}">${icons[x.icon](17)}<span>${x.name}</span></button>`;
   $('.sbx-tools:not(.sbx-tools--util)').innerHTML = TOOLS.map(toolButton).join('');
   $('.sbx-tools--util').innerHTML = UTILITIES.map(toolButton).join('');
   $('.sbx-mats').innerHTML = MATERIALS.map((m) => swatch(m.id, m.ctype)).join('');
@@ -305,9 +299,9 @@ export function createSandbox(elements, { onClose } = {}) {
 
   const palette = $('.sbx-palette');
   palette.addEventListener('click', (ev) => {
-    const t = ev.target.closest('[data-tool]');
+    const tb = ev.target.closest('[data-tool]');
     const b = ev.target.closest('[data-id]');
-    if (t) selectTool(t.dataset.tool);
+    if (tb) selectTool(tb.dataset.tool);
     else if (b) selectSubstance(Number(b.dataset.id), Number(b.dataset.ctype));
   });
   const search = $('.sbx-search input');
@@ -365,11 +359,11 @@ export function createSandbox(elements, { onClose } = {}) {
     root.querySelectorAll('[data-id]').forEach((b) => b.classList.toggle('is-active', sel.kind === 'sub' && Number(b.dataset.id) === sel.id && Number(b.dataset.ctype) === sel.ctype));
     const card = $('.sbx-card');
     if (sel.kind === 'tool') {
-      const t = TOOL[sel.key];
+      const x = TOOL[sel.key];
       card.innerHTML = `
-        <div class="sbx-sel"><span class="sbx-sel__tile sbx-sel__tile--tool" style="--c:${t.color}">${icons[t.icon](26)}</span>
-          <div><p class="sbx-sel__eyebrow">Strumento</p><h3>${t.name}</h3></div></div>
-        <p class="sbx-sel__text">${esc(t.text)}</p>`;
+        <div class="sbx-sel"><span class="sbx-sel__tile sbx-sel__tile--tool" style="--c:${x.color}">${icons[x.icon](26)}</span>
+          <div><p class="sbx-sel__eyebrow">${t('selTool')}</p><h3>${x.name}</h3></div></div>
+        <p class="sbx-sel__text">${esc(x.text)}</p>`;
       return;
     }
     const s = L[sel.id];
@@ -381,7 +375,7 @@ export function createSandbox(elements, { onClose } = {}) {
     const canGas = Number.isFinite(s.bp) && s.bp > 0;
     const blockOnly = s.flags & S.BLOCK_ONLY;
     const groupLabel = s.kind === 'compound' ? subs.groups.find((g) => g.key === s.group)?.label : null;
-    const eyebrow = cat ? `${esc(cat.singular)} · Z = ${s.z}` : groupLabel ? `Libreria · ${esc(groupLabel)}` : { material: 'Materiale', compound: 'Composto', product: 'Prodotto' }[s.kind] ?? '';
+    const eyebrow = cat ? `${esc(cat.singular)} · Z = ${s.z}` : groupLabel ? esc(t('selLibrary', { group: groupLabel })) : { material: t('selMaterial'), compound: t('selCompound'), product: t('selProduct') }[s.kind] ?? '';
     const aqueous = s.flags & S.AQUEOUS;
     const soluble = s.flags & S.SOLUBLE;
     const dissolved = aqueous || (soluble && state.place.dissolved);
@@ -395,21 +389,21 @@ export function createSandbox(elements, { onClose } = {}) {
         blockOnly
           ? ''
           : aqueous
-            ? `<div class="sbx-place"><p class="sbx-label">Posa come</p><p class="sbx-place__aq">Soluzione acquosa (lo ione esiste solo in acqua)</p>
-               <label class="sbx-temp">Temperatura <input type="number" step="1" min="-273" max="99" value="${Math.round(state.place.temp - 273.15)}" /> °C</label></div>`
+            ? `<div class="sbx-place"><p class="sbx-label">${t('placeAs')}</p><p class="sbx-place__aq">${t('aqueousOnly')}</p>
+               <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="-273" max="99" value="${Math.round(state.place.temp - 273.15)}" /> °C</label></div>`
             : `<div class="sbx-place">
-        <p class="sbx-label">Posa come</p>
-        <div class="segmented sbx-phase" role="group" aria-label="Stato">
-          <button type="button" class="segmented__btn" data-phase="${SOLID}" aria-pressed="${!dissolved && phase === SOLID}" ${canSolid ? '' : 'disabled'}>Solido</button>
-          <button type="button" class="segmented__btn" data-phase="${LIQUID}" aria-pressed="${!dissolved && phase === LIQUID}" ${canLiquid ? '' : 'disabled'}>Liquido</button>
-          <button type="button" class="segmented__btn" data-phase="${GAS}" aria-pressed="${!dissolved && phase === GAS}" ${canGas ? '' : 'disabled'}>Gas</button>
-          ${soluble ? `<button type="button" class="segmented__btn" data-phase="aq" aria-pressed="${Boolean(dissolved)}" title="Sciolto in acqua">In soluzione</button>` : ''}
+        <p class="sbx-label">${t('placeAs')}</p>
+        <div class="segmented sbx-phase" role="group" aria-label="${t('phase')}" data-help="term.state">
+          <button type="button" class="segmented__btn" data-phase="${SOLID}" aria-pressed="${!dissolved && phase === SOLID}" ${canSolid ? '' : 'disabled'}>${t('solid')}</button>
+          <button type="button" class="segmented__btn" data-phase="${LIQUID}" aria-pressed="${!dissolved && phase === LIQUID}" ${canLiquid ? '' : 'disabled'}>${t('liquid')}</button>
+          <button type="button" class="segmented__btn" data-phase="${GAS}" aria-pressed="${!dissolved && phase === GAS}" ${canGas ? '' : 'disabled'}>${t('gas')}</button>
+          ${soluble ? `<button type="button" class="segmented__btn" data-phase="aq" aria-pressed="${Boolean(dissolved)}" title="${t('dissolvedTitle')}">${t('dissolved')}</button>` : ''}
         </div>
-        <div class="segmented sbx-form" role="group" aria-label="Forma del solido" ${!dissolved && phase === SOLID ? '' : 'hidden'}>
-          <button type="button" class="segmented__btn" data-form="powder" aria-pressed="${state.place.form === 'powder'}">Polvere</button>
-          <button type="button" class="segmented__btn" data-form="block" aria-pressed="${state.place.form === 'block'}">Blocco</button>
+        <div class="segmented sbx-form" role="group" aria-label="${t('solidForm')}" ${!dissolved && phase === SOLID ? '' : 'hidden'}>
+          <button type="button" class="segmented__btn" data-form="powder" aria-pressed="${state.place.form === 'powder'}">${t('powder')}</button>
+          <button type="button" class="segmented__btn" data-form="block" aria-pressed="${state.place.form === 'block'}">${t('block')}</button>
         </div>
-        <label class="sbx-temp">Temperatura <input type="number" step="1" min="-273" max="${Math.round(T_MAX - 273.15)}" value="${Math.round(state.place.temp - 273.15)}" /> °C</label>
+        <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="-273" max="${Math.round(T_MAX - 273.15)}" value="${Math.round(state.place.temp - 273.15)}" /> °C</label>
       </div>`
       }
       <ul class="sbx-notes">${substanceNotes(subs, sel.id, sel.ctype).map((n) => `<li>${esc(n)}</li>`).join('')}</ul>`;
@@ -614,8 +608,8 @@ export function createSandbox(elements, { onClose } = {}) {
     syncHistory();
     message(label, 1500);
   }
-  const undo = () => travel(history.undo, history.redo, 'Annullato.');
-  const redo = () => travel(history.redo, history.undo, 'Ripetuto.');
+  const undo = () => travel(history.undo, history.redo, t('undone'));
+  const redo = () => travel(history.redo, history.undo, t('redone'));
 
   // ---------------------------------------------------------------- modi di disegno (forme, secchiello)
   /** La forma trascinata si usa con le sostanze e con gli strumenti che hanno senso su un'area. */
@@ -638,7 +632,7 @@ export function createSandbox(elements, { onClose } = {}) {
     }
     const sel = state.sel;
     if (sel.kind !== 'sub') {
-      message('Il secchiello riempie con una sostanza: sceglila a sinistra.', 3000);
+      message(t('bucketNeedsSubstance'), 3000);
       return;
     }
     remember();
@@ -783,7 +777,7 @@ export function createSandbox(elements, { onClose } = {}) {
     state.running = v;
     const b = $('.sbx-play');
     b.innerHTML = v ? icons.pause(16) : icons.play(16);
-    b.setAttribute('aria-label', v ? 'Pausa' : 'Riprendi');
+    b.setAttribute('aria-label', v ? t('pause') : t('resume'));
     b.classList.toggle('is-paused', !v);
     $('.sbx-paused').hidden = v;
   }
@@ -861,7 +855,7 @@ export function createSandbox(elements, { onClose } = {}) {
       case 'step': setRunning(false); stepOnce(); break;
       case 'examples': togglePop('.sbx-examples', '[data-act="examples"]'); break;
       case 'help': togglePop('.sbx-help', '[data-act="help"]'); break;
-      case 'clear': clearAll(); message('Sandbox svuotata (Ctrl + Z annulla).', 2500); break;
+      case 'clear': clearAll(); message(t('cleared'), 2500); break;
       case 'undo': undo(); break;
       case 'redo': redo(); break;
       case 'log-clear': world.events.clear(); state.logKeys = []; state.logSeen = -1; renderLog(); break;
@@ -908,7 +902,7 @@ export function createSandbox(elements, { onClose } = {}) {
     }
     state.logKeys = state.logKeys.filter((k) => world.events.has(k));
     if (!state.logKeys.length) {
-      body.innerHTML = '<p class="sbx-log__empty">Qui compaiono le reazioni, i decadimenti e i cambiamenti di stato che avvengono nella sandbox, con le loro equazioni.</p>';
+      body.innerHTML = `<p class="sbx-log__empty">${esc(t('logEmpty'))}</p>`;
       return;
     }
     // gruppi nell'ordine in cui sono comparsi (prima la causa, poi le conseguenze); dentro, i più recenti in alto
@@ -926,11 +920,11 @@ export function createSandbox(elements, { onClose } = {}) {
         const all = groups.get(g);
         const items = all.slice(0, LOG_ITEMS);
         const more = all.length - items.length;
-        return `<section class="sbx-log__group"><h4>${g}</h4><ul>${items
+        return `<section class="sbx-log__group"><h4>${esc(g)}</h4><ul>${items
           .map(([k, d]) => `<li class="${now - (state.logFresh.get(k) ?? 0) < 1500 ? 'is-new' : ''}">
             <div class="sbx-log__title"><span>${esc(d.title)}</span><b>×${fmtNumber(world.events.get(k))}</b></div>
             <div class="sbx-log__eq">${esc(d.equation)}</div>${d.note ? `<p>${esc(d.note)}</p>` : ''}</li>`)
-          .join('')}</ul>${more > 0 ? `<p class="sbx-log__more">… e altre ${more}</p>` : ''}</section>`;
+          .join('')}</ul>${more > 0 ? `<p class="sbx-log__more">${t('logMore', { n: more })}</p>` : ''}</section>`;
       })
       .join('');
   }
@@ -946,14 +940,14 @@ export function createSandbox(elements, { onClose } = {}) {
     }
     if (!c.id) {
       const parts = world.particles.filter((p) => Math.floor(p.x) === h.x && Math.floor(p.y) === h.y);
-      el.innerHTML = parts.length ? `<b>${parts[0].kind === 1 ? 'Neutrone' : 'Radiazione'}</b>` : `<span class="muted">Aria · ${fmtCelsius(AMBIENT)}</span>`;
+      el.innerHTML = parts.length ? `<b>${parts[0].kind === 1 ? t('hNeutron') : t('hRadiation')}</b>` : `<span class="muted">${t('hAir')} · ${fmtCelsius(AMBIENT)}</span>`;
       return;
     }
     const s = L[c.id];
     const label = substanceLabel(subs, c.id, c.ctype);
     const sym = s.kind === 'element' ? `<span class="sbx-hover__sym">${esc(s.symbol)}</span>` : '';
-    const state_ = s.flags & S.FIRE ? 'fiamma' : c.dissolved || s.flags & S.AQUEOUS ? (c.phase === SOLID ? 'soluzione gelata' : 'in soluzione') : c.phase === SOLID ? (s.flags & S.BLOCK_ONLY ? 'solido' : c.powder ? 'polvere' : 'blocco') : PHASE_NAME[c.phase];
-    const extra = [c.burning ? 'brucia' : '', c.spark ? 'corrente' : ''].filter(Boolean).join(' · ');
+    const state_ = s.flags & S.FIRE ? t('hFlame') : c.dissolved || s.flags & S.AQUEOUS ? (c.phase === SOLID ? t('hFrozenSolution') : t('hSolution')) : c.phase === SOLID ? (s.flags & S.BLOCK_ONLY ? t('hSolid') : c.powder ? t('hPowder') : t('hBlock')) : PHASE_NAME[c.phase];
+    const extra = [c.burning ? t('hBurning') : '', c.spark ? t('hCurrent') : ''].filter(Boolean).join(' · ');
     const tShow = s.flags & S.WALL ? '' : ` · <b>${fmtCelsius(c.temp)}</b>`;
     el.innerHTML = `${sym}<b>${esc(label.name)}</b>${label.formula && label.formula !== s.symbol ? ` <span class="muted">${esc(label.formula)}</span>` : ''} · ${state_}${tShow}${extra ? ` · <span class="sbx-hover__hot">${extra}</span>` : ''}
       <span class="sbx-hover__bar" style="--t:${heatScale(c.temp)}"></span>`;
@@ -961,7 +955,7 @@ export function createSandbox(elements, { onClose } = {}) {
 
   let fps = 60;
   function renderStats() {
-    $('.sbx-stats').textContent = `${fmtNumber(cellCount)} celle · ${fmtNumber(world.particles.length)} particelle · ${Math.round(fps)} fps`;
+    $('.sbx-stats').textContent = t('stats', { cells: fmtNumber(cellCount), parts: fmtNumber(world.particles.length), fps: Math.round(fps) });
   }
 
   // ---------------------------------------------------------------- ciclo
