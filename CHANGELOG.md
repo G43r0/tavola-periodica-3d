@@ -44,6 +44,16 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
     acqua salata ed evaporazione, esplosivi.
   - Test: `tests/sandbox/compounds.test.mjs` (dati delle 554 sostanze, catalogo, soluzioni, precipitazione,
     combustione, catalizzatore, decomposizione, detonazione, metalli e acidi, carbonizzazione).
+- **Nuovi strumenti nella sandbox**:
+  - **Mescola** (`M`): rimescola polveri, liquidi, gas e soluzioni nel pennello e ne uguaglia in parte la temperatura,
+    per formare miscele (ferro + zolfo, polvere nera) che poi reagiscono; i blocchi restano fermi e i liquidi di
+    densità diversa si separano di nuovo da soli.
+  - **Vento** (`W`), **Ambiente** (riporta a 22 °C), **Estintore** (spegne fiamme e braci), **Pipetta** (sceglie la sostanza).
+  - Materiali **Sorgente** (clona all'infinito la sostanza che tocca) e **Pozzo** (cancella ciò che lo tocca).
+  - **Modi di disegno**: Pennello, Riempi (secchiello sulla regione chiusa), Linea, Rettangolo ed Ellisse (pieni o solo
+    contorno, con anteprima); **Annulla / Ripeti** (`Ctrl + Z` / `Ctrl + Y`, 12 passi).
+  - 2 nuovi esempi: «Miscele con Mescola» e «Sorgenti, pozzi e vento».
+  - Test: `tests/sandbox/tools.test.mjs`; modulo `src/sandbox/shapes.js`.
 - **Tutte le 1349 reazioni del catalogo nel laboratorio**: il pulsante «Reazioni» le elenca in 14 gruppi divisi in
   sottogruppi (si aprono uno alla volta) e una **ricerca** trova una reazione da formula, sostanza o parola. Le 1302
   nuove hanno equazione, condizioni e nota; le 47 già presenti conservano nome e descrizione. Per ognuna sono

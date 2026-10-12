@@ -311,10 +311,10 @@ nel pennello). È una «sabbiera» a particelle ispirata a *The Powder Toy*: una
 - **Registro delle reazioni**: a destra compaiono, con l'equazione bilanciata e il numero di volte, le reazioni avvenute
   (per quelle del catalogo anche condizioni, ΔH° e numero nel catalogo), le soluzioni e le cristallizzazioni, i
   decadimenti (²²⁶Ra → ²²²Rn + ⁴He), le fissioni e i cambiamenti di stato (con la temperatura).
-- **Esempi** pronti (17): metalli alcalini in acqua, saggio alla fiamma, termite, reazione a catena, scarica nei gas,
+- **Esempi** pronti (19): metalli alcalini in acqua, saggio alla fiamma, termite, reazione a catena, scarica nei gas,
   decadimento radioattivo, legno e carbone, idrogeno e ossigeno, galleggiare sul mercurio, elettrolisi dell'acqua,
   precipitazioni colorate, combustibili, acqua ossigenata e catalizzatore, metalli e acido cloridrico, acqua salata ed
-  evaporazione, esplosivi, sodio e cloro.
+  evaporazione, esplosivi, miscele con Mescola, sorgenti-pozzi-vento, sodio e cloro.
 
 | Strumento | Effetto |
 |---|---|
@@ -324,6 +324,20 @@ nel pennello). È una «sabbiera» a particelle ispirata a *The Powder Toy*: una
 | Scintilla | impulso elettrico nei conduttori |
 | Neutroni | sorgente di neutroni veloci |
 | Esplosione | un'esplosione al clic |
+| **Mescola** (`M`) | rimescola polveri, liquidi, gas e soluzioni nel pennello e ne uguaglia la temperatura: forma miscele (ferro + zolfo, polvere nera…) che poi reagiscono; i liquidi di densità diversa si separano di nuovo |
+| **Vento** (`W`) | spinge gas, polveri e liquidi nella direzione in cui trascini il cursore; fermo, li spinge via dal centro |
+| **Ambiente** | riporta le celle a 22 °C e ne spegne le braci |
+| **Estintore** | spegne fiamme e braci e raffredda sotto l'accensione |
+| **Pipetta** | sceglie la sostanza (con temperatura e stato) su cui clicchi |
+
+Altri materiali: la **Sorgente** clona all'infinito la prima sostanza che tocca (posala accanto all'acqua, alla sabbia o a un
+gas) e il **Pozzo** cancella tutto ciò che lo tocca, per svuotare vasche e smaltire i gas.
+
+**Modi di disegno** (in basso a sinistra): *Pennello* a mano libera, *Riempi* (secchiello: riempie la regione chiusa che
+tocca con la sostanza scelta; il clic destro la svuota), *Linea*, *Rettangolo* ed *Ellisse* trascinando il mouse (con
+«Pieno» o solo contorno, spesso quanto il pennello: ideale per vasche e contenitori). **Annulla** e **Ripeti**
+(`Ctrl + Z` / `Ctrl + Y`, anche i pulsanti in alto) tornano indietro di 12 modifiche, compreso «Svuota» e il caricamento
+di un esempio.
 
 Limiti dichiarati: una cella è un «granello», non un atomo; le reazioni, le conducibilità e le velocità sono semplificate
 e scelte per il gioco (una cella di prodotto per ogni cella di reagente, in proporzione ai coefficienti); i prodotti
@@ -375,10 +389,11 @@ src/
     world.js          motore: movimento, calore, cambi di stato, soluzioni, combustione, reazioni, elettricità, radioattività, esplosioni
     render.js         disegno: colori, incandescenza, fiamme colorate, scariche, vista termica, bagliore
     describe.js       nomi e formule generati, equazioni del registro, note sulle sostanze
+    shapes.js         linea, rettangolo, ellisse come elenco di celle
     presets.js        esempi pronti
     sandbox-view.js   interfaccia: tavolozza, strumenti, pennello, scheda, registro, tastiera
 tests/lab/            test del motore chimico (npm test)
-tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo)
+tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo, strumenti)
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json

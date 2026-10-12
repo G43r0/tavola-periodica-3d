@@ -1,7 +1,7 @@
 // Disegno della sandbox: dalla griglia del motore ai pixel (una cella = un pixel, poi ingrandito dal canvas).
 // Colori realistici delle sostanze, incandescenza dei corpi caldi (dal punto di Draper, 525 °C), fiamme colorate,
 // scintille, scarica nei gas e vista termica. Riempie due buffer: colore e bagliore (per l'effetto glow).
-import { SOLID, LIQUID, GAS, S, WOOD, CONCRETE, WALL, GENERATOR, SALT, OXIDE, SOLUTION, variantColor } from './substances.js';
+import { SOLID, LIQUID, GAS, S, WOOD, CONCRETE, WALL, GENERATOR, SOURCE, DRAIN, SALT, OXIDE, SOLUTION, variantColor } from './substances.js';
 import { C_BURN, C_DISSOLVED, SPARK_ACTIVE, NEUTRON } from './world.js';
 
 const BG = [6, 9, 14];
@@ -123,7 +123,7 @@ export function createRenderer(world, subs) {
    * @returns {number} celle occupate
    */
   function draw(out, glow, { heatView = false, frame = 0 } = {}) {
-    const { W, N, type, temp, flags: cf, seed, spark, ctype, life } = world;
+    const { W, N, type, temp, flags: cf, seed, spark, ctype, life, vx } = world;
     const bgPix = (255 << 24) | (BG[2] << 16) | (BG[1] << 8) | BG[0];
     let count = 0;
     for (let i = 0; i < N; i++) {
@@ -196,6 +196,19 @@ export function createRenderer(world, subs) {
         else if (id === CONCRETE) shade = seed[i] > 236 ? 0.72 : seed[i] < 18 ? 1.12 : 0.95 + seed[i] / 2550;
         else if (id === WALL) shade = (x + y) % 4 === 0 ? 1.25 : 1;
         else if (id === GENERATOR) shade = ((x >> 1) + (y >> 1)) & 1 ? 1 : 0.55;
+        else if (id === DRAIN) shade = ((x + y) & 3) === 0 ? 1.5 : ((x ^ y) & 2 ? 0.45 : 0.8);
+        else if (id === SOURCE) {
+          // scacchiera: il colore della sorgente e quello della sostanza che clona
+          shade = 1;
+          const mem = ctype[i];
+          if (mem && ((x >> 1) + (y >> 1)) & 1) {
+            const mt = vx[i]; // temperatura ricordata
+            const mo = mem * 16 + (mt < mp[mem] ? SOLID : mt < bp[mem] ? LIQUID : GAS) * 4;
+            r = base[mo];
+            g = base[mo + 1];
+            b = base[mo + 2];
+          }
+        }
         else if (ph === SOLID) shade = cf[i] & 1 ? 0.86 + seed[i] / 920 : 0.95 + seed[i] / 2550;
         else if (ph === LIQUID) shade = 0.95 + seed[i] / 2550;
         else shade = 1;
