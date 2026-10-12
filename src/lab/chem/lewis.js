@@ -4,6 +4,22 @@
 // più elettronegativi, poi quelli degli altri; gli avanzi vanno sull'atomo centrale che può espandere
 // l'ottetto (dal 3° periodo); un elettrone dispari resta spaiato (radicale).
 import { TIER } from './elements-lab.js';
+import { createT } from '../../i18n/index.js';
+
+const t = createT({
+  it: {
+    notEnough: 'Non ci sono abbastanza elettroni per tutti questi legami.',
+    period2: 'Un atomo del 2° periodo non può avere più di 8 elettroni attorno.',
+  },
+  en: {
+    notEnough: 'There are not enough electrons for all these bonds.',
+    period2: 'An atom of period 2 cannot have more than 8 electrons around it.',
+  },
+  eli6: {
+    notEnough: 'Non ci sono abbastanza elettroni per fare tutti questi legami: ogni legame ha bisogno di 2 elettroni.',
+    period2: 'Questo atomo è piccolo: intorno a lui ci stanno al massimo 8 elettroni.',
+  },
+});
 
 /** L'atomo segue la regola dell'ottetto (o del duetto)? */
 export function usesOctet(info) {
@@ -36,7 +52,7 @@ export function analyzeLewis(lab, atoms, bonds) {
   const result = { charge: Q, electrons, invalid: null };
 
   if (R < 0) {
-    result.invalid = 'Non ci sono abbastanza elettroni per tutti questi legami.';
+    result.invalid = t('notEnough');
     R = 0;
   } else if (n === 1) {
     L[0] = R;
@@ -121,7 +137,7 @@ export function analyzeLewis(lab, atoms, bonds) {
   result.incomplete = result.atoms.map((a, i) => (a.incomplete ? i : -1)).filter((i) => i >= 0);
   result.expanded = result.atoms.map((a, i) => (a.expanded ? i : -1)).filter((i) => i >= 0);
   if (!result.invalid && result.atoms.some((a) => a.overfilled)) {
-    result.invalid = 'Un atomo del 2° periodo non può avere più di 8 elettroni attorno.';
+    result.invalid = t('period2');
   }
   result.unverified = info.some((x) => x.tier !== TIER.MAIN);
   return result;

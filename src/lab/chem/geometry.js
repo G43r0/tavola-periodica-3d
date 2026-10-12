@@ -8,6 +8,7 @@
 //  - repulsione tra atomi non legati
 // Unità: 1 = 100 pm.
 import { TIER, ionicRadius } from './elements-lab.js';
+import { isItalian } from '../../i18n/index.js';
 
 const ORDER_FACTOR = { 1: 1, 2: 0.87, 3: 0.78 }; // accorciamento tipico dei legami multipli (C–C 154, C=C 134, C≡C 120 pm)
 const BOND_SYMBOL = { 1: '-', 2: '=', 3: '#' };
@@ -37,7 +38,7 @@ function rng(seed) {
 
 // ------------------------------------------------------------------ VSEPR
 
-const SHAPES = {
+const SHAPES_IT = {
   '0-0': 'atomo isolato',
   '1-0': 'lineare',
   '2-0': 'lineare',
@@ -59,7 +60,29 @@ const SHAPES = {
   '6-1': 'ottaedrica distorta',
 };
 
-const IDEAL = {
+const SHAPES_EN = {
+  '0-0': 'isolated atom',
+  '1-0': 'linear',
+  '2-0': 'linear',
+  '3-0': 'trigonal planar',
+  '2-1': 'bent',
+  '4-0': 'tetrahedral',
+  '3-1': 'trigonal pyramidal',
+  '2-2': 'bent',
+  '5-0': 'trigonal bipyramidal',
+  '4-1': 'seesaw',
+  '3-2': 'T-shaped',
+  '2-3': 'linear',
+  '6-0': 'octahedral',
+  '5-1': 'square pyramidal',
+  '4-2': 'square planar',
+  '3-3': 'T-shaped',
+  '2-4': 'linear',
+  '7-0': 'pentagonal bipyramidal',
+  '6-1': 'distorted octahedral',
+};
+
+const IDEAL_IT = {
   2: '180°',
   3: '120°',
   4: '109,5°',
@@ -67,6 +90,7 @@ const IDEAL = {
   6: '90°',
   7: '72° e 90°',
 };
+const IDEAL_EN = { ...IDEAL_IT, 4: '109.5°', 5: '90° and 120°', 7: '72° and 90°' };
 
 /**
  * Classificazione VSEPR di ogni atomo con almeno 2 vicini.
@@ -85,8 +109,10 @@ export function vsepr(lab, desc, lewis) {
     const info = lab.get(a.z);
     const la = lewis.atoms[i];
     const E = info.tier === TIER.MAIN ? la.lonePairs + la.unpaired : 0;
-    const shape = SHAPES[`${X}-${E}`] ?? `${X + E} domini`;
+    const it = isItalian();
+    const shape = (it ? SHAPES_IT : SHAPES_EN)[`${X}-${E}`] ?? (it ? `${X + E} domini` : `${X + E} domains`);
     const steric = X + E;
+    const IDEAL = it ? IDEAL_IT : IDEAL_EN;
     let ideal = IDEAL[steric] ?? null;
     if (E > 0 && (steric === 3 || steric === 4)) ideal = `< ${IDEAL[steric]}`;
     return {
