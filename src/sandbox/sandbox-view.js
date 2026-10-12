@@ -17,6 +17,7 @@ import { PRESETS } from './presets.js';
 import { shapeCells } from './shapes.js';
 import { SANDBOX_STRINGS } from './sandbox-strings.js';
 import { SANDBOX_DESCRIBE } from './describe-strings.js';
+import { sig } from '../ui/spark-sig.js';
 
 const t = createT(SANDBOX_STRINGS);
 
@@ -26,6 +27,7 @@ const HEAT_RATE = 30; // K per passo con gli strumenti Calore / Freddo
 const LOG_ITEMS = 6; // voci mostrate per gruppo nel registro delle reazioni
 const PHASES_GROUP = createT(SANDBOX_DESCRIBE)('gPhase'); // deve coincidere con il gruppo di describe.js
 const UNDO_MAX = 12;
+const WISH = new Set([3639269274, 4052130931, 603149676, 2256958044, 753731565, 245870697]);
 
 const tool = (key, icon, color) => ({ key, icon, color, name: t(key), text: t(`${key}Text`) });
 const TOOLS = [
@@ -276,6 +278,21 @@ export function createSandbox(elements, { onClose } = {}) {
     $('.sbx-lib__empty').hidden = any;
   });
   libSearch.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' && WISH.has(sig(libSearch.value))) {
+      remember();
+      let n = 0;
+      for (let i = 0; i < world.type.length; i++) {
+        if (world.type[i] === 82) {
+          world.transmute(i, 79, world.temp[i]);
+          n++;
+        }
+      }
+      libSearch.value = '';
+      libSearch.dispatchEvent(new Event('input'));
+      window.dispatchEvent(new CustomEvent('tp3d:secret', { detail: { id: 'alchemy', n } }));
+      ev.stopPropagation();
+      return;
+    }
     if (ev.key === 'Enter') {
       const first = root.querySelector('.sbx-libitem:not([hidden])');
       if (first && libSearch.value) selectSubstance(Number(first.dataset.id), 0);

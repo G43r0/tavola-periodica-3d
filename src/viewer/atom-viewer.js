@@ -760,6 +760,7 @@ export function createAtomViewer(elements, { onClose }) {
     root.classList.add('has-particle');
     root.classList.remove('is-quark-view');
     particlePanel.hidden = false;
+    window.dispatchEvent(new CustomEvent('tp3d:particle', { detail: { kind } }));
     renderParticle();
     particlePanel.scrollTop = 0;
     updateInsets();
