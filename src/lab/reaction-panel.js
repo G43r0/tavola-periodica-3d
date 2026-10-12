@@ -241,7 +241,7 @@ export function simulationReportHtml(sim) {
           <button type="button" class="chip-btn" data-sim-add="${m.re.r.id}">${tr('addSim')}</button></div>`;
       }),
       ...endothermic.slice(0, 3).map((re) => `<div class="sim-hint is-endo"><p>${tr('endoHint', { title: esc(reactionTitle(re)), dh: kj(reactionDH(re)) })}</p>${equationHtml(re)}</div>`),
-      ...needs.slice(0, 4).map((re) => `<div class="sim-hint"><p>${re.r.needs ? tr('needs', { title: esc(reactionTitle(re)), needs: esc(re.r.needs) }) : tr('equilibrium', { title: esc(reactionTitle(re)) })}</p></div>`),
+      ...needs.slice(0, 4).map((re) => `<div class="sim-hint"><p>${re.r.needs ? tr('needs', { title: esc(reactionTitle(re)), needs: esc(re.r.needsText ?? re.r.needs) }) : tr('equilibrium', { title: esc(reactionTitle(re)) })}</p></div>`),
     ];
     body = `<p>${tr('bounce', { energy: sim.energy })}</p>
       ${hints.join('')}
@@ -276,7 +276,7 @@ function reactionItem(re) {
 function searchText(re) {
   if (!re.search) {
     const names = [...re.reactants, ...re.products].map((x) => x.name).join(' ');
-    const text = `${equationText(re)} ${re.r.name ?? ''} ${re.r.cond ?? ''} ${re.r.sub ?? ''} ${re.r.desc} ${names}`;
+    const text = `${equationText(re)} ${re.r.name ?? ''} ${re.r.cond ?? ''} ${re.r.condText ?? ''} ${re.r.sub ?? ''} ${re.r.desc} ${names} ${[...re.reactants, ...re.products].map((x) => x.nameIt ?? '').join(' ')}`;
     re.search = normalizeName(text.replace(/[₀-₉]/g, (c) => '₀₁₂₃₄₅₆₇₈₉'.indexOf(c)));
   }
   return re.search;
@@ -448,7 +448,7 @@ export function reactionCardHtml(lab, re, ui) {
       ${bondsBlock}
     </section>
     <section class="mp-sec"><h4>${tr('theReaction')}</h4><p>${esc(r.desc)}</p>${r.note ? `<p class="mp-callout">${esc(r.note)}</p>` : ''}
-      ${r.cond ? `<p class="rx-cond"><b>${tr('conditions')}</b> ${esc(r.cond)}</p>` : ''}
-      ${r.needs ? `<p class="rx-cond"><b>${tr('requires')}</b> ${esc(r.needs)} ${tr('requiresNote')}</p>` : ''}
+      ${r.cond ? `<p class="rx-cond"><b>${tr('conditions')}</b> ${esc(r.condText ?? r.cond)}</p>` : ''}
+      ${r.needs ? `<p class="rx-cond"><b>${tr('requires')}</b> ${esc(r.needsText ?? r.needs)} ${tr('requiresNote')}</p>` : ''}
       ${r.rev ? `<p class="rx-cond">${tr('reversible')}</p>` : ''}</section>`;
 }

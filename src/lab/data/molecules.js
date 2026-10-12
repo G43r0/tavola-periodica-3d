@@ -8,6 +8,7 @@
 
 import { MORE_GROUPS, MORE_MOLECULES } from './molecules-more.js';
 import { REACTION_MOLECULES } from './molecules-reazioni.js';
+import { localizeLibrary } from '../../i18n/lab-data.js';
 
 const BASE_GROUPS = [
   { key: 'elementi', label: 'Elementi' },
@@ -225,3 +226,6 @@ export const MOLECULE_GROUPS = MORE_GROUPS.reduce((list, g) => {
 }, [...BASE_GROUPS]);
 
 export const MOLECULES = [...BASE_MOLECULES, ...MORE_MOLECULES, ...REACTION_MOLECULES];
+
+// nomi e testi nella lingua dell'interfaccia (in inglese; in italiano restano questi)
+localizeLibrary(MOLECULES, MOLECULE_GROUPS);

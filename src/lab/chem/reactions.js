@@ -33,6 +33,7 @@ export function speciesInfo(lab, library, elements, key) {
       key,
       formula: symbol,
       name: el.name,
+      nameIt: el.nameIt,
       state: el.state,
       mark: STATE_MARK[el.state] ?? '',
       hf: 0, // elemento nel suo stato standard
@@ -49,6 +50,7 @@ export function speciesInfo(lab, library, elements, key) {
     key,
     formula: entry.formula ?? null,
     name: entry.name,
+    nameIt: entry.nameIt,
     state: entry.state,
     mark: STATE_MARK[entry.state] ?? '',
     hf: entry.hf ?? null,
