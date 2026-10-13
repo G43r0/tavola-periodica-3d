@@ -54,6 +54,7 @@ export const GAME_STRINGS = {
     orderShort: 'Esercitazione {n}',
     orderN: 'Esercitazione {n}: {title}',
     orderPay: 'Paga: fino a {pay} · tempo consigliato: {min} min',
+    boardLabel: 'Alla lavagna',
     reactionLabel: 'Reazione',
 
     boardWelcome: 'Benvenuto nel laboratorio!',
@@ -337,6 +338,7 @@ export const GAME_STRINGS = {
     orderShort: 'Exercise {n}',
     orderN: 'Exercise {n}: {title}',
     orderPay: 'Pay: up to {pay} · suggested time: {min} min',
+    boardLabel: 'On the blackboard',
     reactionLabel: 'Reaction',
 
     boardWelcome: 'Welcome to the laboratory!',

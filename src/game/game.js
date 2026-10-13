@@ -993,7 +993,12 @@ export class LabGame {
     _v.set(def.rim[k], def.rim[k + 1], def.rim[k + 2]).applyMatrix4(item.mesh.matrixWorld);
     _v2.set(def.rim[k] * 1.25, def.rim[k + 1], def.rim[k + 2] * 1.25).applyMatrix4(item.mesh.matrixWorld).sub(_v);
     _v2.y = 0;
-    const out = _v2.lengthSq() > 1e-10 ? _v2.normalize() : _v2.set(0, 0, 0);
+    const out = _v2.lengthSq() > 1e-10 ? _v2.normalize().clone() : new THREE.Vector3();
+    // inclinato quasi in orizzontale o oltre, la direzione «in fuori» del bordo è instabile (a 100° la bocca guarda in
+    // basso): il getto esce nella direzione dell'asse del recipiente, proiettata in orizzontale
+    const axis = new THREE.Vector3(0, 1, 0).applyQuaternion(item.mesh.quaternion);
+    const flat = Math.hypot(axis.x, axis.z);
+    if (flat > 0.2) out.set(axis.x / flat, 0, axis.z / flat);
     const p = _v.clone().addScaledVector(out, 0.003);
     // velocità orizzontale del getto ≈ √(g·h): una goccia cade quasi dritta, un getto pieno va più in là
     const speed = def.drops ? 0.01 : Math.min(0.45, 0.6 * Math.sqrt(9.81 * Math.min(h, 0.03)));
@@ -1249,6 +1254,8 @@ export class LabGame {
   // ------------------------------------------------------------------ fuoco, gas, doccia, estintore
 
   updateHazards(dt) {
+    // con una finestra aperta il gioco si ferma (dt = 0): niente brucia, niente si spegne
+    if (!(dt > 0)) return;
     // estintore: un cono di CO₂ davanti alla tromba
     const ex = this.held?.kind === 'extinguisher' ? this.held : null;
     if (ex && this.spraying) {

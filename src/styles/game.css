@@ -584,11 +584,19 @@
   margin-top: 3px;
   color: var(--accent);
 }
+/* i passi come sulla lavagna dell'aula: le righe hanno già i loro numeri */
 .gm-steps {
   margin: 12px 0 0;
-  padding-left: 18px;
-  color: var(--text-1);
+  padding: 10px 14px;
+  list-style: none;
+  color: #e8efe9;
   line-height: 1.6;
+  background: #23372c;
+  border: 3px solid #b58352;
+  border-radius: 8px;
+}
+.gm-steps li:first-child {
+  font-weight: 600;
 }
 .gm-stars {
   display: flex;

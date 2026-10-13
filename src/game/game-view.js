@@ -247,7 +247,7 @@ export function createGame(elements, { onClose } = {}) {
       <p class="gm-eyebrow">${t('orderN', { n: index + 1, title: '' }).replace(/[:·—-]\s*$/, '')} / ${ORDERS.length}</p>
       <h3>${t(`${def.id}Title`)}</h3>
       <p class="gm-teacher">${icons.book(16)} ${brief}</p>
-      <ol class="gm-steps">${(Array.isArray(steps) ? steps : [steps]).map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
+      <ul class="gm-steps" aria-label="${t('boardLabel')}">${(Array.isArray(steps) ? steps : [steps]).map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
       <p class="gm-small">${t('orderPay', { pay: fmtMoney(def.pay), min: Math.round(def.par / 60) })}</p>
       <div class="gm-actions"><button type="button" class="gm-primary" data-act="play">${t('start')}</button></div>`);
   }
