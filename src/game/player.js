@@ -22,6 +22,7 @@ export class Player {
     this.camFrom = null;
     this.camT = 1;
     this.benchCam = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
+    this.onTeleport = null; // (x, z) → il gioco libera il posto (sgabelli spinti lì)
     const start = { x: 0.15, y: HALF + RADIUS + 0.02, z: 0.4 };
     this.cc = physics.player(start, RADIUS, HALF);
   }
@@ -46,6 +47,7 @@ export class Player {
     this.cc.body.setNextKinematicTranslation({ x, y: HALF + RADIUS + 0.02, z });
     this.cc.body.setTranslation({ x, y: HALF + RADIUS + 0.02, z }, true);
     if (yaw !== null) this.yaw = yaw;
+    this.onTeleport?.(x, z);
   }
 
   /** Passa alla vista del bancone sulla postazione più vicina (o a quella indicata). */
@@ -91,7 +93,7 @@ export class Player {
   }
 
   update(dt, blocked) {
-    const { controller, collider, body } = this.cc;
+    const { controller, body } = this.cc;
     let mx = 0;
     let mz = 0;
     if (this.mode === 'walk' && !blocked) {
@@ -107,8 +109,8 @@ export class Player {
     const vx = ((mx * cos + mz * sin) / len) * speed;
     const vz = ((-mx * sin + mz * cos) / len) * speed;
     this.vy = controller.computedGrounded?.() ? -0.5 : Math.max(-20, this.vy - 9.81 * dt);
-    controller.computeColliderMovement(collider, { x: vx * dt, y: this.vy * dt, z: vz * dt });
-    const m = controller.computedMovement();
+    // il controllore vede solo la stanza e gli arredi mobili (che spinge): la vetreria non lo ferma
+    const m = this.physics.moveCharacter(this.cc, { x: vx * dt, y: this.vy * dt, z: vz * dt }, dt);
     const t = body.translation();
     body.setNextKinematicTranslation({ x: t.x + m.x, y: t.y + m.y, z: t.z + m.z });
     this.moving = Math.hypot(vx, vz) > 0.1;

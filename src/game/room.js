@@ -28,7 +28,11 @@ export const LAYOUT = {
   shower: { x: 4.45, z: 3.35 },
   extinguisher: { x: 4.82, z: 2.3 },
   store: { x: 4.6, z: 0.9 },
+  // sgabelli accostati al bancone A (il suo mobile finisce a z = 0,05): nel corridoio resta il passaggio
+  stools: [{ x: -0.95, z: 0.25 }, { x: 1.05, z: 0.25 }],
 };
+/** Sgabello: seduta a 0,64 m, base larga sul pavimento; collisore = cilindro pieno (mezza altezza, raggio), massa in kg. */
+export const STOOL = { hh: 0.32, r: 0.17, mass: 5 };
 
 export const BIN_KINDS = ['heavy', 'inorganic', 'organic', 'glass', 'solid'];
 const BIN_COLORS = { heavy: '#3b4048', inorganic: '#2f6fd1', organic: '#e07a1f', glass: '#2f9a4c', solid: '#c9ccd2' };
@@ -68,7 +72,8 @@ function noise(g, w, h, alpha, n = 2500) {
 /**
  * Costruisce la stanza.
  * @returns {{group: THREE.Group, fixtures: object[], zones: object, update: (dt: number, state: object) => void,
- *            setBoard: (lines: string[]) => void, setBalance: (text: string) => void}}
+ *            setBoard: (lines: string[]) => void, setBalance: (text: string) => void,
+ *            props: {mesh: THREE.Group, body: object, home: {x: number, z: number}}[]}}
  */
 export function buildRoom({ scene, physics, G, elements, envMap }) {
   const group = new THREE.Group();
@@ -179,11 +184,17 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   for (const dx of [-1.6, 0, 1.6]) solid(0.03, 0.35, 0.3, M.wood, sb.x + dx, BENCH_Y + 0.17, sb.z + 0.18);
   solid(sb.w - 0.2, 0.3, 0.02, M.wood, sb.x, 1.42, sb.z + 0.34);
 
-  // sgabelli
-  for (const x of [-0.95, 1.05]) {
-    mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.04, seg(20, 10)), M.black, x, 0.62, 0.45);
-    mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.6, 8), M.darkSteel, x, 0.3, 0.45);
-    physics.cylinder(x, 0.32, 0.45, 0.32, 0.17);
+  // sgabelli: arredi mobili, il giocatore li spinge camminandoci contro (il gioco copia la fisica sulla mesh)
+  const props = [];
+  for (const s of LAYOUT.stools) {
+    const stool = new THREE.Group();
+    stool.position.set(s.x, 0, s.z);
+    group.add(stool);
+    mesh(new THREE.CylinderGeometry(STOOL.r, STOOL.r, 0.04, seg(20, 10)), M.black, 0, 2 * STOOL.hh - 0.02, 0, { parent: stool });
+    mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.6, 8), M.darkSteel, 0, 0.32, 0, { parent: stool });
+    mesh(new THREE.CylinderGeometry(STOOL.r - 0.03, STOOL.r - 0.01, 0.03, seg(20, 10)), M.darkSteel, 0, 0.015, 0, { parent: stool });
+    const body = physics.prop({ x: s.x, z: s.z, ...STOOL });
+    props.push({ mesh: stool, body, home: { x: s.x, z: s.z } });
   }
 
   // ------------------------------------------------------------ bilancia
@@ -493,7 +504,7 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     hood.led.color.set(hood.on ? 0x30ff60 : 0x3a1010);
   };
 
-  return { group, fixtures, zones, update, setBoard, setBalance, bins, lights: { sun, hemi, ceiling } };
+  return { group, fixtures, zones, update, setBoard, setBalance, bins, props, lights: { sun, hemi, ceiling } };
 }
 
 function fitLine(g, text, x, y, w) {

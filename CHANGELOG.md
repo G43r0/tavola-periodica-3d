@@ -25,6 +25,11 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
     pulizia della vetreria e contenitori dei rifiuti con le multe.
   - Testi in italiano, inglese e versione semplice; voce «Simulatore di laboratorio» nella modalità Spiega.
   - Test del simulatore (`tests/game/`): chimica dei contenitori, fisica, liquidi, esercitazioni e valutazione.
+  - Legenda dei comandi in basso a destra, come in *Cooking Simulator*: mostra i tasti che servono adesso (cambia con
+    l'oggetto in mano e con ciò che si guarda), attenua le azioni che con quel bersaglio non funzionano, illumina il
+    tasto premuto; `L` la nasconde. Sotto il mirino resta solo il nome di ciò che si guarda.
+  - Sgabelli spingibili: il giocatore li sposta camminandoci contro e non ci resta più bloccato nel corridoio tra i
+    banconi; tornano al loro posto a ogni partita. La vetreria a terra non ferma più il giocatore.
 - **Preset grafici** (pulsante con lo schermo nella barra in alto): *Semplice* per i computer poco potenti (niente
   post-processing, meno segmenti e punti, sandbox senza bagliore, niente sfocature e animazioni continue
   nell'interfaccia), *Medio* (la grafica di prima, predefinito) e *Professionale*: sovracampionamento, MSAA 4×, tone

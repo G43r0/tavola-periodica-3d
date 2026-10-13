@@ -7,6 +7,7 @@ import { ORDERS } from '../../src/game/orders.js';
 import { DEFS } from '../../src/game/items.js';
 import { BINS } from '../../src/game/mixture.js';
 import { STATIONS } from '../../src/game/room.js';
+import { KEY_IDS } from '../../src/game/controls.js';
 
 const has = (key) => key in GAME_STRINGS.it && key in GAME_STRINGS.en;
 
@@ -27,4 +28,12 @@ test('testi del simulatore: chiavi composte (esercitazioni, oggetti, rifiuti, po
   for (const s of STATIONS) assert.ok(has(`station_${s.key}`), `station_${s.key}`);
   for (const s of ['aq', 'solid', 'liquid', 'gas']) assert.ok(has(`state_${s}`));
   for (const a of ['fire', 'toxic', 'alarm']) assert.ok(has(`alarm_${a}`));
+});
+
+test('testi del simulatore: legenda dei comandi (azioni e tasti)', () => {
+  const src = fs.readFileSync(new URL('../../src/game/controls.js', import.meta.url), 'utf8');
+  const actions = new Set([...src.matchAll(/'(lg[A-Z]\w*)'/g)].map((m) => m[1]));
+  assert.ok(actions.size > 30);
+  for (const k of actions) assert.ok(has(k), `testo mancante: ${k}`);
+  for (const k of KEY_IDS) assert.ok(has(`key_${k}`), `key_${k}`);
 });

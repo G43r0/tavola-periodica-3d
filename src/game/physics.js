@@ -16,13 +16,20 @@ const MAX_STEPS = 6;
 
 /** Gruppi di collisione: bit alti = appartenenza, bit bassi = con chi collide. */
 const group = (member, filter) => (member << 16) | filter;
-export const G = { STATIC: 1, ITEM: 2, PLAYER: 4, DEBRIS: 8 };
+export const G = { STATIC: 1, ITEM: 2, PLAYER: 4, DEBRIS: 8, PROP: 16 };
 const GROUPS = {
-  static: group(G.STATIC, G.ITEM | G.PLAYER | G.DEBRIS),
-  item: group(G.ITEM, G.STATIC | G.ITEM | G.DEBRIS),
+  static: group(G.STATIC, G.ITEM | G.PLAYER | G.DEBRIS | G.PROP),
+  item: group(G.ITEM, G.STATIC | G.ITEM | G.DEBRIS | G.PROP),
+  // il corpo cinematico del giocatore non tocca gli arredi nel risolutore (li spingerebbe con massa infinita):
+  // li sposta il controllore del personaggio con i suoi impulsi
   player: group(G.PLAYER, G.STATIC),
-  debris: group(G.DEBRIS, G.STATIC | G.ITEM),
+  debris: group(G.DEBRIS, G.STATIC | G.ITEM | G.PROP),
+  prop: group(G.PROP, G.STATIC | G.ITEM | G.DEBRIS | G.PROP | G.PLAYER),
+  // cosa «vede» il controllore del personaggio: la stanza e gli arredi mobili, non la vetreria né l'oggetto in mano
+  playerQuery: group(G.PLAYER, G.STATIC | G.PROP),
 };
+/** Massa del personaggio negli urti con gli arredi (kg). */
+const CHARACTER_MASS = 80;
 
 export class Physics {
   constructor(R) {
@@ -52,6 +59,20 @@ export class Physics {
     const c = this.world.createCollider(d);
     if (owner) this.owners.set(c.handle, owner);
     return c;
+  }
+
+  /**
+   * Arredo mobile (sgabello): cilindro dinamico appoggiato sul pavimento in (x, z), alto 2·hh. Il giocatore lo spinge
+   * camminandoci contro; gira solo attorno alla verticale, quindi non si ribalta, e si ferma presto (smorzamento).
+   */
+  prop({ x, z, hh, r, mass, owner = null }) {
+    const { R } = this;
+    const desc = R.RigidBodyDesc.dynamic().setTranslation(x, 0, z).setLinearDamping(2).setAngularDamping(4).enabledRotations(false, true, false);
+    const body = this.world.createRigidBody(desc);
+    const cd = R.ColliderDesc.cylinder(hh, r).setTranslation(0, hh, 0).setMass(mass).setFriction(0.5).setRestitution(0).setCollisionGroups(GROUPS.prop);
+    const c = this.world.createCollider(cd, body);
+    if (owner) this.owners.set(c.handle, owner);
+    return body;
   }
 
   /**
@@ -92,8 +113,21 @@ export class Physics {
     controller.setMaxSlopeClimbAngle((45 * Math.PI) / 180);
     controller.enableAutostep(0.25, 0.2, false);
     controller.enableSnapToGround(0.3);
-    controller.setApplyImpulsesToDynamicBodies(false);
-    return { body, collider, controller };
+    controller.setApplyImpulsesToDynamicBodies(true);
+    controller.setCharacterMass(CHARACTER_MASS);
+    return { body, collider, controller, query: GROUPS.playerQuery };
+  }
+
+  /**
+   * Movimento del personaggio di `delta` metri in `dt` secondi. Rapier trasferisce agli arredi la velocità
+   * movimento / passo della fisica: con il passo fisso di 1/120 s e un fotogramma di 1/60 s gli sgabelli
+   * partirebbero al doppio della velocità del giocatore, quindi per questo calcolo il passo è quello del fotogramma.
+   */
+  moveCharacter(cc, delta, dt) {
+    if (dt > 0) this.world.timestep = dt;
+    cc.controller.computeColliderMovement(cc.collider, delta, undefined, cc.query);
+    this.world.timestep = STEP;
+    return cc.controller.computedMovement();
   }
 
   remove(body) {

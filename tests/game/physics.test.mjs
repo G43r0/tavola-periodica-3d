@@ -7,6 +7,7 @@ import { loadPhysics, Physics } from '../../src/game/physics.js';
 import { interiorSamples, rimPoints, liquidLevel, profileVolume } from '../../src/game/liquid.js';
 import { ORDERS, ORDER_BY_ID, grade, score } from '../../src/game/orders.js';
 import { createLabChemistry, Mixture } from '../../src/game/mixture.js';
+import { LAYOUT, BENCH_Y, STOOL } from '../../src/game/room.js';
 
 const R = await loadPhysics();
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
@@ -49,6 +50,57 @@ test('fisica: il personaggio cammina e non attraversa i muri', () => {
   const z = p.body.translation().z;
   assert.ok(z > -0.9 + 0.27 - 0.03, `si ferma davanti al muro (z = ${z})`);
   assert.ok(z < -0.5, 'ma si è mosso');
+});
+
+/**
+ * Il corridoio tra i banconi A e B con i due sgabelli (come in room.js) e il giocatore alla partenza (0,15; 0,4).
+ * Cammina per `seconds` verso `dirX` a passo di fotogramma (1/60 s) e restituisce dove arriva e gli sgabelli.
+ */
+function corridor(dirX, seconds = 4, { z = 0.4, beaker = false } = {}) {
+  const ph = new Physics(R);
+  ph.box(0, -0.1, 0, 6, 0.1, 6);
+  for (const b of [LAYOUT.benchA, LAYOUT.benchB]) {
+    ph.box(b.x, (BENCH_Y - 0.04) / 2, b.z, b.w / 2, (BENCH_Y - 0.04) / 2, b.d / 2);
+    ph.box(b.x, BENCH_Y - 0.02, b.z, b.w / 2 + 0.02, 0.02, b.d / 2 + 0.02);
+  }
+  const stools = LAYOUT.stools.map((s) => ph.prop({ x: s.x, z: s.z, ...STOOL }));
+  const glass = beaker ? ph.dynamic({ pos: { x: 0.6 * dirX, y: 0, z }, shapes: [{ type: 'cylinder', hh: 0.0475, r: 0.0345, y: 0.0475 }], mass: 0.1 }) : null;
+  const p = ph.player({ x: 0.15, y: 0.85, z }, 0.28, 0.55);
+  const dt = 1 / 60;
+  let vy = 0;
+  for (let i = 0; i < seconds / dt; i++) {
+    vy = p.controller.computedGrounded() ? -0.5 : vy - 9.81 * dt;
+    const m = ph.moveCharacter(p, { x: 2.1 * dirX * dt, y: vy * dt, z: 0 }, dt);
+    const t = p.body.translation();
+    p.body.setNextKinematicTranslation({ x: t.x + m.x, y: t.y + m.y, z: t.z + m.z });
+    ph.step(dt, []);
+  }
+  return { x: p.body.translation().x, stools, glass };
+}
+
+test('stanza: gli sgabelli non chiudono il corridoio tra i banconi (il giocatore esce da entrambi i lati)', () => {
+  for (const dir of [1, -1]) {
+    const { x, stools } = corridor(dir);
+    assert.ok(Math.abs(x) > 1.9, `verso ${dir > 0 ? 'est' : 'ovest'} si ferma a x = ${x.toFixed(2)}`);
+    // gli sgabelli spinti restano dritti (girano solo attorno alla verticale)
+    for (const s of stools) {
+      const r = s.rotation();
+      assert.ok(Math.hypot(r.x, r.z) < 0.01, 'sgabello ribaltato');
+    }
+  }
+  // anche rasente al bancone A, dove lo sgabello è sulla strada: lo spinge e passa
+  assert.ok(corridor(1, 4, { z: 0.38 }).x > 1.9);
+});
+
+test('stanza: il giocatore spinge uno sgabello a passo d\'uomo, ma passa attraverso la vetreria a terra', () => {
+  const { stools } = corridor(1, 1.5, { z: 0.3 });
+  const moved = stools[1].translation();
+  // spinto in avanti, non scagliato via (la velocità trasferita è quella del giocatore, non il doppio)
+  assert.ok(moved.x > LAYOUT.stools[1].x + 0.2, `sgabello a x = ${moved.x.toFixed(2)}`);
+  assert.ok(moved.x < 0.15 + 2.1 * 1.5 + 0.6, `sgabello troppo lontano: x = ${moved.x.toFixed(2)}`);
+  const { glass } = corridor(1, 1, { beaker: true });
+  const g = glass.translation();
+  assert.ok(Math.hypot(g.x - 0.6, g.z - 0.4) < 0.001, 'il becher a terra non viene calciato via');
 });
 
 test('liquidi: volume del profilo, livello orizzontale e versamento inclinando', () => {

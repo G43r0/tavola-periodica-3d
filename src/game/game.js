@@ -16,6 +16,7 @@ import { Player } from './player.js';
 import { createLabChemistry, Mixture, wasteClass, binAccepts, AMBIENT } from './mixture.js';
 import { SHELF, PRICES, UNIVERSAL_SCALE, FLAME_SALTS } from './reagents.js';
 import { ORDERS, grade } from './orders.js';
+import { legendRows } from './controls.js';
 
 const WATER = 123;
 const REACH = 2.3;
@@ -105,6 +106,8 @@ export class LabGame {
     this.pendingBreaks = new Set();
     this.physics.preStep = (dt) => this.controlHeld(dt);
     this.physics.onImpact = (owner, force, other, speed) => this.impact(owner, force, other, speed);
+    // dopo un salto di postazione uno sgabello spinto lì tornerebbe a incastrarsi nel giocatore
+    this.player.onTeleport = (x, z) => this.clearProps(x, z);
     this.room.setBoard([t('boardWelcome'), t('boardWelcome2')]);
     // estintore appeso al muro
     this.extinguisher = this.spawn('extinguisher', { pos: new THREE.Vector3(LAYOUT.extinguisher.x, 0.37, LAYOUT.extinguisher.z) });
@@ -209,6 +212,27 @@ export class LabGame {
     Object.assign(this.fx.sink, { tap: false });
     Object.assign(this.fx.hood, { on: false });
     placeItem(this.extinguisher, this.extinguisher.home);
+    this.clearProps();
+  }
+
+  /** Rimette a posto gli sgabelli: tutti, o solo quelli a meno di 0,6 m dal punto (x, z). */
+  clearProps(x = null, z = null) {
+    for (const p of this.room.props) {
+      const t = p.body.translation();
+      if (x !== null && Math.hypot(t.x - x, t.z - z) > 0.6) continue;
+      p.body.setTranslation({ x: p.home.x, y: 0, z: p.home.z }, true);
+      p.body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+      p.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      p.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      this.syncProp(p);
+    }
+  }
+
+  syncProp(p) {
+    const t = p.body.translation();
+    const r = p.body.rotation();
+    p.mesh.position.set(t.x, t.y, t.z);
+    p.mesh.quaternion.set(r.x, r.y, r.z, r.w);
   }
 
   startFree(chemMode) {
@@ -1428,6 +1452,7 @@ export class LabGame {
     this.pendingBreaks.clear();
     this.physics.step(dt, this.items.map((i) => i.body));
     for (const it of this.items) syncItem(it);
+    for (const p of this.room.props) if (!p.body.isSleeping()) this.syncProp(p);
     for (const it of this.items) if (it.def.container && it.mixture) this.pourFrom(it, dt);
     // acqua del rubinetto nei contenitori sotto il getto
     const sink = this.fx.sink;
@@ -1478,37 +1503,40 @@ export class LabGame {
 
   // ------------------------------------------------------------------ informazioni per l'interfaccia
 
-  /** Testo del suggerimento sotto il mirino. */
+  /** Riga sotto il mirino: cosa si sta guardando (i tasti sono nella legenda, vedi legend()). */
   prompt() {
     const { t } = this;
     const h = this.hover;
+    if (!h) return [];
+    if (h.type === 'item') return [this.itemName(h.item)];
+    if (h.type === 'puddle') return [t('lookPuddle')];
+    const f = h.fixture;
+    const key = {
+      hotplate: f.level ? 'lookPlate' : 'lookPlateOff', bunsen: f.on ? 'lookBunsenOn' : 'lookBunsenOff', sink: f.tap ? 'lookSinkOn' : 'lookSink',
+      balance: 'lookBalance', hood: f.on ? 'lookHoodOn' : 'lookHoodOff', shower: 'lookShower', bell: 'lookBell', store: 'lookStore',
+      towels: 'lookTowels', strips: 'lookStrips', bin: 'lookBin', tray: 'lookTray',
+    }[f.kind];
+    return key ? [t(key, { n: f.level, bin: f.bin ? t(`bin_${f.bin}`) : '' })] : [];
+  }
+
+  /** Righe della legenda dei comandi in basso a destra (controls.js), per la situazione di adesso. */
+  legend() {
+    const h = this.hover;
     const held = this.held;
-    const lines = [];
-    if (held) {
-      if (held.def.container) lines.push(t('promptPour'));
-      if (held.kind === 'spatula') lines.push(held.load ? t('promptSpatulaDrop') : t('promptSpatulaTake'));
-      if (held.kind === 'loop') lines.push(t('promptLoop'));
-      if (held.kind === 'strip') lines.push(t('promptStrip'));
-      if (held.kind === 'towel') lines.push(t('promptTowel'));
-      if (held.kind === 'extinguisher') lines.push(t('promptExtinguisher'));
-      if (h?.type === 'fixture' && h.fixture.kind === 'sink' && held.def.container) lines.push(t('promptWash'));
-      if (h?.type === 'fixture' && h.fixture.kind === 'bin' && held.def.container) lines.push(t('promptEmpty', { bin: t(`bin_${h.fixture.bin}`) }));
-      lines.push(t('promptDrop'));
-      return lines;
-    }
-    if (!h) return lines;
-    if (h.type === 'item') lines.push(t('promptTake', { name: this.itemName(h.item) }));
-    else if (h.type === 'puddle') lines.push(t('promptPuddle'));
-    else {
+    let target = null;
+    if (h?.type === 'item') target = { type: 'item', kind: h.item.kind, name: this.itemName(h.item), container: Boolean(h.item.def.container) };
+    else if (h?.type === 'puddle') target = { type: 'puddle' };
+    else if (h?.type === 'fixture') {
       const f = h.fixture;
-      const key = {
-        hotplate: f.level ? 'promptPlateOn' : 'promptPlate', bunsen: f.on ? 'promptBunsenOff' : 'promptBunsenOn', sink: f.tap ? 'promptTapOff' : 'promptTapOn',
-        balance: 'promptTare', hood: f.on ? 'promptHoodOff' : 'promptHoodOn', shower: 'promptShower', bell: 'promptBell', store: 'promptStore',
-        towels: 'promptTowels', strips: 'promptStrips', bin: 'promptBin', tray: 'promptTray',
-      }[f.kind];
-      if (key) lines.push(t(key, { n: f.level, bin: f.bin ? t(`bin_${f.bin}`) : '' }));
+      target = { type: 'fixture', kind: f.kind, on: Boolean(f.kind === 'sink' ? f.tap : f.on), level: f.level ?? 0, binName: f.bin ? this.t(`bin_${f.bin}`) : '' };
     }
-    return lines;
+    return legendRows({
+      mode: this.player.mode,
+      held: held ? { kind: held.kind, container: Boolean(held.def.container), loaded: Boolean(held.load && !held.load.isEmpty()) } : null,
+      target,
+      canPlace: held ? Boolean(this.placeSpot(held)) : false,
+      pouring: this.pouring,
+    });
   }
 
   /** Scheda di un contenitore per l'interfaccia (cosa contiene, nella modalità di chimica scelta). */
@@ -1591,6 +1619,7 @@ export class LabGame {
     const looked = this.hover?.type === 'item' ? this.hover.item : null;
     return {
       prompt: this.prompt(),
+      legend: this.legend(),
       held: this.held ? this.describe(this.held) : null,
       looked: looked && looked !== this.held ? this.describe(looked) : null,
       order: o ? { n: o.index + 1, title: this.t(`${o.def.id}Title`), brief: this.t(`${o.def.id}Brief${this.chemMode === 'simple' ? 'Simple' : ''}`), steps, elapsed: this.time - o.start, par: o.def.par, costs: o.costs + o.fines } : null,

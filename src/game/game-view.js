@@ -47,7 +47,13 @@ const TEMPLATE = () => `
       <button type="button" class="gm-iconbtn" data-act="pause" title="${t('pauseTitle')}">${icons.pause(16)}</button>
     </div>
     <section class="gm-card gm-card--held" hidden></section>
-    <section class="gm-card gm-card--looked" hidden></section>
+    <div class="gm-br">
+      <section class="gm-card gm-card--looked" hidden></section>
+      <section class="gm-legend" aria-label="${t('legendTitle')}">
+        <header><span>${t('legendTitle')}</span><small><kbd>L</kbd> <span class="gm-legend__toggle">${t('legendHide')}</span></small></header>
+        <ol></ol>
+      </section>
+    </div>
     <div class="gm-toasts" aria-live="polite"></div>
     <div class="gm-alarm" hidden></div>
     <div class="gm-tilt" hidden><span></span></div>
@@ -80,6 +86,8 @@ export function createGame(elements, { onClose } = {}) {
   let save = loadSave();
   let chemMode = save.chemMode ?? 'real';
   let showInfo = true;
+  let showLegend = save.legend !== false;
+  const pressed = new Set(); // tasti premuti (id della legenda): la riga corrispondente si illumina
 
   // ---------------------------------------------------------------- avvio
   async function boot() {
@@ -170,6 +178,7 @@ export function createGame(elements, { onClose } = {}) {
     if (s !== 'play') {
       unlock();
       rmb = false;
+      pressed.clear();
       game?.setPour(false);
       game?.player.keys.clear();
     }
@@ -452,6 +461,11 @@ export function createGame(elements, { onClose } = {}) {
     }
     if (state !== 'play') return;
     const code = ev.code;
+    const id = keyId(code);
+    if (id) {
+      if (down) pressed.add(id);
+      else pressed.delete(id);
+    }
     if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(code)) {
       if (game.player.mode === 'bench' && down && (code === 'KeyA' || code === 'ArrowLeft')) game.station(-1);
       else if (game.player.mode === 'bench' && down && (code === 'KeyD' || code === 'ArrowRight')) game.station(1);
@@ -473,6 +487,12 @@ export function createGame(elements, { onClose } = {}) {
       if (game.player.mode === 'walk') lock();
       else unlock();
     } else if (code === 'KeyI') showInfo = !showInfo;
+    else if (code === 'KeyL') {
+      showLegend = !showLegend;
+      save.legend = showLegend;
+      storeSave(save);
+      lastLegendHtml = null;
+    }
     else if (code === 'KeyH') showHelp();
     else if (code === 'KeyF') {
       // fps per controllare le prestazioni
@@ -484,7 +504,21 @@ export function createGame(elements, { onClose } = {}) {
   const keyup = (e) => onKey(e, false);
   window.addEventListener('keydown', keydown);
   window.addEventListener('keyup', keyup);
-  window.addEventListener('blur', () => game?.player.keys.clear());
+  window.addEventListener('blur', () => {
+    game?.player.keys.clear();
+    pressed.clear();
+  });
+  /** Id della legenda per un tasto (controls.js, KEY_IDS). */
+  function keyId(code) {
+    if (code === 'KeyE') return 'e';
+    if (code === 'KeyQ') return 'q';
+    if (code === 'Tab') return 'tab';
+    if (code === 'KeyH') return 'h';
+    if (code === 'ShiftLeft' || code === 'ShiftRight') return 'shift';
+    if (game?.player.mode === 'bench' && ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight'].includes(code)) return 'ad';
+    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) return 'wasd';
+    return null;
+  }
 
   stage.addEventListener('mousedown', (ev) => {
     if (state !== 'play') return;
@@ -492,15 +526,20 @@ export function createGame(elements, { onClose } = {}) {
       lock();
       return;
     }
-    if (ev.button === 0) game.primary();
-    else if (ev.button === 2) {
+    if (ev.button === 0) {
+      pressed.add('lmb');
+      game.primary();
+    } else if (ev.button === 2) {
       rmb = true;
+      pressed.add('rmb');
       game.setPour(true);
     }
   });
   window.addEventListener('mouseup', (ev) => {
+    if (ev.button === 0) pressed.delete('lmb');
     if (ev.button === 2) {
       rmb = false;
+      pressed.delete('rmb');
       game?.setPour(false);
     }
   });
@@ -539,10 +578,25 @@ export function createGame(elements, { onClose } = {}) {
   }
 
   let lastOrderHtml = '';
+  let lastLegendHtml = null;
   let fps = 0;
+  /** Legenda in basso a destra: tasti (kbd) e azione; attenuata se non funziona, illuminata se il tasto è premuto. */
+  function renderLegend(rowsList) {
+    const html = showLegend
+      ? rowsList.map((r) => `<li class="${r.off ? 'is-off' : ''} ${r.keys.some((k) => pressed.has(k)) ? 'is-down' : ''}"><span class="gm-keys">${r.keys.map((k) => `<kbd>${esc(t(`key_${k}`))}</kbd>`).join('<i>+</i>')}</span><span>${esc(t(r.key, r.params ?? undefined))}</span></li>`).join('')
+      : '';
+    if (html === lastLegendHtml) return;
+    lastLegendHtml = html;
+    const el = $('.gm-legend');
+    el.classList.toggle('is-collapsed', !showLegend);
+    el.querySelector('.gm-legend__toggle').textContent = showLegend ? t('legendHide') : t('legendShow');
+    el.querySelector('ol').innerHTML = html;
+  }
+
   function renderHud() {
     const h = game.hud();
-    $('.gm-prompt').innerHTML = h.prompt.map((p) => `<span>${p}</span>`).join('');
+    $('.gm-prompt').innerHTML = h.prompt.map((p) => `<span>${esc(p)}</span>`).join('');
+    renderLegend(h.legend);
     $('.gm-cross').hidden = h.mode !== 'walk';
     $('.gm-money').innerHTML = h.free ? `<span>${t('freeShort')}</span>` : `<span>${fmtMoney(h.money)}</span>`;
     $('.gm-view').innerHTML = `${h.mode === 'walk' ? t('viewWalk') : t('viewBench', { station: t(`station_${h.station}`) })}${fpsShow ? ` · ${fps} fps` : ''}`;
