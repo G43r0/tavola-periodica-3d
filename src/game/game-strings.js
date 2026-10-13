@@ -135,6 +135,10 @@ export const GAME_STRINGS = {
     lookPuddle: 'Pozza',
     lookPuddleNote: 'Asciugala con la carta assorbente',
     pouring: 'Versando',
+    pouringInto: 'Versando in {name}',
+    pouringSink: 'Versando nel lavandino',
+    pouringBin: 'Versando nei rifiuti ({bin})',
+    pouringOut: 'Versando fuori!',
     pourRate: '{ml} mL/s',
 
     // legenda dei comandi in basso a destra (controls.js)
@@ -474,6 +478,10 @@ export const GAME_STRINGS = {
     lookPuddle: 'Puddle',
     lookPuddleNote: 'Wipe it up with a paper towel',
     pouring: 'Pouring',
+    pouringInto: 'Pouring into {name}',
+    pouringSink: 'Pouring into the sink',
+    pouringBin: 'Pouring into the waste ({bin})',
+    pouringOut: 'Spilling!',
     pourRate: '{ml} mL/s',
 
     // controls legend, bottom right (controls.js)

@@ -155,6 +155,39 @@ export function liquidLevel(samples, rim, m, fraction) {
   return { level, rimY, rimIndex, over: over / n };
 }
 
+// ------------------------------------------------------------------ versamento
+
+/** Carico sotto cui il liquido resta attaccato al bordo e non esce (m). */
+export const POUR_DEAD = 0.0005;
+
+/**
+ * Portata del versamento (mL/s) con un carico h (m) sopra il punto più basso del bordo, raggio della bocca R:
+ * stramazzo sul bordo circolare, Q = Cd · (2/3) · √(2g) · b · h^1,5 ≈ 1,77 · b · h^1,5 con b = corda bagnata
+ * (Cd ≈ 0,6). Sotto POUR_DEAD non esce niente; il carico conta fino a 3 cm e la portata è al massimo 150 · flow
+ * (un becher capovolto si svuota in un paio di secondi); una polvere scorre al 60 %. Un contenitore stracolmo
+ * (livello oltre la capienza) trabocca in più.
+ */
+export function pourRate({ h, R, flow = 1, powder = false, overfull = false }) {
+  if (!(h > POUR_DEAD)) return 0;
+  const hh = Math.min(h, R);
+  const b = 2 * Math.sqrt(Math.max(1e-8, 2 * R * hh - hh * hh));
+  let q = 1.77 * b * Math.min(h, 0.03) ** 1.5 * 1e6 * flow;
+  if (powder) q *= 0.6;
+  q = Math.min(q, 150 * flow);
+  return overfull ? q + 40 : q;
+}
+
+/** Dove arriva alla quota yTarget un getto che parte da p con velocità orizzontale (vx, vz): punto e tempo di volo. */
+export function ballisticLanding(p, vx, vz, yTarget) {
+  const t = Math.sqrt(Math.max(0, (2 * (p.y - yTarget)) / 9.81));
+  return { x: p.x + vx * t, z: p.z + vz * t, t };
+}
+
+/** Raggio del getto (m) per una portata Q (m³/s) a velocità v (m/s): continuità, Q = π r² v, tra 0,8 e 5 mm. */
+export function streamRadius(Q, v) {
+  return Math.max(0.0008, Math.min(0.005, Math.sqrt(Q / (Math.PI * Math.max(0.05, v)))));
+}
+
 // ------------------------------------------------------------------ disegno
 
 /**

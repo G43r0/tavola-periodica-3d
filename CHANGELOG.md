@@ -30,6 +30,14 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
     non funzionano e illumina il tasto premuto (`L` la nasconde). Le informazioni importanti sono in finestrelle accanto
     agli oggetti: ciò che si guarda (nome nella fascia gialla, millilitri e contenuto, stato di piastra, rubinetto,
     bilancia…) e ciò che si tiene in mano (millilitri e «Versando»). Prendono il posto delle schede in basso.
+  - Versamento più facile da controllare: il recipiente torna dritto quando si lascia il tasto destro (e smette di
+    versare); un anello mostra dove cadrà il getto già prima della prima goccia (verde dentro un recipiente, nel
+    lavandino o nei rifiuti, rosso se fa una pozza); la finestrella dice dove si sta versando. La portata ha una zona
+    morta (il liquido resta attaccato al bordo fino a 0,5 mm di carico), una corsa del mouse più fine vicino al bordo e
+    un massimo di 150 mL/s per un becher. Mentre si versa si può correggere la mira girando lo sguardo.
+  - Getto continuo che si assottiglia cadendo e si ferma sugli ostacoli (il bordo di un altro becher, un oggetto in
+    mezzo); il liquido arriva nel recipiente quando il getto lo tocca. L'oggetto guardato ha un contorno (verde per gli
+    oggetti, ambra per gli elementi fissi).
   - Sgabelli spingibili: il giocatore li sposta camminandoci contro e non ci resta più bloccato nel corridoio tra i
     banconi; tornano al loro posto a ogni partita. La vetreria a terra non ferma più il giocatore.
 - **Preset grafici** (pulsante con lo schermo nella barra in alto): *Semplice* per i computer poco potenti (niente

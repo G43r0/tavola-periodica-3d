@@ -22,7 +22,7 @@ export class Player {
     this.camFrom = null;
     this.camT = 1;
     this.benchCam = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
-    this.onTeleport = null; // (x, z) → il gioco libera il posto (sgabelli spinti lì)
+    this.onTeleport = null; // (da, a) → il gioco libera il posto (sgabelli spinti lì) e porta con sé l'oggetto in mano
     const start = { x: 0.15, y: HALF + RADIUS + 0.02, z: 0.4 };
     this.cc = physics.player(start, RADIUS, HALF);
   }
@@ -44,10 +44,12 @@ export class Player {
   }
 
   teleport(x, z, yaw = null) {
+    const from = this.cc.body.translation();
+    const fromYaw = this.yaw;
     this.cc.body.setNextKinematicTranslation({ x, y: HALF + RADIUS + 0.02, z });
     this.cc.body.setTranslation({ x, y: HALF + RADIUS + 0.02, z }, true);
     if (yaw !== null) this.yaw = yaw;
-    this.onTeleport?.(x, z);
+    this.onTeleport?.({ x: from.x, z: from.z, yaw: fromYaw }, { x, z, yaw: this.yaw });
   }
 
   /** Passa alla vista del bancone sulla postazione più vicina (o a quella indicata). */

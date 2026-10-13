@@ -552,9 +552,12 @@ export function createGame(elements, { onClose } = {}) {
     game.setMouse(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
     // Chromium a volte manda un salto enorme subito dopo il blocco del puntatore: si ignora
     if (Math.abs(ev.movementX) > 250 || Math.abs(ev.movementY) > 250) return;
-    // tasto destro premuto: il mouse in su inclina in avanti (versa), in giù raddrizza
-    if (rmb && game.held) game.tiltBy(-ev.movementY * (game.player.mode === 'walk' ? 1 : 1.4));
-    else if (game.player.mode === 'walk' && locked()) game.player.look(ev.movementX, ev.movementY);
+    // tasto destro premuto: il mouse in su inclina in avanti (versa), in giù raddrizza; di lato si continua a girare lo
+    // sguardo (a metà velocità) per correggere la mira mentre si versa
+    if (rmb && game.held) {
+      game.tiltBy(-ev.movementY * (game.player.mode === 'walk' ? 1 : 1.4));
+      if (game.player.mode === 'walk' && locked()) game.player.look(ev.movementX * 0.5, 0);
+    } else if (game.player.mode === 'walk' && locked()) game.player.look(ev.movementX, ev.movementY);
   });
   stage.addEventListener('wheel', (ev) => {
     if (state !== 'play') return;
@@ -574,7 +577,7 @@ export function createGame(elements, { onClose } = {}) {
     const strip = info.swatch ? `<div class="gm-strip"><span style="background:${info.swatch}"></span><div class="gm-scale">${info.scale.map((c, i) => `<i style="background:${c}" title="pH ${i}">${i}</i>`).join('')}</div></div>` : '';
     const notes = info.notes.slice(0, 2).map((n) => `<p class="gm-pop__note">${esc(n)}</p>`).join('');
     if (kind === 'held') {
-      const status = info.pouring !== undefined ? `<small class="gm-pop__status">${t('pouring')}${chemMode === 'simple' && info.pouring > 0.2 ? ` · ${t('pourRate', { ml: game.fmt(info.pouring, info.pouring < 10 ? 1 : 0) })}` : ''}</small>` : '';
+      const status = info.status ? `<small class="gm-pop__status ${info.spilling ? 'is-bad' : ''}">${esc(info.status)}${chemMode === 'simple' && info.pouring > 0.2 ? ` · ${t('pourRate', { ml: game.fmt(info.pouring, info.pouring < 10 ? 1 : 0) })}` : ''}</small>` : '';
       const big = info.volume ? `<div class="gm-pop__big">${DROP}<b>${esc(info.volume)}</b></div>` : '';
       return `${big}${status}<p class="gm-pop__name"><span class="gm-swatch" style="background:${info.color ?? 'transparent'}"></span>${esc(info.name)}</p>${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}${meta ? `<p class="gm-pop__meta">${meta}</p>` : ''}${strip}${info.volume ? '' : notes}`;
     }

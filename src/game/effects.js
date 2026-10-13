@@ -76,6 +76,97 @@ export class Drops {
   }
 }
 
+/**
+ * Getto continuo di un liquido: un tubo lungo la parabola dal bordo al punto d'arrivo, che si assottiglia cadendo
+ * (continuità: Q = π r² v). Una geometria sola per getto, riscritta a ogni fotogramma (niente geometrie nuove).
+ */
+const RINGS = 11;
+const SIDES = 6;
+export class Stream {
+  constructor(scene) {
+    const geo = new THREE.BufferGeometry();
+    this.pos = new Float32Array(RINGS * SIDES * 3);
+    this.nrm = new Float32Array(RINGS * SIDES * 3);
+    geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
+    geo.setAttribute('normal', new THREE.BufferAttribute(this.nrm, 3).setUsage(THREE.DynamicDrawUsage));
+    const idx = [];
+    for (let i = 0; i < RINGS - 1; i++) {
+      for (let j = 0; j < SIDES; j++) {
+        const a = i * SIDES + j;
+        const b = i * SIDES + ((j + 1) % SIDES);
+        idx.push(a, a + SIDES, b, b, a + SIDES, b + SIDES);
+      }
+    }
+    geo.setIndex(idx);
+    this.mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.78, depthWrite: false });
+    this.mesh = new THREE.Mesh(geo, this.mat);
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 5;
+    this.mesh.visible = false;
+    scene.add(this.mesh);
+  }
+
+  /**
+   * Disegna il getto: parte da p con velocità orizzontale (vx, vz), dura tEnd secondi di caduta, portata q (mL/s),
+   * colore rgb (0–255).
+   */
+  set(p, vx, vz, tEnd, q, rgb) {
+    const Q = q * 1e-6;
+    const hs = Math.hypot(vx, vz);
+    // direzione orizzontale del getto (o x se cade dritto) per costruire le sezioni
+    const hx = hs > 1e-4 ? vx / hs : 1;
+    const hz = hs > 1e-4 ? vz / hs : 0;
+    for (let i = 0; i < RINGS; i++) {
+      const t = (tEnd * i) / (RINGS - 1);
+      const cx = p.x + vx * t;
+      const cy = p.y - 4.905 * t * t;
+      const cz = p.z + vz * t;
+      // tangente (vx, −g t, vz) e due assi perpendicolari: B orizzontale, N nel piano verticale del getto
+      const vy = -9.81 * t;
+      const v = Math.hypot(hs, vy);
+      const tx = (hx * hs) / v;
+      const ty = vy / v;
+      const tz = (hz * hs) / v;
+      const bx = -hz;
+      const bz = hx;
+      const nx = ty * bz;
+      const ny = tz * bx - tx * bz;
+      const nz = -ty * bx;
+      const r = Math.max(0.0008, Math.min(0.005, Math.sqrt(Q / (Math.PI * Math.max(0.05, v)))));
+      for (let j = 0; j < SIDES; j++) {
+        const a = (j / SIDES) * Math.PI * 2;
+        const ca = Math.cos(a);
+        const sa = Math.sin(a);
+        const ox = nx * ca + bx * sa;
+        const oy = ny * ca;
+        const oz = nz * ca + bz * sa;
+        const k = (i * SIDES + j) * 3;
+        this.pos[k] = cx + ox * r;
+        this.pos[k + 1] = cy + oy * r;
+        this.pos[k + 2] = cz + oz * r;
+        this.nrm[k] = ox;
+        this.nrm[k + 1] = oy;
+        this.nrm[k + 2] = oz;
+      }
+    }
+    const g = this.mesh.geometry;
+    g.attributes.position.needsUpdate = true;
+    g.attributes.normal.needsUpdate = true;
+    this.mat.color.setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, THREE.SRGBColorSpace);
+    this.mesh.visible = true;
+  }
+
+  hide() {
+    this.mesh.visible = false;
+  }
+
+  dispose() {
+    this.mesh.removeFromParent();
+    this.mesh.geometry.dispose();
+    this.mat.dispose();
+  }
+}
+
 const PUFF_VERT = `
 attribute float aSize;
 attribute vec4 aColor;

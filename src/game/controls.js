@@ -108,3 +108,17 @@ export function legendRows(s) {
   rows.push(row(['h'], 'lgHelp'));
   return rows;
 }
+
+/** Velocità con cui l'oggetto in mano torna dritto quando si lascia il tasto destro (rad/s). */
+export const TILT_RETURN = 3;
+
+/** Inclinazione dopo dt secondi: ferma finché il tasto destro è premuto, altrimenti torna verso 0 (mai negativa). */
+export function relaxTilt(tilt, dt, holding) {
+  if (holding) return tilt;
+  return Math.max(0, tilt - TILT_RETURN * dt);
+}
+
+/** Sensibilità dell'inclinazione: più fine vicino al bordo (carico da −2 a +4 mm), dove inizia il versamento. */
+export function tiltGain(head) {
+  return head !== undefined && head > -0.002 && head < 0.004 ? 0.4 : 1;
+}

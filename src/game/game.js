@@ -8,15 +8,15 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { gfx } from '../gfx/preset.js';
 import { locale } from '../i18n/index.js';
 import { Physics } from './physics.js';
-import { buildRoom, LAYOUT, BENCH_Y, DESK_Y, STATIONS } from './room.js';
+import { buildRoom, ROOM, LAYOUT, BENCH_Y, DESK_Y, STATIONS } from './room.js';
 import { DEFS, createItem, syncItem, disposeItem, placeItem, itemMaterials, itemMassGrams } from './items.js';
-import { liquidLevel } from './liquid.js';
-import { Drops, Puffs, createPuddle, puddleRadius } from './effects.js';
+import { liquidLevel, pourRate, ballisticLanding } from './liquid.js';
+import { Drops, Puffs, Stream, createPuddle, puddleRadius } from './effects.js';
 import { Player } from './player.js';
 import { createLabChemistry, Mixture, wasteClass, binAccepts, AMBIENT } from './mixture.js';
 import { SHELF, PRICES, UNIVERSAL_SCALE, FLAME_SALTS } from './reagents.js';
 import { ORDERS, grade } from './orders.js';
-import { legendRows } from './controls.js';
+import { legendRows, relaxTilt, tiltGain } from './controls.js';
 
 const WATER = 123;
 const REACH = 2.3;
@@ -43,6 +43,32 @@ const SLOTS = {
 const rgbCss = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
 /** Punta degli strumenti nelle coordinate dell'oggetto (asse x in avanti). */
 const TOOL_TIPS = { loop: [0.102, 0.004, 0], spatula: [0.075, 0.003, 0], strip: [0.03, 0.001, 0] };
+
+/** Materiale del contorno: trasparente al centro, colorato verso i bordi visti di taglio (effetto Fresnel). */
+const outlineMats = new Map();
+function outlineMaterial(color, strength) {
+  const key = `${color}:${strength}`;
+  if (!outlineMats.has(key)) {
+    outlineMats.set(key, new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: new THREE.Color(color) }, uStrength: { value: strength } },
+      vertexShader: `varying float vRim;
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vec3 n = normalize(normalMatrix * normal);
+          vRim = 1.0 - abs(dot(n, normalize(-mv.xyz)));
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `uniform vec3 uColor; uniform float uStrength; varying float vRim;
+        void main() {
+          gl_FragColor = vec4(uColor, smoothstep(0.35, 0.95, vRim) * uStrength);
+          #include <colorspace_fragment>
+        }`,
+      transparent: true,
+      depthWrite: false,
+    }));
+  }
+  return outlineMats.get(key);
+}
 
 export class LabGame {
   /**
@@ -78,6 +104,16 @@ export class LabGame {
     this.fires = [];
     this.clouds = [];
     this.drops = new Drops(this.scene);
+    this.streams = new Map(); // contenitore che versa → getto continuo
+    this.inFlight = []; // liquido nel getto: arriva al bersaglio dopo il tempo di volo
+    this.aim = null; // dove cadrebbe il getto del contenitore in mano (anello verde o rosso)
+    this.aimRing = new THREE.Mesh(new THREE.RingGeometry(0.010, 0.014, 32), new THREE.MeshBasicMaterial({ color: 0x5fd38d, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }));
+    this.aimRing.rotation.x = -Math.PI / 2;
+    this.aimRing.renderOrder = 6;
+    this.aimRing.visible = false;
+    this.scene.add(this.aimRing);
+    this.outlined = null; // oggetto o elemento fisso evidenziato (quello che si guarda)
+    this.hoverT = 0;
     this.puffs = new Puffs(this.scene, 1400, false);
     this.flames = new Puffs(this.scene, 700, true);
     this.player = new Player(this.physics, this.camera);
@@ -106,8 +142,7 @@ export class LabGame {
     this.pendingBreaks = new Set();
     this.physics.preStep = (dt) => this.controlHeld(dt);
     this.physics.onImpact = (owner, force, other, speed) => this.impact(owner, force, other, speed);
-    // dopo un salto di postazione uno sgabello spinto lì tornerebbe a incastrarsi nel giocatore
-    this.player.onTeleport = (x, z) => this.clearProps(x, z);
+    this.player.onTeleport = (from, to) => this.teleported(from, to);
     this.room.setBoard([t('boardWelcome'), t('boardWelcome2')]);
     // estintore appeso al muro
     this.extinguisher = this.spawn('extinguisher', { pos: new THREE.Vector3(LAYOUT.extinguisher.x, 0.37, LAYOUT.extinguisher.z) });
@@ -125,6 +160,8 @@ export class LabGame {
   }
 
   removeItem(item) {
+    this.streams.get(item)?.dispose();
+    this.streams.delete(item);
     if (this.held === item) this.held = null;
     this.items = this.items.filter((i) => i !== item);
     disposeItem(item, this.env);
@@ -207,12 +244,32 @@ export class LabGame {
     this.clouds = [];
     this.held = null;
     this.splash = null;
+    this.inFlight = [];
+    for (const st of this.streams.values()) st.dispose();
+    this.streams.clear();
     Object.assign(this.fx.bunsen, { on: false });
     Object.assign(this.fx.hotplate, { level: 0 });
     Object.assign(this.fx.sink, { tap: false });
     Object.assign(this.fx.hood, { on: false });
     placeItem(this.extinguisher, this.extinguisher.home);
     this.clearProps();
+  }
+
+  /**
+   * Il giocatore è saltato altrove (cambio di postazione, nuova partita): uno sgabello spinto lì tornerebbe a
+   * incastrarsi nel giocatore, quindi torna a posto; l'oggetto in mano viaggia con lui (stessa posizione rispetto al
+   * giocatore e al suo sguardo), altrimenti resterebbe indietro incastrato nei banconi e cadrebbe.
+   */
+  teleported(from, to) {
+    this.clearProps(to.x, to.z);
+    const item = this.held;
+    if (!item) return;
+    const t = item.body.translation();
+    const off = new THREE.Vector3(t.x - from.x, t.y, t.z - from.z).applyAxisAngle(UP, to.yaw - from.yaw);
+    const r = item.body.rotation();
+    const q = new THREE.Quaternion().setFromAxisAngle(UP, to.yaw - from.yaw).multiply(new THREE.Quaternion(r.x, r.y, r.z, r.w));
+    placeItem(item, new THREE.Vector3(to.x + off.x, off.y, to.z + off.z), q);
+    this.stuckT = 0;
   }
 
   /** Rimette a posto gli sgabelli: tutti, o solo quelli a meno di 0,6 m dal punto (x, z). */
@@ -442,9 +499,43 @@ export class LabGame {
     }
     const hits = ray.intersectObjects(targets, false);
     const hit = hits[0];
-    this.hover = hit ? { ...owner.get(hit.object), point: hit.point, distance: hit.distance } : null;
+    if (hit) {
+      this.hover = { ...owner.get(hit.object), point: hit.point, distance: hit.distance };
+      this.hoverT = this.time;
+    } else if (this.time - this.hoverT > 0.12 || this.hover?.item === this.held) {
+      // per un attimo si tiene il bersaglio di prima: sfiorando un bordo il contorno e la legenda non lampeggiano
+      this.hover = null;
+    }
     // con la spatola o l'ansa in mano ha senso «puntare» il contenitore anche oltre il becher davanti
     return this.hover;
+  }
+
+  /**
+   * Contorno di ciò che si guarda: un guscio appena più grande delle sue mesh che si illumina sui bordi (verde per
+   * gli oggetti, ambra per gli elementi fissi). Mai sull'oggetto in mano.
+   */
+  updateOutline() {
+    const h = this.hover;
+    const target = h?.type === 'item' && h.item !== this.held ? h.item : h?.type === 'fixture' ? h.fixture : null;
+    if (target === this.outlined) return;
+    if (this.outlined) for (const m of this.outlined.hits ?? this.outlined.hit) if (m.userData.outline) m.userData.outline.visible = false;
+    this.outlined = target;
+    if (!target) return;
+    const fixture = h.type === 'fixture';
+    for (const m of target.hits ?? target.hit) {
+      if (!m.geometry || m.material?.blending === THREE.AdditiveBlending) continue;
+      if (!m.userData.outline) {
+        if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
+        const r = Math.max(0.01, m.geometry.boundingSphere.radius);
+        const shell = new THREE.Mesh(m.geometry, fixture ? outlineMaterial(0xf2b84b, 0.75) : outlineMaterial(0x5fd38d, 0.95));
+        shell.scale.setScalar(1 + 0.004 / r);
+        shell.renderOrder = 7;
+        shell.raycast = () => {};
+        m.add(shell);
+        m.userData.outline = shell;
+      }
+      m.userData.outline.visible = true;
+    }
   }
 
   /** Clic sinistro: prende o posa. */
@@ -462,6 +553,7 @@ export class LabGame {
     if (item.data.inBin) return;
     this.held = item;
     this.tilt = 0;
+    if (this.hover?.item === item) this.hover = null;
     const p = item.mesh.position;
     if (this.player.mode === 'walk') this.holdDist = Math.max(0.35, Math.min(0.7, this.camera.position.distanceTo(p)));
     else this.lift = Math.max(0.1, Math.min(0.4, p.y - this.benchPlaneY() + 0.16));
@@ -504,7 +596,7 @@ export class LabGame {
       item.body.setLinvel({ x: _v.x * throwSpeed, y: _v.y * throwSpeed + 1.2, z: _v.z * throwSpeed }, true);
     } else if (spot) {
       // posato dritto, girato come lo si teneva
-      const yaw = this.player.mode === 'walk' ? this.player.yaw : 0;
+      const yaw = this.holdYaw();
       const q = new THREE.Quaternion().setFromAxisAngle(UP, item.def.container || item.kind === 'extinguisher' ? yaw : yaw + Math.PI / 2);
       placeItem(item, spot, q);
     }
@@ -518,10 +610,12 @@ export class LabGame {
     this.pouring = on && Boolean(this.held);
   }
 
+  /** Inclina l'oggetto in mano (mouse con il tasto destro); vicino al bordo, dove inizia il versamento, più finemente. */
   tiltBy(dy) {
     if (!this.held) return;
     const max = this.held.def.container ? 2.6 : 1.2;
-    this.tilt = Math.max(0, Math.min(max, this.tilt + dy * 0.0045));
+    const gain = this.held.def.container ? tiltGain(this.held.pourHead) : 1;
+    this.tilt = Math.max(0, Math.min(max, this.tilt + dy * 0.0045 * gain));
   }
 
   wheel(delta) {
@@ -775,10 +869,16 @@ export class LabGame {
   // ------------------------------------------------------------------ controllo dell'oggetto in mano (a ogni passo fisico)
 
   /** Orientamento voluto per l'oggetto in mano. */
+  /** Direzione (attorno alla verticale) in cui si tiene l'oggetto: lo sguardo, o la postazione nella vista del bancone. */
+  holdYaw() {
+    if (this.player.mode === 'walk') return this.player.yaw;
+    const st = STATIONS[this.player.station];
+    return Math.atan2(-(st.look[0] - st.cam[0]), -(st.look[2] - st.cam[2]));
+  }
+
   holdQuat(out) {
     const item = this.held;
-    const st = STATIONS[this.player.station];
-    const yaw = this.player.mode === 'walk' ? this.player.yaw : Math.atan2(-(st.look[0] - st.cam[0]), -(st.look[2] - st.cam[2]));
+    const yaw = this.holdYaw();
     const wobble = this.swirlT > 0 ? Math.sin(this.swirlT * 18) * 0.25 : 0;
     if (item.def.container) {
       out.setFromAxisAngle(UP, yaw);
@@ -805,7 +905,9 @@ export class LabGame {
       out.copy(this.camera.position).addScaledVector(_v2, this.holdDist);
       out.y -= 0.06 + (item.def.container ? item.def.height * 0.4 : 0);
     } else {
-      this.ray.setFromCamera(this.mouse, this.camera);
+      // durante il passaggio da una postazione all'altra conta già la camera d'arrivo: con quella a metà strada il
+      // punto sotto il puntatore salterebbe lontano e l'oggetto ci volerebbe contro i mobili
+      this.ray.setFromCamera(this.mouse, this.player.camT < 1 ? this.benchCamera() : this.camera);
       const y = this.benchPlaneY() + this.lift;
       const d = this.ray.ray.direction;
       const o = this.ray.ray.origin;
@@ -823,8 +925,19 @@ export class LabGame {
     // il getto parte in avanti: si arretra la bocca di quanto si sposta cadendo
     const fall = Math.sqrt((2 * (0.05 + 0.02 * this.tilt)) / 9.81);
     const drift = Math.min(0.03, (item.streamSpeed ?? 0) * fall);
-    if (drift > 0) goal.add(_v2.set(0, 0, drift).applyAxisAngle(UP, this.player.mode === 'walk' ? this.player.yaw : 0));
+    if (drift > 0) goal.add(_v2.set(0, 0, drift).applyAxisAngle(UP, this.holdYaw()));
     return out.lerp(goal, blend);
+  }
+
+  /** Camera della vista del bancone già arrivata alla postazione (la vera può essere ancora in movimento). */
+  benchCamera() {
+    this.arrivalCam ??= new THREE.PerspectiveCamera();
+    const c = this.arrivalCam;
+    c.copy(this.camera, false);
+    c.position.copy(this.player.benchCam.pos);
+    c.lookAt(this.player.benchCam.look);
+    c.updateMatrixWorld();
+    return c;
   }
 
   /** Strumenti: la punta (ansa, cucchiaio della spatola, cartina) va sul punto guardato, se è a portata. */
@@ -872,6 +985,11 @@ export class LabGame {
     const quat = this.holdQuat(_q);
     const target = this.holdTarget(_v, quat);
     const p = body.translation();
+    // rete di sicurezza: un oggetto finito fuori dalla stanza (dentro un muro) torna subito davanti al giocatore
+    if (Math.abs(p.x) > ROOM.W / 2 - 0.02 || Math.abs(p.z) > ROOM.D / 2 - 0.02 || p.y < 0) {
+      placeItem(item, target, quat);
+      return;
+    }
     const dx = target.x - p.x;
     const dy = target.y - p.y;
     const dz = target.z - p.z;
@@ -948,39 +1066,89 @@ export class LabGame {
     return out;
   }
 
-  /** Dove cade un getto che parte da p con velocità orizzontale v: contenitore, scarico, rifiuti o superficie. */
+  /**
+   * Dove cade un getto che parte da p con velocità orizzontale (vx, vz): contenitore, scarico, rifiuti o superficie,
+   * con il tempo di volo t. Lungo la parabola si controllano gli ostacoli (8 tratti, un raggio ciascuno): il bordo di
+   * un altro becher o un oggetto in mezzo fermano il liquido, che cade sotto e fa una pozza (blocked = punto d'urto).
+   */
   traceStream(p, vx, vz, source) {
     let best = null;
-    const fall = (y) => {
-      const dt = Math.sqrt(Math.max(0, (2 * (p.y - y)) / 9.81));
-      return [p.x + vx * dt, p.z + vz * dt];
-    };
+    const fall = (y) => ballisticLanding(p, vx, vz, y);
     for (const r of this.receivers(source)) {
       if (r.y > p.y - 0.003) continue;
-      const [x, z] = fall(r.y);
-      if (Math.hypot(x - r.x, z - r.z) < r.r && (!best || r.y > best.y)) best = { type: 'item', item: r.item, y: r.y, x, z };
+      const l = fall(r.y);
+      if (Math.hypot(l.x - r.x, l.z - r.z) < r.r && (!best || r.y > best.y)) best = { type: 'item', item: r.item, y: r.y, x: l.x, z: l.z, t: l.t };
     }
     const sb = this.fx.sink.basin;
     {
-      const [x, z] = fall(sb.top);
-      if (!best && p.y > sb.top && x > sb.x0 && x < sb.x1 && z > sb.z0 && z < sb.z1) best = { type: 'sink', y: sb.y, x, z };
+      const l = fall(sb.top);
+      if (!best && p.y > sb.top && l.x > sb.x0 && l.x < sb.x1 && l.z > sb.z0 && l.z < sb.z1) best = { type: 'sink', y: sb.y, x: l.x, z: l.z, t: fall(sb.y).t };
     }
     for (const bin of this.room.bins) {
       const o = bin.opening;
-      const [x, z] = fall(o.y);
-      if (!best && p.y > o.y && Math.hypot(x - o.x, z - o.z) < o.r) best = { type: 'bin', bin, y: o.y, x, z };
+      const l = fall(o.y);
+      if (!best && p.y > o.y && Math.hypot(l.x - o.x, l.z - o.z) < o.r) best = { type: 'bin', bin, y: o.y, x: l.x, z: l.z, t: l.t };
     }
-    if (best) return best;
-    const hit = this.physics.ray({ x: p.x, y: p.y, z: p.z }, { x: 0, y: -1, z: 0 }, 4, { solidOnly: true });
-    const y = hit ? hit.point.y : 0;
-    const [x, z] = fall(y);
-    return { type: 'surface', x, y, z };
+    if (!best) {
+      const hit = this.physics.ray({ x: p.x, y: p.y, z: p.z }, { x: 0, y: -1, z: 0 }, 4, { solidOnly: true });
+      const l = fall(hit ? hit.point.y : 0);
+      best = { type: 'surface', x: l.x, y: hit ? hit.point.y : 0, z: l.z, t: l.t };
+    }
+    // ostacoli lungo il getto (il contenitore che versa e quello che riceve non contano)
+    const skip = new Set([source?.body, best.item?.body].filter(Boolean));
+    const predicate = (c) => !skip.has(c.parent());
+    // si controlla fino all'imboccatura del bersaglio (bordo del recipiente, bordo del lavandino o del bidone): sotto
+    // c'è il bersaglio stesso
+    const mouthY = best.type === 'item' || best.type === 'bin' ? best.y + 0.002 : best.type === 'sink' ? sb.top + 0.002 : null;
+    const tEnd = mouthY === null ? best.t : fall(mouthY).t;
+    const at = (t, out) => out.set(p.x + vx * t, p.y - 4.905 * t * t, p.z + vz * t);
+    const a = _v.clone();
+    const b = _v2.clone();
+    for (let i = 0; i < 8 && tEnd > 0; i++) {
+      at((tEnd * i) / 8, a);
+      at((tEnd * (i + 1)) / 8, b);
+      const d = b.clone().sub(a);
+      const len = d.length();
+      if (len < 1e-5) continue;
+      const hit = this.physics.ray({ x: a.x, y: a.y, z: a.z }, { x: d.x / len, y: d.y / len, z: d.z / len }, len, { predicate });
+      if (!hit) continue;
+      // se è il piano su cui doveva cadere comunque, nulla cambia
+      if (best.type === 'surface' && hit.point.y < best.y + 0.004) break;
+      const below = this.physics.ray({ x: hit.point.x, y: hit.point.y + 0.001, z: hit.point.z }, { x: 0, y: -1, z: 0 }, 4, { solidOnly: true });
+      const y = below ? below.point.y : 0;
+      return { type: 'surface', x: hit.point.x, y, z: hit.point.z, t: (tEnd * (i + hit.toi / len)) / 8, blocked: hit.point };
+    }
+    return best;
+  }
+
+  /**
+   * Punto di uscita del getto di un contenitore inclinato (il punto più basso del bordo, appena fuori), direzione
+   * orizzontale e velocità: ≈ √(g·h), una goccia cade quasi dritta, un getto pieno va più in là.
+   */
+  spout(item, info, h) {
+    const def = item.def;
+    const m = item.mesh.matrixWorld;
+    const k = info.rimIndex * 3;
+    const lip = new THREE.Vector3(def.rim[k], def.rim[k + 1], def.rim[k + 2]).applyMatrix4(m);
+    const out = new THREE.Vector3(def.rim[k] * 1.25, def.rim[k + 1], def.rim[k + 2] * 1.25).applyMatrix4(m).sub(lip);
+    out.y = 0;
+    if (out.lengthSq() > 1e-10) out.normalize();
+    else out.set(0, 0, 0);
+    // inclinato quasi in orizzontale o oltre, la direzione «in fuori» del bordo è instabile (a 100° la bocca guarda in
+    // basso): il getto esce nella direzione dell'asse del recipiente, proiettata in orizzontale
+    const axis = new THREE.Vector3(0, 1, 0).applyQuaternion(item.mesh.quaternion);
+    const flat = Math.hypot(axis.x, axis.z);
+    if (flat > 0.2) out.set(axis.x / flat, 0, axis.z / flat);
+    const speed = def.drops ? 0.01 : Math.min(0.45, 0.6 * Math.sqrt(9.81 * Math.min(Math.max(0, h), 0.03)));
+    return { p: lip.addScaledVector(out, 0.003), out, speed };
   }
 
   /** Versa dal contenitore se il liquido (o la polvere) supera il punto più basso del bordo. */
   pourFrom(item, dt) {
     const mix = item.mixture;
     const def = item.def;
+    item.pourHead = undefined;
+    item.levelInfo = null;
     if (!mix || mix.isEmpty()) return;
     const lv = mix.liquidVolume;
     const sv = mix.solidVolume;
@@ -991,13 +1159,9 @@ export class LabGame {
     item.levelInfo = info;
     let h = info.level - info.rimY;
     if (!liquid) h -= 0.004; // la polvere scorre solo oltre l'angolo di riposo
-    if (!(h > 0)) return;
-    // portata di uno stramazzo sul bordo circolare: Q ≈ 1,77 · b · h^1,5 (b = corda bagnata)
-    const R = def.rimR;
-    const b = 2 * Math.sqrt(Math.max(1e-8, 2 * R * Math.min(h, R) - Math.min(h, R) ** 2));
-    let q = 1.77 * b * Math.min(h, 0.03) ** 1.5 * 1e6 * (def.flow ?? 1); // mL/s
-    if (!liquid) q *= 0.6;
-    if (h > 0.03 || info.level === Infinity) q += 40;
+    item.pourHead = Math.min(h, 0.05);
+    const q = pourRate({ h, R: def.rimR, flow: def.flow ?? 1, powder: !liquid, overfull: info.level === Infinity });
+    if (q <= 0) return;
     let dv = q * dt;
     const avail = liquid ? lv - RESIDUE_ML : sv;
     if (def.drops) {
@@ -1014,34 +1178,68 @@ export class LabGame {
     const portion = liquid ? mix.take(dv) : mix.takeFraction(dv / sv, { solidOnly: true });
     if (item.data.reagent) this.addCost(liquid ? dv * (item.data.price ?? PRICES.solutionPerMl) : portion.mass * PRICES.solidPerGram);
     if (mix.liquidVolume + mix.solidVolume < 0.5 && !mix.isEmpty()) item.dirty = true;
-    // punto di uscita: il bordo più basso, un po' all'esterno
-    const k = info.rimIndex * 3;
-    _v.set(def.rim[k], def.rim[k + 1], def.rim[k + 2]).applyMatrix4(item.mesh.matrixWorld);
-    _v2.set(def.rim[k] * 1.25, def.rim[k + 1], def.rim[k + 2] * 1.25).applyMatrix4(item.mesh.matrixWorld).sub(_v);
-    _v2.y = 0;
-    const out = _v2.lengthSq() > 1e-10 ? _v2.normalize().clone() : new THREE.Vector3();
-    // inclinato quasi in orizzontale o oltre, la direzione «in fuori» del bordo è instabile (a 100° la bocca guarda in
-    // basso): il getto esce nella direzione dell'asse del recipiente, proiettata in orizzontale
-    const axis = new THREE.Vector3(0, 1, 0).applyQuaternion(item.mesh.quaternion);
-    const flat = Math.hypot(axis.x, axis.z);
-    if (flat > 0.2) out.set(axis.x / flat, 0, axis.z / flat);
-    const p = _v.clone().addScaledVector(out, 0.003);
-    // velocità orizzontale del getto ≈ √(g·h): una goccia cade quasi dritta, un getto pieno va più in là
-    const speed = def.drops ? 0.01 : Math.min(0.45, 0.6 * Math.sqrt(9.81 * Math.min(h, 0.03)));
+    const { p, out, speed } = this.spout(item, info, h);
     item.streamSpeed = speed;
     const dest = this.traceStream(p, out.x * speed, out.z * speed, item);
-    if (dest.type === 'item') dest.item.mixture.add(portion);
-    else if (dest.type === 'sink') this.disposeWaste(portion, 'sink', item);
-    else if (dest.type === 'bin') this.disposeWaste(portion, dest.bin.bin, item);
-    else this.spill(portion, new THREE.Vector3(dest.x, dest.y, dest.z), item);
-    // gocce visibili del getto
+    // il liquido arriva al bersaglio quando il getto lo tocca (il bicchiere non si riempie prima)
+    this.inFlight.push({ at: this.time + dest.t, dest, portion, source: item });
     const look = liquid ? mix.appearance() : null;
     const col = liquid ? (look.turbid > 0.3 ? look.turbidColor : look.liquid) : portion.appearance().solid;
+    if (liquid && !def.drops && q >= 1.5) {
+      // getto continuo fino al punto d'arrivo (o all'ostacolo), più qualche schizzo dove arriva
+      let st = this.streams.get(item);
+      if (!st) this.streams.set(item, (st = new Stream(this.scene)));
+      st.set(p, out.x * speed, out.z * speed, dest.t, q, col);
+      st.shown = this.time;
+      if (Math.random() < Math.min(0.8, q * dt * 1.5)) {
+        const e = dest.blocked ?? { x: dest.x, y: dest.y, z: dest.z };
+        this.drops.emit(e.x, e.y + 0.003, e.z, (Math.random() - 0.5) * 0.25, 0.25 + Math.random() * 0.3, (Math.random() - 0.5) * 0.25, 0.0012, col, 0.4, e.y - 0.01);
+      }
+      return;
+    }
+    // poche gocce (contagocce, polvere, filo sottile)
     const n = def.drops ? 1 : Math.min(5, 1 + Math.floor(q * dt * 2));
     for (let i = 0; i < n; i++) {
       const r = def.drops ? 0.0022 : Math.min(0.004, (liquid ? 0.0012 : 0.0008) + Math.sqrt(q) * 0.00028);
       this.drops.emit(p.x + (Math.random() - 0.5) * 0.002, p.y, p.z + (Math.random() - 0.5) * 0.002, out.x * speed, -0.05, out.z * speed, r, col, 1.2, dest.y);
     }
+  }
+
+  /** Consegna il liquido arrivato in fondo al getto: nel contenitore, nello scarico, nei rifiuti o in una pozza. */
+  deliverStreams() {
+    if (!this.inFlight.length) return;
+    const due = [];
+    this.inFlight = this.inFlight.filter((f) => (f.at <= this.time ? (due.push(f), false) : true));
+    for (const { dest, portion, source } of due) {
+      if (dest.type === 'item' && this.items.includes(dest.item)) dest.item.mixture.add(portion);
+      else if (dest.type === 'sink') this.disposeWaste(portion, 'sink', source);
+      else if (dest.type === 'bin') this.disposeWaste(portion, dest.bin.bin, source);
+      else this.spill(portion, new THREE.Vector3(dest.x, dest.y, dest.z), source);
+    }
+  }
+
+  /**
+   * Anello sul punto in cui cadrebbe il getto del contenitore in mano, già da un'inclinazione piccola (prima che
+   * esca la prima goccia): verde se finisce in un recipiente, nel lavandino o nei rifiuti, rosso se fa una pozza.
+   */
+  updateAim() {
+    const item = this.held;
+    const info = item?.levelInfo;
+    this.aim = null;
+    if (!item?.def.container || !info || this.tilt < 0.1) {
+      this.aimRing.visible = false;
+      return;
+    }
+    const h = item.pourHead ?? -1;
+    const sp = this.spout(item, info, h);
+    const speed = item.def.drops ? sp.speed : Math.max(0.12, sp.speed);
+    const dest = this.traceStream(sp.p, sp.out.x * speed, sp.out.z * speed, item);
+    const ok = dest.type !== 'surface';
+    this.aim = { dest, ok };
+    const e = dest.blocked ?? dest;
+    this.aimRing.position.set(e.x, e.y + 0.001, e.z);
+    this.aimRing.material.color.set(ok ? 0x5fd38d : 0xe5484d);
+    this.aimRing.visible = true;
   }
 
   /** Liquido o polvere finiti su una superficie: nuova pozza o si unisce a una vicina; nel lavandino va nello scarico. */
@@ -1449,6 +1647,8 @@ export class LabGame {
   update(dt, { blocked = false } = {}) {
     this.time += dt;
     if (this.swirlT > 0) this.swirlT -= dt;
+    // lasciato il tasto destro, il contenitore torna dritto da solo (e smette di versare)
+    if (this.held) this.tilt = relaxTilt(this.tilt, dt, this.pouring);
     this.player.update(dt, blocked);
     for (const b of this.pendingBreaks) this.breakItem(b);
     this.pendingBreaks.clear();
@@ -1456,6 +1656,8 @@ export class LabGame {
     for (const it of this.items) syncItem(it);
     for (const p of this.room.props) if (!p.body.isSleeping()) this.syncProp(p);
     for (const it of this.items) if (it.def.container && it.mixture) this.pourFrom(it, dt);
+    for (const [it, st] of this.streams) if (st.shown !== this.time) st.hide();
+    this.deliverStreams();
     // acqua del rubinetto nei contenitori sotto il getto
     const sink = this.fx.sink;
     if (sink.tap) {
@@ -1474,6 +1676,8 @@ export class LabGame {
     this.updateHazards(dt);
     this.checkBins();
     this.updateHover();
+    this.updateAim();
+    this.updateOutline();
     // le pozze d'acqua evaporano piano
     for (const pd of [...this.puddles]) {
       if (this.time - (pd.lastTick ?? 0) > 1) {
@@ -1654,7 +1858,18 @@ export class LabGame {
     const item = this.held;
     if (!item) return null;
     const info = this.describe(item);
-    if (item.def.container && this.time - (item.pourT ?? -1) < 0.25) info.pouring = item.pourRate ?? 0;
+    if (item.def.container && this.time - (item.pourT ?? -1) < 0.25) {
+      info.pouring = item.pourRate ?? 0;
+      // dove va il getto: «Versando in Becher da 100 mL», nel lavandino, nei rifiuti o fuori
+      const d = this.aim?.dest;
+      if (d?.type === 'item') info.status = this.t('pouringInto', { name: this.itemName(d.item) });
+      else if (d?.type === 'sink') info.status = this.t('pouringSink');
+      else if (d?.type === 'bin') info.status = this.t('pouringBin', { bin: this.t(`bin_${d.bin.bin}`) });
+      else if (d) {
+        info.status = this.t('pouringOut');
+        info.spilling = true;
+      } else info.status = this.t('pouring');
+    }
     return info;
   }
 

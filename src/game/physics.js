@@ -169,14 +169,15 @@ export class Physics {
   }
 
   /**
-   * Raggio: primo collisore colpito. solidOnly: solo la stanza (esclude gli oggetti mobili). exclude: corpo da ignorare.
+   * Raggio: primo collisore colpito. solidOnly: solo la stanza (esclude gli oggetti mobili). exclude: corpo da ignorare;
+   * predicate: (collisore) → false per ignorarlo.
    * @returns {{toi: number, point: {x,y,z}, normal: {x,y,z}, collider: object, owner: object}|null}
    */
-  ray(origin, dir, maxToi, { solidOnly = false, exclude = null } = {}) {
+  ray(origin, dir, maxToi, { solidOnly = false, exclude = null, predicate = null } = {}) {
     const { R } = this;
     const ray = new R.Ray(origin, dir);
     const flags = solidOnly ? R.QueryFilterFlags.EXCLUDE_DYNAMIC | R.QueryFilterFlags.EXCLUDE_KINEMATIC : R.QueryFilterFlags.EXCLUDE_KINEMATIC;
-    const hit = this.world.castRayAndGetNormal(ray, maxToi, true, flags, undefined, undefined, exclude ?? undefined);
+    const hit = this.world.castRayAndGetNormal(ray, maxToi, true, flags, undefined, undefined, exclude ?? undefined, predicate ?? undefined);
     if (!hit) return null;
     const p = ray.pointAt(hit.timeOfImpact);
     return { toi: hit.timeOfImpact, point: { x: p.x, y: p.y, z: p.z }, normal: hit.normal, collider: hit.collider, owner: this.ownerOf(hit.collider) };

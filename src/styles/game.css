@@ -245,6 +245,9 @@
   font-weight: 600;
   color: #9fe6ff;
 }
+.gm-pop__status.is-bad {
+  color: #ff8a8f;
+}
 .gm-pop__name {
   display: flex;
   align-items: center;

@@ -1,7 +1,7 @@
 // Test della legenda dei comandi (in basso a destra): righe giuste per ogni situazione. npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { legendRows, MAX_ROWS } from '../../src/game/controls.js';
+import { legendRows, MAX_ROWS, relaxTilt, tiltGain } from '../../src/game/controls.js';
 
 const keys = (rows) => rows.map((r) => r.key);
 const beaker = { kind: 'beaker250', container: true };
@@ -79,4 +79,13 @@ test('legenda: mai più di MAX_ROWS righe, l\'aiuto sempre in fondo', () => {
     assert.ok(rows.length <= MAX_ROWS, `${rows.length} righe`);
     assert.equal(rows.at(-1).key, 'lgHelp');
   }
+});
+
+test('inclinazione: torna dritta lasciando il tasto destro, ferma tenendolo premuto', () => {
+  assert.ok(Math.abs(relaxTilt(1.2, 0.1, false) - 0.9) < 1e-9);
+  assert.equal(relaxTilt(1.2, 0.1, true), 1.2);
+  assert.equal(relaxTilt(0.1, 0.5, false), 0);
+  assert.equal(tiltGain(0.001), 0.4, 'vicino al bordo la corsa del mouse è più lunga');
+  assert.equal(tiltGain(-0.01), 1);
+  assert.equal(tiltGain(undefined), 1);
 });
