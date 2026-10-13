@@ -1,0 +1,192 @@
+// Effetti del simulatore: gocce e polveri che cadono (sfere istanziate), sbuffi morbidi di vapore, fumo, gas,
+// getto dell'estintore e fiamme (punti con uno shader), pozze sulle superfici.
+import * as THREE from 'three';
+
+const _m = new THREE.Matrix4();
+const _q = new THREE.Quaternion();
+const _s = new THREE.Vector3();
+const _p = new THREE.Vector3();
+const _c = new THREE.Color();
+
+/** Gocce, granelli di polvere e schegge: piccole sfere con fisica balistica. */
+export class Drops {
+  constructor(scene, max = 900) {
+    this.max = max;
+    this.mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ roughness: 0.15, metalness: 0, transparent: true, opacity: 0.85 }), max);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.frustumCulled = false;
+    this.mesh.count = 0;
+    this.mesh.renderOrder = 5;
+    this.mesh.setColorAt(0, new THREE.Color(1, 1, 1));
+    scene.add(this.mesh);
+    this.p = new Float32Array(max * 3);
+    this.v = new Float32Array(max * 3);
+    this.life = new Float32Array(max);
+    this.size = new Float32Array(max);
+    this.floor = new Float32Array(max);
+    this.col = new Float32Array(max * 3);
+    this.n = 0;
+  }
+
+  /** Aggiunge una goccia (posizione, velocità, raggio, colore 0–255, durata, quota a cui sparisce). */
+  emit(x, y, z, vx, vy, vz, r, rgb, life = 2, floor = -1) {
+    if (this.n >= this.max) return;
+    const i = this.n++;
+    this.p.set([x, y, z], i * 3);
+    this.v.set([vx, vy, vz], i * 3);
+    this.life[i] = life;
+    this.size[i] = r;
+    this.floor[i] = floor;
+    this.col.set([rgb[0] / 255, rgb[1] / 255, rgb[2] / 255], i * 3);
+  }
+
+  update(dt) {
+    let w = 0;
+    for (let i = 0; i < this.n; i++) {
+      this.life[i] -= dt;
+      this.v[i * 3 + 1] -= 9.81 * dt;
+      this.p[i * 3] += this.v[i * 3] * dt;
+      this.p[i * 3 + 1] += this.v[i * 3 + 1] * dt;
+      this.p[i * 3 + 2] += this.v[i * 3 + 2] * dt;
+      if (this.life[i] <= 0 || this.p[i * 3 + 1] < this.floor[i]) continue;
+      if (w !== i) {
+        this.p.copyWithin(w * 3, i * 3, i * 3 + 3);
+        this.v.copyWithin(w * 3, i * 3, i * 3 + 3);
+        this.col.copyWithin(w * 3, i * 3, i * 3 + 3);
+        this.life[w] = this.life[i];
+        this.size[w] = this.size[i];
+        this.floor[w] = this.floor[i];
+      }
+      w++;
+    }
+    this.n = w;
+    for (let i = 0; i < w; i++) {
+      _p.set(this.p[i * 3], this.p[i * 3 + 1], this.p[i * 3 + 2]);
+      const r = this.size[i];
+      // le gocce si allungano nella direzione della caduta
+      _s.set(r, r * (1 + Math.min(2, Math.abs(this.v[i * 3 + 1]) * 0.6)), r);
+      _m.compose(_p, _q, _s);
+      this.mesh.setMatrixAt(i, _m);
+      _c.setRGB(this.col[i * 3], this.col[i * 3 + 1], this.col[i * 3 + 2]);
+      this.mesh.setColorAt(i, _c);
+    }
+    this.mesh.count = w;
+    this.mesh.instanceMatrix.needsUpdate = true;
+    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+  }
+}
+
+const PUFF_VERT = `
+attribute float aSize;
+attribute vec4 aColor;
+varying vec4 vColor;
+void main() {
+  vColor = aColor;
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  gl_PointSize = aSize * (900.0 / -mv.z);
+  gl_Position = projectionMatrix * mv;
+}`;
+const PUFF_FRAG = `
+varying vec4 vColor;
+void main() {
+  vec2 d = gl_PointCoord - 0.5;
+  float r = dot(d, d) * 4.0;
+  if (r > 1.0) discard;
+  gl_FragColor = vec4(vColor.rgb, vColor.a * (1.0 - r) * (1.0 - r));
+}`;
+
+/** Sbuffi morbidi che salgono, si allargano e svaniscono (vapore, fumo, gas, fiamme con la miscelazione additiva). */
+export class Puffs {
+  constructor(scene, max = 1200, additive = false) {
+    this.max = max;
+    this.geo = new THREE.BufferGeometry();
+    this.pos = new Float32Array(max * 3);
+    this.sizeA = new Float32Array(max);
+    this.colA = new Float32Array(max * 4);
+    this.geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
+    this.geo.setAttribute('aSize', new THREE.BufferAttribute(this.sizeA, 1).setUsage(THREE.DynamicDrawUsage));
+    this.geo.setAttribute('aColor', new THREE.BufferAttribute(this.colA, 4).setUsage(THREE.DynamicDrawUsage));
+    this.points = new THREE.Points(
+      this.geo,
+      new THREE.ShaderMaterial({ vertexShader: PUFF_VERT, fragmentShader: PUFF_FRAG, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }),
+    );
+    this.points.frustumCulled = false;
+    this.points.renderOrder = additive ? 7 : 6;
+    scene.add(this.points);
+    this.v = new Float32Array(max * 3);
+    this.life = new Float32Array(max);
+    this.life0 = new Float32Array(max);
+    this.s0 = new Float32Array(max);
+    this.s1 = new Float32Array(max);
+    this.a0 = new Float32Array(max);
+    this.n = 0;
+  }
+
+  emit(x, y, z, vx, vy, vz, { size = 0.03, grow = 3, rgb = [230, 230, 230], alpha = 0.4, life = 2 } = {}) {
+    if (this.n >= this.max) return;
+    const i = this.n++;
+    this.pos.set([x, y, z], i * 3);
+    this.v.set([vx, vy, vz], i * 3);
+    this.life[i] = this.life0[i] = life;
+    this.s0[i] = size;
+    this.s1[i] = size * grow;
+    this.a0[i] = alpha;
+    this.colA.set([rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, alpha], i * 4);
+  }
+
+  update(dt, wind = null) {
+    let w = 0;
+    for (let i = 0; i < this.n; i++) {
+      this.life[i] -= dt;
+      if (this.life[i] <= 0) continue;
+      const k = i * 3;
+      if (wind) {
+        const f = wind(this.pos[k], this.pos[k + 1], this.pos[k + 2]);
+        if (f) {
+          this.v[k] += f[0] * dt;
+          this.v[k + 1] += f[1] * dt;
+          this.v[k + 2] += f[2] * dt;
+        }
+      }
+      this.pos[k] += this.v[k] * dt;
+      this.pos[k + 1] += this.v[k + 1] * dt;
+      this.pos[k + 2] += this.v[k + 2] * dt;
+      this.v[k] *= 0.985;
+      this.v[k + 2] *= 0.985;
+      const u = 1 - this.life[i] / this.life0[i];
+      this.sizeA[i] = this.s0[i] + (this.s1[i] - this.s0[i]) * u;
+      this.colA[i * 4 + 3] = this.a0[i] * (u < 0.15 ? u / 0.15 : 1 - (u - 0.15) / 0.85);
+      if (w !== i) {
+        this.pos.copyWithin(w * 3, k, k + 3);
+        this.v.copyWithin(w * 3, k, k + 3);
+        this.colA.copyWithin(w * 4, i * 4, i * 4 + 4);
+        this.sizeA[w] = this.sizeA[i];
+        this.life[w] = this.life[i];
+        this.life0[w] = this.life0[i];
+        this.s0[w] = this.s0[i];
+        this.s1[w] = this.s1[i];
+        this.a0[w] = this.a0[i];
+      }
+      w++;
+    }
+    this.n = w;
+    this.geo.setDrawRange(0, w);
+    this.geo.attributes.position.needsUpdate = true;
+    this.geo.attributes.aSize.needsUpdate = true;
+    this.geo.attributes.aColor.needsUpdate = true;
+  }
+}
+
+/** Pozza di liquido su una superficie: un disco che si allarga con il volume. */
+export function createPuddle(scene, x, y, z) {
+  const mat = new THREE.MeshStandardMaterial({ color: 0xd6e8f6, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+  const mesh = new THREE.Mesh(new THREE.CircleGeometry(1, 28), mat);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.set(x, y + 0.002, z);
+  mesh.renderOrder = 1;
+  scene.add(mesh);
+  return mesh;
+}
+
+/** Raggio (m) di una pozza di V millilitri su una superficie liscia (spessore ~1,5 mm). */
+export const puddleRadius = (ml) => Math.max(0.015, Math.min(0.6, Math.sqrt((ml * 1e-6) / (Math.PI * 0.0015))));

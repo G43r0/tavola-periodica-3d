@@ -313,6 +313,9 @@ export const GLOSSARY_ELI6 = {
   'ui.sandbox': {
     d: 'Un foglio dove disegni con gli elementi veri: puoi sciogliere il ferro, far bruciare il legno, far esplodere l\'idrogeno o accendere il neon, e vedere cosa succede.',
   },
+  'ui.game': {
+    d: 'Un videogioco in cui entri nel laboratorio di chimica della scuola e fai gli esperimenti come un vero chimico: prendi i bicchieri di vetro, pesi, versi, scaldi e porti il risultato alla maestra. Se fai cadere un bicchiere si rompe, e la spazzatura va nel bidone giusto!',
+  },
   'ui.language': {
     d: 'Cambia la lingua: italiano, inglese o questa, che spiega le stesse cose con parole più semplici.',
   },
