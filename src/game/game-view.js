@@ -379,6 +379,7 @@ export function createGame(elements, { onClose } = {}) {
     const prev = state;
     showDialog(`
       <h3>${t('controls')}</h3>
+      <p class="gm-help__note">${t('helpNote')}</p>
       <div class="gm-help">
         <div><h4>${t('helpWalk')}</h4><dl>${rows(t('helpWalkRows'))}</dl></div>
         <div><h4>${t('helpBench')}</h4><dl>${rows(t('helpBenchRows'))}</dl><h4>${t('helpTools')}</h4><dl>${rows(t('helpToolsRows'))}</dl></div>

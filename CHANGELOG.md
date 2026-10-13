@@ -38,6 +38,8 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   - Getto continuo che si assottiglia cadendo e si ferma sugli ostacoli (il bordo di un altro becher, un oggetto in
     mezzo); il liquido arriva nel recipiente quando il getto lo tocca. L'oggetto guardato ha un contorno (verde per gli
     oggetti, ambra per gli elementi fissi).
+  - Le pozze di una soluzione, evaporando, lasciano un alone di residuo secco (anche la polvere versata) da pulire
+    con la carta: finché resta conta nel disordine della valutazione. L'aiuto (`H`) spiega legenda, finestrelle e anello.
   - Sgabelli spingibili: il giocatore li sposta camminandoci contro e non ci resta più bloccato nel corridoio tra i
     banconi; tornano al loro posto a ogni partita. La vetreria a terra non ferma più il giocatore.
 - **Preset grafici** (pulsante con lo schermo nella barra in alto): *Semplice* per i computer poco potenti (niente

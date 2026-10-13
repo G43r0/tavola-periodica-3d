@@ -36,11 +36,11 @@ filtrazione, distillazione, audio.
 |---|---|---|
 | Muoversi | `W A S D` (`Maiusc` corre), mouse per guardare | `A` / `D` cambia postazione |
 | Prendere / posare | clic sinistro | clic sinistro (l'oggetto segue il puntatore) |
-| Versare | tieni premuto il tasto destro e muovi il mouse in su/giù: l'inclinazione segue il mouse | uguale |
+| Versare | tieni premuto il tasto destro e muovi il mouse in su/giù: l'inclinazione segue il mouse; lasciando il tasto il recipiente torna dritto; di lato si corregge la mira | uguale |
 | Lanciare | `Q` | — |
 | Usare | `E` (manopole, rubinetto, bilancia, campanello, cappa, doccia; con uno strumento in mano: spatola, ansa, carta, cartina, estintore) | uguale |
 | Distanza / altezza | rotella | rotella |
-| Altro | `Tab` cambia visuale, `I` dettagli del contenitore, `H` comandi, `Esc` pausa | |
+| Altro | `Tab` cambia visuale, `I` finestrelle accanto agli oggetti, `L` legenda dei comandi, `H` comandi, `Esc` pausa | |
 
 ### Moduli (`src/game/`)
 
@@ -57,7 +57,9 @@ filtrazione, distillazione, audio.
 | `liquid.js` | disegno dei liquidi (superficie sempre orizzontale), livello del liquido da campioni del volume interno, versamento |
 | `effects.js` | fiamme, fuoco, fumo e gas, vapore, schizzi, gocce, pozze, frammenti di vetro, esplosioni |
 | `player.js` | camera in prima persona (capsula con il controllore del personaggio) e camera del bancone |
-| `hud.js` | mirino, suggerimenti, scheda dell'ordine, contenitori, soldi, avvisi |
+| `controls.js` | legenda dei comandi (funzione pura `legendRows`), ritorno e sensibilità dell'inclinazione |
+
+L'HUD (mirino, legenda, finestrelle accanto agli oggetti, scheda dell'esercitazione, soldi, avvisi) è in `game-view.js`.
 
 ### Liquidi e versamento
 
@@ -67,6 +69,22 @@ punto più basso del bordo esce da lì: la portata cresce con il volume che spor
 un getto se si inclina molto). Il getto cade con una parabola; se attraversa la bocca di un altro contenitore il liquido
 vi passa, altrimenti forma una pozza dove tocca. Lo shader del liquido scarta i frammenti sopra il livello e disegna le
 facce interne come superficie.
+
+Aggiornamento dopo la ricerca su *Cooking Simulator* (`reports/Oggetti e fluidi in Cooking Simulator.md`): la
+portata è in `pourRate` (`liquid.js`) con una zona morta di 0,5 mm e un massimo di 150 · flow mL/s; vicino al bordo il
+mouse inclina più finemente; un anello verde o rosso mostra il punto d'arrivo prima della prima goccia; il getto è un
+tubo che si assottiglia (continuità) e si ferma sugli ostacoli lungo la parabola; il liquido arriva dopo il tempo di
+volo. Una pozza evaporata lascia un alone di residuo secco da pulire.
+
+### Interfaccia
+
+Come in *Cooking Simulator*: in basso a destra una legenda piccola (icona del tasto e azione) che cambia con l'oggetto
+in mano e con ciò che si guarda; le informazioni importanti in finestrelle agganciate agli oggetti (a sinistra di ciò
+che si guarda: nome in una fascia, millilitri e contenuto; a destra dell'oggetto in mano: millilitri e dove si sta
+versando); contorno sull'oggetto guardato. Gli sgabelli sono arredi dinamici che il giocatore spinge.
+
+Rimandato (passi 10–14 del piano nel report): anteprima del punto di posa, lancio a carica, rotazione con `R`,
+manipolazione precisa con `Maiusc` e corsa con la barra spaziatrice, rubinetto che riempie tenendo premuto `E`.
 
 ### Chimica dei contenitori
 
@@ -97,7 +115,7 @@ nel contenitore giusto e lavare.
 
 - **Vetro rotto**: urto oltre ~3,5 m/s → frammenti (da raccogliere e buttare nel contenitore del vetro) e pozza.
 - **Pozze**: si puliscono con la carta assorbente, che poi va nei rifiuti giusti; un liquido infiammabile vicino a una
-  fiamma prende fuoco.
+  fiamma prende fuoco. Evaporando, una pozza con almeno 0,05 g di soluto lascia un alone che va pulito anch'esso.
 - **Fuoco**: si propaga a carta e liquidi infiammabili; si spegne con l'estintore a CO₂.
 - **Gas tossici** (Cl₂, NO₂, H₂S, SO₂, NH₃, HCN, CO, Br₂…): fuori dalla cappa accesa fanno scattare l'allarme.
 - **Esplosioni**: reazioni molto esotermiche o esplosivi scaldati; spingono gli oggetti e rompono la vetreria vicina.
@@ -117,4 +135,5 @@ con trasmissione.
 
 `npm test` (tests/game): scioglimento e concentrazione, pH di acidi e basi, titolazione e fenolftaleina, pioggia d'oro,
 cristallizzazione ed eccesso di calore, conservazione della massa nei travasi, classi dei rifiuti, livello del liquido
-e versamento, rottura della vetreria con Rapier, valutazione delle esercitazioni. Prova nel browser con screenshot.
+e versamento, rottura della vetreria con Rapier, valutazione delle esercitazioni, corridoio libero con gli sgabelli
+spingibili, portata e getto, aloni, righe della legenda. Prova nel browser con screenshot.

@@ -1,7 +1,8 @@
-// Test del versamento: portata (con zona morta e tetto), punto d'arrivo del getto e raggio del getto. npm test
+// Test del versamento (portata con zona morta e tetto, punto d'arrivo e raggio del getto) e delle pozze. npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { pourRate, ballisticLanding, streamRadius, POUR_DEAD } from '../../src/game/liquid.js';
+import { puddleState, STAIN_G } from '../../src/game/effects.js';
 
 const R = 0.033; // becher da 250 mL
 
@@ -37,4 +38,12 @@ test('getto: punto d\'arrivo balistico e raggio dalla continuità', () => {
   assert.ok(Math.abs(r - 0.0029) < 0.0001, `r = ${r}`);
   assert.equal(streamRadius(1e-9, 0.3), 0.0008);
   assert.equal(streamRadius(1, 0.3), 0.005);
+});
+
+test('pozze: evaporando lasciano un alone se resta abbastanza residuo secco', () => {
+  assert.equal(puddleState(12, 0, 0.3), 'wet', 'acqua salata: ancora una pozza');
+  assert.equal(puddleState(0.01, 0.2, 0.3), 'stain', 'evaporata: resta il sale');
+  assert.equal(puddleState(0.01, 0.001, 0.004), 'gone', 'acqua distillata o del rubinetto: non resta niente');
+  assert.equal(puddleState(0, 0.05, STAIN_G), 'stain');
+  assert.equal(puddleState(0, 0.005, 0.2), 'gone', 'sotto 0,01 mL sparisce comunque');
 });

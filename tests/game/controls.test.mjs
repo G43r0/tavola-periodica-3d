@@ -65,6 +65,8 @@ test('legenda: strumenti attenuati quando il bersaglio non va bene', () => {
   assert.equal(ok.find((r) => r.key === 'lgSpatulaTake').off, false);
   const towel = legendRows({ mode: 'walk', held: { kind: 'towel', container: false }, target: { type: 'puddle' } });
   assert.equal(towel.find((r) => r.key === 'lgWipe').off, false);
+  const stain = legendRows({ mode: 'walk', held: { kind: 'towel', container: false }, target: { type: 'puddle', stain: true } });
+  assert.equal(stain.find((r) => r.key === 'lgWipeStain').off, false);
 });
 
 test('legenda: mai più di MAX_ROWS righe, l\'aiuto sempre in fondo', () => {

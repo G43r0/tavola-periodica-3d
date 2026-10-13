@@ -828,6 +828,12 @@
   grid-template-columns: 1fr 1fr;
   gap: 18px;
 }
+.gm-help__note {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-1);
+}
 .gm-help h4 {
   margin: 10px 0 6px;
   font-size: 13px;
@@ -835,7 +841,7 @@
 }
 .gm-help dl {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: minmax(6em, 42%) 1fr;
   gap: 4px 10px;
   margin: 0;
   font-size: 12.5px;
@@ -843,7 +849,6 @@
 .gm-help dt {
   font-family: var(--font-mono);
   color: var(--text-0);
-  white-space: nowrap;
 }
 .gm-help dd {
   margin: 0;

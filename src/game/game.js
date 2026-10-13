@@ -11,7 +11,7 @@ import { Physics } from './physics.js';
 import { buildRoom, ROOM, LAYOUT, BENCH_Y, DESK_Y, STATIONS } from './room.js';
 import { DEFS, createItem, syncItem, disposeItem, placeItem, itemMaterials, itemMassGrams } from './items.js';
 import { liquidLevel, pourRate, ballisticLanding } from './liquid.js';
-import { Drops, Puffs, Stream, createPuddle, puddleRadius } from './effects.js';
+import { Drops, Puffs, Stream, createPuddle, puddleRadius, puddleState, stainAlphaMap } from './effects.js';
 import { Player } from './player.js';
 import { createLabChemistry, Mixture, wasteClass, binAccepts, AMBIENT } from './mixture.js';
 import { SHELF, PRICES, UNIVERSAL_SCALE, FLAME_SALTS } from './reagents.js';
@@ -382,7 +382,7 @@ export class LabGame {
 
   /** Disordine: pozze, vetri rotti, carta e cartine abbandonate, fuochi, gas, preparati vecchi non smaltiti. */
   mess() {
-    let n = this.puddles.filter((p) => p.mix.liquidVolume + p.mix.solidVolume > 1).length;
+    let n = this.puddles.filter((p) => p.stain || p.mix.liquidVolume + p.mix.solidVolume > 1).length;
     for (const it of this.items) {
       if (it === this.held) continue;
       if (it.kind === 'shards') n++;
@@ -1259,19 +1259,34 @@ export class LabGame {
     this.updatePuddle(pd);
   }
 
+  /**
+   * Aggiorna una pozza dopo un cambiamento (liquido aggiunto, asciugato, evaporato). Evaporando, il residuo secco resta
+   * sul piano come un alone grande quanto era la pozza: va pulito con la carta e conta come disordine.
+   */
   updatePuddle(pd) {
-    const v = pd.mix.liquidVolume + pd.mix.solidVolume;
-    if (v < 0.01) {
+    const lv = pd.mix.liquidVolume;
+    const sv = pd.mix.solidVolume;
+    const state = puddleState(lv, sv, pd.mix.mass - pd.mix.water);
+    if (state === 'gone') {
       pd.mesh.removeFromParent();
       this.puddles = this.puddles.filter((q) => q !== pd);
       return;
     }
-    pd.r = puddleRadius(v);
+    const wasStain = pd.stain;
+    pd.stain = state === 'stain';
+    if (!pd.stain) pd.maxR = Math.max(pd.maxR ?? 0, puddleRadius(lv + sv));
+    pd.r = pd.stain ? pd.maxR ?? puddleRadius(sv) : puddleRadius(lv + sv);
     pd.mesh.scale.setScalar(pd.r);
     const a = pd.mix.appearance();
-    const c = pd.mix.liquidVolume > 0.05 ? (a.turbid > 0.3 ? a.turbidColor : a.liquid) : a.solid;
-    pd.mesh.material.color.setRGB(c[0] / 255, c[1] / 255, c[2] / 255);
-    pd.mesh.material.opacity = pd.mix.liquidVolume > 0.05 ? Math.min(0.85, 0.35 + a.alpha * 0.5 + a.turbid * 0.4) : 0.95;
+    const c = pd.stain ? a.solid : a.turbid > 0.3 ? a.turbidColor : a.liquid;
+    const mat = pd.mesh.material;
+    mat.color.setRGB(c[0] / 255, c[1] / 255, c[2] / 255);
+    mat.opacity = pd.stain ? 0.55 : Math.min(0.85, 0.35 + a.alpha * 0.5 + a.turbid * 0.4);
+    mat.roughness = pd.stain ? 0.9 : 0.05;
+    if (pd.stain !== Boolean(wasStain)) {
+      mat.alphaMap = pd.stain ? stainAlphaMap() : null;
+      mat.needsUpdate = true;
+    }
   }
 
   // ------------------------------------------------------------------ aspetto del contenuto
@@ -1721,6 +1736,7 @@ export class LabGame {
     if (h.type === 'puddle') {
       const mix = h.puddle.mix;
       const look = mix.appearance();
+      if (h.puddle.stain) return { name: t('lookStain'), rows: [], notes: [t('lookStainNote')], color: rgbCss(look.solid) };
       return { name: t('lookPuddle'), rows: [], notes: [t('lookPuddleNote')], volume: `≈ ${this.fmt(Math.max(1, Math.round(mix.liquidVolume)), 0)} mL`, color: rgbCss(look.liquid) };
     }
     const f = h.fixture;
@@ -1745,7 +1761,7 @@ export class LabGame {
     const held = this.held;
     let target = null;
     if (h?.type === 'item') target = { type: 'item', kind: h.item.kind, name: this.itemName(h.item), container: Boolean(h.item.def.container) };
-    else if (h?.type === 'puddle') target = { type: 'puddle' };
+    else if (h?.type === 'puddle') target = { type: 'puddle', stain: Boolean(h.puddle.stain) };
     else if (h?.type === 'fixture') {
       const f = h.fixture;
       target = { type: 'fixture', kind: f.kind, on: Boolean(f.kind === 'sink' ? f.tap : f.on), level: f.level ?? 0, binName: f.bin ? this.t(`bin_${f.bin}`) : '' };

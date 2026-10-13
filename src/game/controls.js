@@ -52,7 +52,7 @@ function toolRows(held, target) {
     case 'strip':
       return [row(['e'], 'lgStrip', null, !onVessel)];
     case 'towel':
-      return [row(['e'], 'lgWipe', null, target?.type !== 'puddle')];
+      return [row(['e'], target?.stain ? 'lgWipeStain' : 'lgWipe', null, target?.type !== 'puddle')];
     case 'extinguisher':
       return [row(['e'], 'lgSpray')];
     default:
@@ -64,7 +64,7 @@ function toolRows(held, target) {
  * Righe della legenda.
  * @param {{mode: 'walk'|'bench', held: null|{kind: string, container: boolean, loaded?: boolean},
  *          target: null|{type: 'item'|'fixture'|'puddle', kind?: string, name?: string, container?: boolean,
- *                         on?: boolean, level?: number, binName?: string},
+ *                         on?: boolean, level?: number, binName?: string, stain?: boolean},
  *          canPlace?: boolean, pouring?: boolean}} s
  * @returns {{keys: string[], key: string, params: object|null, off: boolean}[]}
  */
@@ -100,7 +100,7 @@ export function legendRows(s) {
     }
     if (target.kind === 'bin') out.push(row(['e'], 'lgBinNeedsVessel', { bin: target.binName ?? '' }, true));
   } else if (target?.type === 'puddle') {
-    out.push(row(['e'], 'lgNeedTowel', null, true));
+    out.push(row(['e'], target.stain ? 'lgNeedTowelStain' : 'lgNeedTowel', null, true));
   }
   const rows = out.slice(0, MAX_ROWS - 1);
   const base = mode === 'bench' ? [row(['ad'], 'lgStation'), row(['tab'], 'lgFirstPerson')] : [row(['wasd'], 'lgWalk'), row(['tab'], 'lgBenchView')];

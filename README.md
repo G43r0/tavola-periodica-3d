@@ -441,13 +441,23 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
   quantità variabili; tolleranze strette) o *semplificata* (un cucchiaino = 1 g, quantità e pH sempre visibili,
   tolleranze larghe).
 - **Due visuali**: prima persona (`W A S D` e mouse) e vista dall'alto del bancone (`Tab`; `A`/`D` cambia postazione:
-  bancone, scaffale, lavandino, cappa, cattedra, rifiuti).
+  bancone, scaffale, lavandino, cappa, cattedra, rifiuti; l'oggetto in mano viaggia con il giocatore).
+- **Interfaccia come in *Cooking Simulator***: in basso a destra una legenda piccola (icona del tasto e azione) mostra
+  sempre i comandi del momento, cambia con l'oggetto in mano e con ciò che si guarda, attenua le azioni che lì non
+  funzionano e illumina il tasto premuto (`L` la nasconde). Le informazioni importanti sono in finestrelle accanto agli
+  oggetti: ciò che si guarda (nome in una fascia, millilitri e contenuto; stato di piastra, Bunsen, rubinetto, bilancia,
+  rifiuti) e ciò che si tiene in mano (millilitri e dove si sta versando). L'oggetto guardato ha un contorno.
 - **Fisica vera**: gli oggetti si prendono, si posano dove si guarda, si lanciano, cadono e si rovesciano; la vetreria che
-  urta oltre ~3,3 m/s si rompe (un becher che cade dal bancone sì, uno posato no).
-- **Versare**: tenendo premuto il tasto destro e muovendo il mouse si inclina il recipiente. Il livello del liquido resta
-  orizzontale (quantile di ~300 punti campionati nel volume interno) e il liquido esce dal punto più basso del bordo con
-  la portata di uno stramazzo (Q ≈ 1,77 · b · h^1,5): inclinando poco si versa goccia a goccia. Guardando un altro
-  recipiente, la bocca si porta sopra la sua apertura; il getto cade in una parabola e, se manca il bersaglio, fa una pozza.
+  urta oltre ~3,3 m/s si rompe (un becher che cade dal bancone sì, uno posato no). Gli sgabelli si spingono camminandoci
+  contro; la vetreria a terra non ferma il giocatore.
+- **Versare**: tenendo premuto il tasto destro e muovendo il mouse si inclina il recipiente; lasciando il tasto torna
+  dritto e smette di versare, e di lato si corregge la mira. Il livello del liquido resta orizzontale (quantile di ~300
+  punti campionati nel volume interno) e il liquido esce dal punto più basso del bordo con la portata di uno stramazzo
+  (Q ≈ 1,77 · b · h^1,5, fino a 150 mL/s per un becher): sotto 0,5 mm di carico resta attaccato al bordo, poi esce
+  goccia a goccia, e vicino al bordo il mouse inclina più finemente. Guardando un altro recipiente, la bocca si porta
+  sopra la sua apertura. Un anello mostra dove cadrà il getto già prima della prima goccia: verde in un recipiente, nel
+  lavandino o nei rifiuti, rosso se farà una pozza. Il getto è un filo continuo che si assottiglia cadendo e si ferma
+  sugli ostacoli (il bordo di un altro becher); il liquido arriva quando il getto tocca il bersaglio.
 - **Strumenti**: becher da 100 e 250 mL, beuta, cilindro graduato (tacche da 1 mL), bottiglie di reagenti con etichetta e
   pittogrammi, spruzzetta di acqua distillata, contagocce di fenolftaleina, barattoli, spatola (un cucchiaino o un pizzico),
   bilancia con tara, piastra riscaldante con agitatore (5 livelli), becco Bunsen con treppiede e reticella, ansa di
@@ -458,7 +468,8 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
   indicatori, precipitati in sospensione), solubilità con la temperatura (CRC Handbook) e cristallizzazione anche come
   idrato (CuSO₄·5H₂O azzurro, che scaldato troppo torna bianco), ebollizione ed evaporazione, gas che si liberano, le
   reazioni del catalogo con le loro condizioni e il loro calore. Il tempo termico scorre 4 volte più veloce del reale.
-- **Incidenti**: vetro rotto (i vetri vanno raccolti e buttati nel contenitore del vetro), pozze da asciugare con la carta,
+- **Incidenti**: vetro rotto (i vetri vanno raccolti e buttati nel contenitore del vetro), pozze da asciugare con la carta
+  (evaporando, quelle di una soluzione lasciano un alone di residuo secco da pulire),
   fuoco (un liquido infiammabile vicino alla fiamma; si propaga alla carta; si spegne con l'estintore), gas tossici (NO₂,
   Cl₂, H₂S, NH₃… fanno scattare l'allarme fuori dalla cappa accesa), esplosioni, schizzi corrosivi (doccia di emergenza
   entro 15 s).
@@ -525,7 +536,8 @@ src/
     data/molecules-reazioni.js sostanze aggiunte per il catalogo delle reazioni (ioni monoatomici, complessi, silice…)
     data/reactions.js libreria delle reazioni
   game/               simulatore di laboratorio (il gioco)
-    game-view.js      interfaccia: menu, HUD, finestre, comandi, blocco del puntatore; carica Rapier alla prima apertura
+    game-view.js      interfaccia: menu, HUD (legenda, finestrelle accanto agli oggetti), finestre, comandi; carica Rapier
+    controls.js       legenda dei comandi in basso a destra (funzione pura) e inclinazione del recipiente
     game.js           il gioco: oggetti, presa e versamento, strumenti, calore, incidenti, rifiuti, esercitazioni
     mixture.js        chimica dei contenitori: fasi, pH, colore, solubilità, cristallizzazione, reazioni, calore
     reagents.js       solubilità, acidi e basi, idrati, gas tossici, metalli pesanti, reagenti dello scaffale, prezzi
@@ -552,7 +564,7 @@ tests/lab/            test del motore chimico (npm test)
 tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo, strumenti)
 tests/i18n/           test delle lingue e del glossario della modalità Spiega
 tests/gfx/            test dei preset grafici e dell'aspetto reale degli elementi
-tests/game/           test del simulatore (chimica dei contenitori, fisica, liquidi, esercitazioni e valutazione)
+tests/game/           test del simulatore (chimica dei contenitori, fisica, liquidi e getto, legenda, esercitazioni e valutazione)
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json
@@ -597,8 +609,8 @@ build/icon.png        icona usata da electron-builder
 | clic destro / centrale | (sandbox) cancella / preleva la sostanza |
 | `Maiusc` + clic | (sandbox) linea dal punto precedente |
 | `W A S D`, mouse | (simulatore) cammina e guarda (`Maiusc`: corri) |
-| clic / tasto destro + mouse | (simulatore) prendi o posa / inclina per versare |
+| clic / tasto destro + mouse | (simulatore) prendi o posa / inclina per versare (lasciando il tasto torna dritto) |
 | `E` / `Maiusc+E` | (simulatore) usa: manopole, rubinetto, tara, cappa, campanello; con gli strumenti spatola, ansa, carta, cartina, estintore (un pizzico con la spatola) |
 | `Q` / rotella | (simulatore) lancia / distanza o altezza dell'oggetto |
 | `Tab` / `A` `D` | (simulatore) vista del bancone / postazione precedente o successiva |
-| `I` / `H` / `Esc` | (simulatore) schede / comandi / pausa |
+| `I` / `L` / `H` / `Esc` | (simulatore) finestrelle accanto agli oggetti / legenda dei comandi / tutti i comandi / pausa |

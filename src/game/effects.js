@@ -279,5 +279,36 @@ export function createPuddle(scene, x, y, z) {
   return mesh;
 }
 
+/** Sotto questa massa di residuo secco (g) una pozza evaporata sparisce; sopra lascia un alone da pulire. */
+export const STAIN_G = 0.05;
+
+/**
+ * Stato di una pozza: 'wet' finché c'è liquido, 'stain' quando è evaporata lasciando almeno STAIN_G di residuo
+ * (il sale di una soluzione, il solfato di rame…), 'gone' se non resta quasi niente.
+ */
+export function puddleState(liquidMl, solidMl, residueG) {
+  if (liquidMl + solidMl < 0.01) return 'gone';
+  if (liquidMl >= 0.05) return 'wet';
+  return residueG >= STAIN_G ? 'stain' : 'gone';
+}
+
+let stainTex = null;
+/** Trasparenza di un alone: velo leggero al centro, bordo più marcato (il residuo si accumula dove la pozza finiva). */
+export function stainAlphaMap() {
+  if (stainTex) return stainTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgb(70,70,70)');
+  grad.addColorStop(0.72, 'rgb(110,110,110)');
+  grad.addColorStop(0.9, 'rgb(255,255,255)');
+  grad.addColorStop(1, 'rgb(0,0,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  stainTex = new THREE.CanvasTexture(c);
+  return stainTex;
+}
+
 /** Raggio (m) di una pozza di V millilitri su una superficie liscia (spessore ~1,5 mm). */
 export const puddleRadius = (ml) => Math.max(0.015, Math.min(0.6, Math.sqrt((ml * 1e-6) / (Math.PI * 0.0015))));
