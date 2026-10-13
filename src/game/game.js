@@ -1009,6 +1009,8 @@ export class LabGame {
     }
     dv = Math.min(dv, avail);
     if (dv <= 0) return;
+    item.pourT = this.time;
+    item.pourRate = def.drops ? 0.15 : q;
     const portion = liquid ? mix.take(dv) : mix.takeFraction(dv / sv, { solidOnly: true });
     if (item.data.reagent) this.addCost(liquid ? dv * (item.data.price ?? PRICES.solutionPerMl) : portion.mass * PRICES.solidPerGram);
     if (mix.liquidVolume + mix.solidVolume < 0.5 && !mix.isEmpty()) item.dirty = true;
@@ -1503,20 +1505,34 @@ export class LabGame {
 
   // ------------------------------------------------------------------ informazioni per l'interfaccia
 
-  /** Riga sotto il mirino: cosa si sta guardando (i tasti sono nella legenda, vedi legend()). */
-  prompt() {
+  /**
+   * Finestrella di ciò che si guarda: per i contenitori la scheda del contenuto (describe), per gli elementi fissi il
+   * nome e lo stato (piastra al livello 3, rubinetto aperto, lettura della bilancia…), per le pozze quanto liquido c'è.
+   */
+  lookedInfo() {
     const { t } = this;
     const h = this.hover;
-    if (!h) return [];
-    if (h.type === 'item') return [this.itemName(h.item)];
-    if (h.type === 'puddle') return [t('lookPuddle')];
+    if (!h) return null;
+    if (h.type === 'item') return h.item === this.held ? null : this.describe(h.item);
+    if (h.type === 'puddle') {
+      const mix = h.puddle.mix;
+      const look = mix.appearance();
+      return { name: t('lookPuddle'), rows: [], notes: [t('lookPuddleNote')], volume: `≈ ${this.fmt(Math.max(1, Math.round(mix.liquidVolume)), 0)} mL`, color: rgbCss(look.liquid) };
+    }
     const f = h.fixture;
-    const key = {
-      hotplate: f.level ? 'lookPlate' : 'lookPlateOff', bunsen: f.on ? 'lookBunsenOn' : 'lookBunsenOff', sink: f.tap ? 'lookSinkOn' : 'lookSink',
-      balance: 'lookBalance', hood: f.on ? 'lookHoodOn' : 'lookHoodOff', shower: 'lookShower', bell: 'lookBell', store: 'lookStore',
-      towels: 'lookTowels', strips: 'lookStrips', bin: 'lookBin', tray: 'lookTray',
+    const out = { name: t(`fx_${f.kind}`, { bin: f.bin ? t(`bin_${f.bin}`) : '' }), rows: [], notes: [], fixture: true };
+    const state = {
+      hotplate: () => (f.level ? t('stPlate', { n: f.level, temp: Math.round(22 + f.level * 60) }) : t('stOffF')),
+      bunsen: () => t(f.on ? 'stOn' : 'stOff'),
+      hood: () => t(f.on ? 'stOnF' : 'stOffF'),
+      sink: () => t(f.tap ? 'stTapOn' : 'stTapOff'),
+      balance: () => `${this.fmt(Math.max(-999, this.balanceReading()), 2)} g`,
+      bin: () => t(`binNote_${f.bin}`),
     }[f.kind];
-    return key ? [t(key, { n: f.level, bin: f.bin ? t(`bin_${f.bin}`) : '' })] : [];
+    if (state) out.notes.push(state());
+    if (f.kind === 'hotplate' && f.level) out.hot = true;
+    if ((f.kind === 'bunsen' || f.kind === 'hood') && f.on) out.on = true;
+    return out;
   }
 
   /** Righe della legenda dei comandi in basso a destra (controls.js), per la situazione di adesso. */
@@ -1616,12 +1632,10 @@ export class LabGame {
       const snap = this.snapshot();
       steps = o.def.steps(this.chemMode).map((s) => ({ text: this.t(s.key, this.stepParams(o.def)), done: s.done(snap) }));
     }
-    const looked = this.hover?.type === 'item' ? this.hover.item : null;
     return {
-      prompt: this.prompt(),
       legend: this.legend(),
-      held: this.held ? this.describe(this.held) : null,
-      looked: looked && looked !== this.held ? this.describe(looked) : null,
+      held: this.heldInfo(),
+      looked: this.lookedInfo(),
       order: o ? { n: o.index + 1, title: this.t(`${o.def.id}Title`), brief: this.t(`${o.def.id}Brief${this.chemMode === 'simple' ? 'Simple' : ''}`), steps, elapsed: this.time - o.start, par: o.def.par, costs: o.costs + o.fines } : null,
       money: this.money,
       free: this.free,
@@ -1633,6 +1647,28 @@ export class LabGame {
       flameTest: this.flameTest.t > 0 ? rgbCss(this.flameTest.color) : null,
       plate: this.fx.hotplate.level,
     };
+  }
+
+  /** Finestrella dell'oggetto in mano: la scheda del contenuto e se sta versando (con la portata). */
+  heldInfo() {
+    const item = this.held;
+    if (!item) return null;
+    const info = this.describe(item);
+    if (item.def.container && this.time - (item.pourT ?? -1) < 0.25) info.pouring = item.pourRate ?? 0;
+    return info;
+  }
+
+  /**
+   * Punti del mondo a cui si agganciano le finestrelle: la cima dell'oggetto in mano e di quello guardato (per gli
+   * elementi fissi e le pozze, il punto mirato). La vista li proietta sullo schermo a ogni fotogramma.
+   */
+  popupAnchors() {
+    const top = (item) => new THREE.Vector3(0, item.def.container ? item.def.height : 0.01, 0).applyMatrix4(item.mesh.matrixWorld);
+    const h = this.hover;
+    let looked = null;
+    if (h?.type === 'item' && h.item !== this.held) looked = top(h.item);
+    else if (h?.type === 'fixture' || h?.type === 'puddle') looked = h.point.clone();
+    return { held: this.held ? top(this.held) : null, looked, camera: this.camera };
   }
 
   stepParams(def) {

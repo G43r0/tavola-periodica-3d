@@ -62,30 +62,7 @@
 .gm-cross[hidden] {
   display: none;
 }
-.gm-prompt {
-  position: absolute;
-  left: 50%;
-  top: calc(50% + 22px);
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  max-width: min(640px, 92vw);
-  text-align: center;
-}
-.gm-prompt span {
-  padding: 3px 10px;
-  font-size: 13px;
-  color: #f4f7fb;
-  background: rgba(8, 12, 18, 0.62);
-  border-radius: 6px;
-  backdrop-filter: blur(4px);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-}
 .gm-order,
-.gm-card,
-.gm-legend,
 .gm-top > * {
   pointer-events: auto;
   background: rgba(10, 15, 22, 0.78);
@@ -191,73 +168,178 @@
   color: var(--text-0);
   cursor: pointer;
 }
-.gm-card {
+/* ---------------------------------------------------------------- finestrelle accanto agli oggetti
+   posizionate da game-view.js (placePops) a ogni fotogramma: a sinistra di ciò che si guarda, a destra di ciò che si
+   tiene in mano; piccole come in Cooking Simulator */
+.gm-pop {
   position: absolute;
-  bottom: 16px;
-  width: min(300px, 36vw);
-  padding: 10px 12px;
-  font-size: 12.5px;
+  left: 0;
+  top: 0;
+  max-width: 250px;
+  font-size: 12px;
+  color: #eef2f7;
+  pointer-events: none;
+  will-change: transform;
 }
-.gm-card[hidden] {
+.gm-pop[hidden] {
   display: none;
 }
-.gm-card--held {
-  left: 16px;
+.gm-pop--looked {
+  min-width: 170px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(14, 18, 26, 0.86);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
-/* in basso a destra, in colonna: la scheda di ciò che si guarda sopra, la legenda dei comandi sotto */
-.gm-br {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  width: min(300px, 36vw);
+.gm-pop--looked header {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  pointer-events: none;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  color: #1b1405;
+  background: linear-gradient(180deg, #f6cf5c, #e2ad2f);
 }
-.gm-br .gm-card {
-  position: static;
-  width: auto;
+.gm-pop--looked header.is-hot {
+  background: linear-gradient(180deg, #ffad6b, #ec7a33);
 }
-.gm-legend {
-  pointer-events: none;
-  padding: 8px 10px 9px;
-  font-size: 12.5px;
+.gm-pop--looked header.is-on {
+  background: linear-gradient(180deg, #9be7b6, #4cc47c);
 }
-.gm-legend header {
+.gm-pop--looked h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.gm-pop--looked header .gm-swatch {
+  border-color: rgba(0, 0, 0, 0.35);
+}
+.gm-pop__body {
+  padding: 6px 10px 7px;
+}
+.gm-pop__body:empty {
+  display: none;
+}
+.gm-pop--held {
+  padding: 6px 10px 7px;
+  border-radius: 8px;
+  background: rgba(14, 18, 26, 0.8);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.gm-pop__big {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 6px;
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+  line-height: 1.2;
 }
-.gm-legend header small {
-  font-size: 10.5px;
-  letter-spacing: 0;
-  text-transform: none;
+.gm-pop__big b,
+.gm-pop__vol b {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+.gm-pop__status {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9fe6ff;
+}
+.gm-pop__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 3px 0 0;
+  color: var(--text-1);
+}
+.gm-pop__big + .gm-pop__name,
+.gm-pop__status + .gm-pop__name {
+  font-size: 11px;
+}
+.gm-pop__vol {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 3px;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in oklab, var(--ok) 70%, transparent);
+  border-radius: 5px;
+}
+.gm-pop__vol span,
+.gm-pop__meta {
   color: var(--text-2);
 }
-.gm-legend.is-collapsed {
-  align-self: flex-end;
-  padding: 5px 10px;
+.gm-pop__meta {
+  margin: 3px 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
-.gm-legend.is-collapsed header {
-  gap: 12px;
-  margin: 0;
+.gm-drop {
+  flex: none;
+  fill: #8fd3ff;
 }
-.gm-legend ol {
+.gm-pop ul {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+.gm-pop li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.gm-pop li b {
+  font-weight: 500;
+  font-family: var(--font-mono);
+  color: var(--text-1);
+  white-space: nowrap;
+}
+.gm-pop code {
+  font-size: 11px;
+  color: var(--text-2);
+}
+.gm-pop__more {
+  color: var(--text-2);
+}
+.gm-pop__note {
+  margin: 4px 0 0;
+  color: var(--text-2);
+  line-height: 1.3;
+}
+.gm-pop__body > .gm-pop__note:first-child {
+  margin-top: 0;
+}
+.gm-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+/* ---------------------------------------------------------------- legenda dei comandi (in basso a destra)
+   come in Cooking Simulator: icona del tasto e azione, senza riquadro, leggibile sulla scena grazie all'ombra */
+.gm-legend {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  max-width: min(340px, 44vw);
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 5px 10px;
+  grid-template-columns: auto auto;
+  gap: 4px 9px;
   align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85), 0 0 6px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
 }
-.gm-legend ol:empty {
+.gm-legend[hidden] {
   display: none;
 }
 .gm-legend li {
@@ -267,88 +349,58 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 3px;
+  gap: 2px;
   white-space: nowrap;
 }
-.gm-keys i {
-  font-style: normal;
-  color: var(--text-2);
+.gm-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+.gm-mouse {
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.8));
+}
+.gm-mouse rect:first-child {
+  fill: rgba(20, 24, 30, 0.75);
+  stroke: #fff;
+  stroke-width: 1.3;
+}
+.gm-mouse__line {
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 1;
+  fill: none;
+}
+.gm-mouse__on {
+  fill: #fff;
+}
+.gm-arrows {
+  font-size: 11px;
+  font-weight: 700;
 }
 .gm-legend kbd {
-  min-width: 1.6em;
-  padding: 1px 6px;
+  min-width: 17px;
+  padding: 0 4px;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
   text-align: center;
-  color: #f4f7fb;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-bottom-width: 2px;
-  border-radius: 5px;
-  transition: background-color 120ms, border-color 120ms;
-}
-.gm-legend li > span:last-child {
-  color: #e8edf3;
-  line-height: 1.3;
+  text-shadow: none;
+  color: #1a1f27;
+  background: rgba(238, 241, 245, 0.92);
+  border-radius: 3px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 .gm-legend li.is-off > span {
   opacity: 0.45;
 }
-.gm-legend li.is-down kbd {
-  color: #08130d;
+.gm-legend li.is-down kbd,
+.gm-legend li.is-down .gm-mouse__on {
   background: var(--ok);
-  border-color: var(--ok);
+  fill: var(--ok);
 }
-.gm-card header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.gm-card h4 {
-  margin: 0;
-  flex: 1;
-  font-size: 13.5px;
-}
-.gm-card small {
-  font-size: 10.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-2);
-}
-.gm-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-}
-.gm-meta {
-  margin: 6px 0 0;
-  font-family: var(--font-mono);
-  color: var(--accent);
-}
-.gm-card ul {
-  margin: 6px 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 3px;
-}
-.gm-card li {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-}
-.gm-card li b {
-  font-weight: 500;
-  font-family: var(--font-mono);
-  color: var(--text-1);
-  white-space: nowrap;
-}
-.gm-card code {
-  font-size: 11.5px;
-  color: var(--text-2);
-}
-.gm-cardnote {
-  margin: 5px 0 0;
-  color: var(--text-2);
+.gm-legend li.is-down .gm-mouse rect:first-child {
+  stroke: var(--ok);
 }
 .gm-strip {
   display: flex;
@@ -871,12 +923,8 @@
   .gm-help {
     grid-template-columns: 1fr;
   }
-  .gm-card,
-  .gm-br {
-    width: calc(50vw - 24px);
-  }
-  .gm-br .gm-card {
-    width: auto;
+  .gm-pop {
+    max-width: 46vw;
   }
   .gm-legend li:nth-child(n + 5) {
     display: none;

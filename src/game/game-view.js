@@ -35,25 +35,25 @@ function storeSave(data) {
 const rows = (list) => list.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
 const stars = (n) => Array.from({ length: 5 }, (_, i) => `<span class="gm-star ${n >= i + 1 ? 'is-full' : n >= i + 0.5 ? 'is-half' : ''}">★</span>`).join('');
 
+/** Mouse disegnato, con evidenziato il tasto sinistro (l), destro (r) o la rotella (w). */
+const mouseIcon = (part) => `<svg class="gm-mouse" viewBox="0 0 14 20" width="12" height="17" aria-hidden="true"><rect x="1" y="1" width="12" height="18" rx="6"/><path d="M1 8h12M7 1v7" class="gm-mouse__line"/>${
+  part === 'l' ? '<path d="M7 1.5A5.5 5.5 0 0 0 1.5 7v.5H7z" class="gm-mouse__on"/>' : part === 'r' ? '<path d="M7 1.5A5.5 5.5 0 0 1 12.5 7v.5H7z" class="gm-mouse__on"/>' : part === 'w' ? '<rect x="5.8" y="2.8" width="2.4" height="4.2" rx="1.2" class="gm-mouse__on"/>' : ''
+}</svg>`;
+const DROP = '<svg class="gm-drop" viewBox="0 0 10 14" width="9" height="12" aria-hidden="true"><path d="M5 .8C3.4 3.4 1 6.2 1 8.9a4 4 0 0 0 8 0C9 6.2 6.6 3.4 5 .8z"/></svg>';
+
 const TEMPLATE = () => `
   <div class="gm-stage"></div>
   <div class="gm-hud" hidden>
     <div class="gm-cross"></div>
-    <div class="gm-prompt" aria-live="off"></div>
     <section class="gm-order" data-help="ui.game"></section>
     <div class="gm-top">
       <div class="gm-money" title="${t('moneyTitle')}"></div>
       <div class="gm-view"></div>
       <button type="button" class="gm-iconbtn" data-act="pause" title="${t('pauseTitle')}">${icons.pause(16)}</button>
     </div>
-    <section class="gm-card gm-card--held" hidden></section>
-    <div class="gm-br">
-      <section class="gm-card gm-card--looked" hidden></section>
-      <section class="gm-legend" aria-label="${t('legendTitle')}">
-        <header><span>${t('legendTitle')}</span><small><kbd>L</kbd> <span class="gm-legend__toggle">${t('legendHide')}</span></small></header>
-        <ol></ol>
-      </section>
-    </div>
+    <div class="gm-pop gm-pop--looked" hidden></div>
+    <div class="gm-pop gm-pop--held" hidden></div>
+    <ol class="gm-legend" aria-label="${t('legendTitle')}"></ol>
     <div class="gm-toasts" aria-live="polite"></div>
     <div class="gm-alarm" hidden></div>
     <div class="gm-tilt" hidden><span></span></div>
@@ -88,6 +88,7 @@ export function createGame(elements, { onClose } = {}) {
   let showInfo = true;
   let showLegend = save.legend !== false;
   const pressed = new Set(); // tasti premuti (id della legenda): la riga corrispondente si illumina
+  const pops = { looked: null, held: null }; // finestrelle accanto agli oggetti (elemento, misure)
 
   // ---------------------------------------------------------------- avvio
   async function boot() {
@@ -492,6 +493,7 @@ export function createGame(elements, { onClose } = {}) {
       save.legend = showLegend;
       storeSave(save);
       lastLegendHtml = null;
+      if (!showLegend) toast(t('legendHidden'));
     }
     else if (code === 'KeyH') showHelp();
     else if (code === 'KeyF') {
@@ -562,40 +564,109 @@ export function createGame(elements, { onClose } = {}) {
 
   // ---------------------------------------------------------------- HUD
   const fmtSec = (s) => fmtTime(Math.max(0, s));
-  function renderCard(el, info, kind) {
+
+  /** Contenuto di una finestrella: in mano (mL e «Versando» in grande) o guardato (nome nella fascia e contenuto). */
+  function popHtml(info, kind) {
+    const meta = [info.temp, info.ph].filter(Boolean).map(esc).join(' · ');
+    const rowsList = info.rows.slice(0, 3);
+    const more = info.rows.length - rowsList.length;
+    const rowsHtml = rowsList.map((r) => `<li><span>${esc(r.label)}${r.formula ? ` <code>${esc(r.formula)}</code>` : ''}</span><b>${esc(r.value)}</b></li>`).join('') + (more > 0 ? `<li class="gm-pop__more"><span>+${more}</span></li>` : '');
+    const strip = info.swatch ? `<div class="gm-strip"><span style="background:${info.swatch}"></span><div class="gm-scale">${info.scale.map((c, i) => `<i style="background:${c}" title="pH ${i}">${i}</i>`).join('')}</div></div>` : '';
+    const notes = info.notes.slice(0, 2).map((n) => `<p class="gm-pop__note">${esc(n)}</p>`).join('');
+    if (kind === 'held') {
+      const status = info.pouring !== undefined ? `<small class="gm-pop__status">${t('pouring')}${chemMode === 'simple' && info.pouring > 0.2 ? ` · ${t('pourRate', { ml: game.fmt(info.pouring, info.pouring < 10 ? 1 : 0) })}` : ''}</small>` : '';
+      const big = info.volume ? `<div class="gm-pop__big">${DROP}<b>${esc(info.volume)}</b></div>` : '';
+      return `${big}${status}<p class="gm-pop__name"><span class="gm-swatch" style="background:${info.color ?? 'transparent'}"></span>${esc(info.name)}</p>${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}${meta ? `<p class="gm-pop__meta">${meta}</p>` : ''}${strip}${info.volume ? '' : notes}`;
+    }
+    const vol = info.volume ? `<p class="gm-pop__vol">${DROP}<b>${esc(info.volume)}</b>${meta ? ` <span>· ${meta}</span>` : ''}</p>` : meta ? `<p class="gm-pop__meta">${meta}</p>` : '';
+    return `<header class="${info.hot ? 'is-hot' : ''} ${info.on ? 'is-on' : ''}"><span class="gm-swatch" style="background:${info.color ?? 'transparent'}"></span><h4>${esc(info.name)}</h4></header>
+      <div class="gm-pop__body">${vol}${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}${strip}${notes}</div>`;
+  }
+
+  function renderPop(kind, info) {
+    const el = $(`.gm-pop--${kind}`);
     if (!info || !showInfo) {
       el.hidden = true;
+      pops[kind] = null;
       return;
     }
-    el.hidden = false;
-    const rowsHtml = info.rows.map((r) => `<li><span>${esc(r.label)}${r.formula ? ` <code>${esc(r.formula)}</code>` : ''}</span><b>${esc(r.value)}</b></li>`).join('');
-    el.innerHTML = `
-      <header><span class="gm-swatch" style="background:${info.color ?? 'transparent'}"></span><h4>${esc(info.name)}</h4><small>${kind === 'held' ? t('inHand') : t('looking')}</small></header>
-      ${info.volume || info.temp || info.ph ? `<p class="gm-meta">${[info.volume, info.temp, info.ph].filter(Boolean).map(esc).join(' · ')}</p>` : ''}
-      ${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}
-      ${info.swatch ? `<div class="gm-strip"><span style="background:${info.swatch}"></span><div class="gm-scale">${info.scale.map((c, i) => `<i style="background:${c}" title="pH ${i}">${i}</i>`).join('')}</div></div>` : ''}
-      ${info.notes.map((n) => `<p class="gm-cardnote">${esc(n)}</p>`).join('')}`;
+    const html = popHtml(info, kind);
+    if (el.hidden || el.lastHtml !== html) {
+      el.innerHTML = html;
+      el.lastHtml = html;
+      el.hidden = false;
+    }
+    pops[kind] = { el, w: el.offsetWidth, h: el.offsetHeight };
+  }
+
+  /** Tasti di una riga della legenda: mouse disegnato per i tasti del mouse, tasti della tastiera per gli altri. */
+  function keyHtml(k) {
+    const label = t(`key_${k}`);
+    if (k === 'lmb' || k === 'rmb' || k === 'wheel') return `<span class="gm-key" title="${esc(label)}">${mouseIcon(k[0])}</span>`;
+    if (k === 'mouse') return `<span class="gm-key" title="${esc(label)}">${mouseIcon('')}<b class="gm-arrows">↕</b></span>`;
+    return label.split(/\s+\/\s+|\s+/).map((c) => `<kbd>${esc(c)}</kbd>`).join('');
+  }
+
+  let lastLegendHtml = null;
+  let legendBox = null;
+  /** Legenda in basso a destra, piccola come in Cooking Simulator: icona del tasto e azione, senza riquadro. */
+  function renderLegend(rowsList) {
+    const html = showLegend
+      ? rowsList.map((r) => {
+        // «tasto destro + mouse»: un solo mouse disegnato, con le frecce del movimento accanto
+        const keys = r.keys.map((k) => (k === 'mouse' && r.keys.length > 1 ? '<b class="gm-arrows">↕</b>' : keyHtml(k))).join('');
+        return `<li class="${r.off ? 'is-off' : ''} ${r.keys.some((k) => pressed.has(k)) ? 'is-down' : ''}"><span class="gm-keys">${keys}</span><span>${esc(t(r.key, r.params ?? undefined))}</span></li>`;
+      }).join('')
+      : '';
+    if (html !== lastLegendHtml) {
+      lastLegendHtml = html;
+      const el = $('.gm-legend');
+      el.innerHTML = html;
+      el.hidden = !html;
+    }
+    const r = $('.gm-legend').getBoundingClientRect();
+    legendBox = r.width ? r : null;
+  }
+
+  /**
+   * Posiziona le finestrelle a ogni fotogramma accanto all'oggetto (quella di ciò che si guarda a sinistra, quella
+   * dell'oggetto in mano a destra), dentro lo schermo e senza coprire la legenda né sovrapporsi tra loro.
+   */
+  const _p = new THREE.Vector3();
+  function placePops() {
+    if (!game || (!pops.looked && !pops.held)) return;
+    const a = game.popupAnchors();
+    const W = stage.clientWidth;
+    const H = stage.clientHeight;
+    const box = {};
+    for (const kind of ['looked', 'held']) {
+      const pop = pops[kind];
+      if (!pop) continue;
+      const anchor = a[kind];
+      if (anchor) _p.copy(anchor).project(a.camera);
+      const behind = !anchor || _p.z > 1;
+      let x = behind ? W - pop.w - 16 : ((_p.x + 1) / 2) * W;
+      let y = behind ? H * 0.6 : ((1 - _p.y) / 2) * H;
+      if (!behind) x = kind === 'looked' ? x - pop.w - 26 : x + 26;
+      y -= pop.h / 2;
+      x = Math.max(12, Math.min(W - pop.w - 12, x));
+      y = Math.max(64, Math.min(H - pop.h - 12, y));
+      if (legendBox && x + pop.w > legendBox.left - 10 && y + pop.h > legendBox.top - 10) y = Math.max(64, legendBox.top - 10 - pop.h);
+      box[kind] = { x, y, w: pop.w, h: pop.h };
+    }
+    const l = box.looked;
+    const h = box.held;
+    if (l && h && h.x < l.x + l.w + 8 && h.x + h.w + 8 > l.x && h.y < l.y + l.h + 8 && h.y + h.h + 8 > l.y) {
+      // si toccano: quella dell'oggetto in mano va sotto (o sopra, se sotto non c'è spazio)
+      h.y = l.y + l.h + 8 + h.h < H - 12 ? l.y + l.h + 8 : Math.max(12, l.y - h.h - 8);
+    }
+    for (const kind of ['looked', 'held']) if (box[kind]) pops[kind].el.style.transform = `translate3d(${Math.round(box[kind].x)}px, ${Math.round(box[kind].y)}px, 0)`;
   }
 
   let lastOrderHtml = '';
-  let lastLegendHtml = null;
   let fps = 0;
-  /** Legenda in basso a destra: tasti (kbd) e azione; attenuata se non funziona, illuminata se il tasto è premuto. */
-  function renderLegend(rowsList) {
-    const html = showLegend
-      ? rowsList.map((r) => `<li class="${r.off ? 'is-off' : ''} ${r.keys.some((k) => pressed.has(k)) ? 'is-down' : ''}"><span class="gm-keys">${r.keys.map((k) => `<kbd>${esc(t(`key_${k}`))}</kbd>`).join('<i>+</i>')}</span><span>${esc(t(r.key, r.params ?? undefined))}</span></li>`).join('')
-      : '';
-    if (html === lastLegendHtml) return;
-    lastLegendHtml = html;
-    const el = $('.gm-legend');
-    el.classList.toggle('is-collapsed', !showLegend);
-    el.querySelector('.gm-legend__toggle').textContent = showLegend ? t('legendHide') : t('legendShow');
-    el.querySelector('ol').innerHTML = html;
-  }
-
   function renderHud() {
     const h = game.hud();
-    $('.gm-prompt').innerHTML = h.prompt.map((p) => `<span>${esc(p)}</span>`).join('');
     renderLegend(h.legend);
     $('.gm-cross').hidden = h.mode !== 'walk';
     $('.gm-money').innerHTML = h.free ? `<span>${t('freeShort')}</span>` : `<span>${fmtMoney(h.money)}</span>`;
@@ -612,8 +683,8 @@ export function createGame(elements, { onClose } = {}) {
       lastOrderHtml = orderHtml;
     }
     $('.gm-order').hidden = !orderHtml;
-    renderCard($('.gm-card--held'), h.held, 'held');
-    renderCard($('.gm-card--looked'), h.looked, 'looked');
+    renderPop('looked', h.looked);
+    renderPop('held', h.held);
     const alarm = $('.gm-alarm');
     const alarmText = h.splash ? t('splashHud', { s: h.splash }) : h.alarm ? t(`alarm_${h.alarm}`) : '';
     alarm.hidden = !alarmText;
@@ -633,6 +704,7 @@ export function createGame(elements, { onClose } = {}) {
     if (!game) return;
     if (state === 'play' || state === 'dialog') game.update(state === 'play' ? dt : 0, { blocked: state !== 'play' });
     game.render();
+    if (state !== 'menu') placePops();
     hudAcc += dt;
     frames++;
     fpsT += dt;

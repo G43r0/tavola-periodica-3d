@@ -37,3 +37,8 @@ test('testi del simulatore: legenda dei comandi (azioni e tasti)', () => {
   for (const k of actions) assert.ok(has(k), `testo mancante: ${k}`);
   for (const k of KEY_IDS) assert.ok(has(`key_${k}`), `key_${k}`);
 });
+
+test('testi del simulatore: finestrelle degli elementi fissi (nome di ogni elemento, rifiuti)', () => {
+  for (const k of ['hotplate', 'bunsen', 'sink', 'balance', 'hood', 'shower', 'bell', 'store', 'towels', 'strips', 'bin', 'tray']) assert.ok(has(`fx_${k}`), `fx_${k}`);
+  for (const b of BINS.filter((b) => b !== 'sink')) assert.ok(has(`binNote_${b}`), `binNote_${b}`);
+});
