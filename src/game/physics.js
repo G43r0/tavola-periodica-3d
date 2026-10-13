@@ -1,11 +1,15 @@
 // Fisica del simulatore di laboratorio con Rapier: mondo a passo fisso, collisori statici della stanza, corpi della
 // vetreria e degli strumenti, sensori, eventi d'urto (per rompere il vetro), raggi e controllore del personaggio.
-// Rapier si carica (WebAssembly incluso nel pacchetto) solo alla prima apertura del gioco.
-import RAPIER from '@dimforge/rapier3d-compat';
+// Rapier (WebAssembly incluso nel pacchetto, ~2 MB) è un file a parte, caricato solo alla prima apertura del gioco.
 
 let loading = null;
-/** Inizializza Rapier una volta sola. */
-export const loadPhysics = () => (loading ??= RAPIER.init().then(() => RAPIER));
+/** Carica e inizializza Rapier una volta sola. */
+export const loadPhysics = () =>
+  (loading ??= import('@dimforge/rapier3d-compat').then(async (m) => {
+    const R = m.default ?? m;
+    await R.init();
+    return R;
+  }));
 
 export const STEP = 1 / 120;
 const MAX_STEPS = 6;

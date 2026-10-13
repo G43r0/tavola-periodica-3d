@@ -552,7 +552,7 @@ export class Mixture {
     const { ctx } = this;
     const water = this.water;
     const kDiss = 0.12 * (1 + 4 * this.mix) * (1 + Math.max(0, this.T - 293) / 25);
-    const kCryst = 0.06 * (1 + 2 * this.mix);
+    const kCryst = 0.1 * (1 + 2 * this.mix);
     for (const sid of [...this.n.keys()]) {
       const mol = this.n.get(sid) ?? 0; // valore aggiornato: un idrato che si scioglie cambia anche il sale anidro
       if (sid === WATER) continue;

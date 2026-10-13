@@ -11,6 +11,20 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 ## [Non rilasciato]
 
 ### Aggiunto
+- **Simulatore di laboratorio** (pulsante «Simulatore» nella barra in alto) — *prototipo giocabile*: un gioco in prima
+  persona nel laboratorio di chimica della scuola, nello stile di *Cooking Simulator*.
+  - Due visuali (prima persona e vista del bancone), fisica vera con Rapier (prendere, posare dove si guarda, lanciare,
+    rovesciare, rompere la vetreria), versamento inclinando il recipiente con il livello del liquido sempre orizzontale e
+    la portata che cresce con l'inclinazione (fino alla goccia singola).
+  - Chimica dei contenitori: scioglimento con la solubilità alla temperatura, cristallizzazione anche come idrato, pH
+    dal bilancio delle cariche, colori di ioni, indicatori e precipitati, ebollizione ed evaporazione, reazioni del
+    catalogo con condizioni e calore. Modalità *realistica* e *semplificata*.
+  - Carriera con 5 esercitazioni (soluzione di NaCl, titolazione, pioggia d'oro, cristalli di solfato di rame, saggio alla
+    fiamma) valutate con stelle e soldi; Laboratorio libero con il magazzino delle 554 sostanze.
+  - Incidenti (vetro rotto, pozze, fuoco ed estintore, gas tossici e cappa, esplosioni, schizzi e doccia di emergenza),
+    pulizia della vetreria e contenitori dei rifiuti con le multe.
+  - Testi in italiano, inglese e versione semplice; voce «Simulatore di laboratorio» nella modalità Spiega.
+  - Test del simulatore (`tests/game/`): chimica dei contenitori, fisica, liquidi, esercitazioni e valutazione.
 - **Preset grafici** (pulsante con lo schermo nella barra in alto): *Semplice* per i computer poco potenti (niente
   post-processing, meno segmenti e punti, sandbox senza bagliore, niente sfocature e animazioni continue
   nell'interfaccia), *Medio* (la grafica di prima, predefinito) e *Professionale*: sovracampionamento, MSAA 4×, tone
@@ -79,6 +93,8 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 - Dati: `src/lab/data/reactions-catalogo.js` (generato dal catalogo); `reactions.js` unisce le due liste.
 
 ### Modificato
+- La Content Security Policy permette la compilazione di WebAssembly (`'wasm-unsafe-eval'`, non `eval` di JavaScript):
+  serve al motore fisico Rapier del simulatore.
 - «Simula reazione» non esegue le reazioni che richiedono altro (catalizzatori, soluzione acquosa, enzimi) né gli
   equilibri (⇌), e li segnala nel resoconto. Con più reazioni note, alcune catene cambiano (es. dopo la calcinazione e
   lo spegnimento della calce, l'acqua di calce riassorbe la CO₂).

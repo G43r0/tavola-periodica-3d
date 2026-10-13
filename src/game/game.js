@@ -40,6 +40,8 @@ const SLOTS = {
 };
 
 const rgbCss = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+/** Punta degli strumenti nelle coordinate dell'oggetto (asse x in avanti). */
+const TOOL_TIPS = { loop: [0.102, 0.004, 0], spatula: [0.075, 0.003, 0], strip: [0.03, 0.001, 0] };
 
 export class LabGame {
   /**
@@ -443,9 +445,28 @@ export class LabGame {
     item.body.setGravityScale(0, true);
   }
 
+  /**
+   * Dove posare l'oggetto in mano: il piano (bancone, cattedra, vassoio, scaffale) che si sta guardando, se è libero e
+   * vicino all'oggetto. Così si posa con precisione «dove si guarda» invece di lasciarlo cadere.
+   */
+  placeSpot(item) {
+    const ray = this.pointerRay();
+    const o = ray.ray.origin;
+    const d = ray.ray.direction;
+    const hit = this.physics.ray({ x: o.x, y: o.y, z: o.z }, { x: d.x, y: d.y, z: d.z }, ray.far, { exclude: item.body });
+    if (!hit || hit.normal.y < 0.7 || hit.collider.parent()?.isDynamic()) return null;
+    const p = new THREE.Vector3(hit.point.x, hit.point.y + 0.003, hit.point.z);
+    if (p.distanceTo(item.mesh.position) > 0.6) return null;
+    // non sopra un altro oggetto
+    const r = item.def.container ? item.def.outer[0] : 0.03;
+    if (this.items.some((it) => it !== item && Math.hypot(it.mesh.position.x - p.x, it.mesh.position.z - p.z) < r + (it.def.outer?.[0] ?? 0.03) && Math.abs(it.mesh.position.y - p.y) < 0.2)) return null;
+    return p;
+  }
+
   release(throwSpeed = 0) {
     const item = this.held;
     if (!item) return;
+    const spot = throwSpeed ? null : this.placeSpot(item);
     this.held = null;
     this.pouring = false;
     this.spraying = false;
@@ -457,6 +478,11 @@ export class LabGame {
     if (throwSpeed) {
       this.camera.getWorldDirection(_v);
       item.body.setLinvel({ x: _v.x * throwSpeed, y: _v.y * throwSpeed + 1.2, z: _v.z * throwSpeed }, true);
+    } else if (spot) {
+      // posato dritto, girato come lo si teneva
+      const yaw = this.player.mode === 'walk' ? this.player.yaw : 0;
+      const q = new THREE.Quaternion().setFromAxisAngle(UP, item.def.container || item.kind === 'extinguisher' ? yaw : yaw + Math.PI / 2);
+      placeItem(item, spot, q);
     }
   }
 
@@ -629,7 +655,7 @@ export class LabGame {
     const mix = target.mixture;
     // pulizia nell'acido cloridrico
     if (mix.dissolved('hcl') > 1e-5) {
-      loop.data.sample = null;
+      loop.data.specimen = null;
       loop.data.residue = null;
       this.toast(t('loopClean'));
       return;
@@ -644,7 +670,7 @@ export class LabGame {
         tint = tz;
       }
     }
-    loop.data.sample = { tint, from: target.data.sample };
+    loop.data.specimen = { tint, from: target.data.sample };
     this.toast(t('loopLoaded', { name: this.itemName(target) }));
   }
 
@@ -685,7 +711,7 @@ export class LabGame {
     if (item.mixture && !item.mixture.isEmpty()) {
       const content = item.mixture.takeFraction(1);
       content.add(item.mixture.takeFraction(1, { solidOnly: true }));
-      this.dispose(content, 'sink', item, true);
+      this.disposeWaste(content, 'sink', item, true);
       item.mixture.clear();
     }
     item.dirty = false;
@@ -698,7 +724,7 @@ export class LabGame {
     const lv = item.mixture.liquidVolume;
     const content = lv > RESIDUE_ML ? item.mixture.take(lv - RESIDUE_ML) : new Mixture(this.chem);
     content.add(item.mixture.takeFraction(0.97, { solidOnly: true }));
-    this.dispose(content, bin.bin, item, true);
+    this.disposeWaste(content, bin.bin, item, true);
     item.dirty = true;
   }
 
@@ -706,7 +732,7 @@ export class LabGame {
    * Smaltisce una miscela in un contenitore dei rifiuti o nel lavandino, con le multe se è quello sbagliato.
    * Durante un versamento continuo controlla una volta ogni pochi secondi.
    */
-  dispose(mix, bin, source = null, once = false) {
+  disposeWaste(mix, bin, source = null, once = false) {
     if (!mix || mix.isEmpty()) return;
     const cls = wasteClass(mix);
     const key = `${source?.id ?? 0}:${bin}`;
@@ -762,14 +788,36 @@ export class LabGame {
       const k = Math.abs(d.y) > 1e-4 ? (y - o.y) / d.y : 1;
       out.copy(o).addScaledVector(d, Math.max(0.2, Math.min(4, k)));
     }
-    if (!item.def.container || this.tilt < 0.25) return out;
+    if (!item.def.container) return this.toolTarget(out, quat);
+    if (this.tilt < 0.25) return out;
     const blend = Math.min(1, (this.tilt - 0.25) / 0.5);
     const aim = this.pourAim(out);
     // punto più basso del bordo con l'orientamento voluto, rispetto all'origine del contenitore
     const top = item.def.profile[item.def.profile.length - 1][1];
     const lip = _v2.set(0, top, -item.def.rimR * 1.05).applyQuaternion(quat);
     const goal = aim.clone().sub(lip);
+    // il getto parte in avanti: si arretra la bocca di quanto si sposta cadendo
+    const fall = Math.sqrt((2 * (0.05 + 0.02 * this.tilt)) / 9.81);
+    const drift = Math.min(0.03, (item.streamSpeed ?? 0) * fall);
+    if (drift > 0) goal.add(_v2.set(0, 0, drift).applyAxisAngle(UP, this.player.mode === 'walk' ? this.player.yaw : 0));
     return out.lerp(goal, blend);
+  }
+
+  /** Strumenti: la punta (ansa, cucchiaio della spatola, cartina) va sul punto guardato, se è a portata. */
+  toolTarget(out, quat) {
+    const item = this.held;
+    const tip = TOOL_TIPS[item.kind];
+    const h = this.hover;
+    if (!tip || !h?.point || h.distance > this.holdDist + 0.6) return out;
+    const offset = _v2.set(...tip).applyQuaternion(quat);
+    // guardando il becco Bunsen con l'ansa, la punta va nel cuore della fiamma
+    if (item.kind === 'loop' && h.fixture?.kind === 'bunsen') {
+      const fl = this.fx.bunsen.flame;
+      return out.set(fl.x, fl.y + 0.07, fl.z).sub(offset);
+    }
+    // davanti al punto colpito, non dentro la superficie
+    const dir = this.pointerRay().ray.direction;
+    return out.copy(h.point).addScaledVector(dir, -0.01).sub(offset);
   }
 
   /** Punto dove portare la bocca del contenitore che si sta inclinando. */
@@ -871,7 +919,7 @@ export class LabGame {
       if (_v.y < 0.75) continue;
       const top = it.def.profile[it.def.profile.length - 1][1];
       _v2.set(0, top, 0).applyMatrix4(it.mesh.matrixWorld);
-      out.push({ item: it, x: _v2.x, y: _v2.y, z: _v2.z, r: it.def.rimR * 0.95 });
+      out.push({ item: it, x: _v2.x, y: _v2.y, z: _v2.z, r: it.def.rimR * 0.95 + 0.004 });
     }
     return out;
   }
@@ -947,11 +995,13 @@ export class LabGame {
     _v2.y = 0;
     const out = _v2.lengthSq() > 1e-10 ? _v2.normalize() : _v2.set(0, 0, 0);
     const p = _v.clone().addScaledVector(out, 0.003);
-    const speed = Math.min(0.5, 0.12 + Math.sqrt(q) * 0.02);
+    // velocità orizzontale del getto ≈ √(g·h): una goccia cade quasi dritta, un getto pieno va più in là
+    const speed = def.drops ? 0.01 : Math.min(0.45, 0.6 * Math.sqrt(9.81 * Math.min(h, 0.03)));
+    item.streamSpeed = speed;
     const dest = this.traceStream(p, out.x * speed, out.z * speed, item);
     if (dest.type === 'item') dest.item.mixture.add(portion);
-    else if (dest.type === 'sink') this.dispose(portion, 'sink', item);
-    else if (dest.type === 'bin') this.dispose(portion, dest.bin.bin, item);
+    else if (dest.type === 'sink') this.disposeWaste(portion, 'sink', item);
+    else if (dest.type === 'bin') this.disposeWaste(portion, dest.bin.bin, item);
     else this.spill(portion, new THREE.Vector3(dest.x, dest.y, dest.z), item);
     // gocce visibili del getto
     const look = liquid ? mix.appearance() : null;
@@ -967,7 +1017,7 @@ export class LabGame {
   spill(mix, p, source) {
     const sb = this.fx.sink.basin;
     if (p.x > sb.x0 && p.x < sb.x1 && p.z > sb.z0 && p.z < sb.z1 && p.y < sb.top + 0.02) {
-      this.dispose(mix, 'sink', source);
+      this.disposeWaste(mix, 'sink', source);
       return;
     }
     let pd = this.puddles.find((q) => Math.hypot(q.pos.x - p.x, q.pos.z - p.z) < q.r + 0.04 && Math.abs(q.pos.y - p.y) < 0.05);
@@ -982,7 +1032,7 @@ export class LabGame {
 
   updatePuddle(pd) {
     const v = pd.mix.liquidVolume + pd.mix.solidVolume;
-    if (v < 0.05) {
+    if (v < 0.01) {
       pd.mesh.removeFromParent();
       this.puddles = this.puddles.filter((q) => q !== pd);
       return;
@@ -1061,7 +1111,7 @@ export class LabGame {
     const sb = this.fx.sink.basin;
     if (p.x > sb.x0 && p.x < sb.x1 && p.z > sb.z0 && p.z < sb.z1 && p.y < sb.top) {
       env.Tenv = 288;
-      if (this.fx.sink.tap) env.lossWK += 10; // a bagnomaria sotto l'acqua corrente
+      if (this.fx.sink.tap) env.lossWK += 3; // a bagnomaria sotto l'acqua corrente
     }
     for (const f of this.fires) {
       const d = f.pos.distanceTo(p);
@@ -1116,7 +1166,7 @@ export class LabGame {
       const fl = bu.flame;
       const inFlame = Math.hypot(tip.x - fl.x, tip.z - fl.z) < 0.04 && tip.y > fl.y && tip.y < fl.top + 0.02;
       if (!inFlame) continue;
-      const s = it.data.sample;
+      const s = it.data.specimen;
       if (s?.tint) {
         let c = chem.sub(s.tint).flameColor ?? [255, 180, 60];
         // un'ansa non pulita mescola i colori (il giallo del sodio copre tutto)
@@ -1131,7 +1181,7 @@ export class LabGame {
         this.flameTest = { color: c, t: 2.5 };
         if (s.from !== undefined) this.order?.flameSeen.add(s.from);
         it.data.residue = s.tint;
-        it.data.sample = null;
+        it.data.specimen = null;
         it.data.warned = false;
       }
     }
@@ -1166,8 +1216,15 @@ export class LabGame {
 
   startFire({ item = null, puddle = null, sid = 0, pos }) {
     if (this.fires.length > 12) return;
+    // appena spento con l'estintore (o con la doccia) non si riaccende subito: la CO₂ copre la zona
+    const owner = item ?? puddle;
+    if (owner && (owner.noFire ?? 0) > this.time) return;
     this.fires.push({ item, puddle, sid, pos: pos.clone(), fuel: item?.kind === 'towel' ? 8 : 30, hit: 0, age: 0 });
-    this.fine('fire', this.t('fire'));
+    // una sola multa per un fuoco che si riaccende
+    if (this.time - (this.lastFireFine ?? -99) > 10) {
+      this.lastFireFine = this.time;
+      this.fine('fire', this.t('fire'));
+    }
     this.alarm = 6;
   }
 
@@ -1228,6 +1285,8 @@ export class LabGame {
       }
       if (f.hit > 0.8 || f.fuel <= 0 || !burning || this.fx.shower.t > 0 && f.pos.distanceTo(new THREE.Vector3(LAYOUT.shower.x, 1, LAYOUT.shower.z)) < 1.2) {
         this.fires = this.fires.filter((q) => q !== f);
+        const owner = f.item ?? f.puddle;
+        if (owner) owner.noFire = this.time + 8;
         if (f.hit > 0.8) this.toast(this.t('fireOut'), 'ok');
         if (f.puddle) this.updatePuddle(f.puddle);
       }
@@ -1279,11 +1338,13 @@ export class LabGame {
     if (bu.on && this.flameTest.t > 0 && this.flameTest.color) {
       const c = this.flameTest.color;
       bu.flameOuter.color.setRGB(c[0] / 255, c[1] / 255, c[2] / 255);
-      bu.flameOuter.opacity = 0.85;
+      bu.flameOuter.opacity = 1;
+      bu.boost = true;
       bu.light.color.setRGB(c[0] / 255, c[1] / 255, c[2] / 255);
     } else {
       bu.flameOuter.color.set(0x5a7dff);
-      bu.flameOuter.opacity = 0.45;
+      bu.flameOuter.opacity = 0.6;
+      bu.boost = false;
       bu.light.color.set(0x6a8cff);
     }
   }
@@ -1326,7 +1387,7 @@ export class LabGame {
       const cls = it.mixture ? wasteClass(it.mixture) : null;
       right = cls === 'heavy' ? 'heavy' : cls === 'organic' ? 'organic' : 'solid';
     } else if (it.def.container) {
-      if (it.mixture && !it.mixture.isEmpty()) this.dispose(it.mixture, kind, it, true);
+      if (it.mixture && !it.mixture.isEmpty()) this.disposeWaste(it.mixture, kind, it, true);
       right = 'glass';
       this.addCost(PRICES.glass[it.kind] ?? 3);
       this.toast(this.t('glassThrown'), 'warn');
@@ -1454,7 +1515,7 @@ export class LabGame {
       return out;
     }
     if (item.kind === 'loop') {
-      out.notes.push(item.data.sample ? t('loopHasSample') : item.data.residue ? t('loopResidue') : t('loopCleanNote'));
+      out.notes.push(item.data.specimen ? t('loopHasSample') : item.data.residue ? t('loopResidue') : t('loopCleanNote'));
       return out;
     }
     if (item.kind === 'strip') {
@@ -1476,13 +1537,15 @@ export class LabGame {
       out.notes.push(item.dirty ? t('dirtyNote') : t('emptyNote'));
       return out;
     }
+    // realistica: cosa c'è e in che stato (i numeri si leggono su bilancia, graduazione ed etichette);
+    // semplificata: anche i grammi. Le tracce trascurabili non si mostrano.
     const comps = mix.components();
     for (const c of comps) {
-      if (c.sid === WATER) continue;
-      let value;
+      if (c.sid === WATER || (c.mol < 2e-6 && typeof c.sid === 'number')) continue;
       const state = t(`state_${c.state}`);
-      if (chemMode === 'simple') value = c.state === 'aq' ? `${this.fmt(c.grams, 2)} g · ${state}` : `${this.fmt(c.grams, 2)} g · ${state}`;
-      else value = c.state === 'aq' ? `${this.fmt(c.conc, c.conc < 0.1 ? 3 : 2)} mol/L` : `${state}`;
+      let value = state;
+      if (chemMode === 'simple') value = `${this.fmt(c.grams, c.grams < 0.1 ? 3 : 2)} g · ${state}`;
+      else if (item.data.reagent && / M\b/.test(item.label?.sub ?? '')) value = item.label.sub.split(' · ')[0];
       out.rows.push({ label: `${c.name}`, formula: c.formula, value });
     }
     // volume: lettura sulla graduazione (realistica) o valore esatto (semplificata)
@@ -1541,7 +1604,7 @@ export class LabGame {
     return {};
   }
 
-  dispose() {
+  destroy() {
     this.renderer.renderLists.dispose();
     this.scene.traverse((o) => {
       o.geometry?.dispose?.();

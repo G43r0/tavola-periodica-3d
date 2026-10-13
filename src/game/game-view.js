@@ -275,7 +275,7 @@ export function createGame(elements, { onClose } = {}) {
           [t('billTotal'), `<b>${fmtMoney(r.money)}</b>`],
         ])}
       </dl>
-      <p class="gm-small">${t('resultCleanup')}</p>
+      ${r.def.answers ? '' : `<p class="gm-small">${t('resultCleanup')}</p>`}
       <div class="gm-actions">
         <button type="button" class="btn-ghost" data-act="menu">${t('toMenu')}</button>
         ${r.last ? `<button type="button" class="gm-primary" data-act="career-end">${t('finish')}</button>` : `<button type="button" class="gm-primary" data-act="next">${t('nextOrder')}</button>`}

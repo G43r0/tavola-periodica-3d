@@ -22,8 +22,8 @@ export const LAYOUT = {
   towels: { x: -4.96, z: 0.55 },
   hood: { x: 4.6, z: -1.8, w: 0.8, d: 1.6 },
   desk: { x: 0, z: -2.9, w: 1.8, d: 0.8 },
-  tray: { x: 0.5, z: -2.85 },
-  bell: { x: 0.85, z: -2.75 },
+  tray: { x: 0.45, z: -2.7 },
+  bell: { x: 0.82, z: -2.64 },
   bins: { x: -4.2, z: 3.62, step: 0.46 },
   shower: { x: 4.45, z: 3.35 },
   extinguisher: { x: 4.82, z: 2.3 },
@@ -39,7 +39,7 @@ export const STATIONS = [
   { key: 'shelf', cam: [0, 1.9, 0.62], look: [0, 1.05, 1.62], stand: [0, 0.75] },
   { key: 'sink', cam: [-3.55, 1.72, -0.3], look: [-4.6, BENCH_Y - 0.05, -0.3], stand: [-3.7, -0.3] },
   { key: 'hood', cam: [3.45, 1.78, -1.8], look: [4.6, BENCH_Y + 0.05, -1.8], stand: [3.6, -1.8] },
-  { key: 'desk', cam: [0.5, 1.62, -1.85], look: [0.5, DESK_Y, -2.85], stand: [0.5, -1.9] },
+  { key: 'desk', cam: [0.5, 1.6, -1.9], look: [0.5, DESK_Y, -2.75], stand: [0.5, -2.0] },
   { key: 'bins', cam: [-3.3, 1.75, 2.55], look: [-3.3, 0.55, 3.65], stand: [-3.3, 2.6] },
 ];
 
@@ -75,7 +75,8 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   scene.add(group);
   const fixtures = [];
   const shadows = Boolean(G.shadows);
-  const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.75, envMapIntensity: 0.6, ...o });
+  // i riflessi dell'ambiente solo sulle superfici lucide (piano nero, acciaio): sugli opachi farebbero strisce
+  const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.75, envMapIntensity: 0.05, ...o });
 
   const M = {
     floor: std({ map: canvasTexture(256, 256, (g, w, h) => {
@@ -93,7 +94,7 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     }, [8, 3]), roughness: 0.92 }),
     wainscot: std({ color: 0x8fa79a, roughness: 0.6 }),
     ceiling: std({ color: 0xf2f2ee, roughness: 0.95 }),
-    top: std({ color: 0x15171b, roughness: 0.35, metalness: 0.05 }),
+    top: std({ color: 0x15171b, roughness: 0.35, metalness: 0.05, envMapIntensity: 0.7 }),
     cabinet: std({ map: canvasTexture(256, 128, (g, w, h) => {
       g.fillStyle = '#e9e6dd';
       g.fillRect(0, 0, w, h);
@@ -103,8 +104,8 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
       g.fillStyle = '#8a8f96';
       for (let x = 0; x < w; x += 64) g.fillRect(x + 28, 14, 8, 3);
     }, [1, 1]), roughness: 0.85 }),
-    steel: std({ color: 0xc4c9cf, metalness: 0.85, roughness: 0.3 }),
-    darkSteel: std({ color: 0x5a6068, metalness: 0.7, roughness: 0.4 }),
+    steel: std({ color: 0xc4c9cf, metalness: 0.85, roughness: 0.3, envMapIntensity: 1 }),
+    darkSteel: std({ color: 0x5a6068, metalness: 0.7, roughness: 0.4, envMapIntensity: 1 }),
     wood: std({ color: 0x9a6a3c, roughness: 0.65 }),
     black: std({ color: 0x202226, roughness: 0.5 }),
     white: std({ color: 0xf4f4f2, roughness: 0.5 }),
@@ -253,11 +254,12 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   bunsen.hit.push(gauze);
   bunsen.gauzeMat = gauzeMat;
   // fiamma: cono interno azzurro e cono esterno; il colore cambia nel saggio alla fiamma
-  const flameOuter = new THREE.MeshBasicMaterial({ color: 0x5a7dff, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false });
+  const flameOuter = new THREE.MeshBasicMaterial({ color: 0x5a7dff, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   const flameInner = new THREE.MeshBasicMaterial({ color: 0x9fe6ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
-  const fo = mesh(new THREE.ConeGeometry(0.014, 0.11, 14, 1, true), flameOuter, bu.x, BENCH_Y + 0.2, bu.z, { cast: false, receive: false });
+  const fo = mesh(new THREE.ConeGeometry(0.02, 0.13, 16, 1, true), flameOuter, bu.x, BENCH_Y + 0.21, bu.z, { cast: false, receive: false });
   const fi = mesh(new THREE.ConeGeometry(0.008, 0.045, 12, 1, true), flameInner, bu.x, BENCH_Y + 0.168, bu.z, { cast: false, receive: false });
   bunsen.flameMeshes = [fo, fi];
+  bunsen.hit.push(fo);
   bunsen.flameOuter = flameOuter;
   fo.visible = fi.visible = false;
   fixtures.push(bunsen);
@@ -472,7 +474,8 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     // fiamma del Bunsen tremolante
     for (const [k, m] of bunsen.flameMeshes.entries()) {
       m.visible = bunsen.on;
-      if (bunsen.on) m.scale.set(1 + Math.sin(t * 31 + k) * 0.05, 1 + Math.sin(t * 23 + k * 2) * 0.08, 1 + Math.cos(t * 29) * 0.05);
+      const b = bunsen.boost && k === 0 ? 1.4 : 1; // nel saggio alla fiamma la fiamma colorata si allarga
+      if (bunsen.on) m.scale.set(b * (1 + Math.sin(t * 31 + k) * 0.05), b * (1 + Math.sin(t * 23 + k * 2) * 0.08), b * (1 + Math.cos(t * 29) * 0.05));
     }
     flameLight.intensity = bunsen.on ? 0.6 + Math.sin(t * 40) * 0.08 : 0;
     gauzeMat.emissiveIntensity += ((bunsen.on ? 0.55 : 0) - gauzeMat.emissiveIntensity) * Math.min(1, dt * 0.6);

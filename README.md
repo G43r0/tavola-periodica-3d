@@ -10,6 +10,9 @@ L'interfaccia è in **italiano**, in **inglese** e in **«Spiegamelo come se ave
 semplici), e la **modalità Spiega** (`F1`) apre una scheda su qualsiasi parola evidenziata o cosa cliccata col tasto destro.
 Tre **preset grafici** (Semplice, Medio, Professionale) adattano la grafica al computer; il Professionale mostra anche
 l'**aspetto reale** di ogni elemento (colori e materiali veri) in un campione 3D.
+Il **simulatore di laboratorio** è un gioco in prima persona nel laboratorio di chimica della scuola, nello stile di
+*Cooking Simulator*: si prendono becher e bottiglie, si pesa, si versa inclinando, si scalda e si consegna il preparato
+all'insegnante, con la fisica vera degli oggetti e la chimica delle 554 sostanze e delle reazioni del catalogo.
 Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 
 | Fase | Contenuto | Stato |
@@ -22,6 +25,7 @@ Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 | 6 | Sandbox degli elementi: polveri, liquidi e gas con temperatura, reazioni, elettricità, radioattività | ✅ completata |
 | 7 | Lingue (italiano, inglese, «Spiegamelo come se avessi 6 anni») e modalità Spiega | ✅ completata |
 | 8 | Preset grafici (Semplice, Medio, Professionale) e aspetto reale degli elementi | ✅ completata |
+| 9 | Simulatore di laboratorio: il gioco in prima persona nel laboratorio della scuola | 🧪 prototipo giocabile |
 
 ---
 
@@ -420,7 +424,60 @@ iridescenza e trasmissione); le miniature si generano all'avvio, poche per fotog
 Protoni, neutroni ed elettroni mantengono invece i colori convenzionali: sono molto più piccoli della lunghezza d'onda
 della luce e quindi non hanno un colore visibile.
 
-## 11. Struttura del progetto
+## 11. Simulatore di laboratorio
+
+Si apre dal pulsante **Simulatore** (occhiali di protezione) nella barra in alto. È un gioco in prima persona ispirato a
+*Cooking Simulator*, ambientato nel laboratorio di chimica di una scuola: lo studente riceve le esercitazioni
+dall'insegnante, le prepara al bancone e le consegna alla cattedra. Modelli e grafica sono costruiti nel codice; la
+fisica è quella di [Rapier](https://rapier.rs) (WebAssembly incluso nell'app, caricato solo alla prima apertura).
+Design e decisioni: `docs/superpowers/specs/2026-10-13-simulatore-laboratorio-design.md`.
+
+**Stato: prototipo giocabile** per provare comandi e fisica. Negozio e ampliamenti del laboratorio, reputazione,
+tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione arriveranno nelle prossime versioni.
+
+- **Modalità**: *Carriera* (5 esercitazioni valutate con stelle e soldi, progressi salvati) e *Laboratorio libero*
+  (tutti gli strumenti e un magazzino con le 554 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
+- **Chimica** scelta all'inizio: *realistica* (si legge la bilancia, la graduazione e le etichette; la spatola prende
+  quantità variabili; tolleranze strette) o *semplificata* (un cucchiaino = 1 g, quantità e pH sempre visibili,
+  tolleranze larghe).
+- **Due visuali**: prima persona (`W A S D` e mouse) e vista dall'alto del bancone (`Tab`; `A`/`D` cambia postazione:
+  bancone, scaffale, lavandino, cappa, cattedra, rifiuti).
+- **Fisica vera**: gli oggetti si prendono, si posano dove si guarda, si lanciano, cadono e si rovesciano; la vetreria che
+  urta oltre ~3,3 m/s si rompe (un becher che cade dal bancone sì, uno posato no).
+- **Versare**: tenendo premuto il tasto destro e muovendo il mouse si inclina il recipiente. Il livello del liquido resta
+  orizzontale (quantile di ~300 punti campionati nel volume interno) e il liquido esce dal punto più basso del bordo con
+  la portata di uno stramazzo (Q ≈ 1,77 · b · h^1,5): inclinando poco si versa goccia a goccia. Guardando un altro
+  recipiente, la bocca si porta sopra la sua apertura; il getto cade in una parabola e, se manca il bersaglio, fa una pozza.
+- **Strumenti**: becher da 100 e 250 mL, beuta, cilindro graduato (tacche da 1 mL), bottiglie di reagenti con etichetta e
+  pittogrammi, spruzzetta di acqua distillata, contagocce di fenolftaleina, barattoli, spatola (un cucchiaino o un pizzico),
+  bilancia con tara, piastra riscaldante con agitatore (5 livelli), becco Bunsen con treppiede e reticella, ansa di
+  nichel-cromo per il saggio alla fiamma, cartine indicatrici universali, carta assorbente, lavandino con rubinetto,
+  cappa aspirante, doccia di emergenza, estintore a CO₂, contenitori dei rifiuti, vassoio delle consegne e campanello.
+- **Chimica dei contenitori** (`src/game/mixture.js`, testata): moli per sostanza e quanto è sciolto, temperatura,
+  volume, massa, pH dal bilancio delle cariche (acidi e basi forti e deboli), colore (ioni dei metalli di transizione,
+  indicatori, precipitati in sospensione), solubilità con la temperatura (CRC Handbook) e cristallizzazione anche come
+  idrato (CuSO₄·5H₂O azzurro, che scaldato troppo torna bianco), ebollizione ed evaporazione, gas che si liberano, le
+  reazioni del catalogo con le loro condizioni e il loro calore. Il tempo termico scorre 4 volte più veloce del reale.
+- **Incidenti**: vetro rotto (i vetri vanno raccolti e buttati nel contenitore del vetro), pozze da asciugare con la carta,
+  fuoco (un liquido infiammabile vicino alla fiamma; si propaga alla carta; si spegne con l'estintore), gas tossici (NO₂,
+  Cl₂, H₂S, NH₃… fanno scattare l'allarme fuori dalla cappa accesa), esplosioni, schizzi corrosivi (doccia di emergenza
+  entro 15 s).
+- **Pulizia e rifiuti**: la vetreria sporca contamina il preparato successivo e si lava al lavandino; i rifiuti vanno nel
+  contenitore giusto — lavandino (solo soluzioni innocue e diluite), metalli pesanti, acidi basi e sali, solventi organici,
+  vetro rotto, rifiuti solidi — altrimenti si prende una multa.
+
+| Esercitazione | Cosa si fa | Cosa si valuta |
+|---------------|-----------|----------------|
+| 1. Soluzione di cloruro di sodio | pesare 2,92 g di NaCl (3 g in semplificata), acqua distillata fino a 100 mL, sciogliere | concentrazione, volume, sale non sciolto, acqua del rubinetto o vetreria sporca |
+| 2. Titolazione acido-base | fenolftaleina in 25 mL di HCl 0,10 M, NaOH 0,10 M fino al primo rosa | mL aggiunti rispetto al punto equivalente (25 mL), pH, indicatore |
+| 3. Pioggia d'oro | Pb(NO₃)₂ + 2 KI → PbI₂ giallo; resti nei metalli pesanti | massa del precipitato, eccesso di reagente |
+| 4. Cristalli di solfato di rame | sciogliere a caldo, evaporare metà dell'acqua, raffreddare (anche a bagnomaria) | grammi di cristalli, cristalli «bruciati», preparato ancora caldo |
+| 5. Saggio alla fiamma | riconoscere tre campioni incogniti dal colore della fiamma, pulendo l'ansa nell'HCl | risposte giuste |
+
+Ogni consegna vale fino a 5 stelle: 3 per il preparato, 1 per sicurezza e pulizia (pozze, vetri, rifiuti abbandonati,
+incidenti, bidoni sbagliati) e 1 per il tempo. La paga è proporzionale alle stelle, meno reagenti, vetreria rotta e multe.
+
+## 12. Struttura del progetto
 
 ```
 electron/
@@ -467,6 +524,19 @@ src/
     data/molecules.js libreria di molecole, ioni e composti ionici (con ΔHf°)
     data/molecules-reazioni.js sostanze aggiunte per il catalogo delle reazioni (ioni monoatomici, complessi, silice…)
     data/reactions.js libreria delle reazioni
+  game/               simulatore di laboratorio (il gioco)
+    game-view.js      interfaccia: menu, HUD, finestre, comandi, blocco del puntatore; carica Rapier alla prima apertura
+    game.js           il gioco: oggetti, presa e versamento, strumenti, calore, incidenti, rifiuti, esercitazioni
+    mixture.js        chimica dei contenitori: fasi, pH, colore, solubilità, cristallizzazione, reazioni, calore
+    reagents.js       solubilità, acidi e basi, idrati, gas tossici, metalli pesanti, reagenti dello scaffale, prezzi
+    orders.js         le esercitazioni: preparazione del banco, passi, valutazione, stelle e soldi
+    physics.js        Rapier: mondo a passo fisso, corpi, urti (rottura del vetro), raggi, controllore del personaggio
+    room.js           l'aula di chimica: banconi, lavandino, cappa, cattedra, lavagna, rifiuti, doccia, luci
+    items.js          vetreria e strumenti: profili reali, collisori, graduazioni, etichette
+    liquid.js         livello del liquido a qualunque inclinazione, versamento, shader del liquido
+    effects.js        gocce, vapore, fumo, gas, fiamme, pozze
+    player.js         camminata in prima persona e camera della vista del bancone
+    game-strings.js   testi del simulatore nelle tre lingue
   sandbox/            sandbox degli elementi
     substances.js     sostanze: elementi (dati reali), materiali, prodotti, sostanze della libreria; proprietà per il motore
     data/compounds.js dati fisici delle 554 sostanze della libreria (fusione, ebollizione, densità, colore, solubilità…)
@@ -482,6 +552,7 @@ tests/lab/            test del motore chimico (npm test)
 tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo, strumenti)
 tests/i18n/           test delle lingue e del glossario della modalità Spiega
 tests/gfx/            test dei preset grafici e dell'aspetto reale degli elementi
+tests/game/           test del simulatore (chimica dei contenitori, fisica, liquidi, esercitazioni e valutazione)
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json
@@ -491,7 +562,7 @@ data-sources/         dati di origine (PubChem + dati curati in italiano)
 build/icon.png        icona usata da electron-builder
 ```
 
-## 12. Uso
+## 13. Uso
 
 - **Passa il mouse** su un elemento: anteprima in alto e cella in rilievo.
   Passando su un numero di gruppo/periodo o su una categoria della legenda si evidenzia l'intera colonna/riga/categoria.
@@ -525,3 +596,9 @@ build/icon.png        icona usata da electron-builder
 | `[` / `]`, rotella | (sandbox) pennello più piccolo / più grande |
 | clic destro / centrale | (sandbox) cancella / preleva la sostanza |
 | `Maiusc` + clic | (sandbox) linea dal punto precedente |
+| `W A S D`, mouse | (simulatore) cammina e guarda (`Maiusc`: corri) |
+| clic / tasto destro + mouse | (simulatore) prendi o posa / inclina per versare |
+| `E` / `Maiusc+E` | (simulatore) usa: manopole, rubinetto, tara, cappa, campanello; con gli strumenti spatola, ansa, carta, cartina, estintore (un pizzico con la spatola) |
+| `Q` / rotella | (simulatore) lancia / distanza o altezza dell'oggetto |
+| `Tab` / `A` `D` | (simulatore) vista del bancone / postazione precedente o successiva |
+| `I` / `H` / `Esc` | (simulatore) schede / comandi / pausa |
