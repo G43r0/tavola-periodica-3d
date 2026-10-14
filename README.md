@@ -99,6 +99,14 @@ npm run dist:linux
 
 Vanno eseguiti sul rispettivo sistema operativo (producono `.dmg` e `.AppImage`).
 
+### Distribuzione con il launcher (repository privato)
+
+Per dare il gioco ad altre persone senza rendere pubblico il codice c'è un **launcher** leggero (`launcher/`, Go, un solo
+eseguibile): scarica il gioco dalle release del repository privato con un token in sola lettura, lo tiene aggiornato e
+aggiorna anche se stesso. Le release si pubblicano creando un tag (`vX.Y.Z` per il gioco, `launcher-vX.Y.Z` per il
+launcher): la pipeline `.github/workflows/release.yml` compila, calcola gli SHA-256 e pubblica. Istruzioni complete in
+[launcher/README.md](launcher/README.md).
+
 ### Problemi comuni
 
 - **`EPERM: operation not permitted, rename ... win-unpacked.tmp`** — un antivirus o un altro processo
@@ -502,6 +510,8 @@ incidenti, bidoni sbagliati) e 1 per il tempo. La paga è proporzionale alle ste
 ## 12. Struttura del progetto
 
 ```
+launcher/             launcher che scarica e aggiorna il gioco (e se stesso) dalle release private (Go)
+.github/workflows/    release.yml: pubblica gioco e launcher quando si crea un tag
 electron/
   main.cjs            processo principale (finestra, menu, sicurezza: contextIsolation, sandbox)
   preload.cjs         ponte minimo verso il renderer

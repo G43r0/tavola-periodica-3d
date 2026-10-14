@@ -1,0 +1,123 @@
+# Pubblica le release che il launcher scarica (repository privato: le release restano private).
+#   - tag «vX.Y.Z»          → zip del gioco per Windows e Linux (+ .sha256)
+#   - tag «launcher-vX.Y.Z» → eseguibili del launcher per Windows e Linux (+ .sha256)
+# Il tag «vX.Y.Z» deve coincidere con "version" in package.json.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'launcher-v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+
+jobs:
+  game:
+    if: startsWith(github.ref_name, 'v')
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            target: win
+            platform: windows-amd64
+            unpacked: release/win-unpacked
+            entry: Tavola Periodica 3D.exe
+          - os: ubuntu-latest
+            target: linux
+            platform: linux-amd64
+            unpacked: release/linux-unpacked
+            entry: tavola-periodica-3d
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: La versione in package.json coincide con il tag
+        shell: bash
+        run: |
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "v$pkg" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Il tag $GITHUB_REF_NAME non coincide con package.json ($pkg)"; exit 1
+          fi
+      - run: npm ci
+      - name: Test
+        if: matrix.target == 'linux'
+        run: npm test
+      - name: Compila l'app e la impacchetta (cartella, senza installer)
+        run: npx vite build && npx electron-builder --${{ matrix.target }} --dir
+      - name: Crea lo zip
+        shell: bash
+        run: |
+          test -f "${{ matrix.unpacked }}/${{ matrix.entry }}" || { echo "::error::manca ${{ matrix.entry }}"; exit 1; }
+          zip_name="TavolaPeriodica3D-${{ matrix.platform }}-${GITHUB_REF_NAME#v}.zip"
+          mkdir -p out
+          out="$PWD/out/$zip_name"
+          cd "${{ matrix.unpacked }}"
+          if [ "${{ matrix.target }}" = win ]; then 7z a -tzip -mx=5 "$out" ./* >/dev/null; else zip -qr -9 "$out" .; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: game-${{ matrix.target }}
+          path: out/*.zip
+          if-no-files-found: error
+
+  publish-game:
+    needs: game
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: game-*
+          merge-multiple: true
+          path: out
+      - name: Pubblica la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd out
+          for f in *.zip; do sha256sum "$f" > "$f.sha256"; done
+          cd ..
+          notes="docs/release-${GITHUB_REF_NAME#v}.md"
+          if [ -f "$notes" ]; then notes_args=(--notes-file "$notes"); else notes_args=(--generate-notes); fi
+          gh release create "$GITHUB_REF_NAME" out/* --verify-tag --title "Tavola Periodica 3D ${GITHUB_REF_NAME#v}" "${notes_args[@]}"
+
+  launcher:
+    if: startsWith(github.ref_name, 'launcher-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Test
+        working-directory: launcher
+        run: go vet ./... && go test ./...
+      - name: Compila per Windows e Linux
+        working-directory: launcher
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          ver="${GITHUB_REF_NAME#launcher-v}"
+          mkdir -p ../out
+          for target in windows/amd64 linux/amd64; do
+            os="${target%/*}"; arch="${target#*/}"
+            name="tp3d-launcher-$os-$arch"; [ "$os" = windows ] && name="$name.exe"
+            GOOS="$os" GOARCH="$arch" go build -trimpath -ldflags "-s -w -X main.version=$ver" -o "../out/$name" .
+          done
+          cd ../out
+          for f in tp3d-launcher-*; do sha256sum "$f" > "$f.sha256"; done
+      - name: Pubblica la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/* --verify-tag --title "Launcher ${GITHUB_REF_NAME#launcher-v}" \
+            --notes "Launcher di Tavola Periodica 3D. Vedi launcher/README.md."

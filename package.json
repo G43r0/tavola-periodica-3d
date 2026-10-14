@@ -65,6 +65,7 @@
     },
     "linux": {
       "target": "AppImage",
+      "executableName": "tavola-periodica-3d",
       "category": "Education",
       "icon": "build/icon.png"
     }

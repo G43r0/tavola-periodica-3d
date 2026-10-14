@@ -4,3 +4,6 @@ release/
 *.log
 .claude/
 graphify-out/
+
+launcher/dist/
+launcher/*.exe

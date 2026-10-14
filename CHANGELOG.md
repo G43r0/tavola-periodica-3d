@@ -8,6 +8,18 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
+## [Non rilasciato]
+
+### Aggiunto
+- **Launcher** (`launcher/`): programma leggero in Go (un solo eseguibile, solo libreria standard) che scarica e aggiorna
+  il gioco dalle release del repository **privato** con un token GitHub in sola lettura, verifica lo SHA-256 di ogni file,
+  installa con scambio sicuro della cartella (in caso di errore resta la versione precedente), parte offline se GitHub non
+  è raggiungibile e **aggiorna anche se stesso**. Il token è cifrato con DPAPI su Windows. Opzioni `--no-update`,
+  `--update-only`, `--force`, `--reset-token`; test con un finto server GitHub.
+- Pipeline di release (`.github/workflows/release.yml`): un tag `vX.Y.Z` pubblica gli zip del gioco per Windows e Linux, un
+  tag `launcher-vX.Y.Z` pubblica gli eseguibili del launcher, entrambi con i file `.sha256`.
+- `electron-builder`: nome dell'eseguibile Linux fissato a `tavola-periodica-3d`.
+
 ## [0.8.0] — 2026-10-14 — Sandbox, lingue, preset grafici e simulatore di laboratorio
 
 ### Aggiunto
