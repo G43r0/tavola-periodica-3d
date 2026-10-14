@@ -1,6 +1,6 @@
 # Gioco base — piano
 
-Data: 2026-10-14 · Stato: **proposta da confermare** · Parte dal prototipo del simulatore
+Data: 2026-10-14 · Stato: **in corso — G1 completata** · Parte dal prototipo del simulatore
 ([design](2026-10-13-simulatore-laboratorio-design.md), branch `ccr-9fd85180-nfjaik`, fase 9)
 
 ## Da dove partiamo
@@ -29,11 +29,13 @@ gioco:
 - Luci ridotte a uno schema chiaro: plafoniere sopra i banconi (luce principale, morbida), finestra come luce di
   riempimento fredda, emisferica bassa. Esposizione da tarare con gli screenshot dei tre preset (obiettivo: nessuna
   superficie grande vicina al bianco).
-- Tone mapping **AgX** (Three.js r186) al posto di ACES nel gioco: satura meno i chiari e tiene i colori delle soluzioni.
+- Tone mapping **neutro** (Khronos PBR Neutral) in tutti i preset del gioco, al posto di ACES: non brucia i chiari e
+  conserva tinta e saturazione, quindi i colori veri delle soluzioni (AgX, previsto all'inizio, tende a desaturarli).
 - Gerarchia visiva: ciò che si può prendere è più saturo e illuminato dello sfondo; strumenti in grigio scuro e acciaio
   invece che bianchi; il contorno dell'oggetto guardato resta l'unico «bagliore».
-- Occlusione ambientale (GTAO di Three.js) e ombre di contatto sotto gli oggetti nel Professionale; ombra finta
-  (disco sfumato) nel Semplice e nel Medio, così gli oggetti non «galleggiano».
+- Ombre di contatto (disco sfumato) sotto ogni oggetto in tutti i preset, più leggere nel Professionale che ha già le
+  ombre vere: gli oggetti non «galleggiano» e, in mano, si vede sopra quale punto sono. L'occlusione ambientale
+  (GTAO) passa alla rifinitura (G8), perché chiede il post-processing che il gioco oggi non ha.
 
 **Vetro e liquidi**
 
@@ -46,7 +48,7 @@ gioco:
 colore graduali, fumi colorati (NO₂ bruno, Cl₂ giallo-verde, I₂ viola), vapore, fiamme colorate, scintille, esplosioni
 con scossa della camera (breve, disattivabile).
 
-**Stanza**: tavola periodica appesa (disegnata dai dati dell'app), armadio dei reagenti con ante di vetro, armadio di
+**Stanza**: il poster della tavola periodica c'è già (ora con i numeri atomici giusti), armadio dei reagenti con ante di vetro, armadio di
 sicurezza giallo per gli infiammabili, orologio, cartelli di sicurezza, vista esterna dalla finestra, macchie e usura.
 
 Tutto resta generato nel codice (nessun modello o texture scaricati) e rispetta i preset: Semplice senza AO, ombre né
@@ -209,7 +211,7 @@ Ogni fase è giocabile da sola, con test e screenshot nei tre preset prima di pa
 
 | Fase | Contenuto | Dipende da |
 |---|---|---|
-| **G1** | Luce, colori della stanza, AgX, vetro leggibile, ombre di contatto (anche nel laboratorio molecolare se serve) | — |
+| **G1** ✅ | Luce, colori della stanza, tone mapping neutro, vetro leggibile, ombre di contatto | — |
 | **G2** | Barattoli, bottiglie, bombole e ampolle nuovi; tappi colorati; etichette GHS; scaffale ordinato | G1 |
 | **G3** | Reazioni al centro: effetti osservabili, equazione nella finestrella, quaderno, condizioni nuove, scaffale ampliato con test di copertura, vista molecolare | G2 |
 | **G4** | Strumenti nuovi (buretta, pipetta, filtrazione, crogiolo, termometro, pH-metro, elettrolisi, distillazione) | G3 |
@@ -217,6 +219,19 @@ Ogni fase è giocabile da sola, con test e screenshot nei tre preset prima di pa
 | **G6** | Carriera: capitoli 0–4 (~25 esercitazioni) scritti come dati, pagine del libro sbloccate, relazione, negozio, reputazione, salvataggi versionati | G5 |
 | **G7** | Carriera: capitoli 5–9, verifiche, pagella, sfide a tempo, richieste extra | G6 |
 | **G8** | Rifinitura: dettagli della stanza, effetti, audio (se lo vogliamo), prestazioni, inglese e «Spiegamelo come se avessi 6 anni», modalità Spiega, README e CHANGELOG | G7 |
+
+### G1 — fatto
+
+| Prima | Dopo |
+|---|---|
+| pareti `#dfe6dc`, pavimento `#b9b4a8`, soffitto e mobili quasi bianchi | pareti verde salvia `#93a39a`, zoccolo `#4d5f56`, linoleum `#6e6862`, mobili grigio ardesia `#56606b`, soffitto `#b9bbb6` |
+| bilancia e piastra bianche `#f4f4f2` | grigio chiaro `#aeb4bb`; piano della cappa nero come i banconi |
+| emisferica 0,9 + sole 1,6 + una lampada da 6 al centro | emisferica 0,5 (1,3 senza riflessi dell'ambiente, nel Semplice), finestra 1,2, due plafoniere sopra i banconi (4,5 e 3) |
+| ACES con esposizione 1,05 (Semplice e Medio) | tone mapping neutro con esposizione 1 in tutti i preset |
+| vetro opaco al 20 % che sembrava plastica grigia | vetro al 7 % al centro con i bordi più chiari e opachi (Fresnel, `glassEdges` in `items.js`), labbro sul bordo della bocca, nel Professionale una tinta verde-azzurra nello spessore |
+| oggetti che galleggiano senza ombre (Semplice e Medio) | ombra di contatto sotto ogni oggetto (disco o ellisse orientata per gli strumenti), che sbiadisce e si allarga sollevandolo |
+
+Verificato con gli screenshot della stessa inquadratura (prima persona, bancone, scaffale, cappa) nei tre preset.
 
 ## Verifiche
 

@@ -105,8 +105,9 @@ export function createGame(elements, { onClose } = {}) {
     renderer = new THREE.WebGLRenderer({ antialias: G.antialias, powerPreference: 'high-performance' });
     renderer.setPixelRatio(G.pixelRatio(window.devicePixelRatio || 1));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = G.toneMapping === 'neutral' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = G.exposure;
+    // tone mapping neutro in tutti i preset: conserva tinta e saturazione, quindi i colori veri delle soluzioni
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1;
     if (G.shadows) {
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFShadowMap;

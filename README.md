@@ -474,6 +474,9 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
   bilancia con tara, piastra riscaldante con agitatore (5 livelli), becco Bunsen con treppiede e reticella, ansa di
   nichel-cromo per il saggio alla fiamma, cartine indicatrici universali, carta assorbente, lavandino con rubinetto,
   cappa aspirante, doccia di emergenza, estintore a CO₂, contenitori dei rifiuti, vassoio delle consegne e campanello.
+- **Grafica**: aula in toni medi (pareti verde salvia, mobili grigio ardesia, banconi neri) e luce moderata, perché la
+  vetreria e i reagenti si stacchino dallo sfondo; vetro limpido al centro e più chiaro sui bordi, con il labbro della
+  bocca; ombra di contatto sotto ogni oggetto; tone mapping neutro, che conserva i colori veri delle soluzioni.
 - **Chimica dei contenitori** (`src/game/mixture.js`, testata): moli per sostanza e quanto è sciolto, temperatura,
   volume, massa, pH dal bilancio delle cariche (acidi e basi forti e deboli), colore (ioni dei metalli di transizione,
   indicatori, precipitati in sospensione), solubilità con la temperatura (CRC Handbook) e cristallizzazione anche come

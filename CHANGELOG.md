@@ -118,6 +118,12 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 - Dati: `src/lab/data/reactions-catalogo.js` (generato dal catalogo); `reactions.js` unisce le due liste.
 
 ### Modificato
+- **Simulatore: luce e leggibilità** (fase G1 del [piano del gioco base](docs/superpowers/specs/2026-10-14-gioco-base-piano.md)).
+  L'aula non è più quasi bianca: pareti verde salvia, linoleum e mobili grigio ardesia, strumenti grigio chiaro, piano
+  della cappa nero. Meno luce (emisferica bassa, finestra, due plafoniere sopra i banconi al posto di una lampada forte)
+  e tone mapping neutro in tutti i preset, che conserva i colori veri delle soluzioni. Il vetro è limpido al centro e
+  più chiaro sui bordi (effetto Fresnel), con il labbro della bocca in evidenza: non sembra più plastica grigia. Ogni
+  oggetto ha un'ombra di contatto, che sbiadisce sollevandolo e mostra sopra quale punto lo si tiene.
 - La Content Security Policy permette la compilazione di WebAssembly (`'wasm-unsafe-eval'`, non `eval` di JavaScript):
   serve al motore fisico Rapier del simulatore.
 - «Simula reazione» non esegue le reazioni che richiedono altro (catalizzatori, soluzione acquosa, enzimi) né gli
@@ -127,6 +133,9 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   pulsante è disattivato e la scheda lo spiega.
 - Test: bilanciamento e conservazione della carica per tutte le 1349 reazioni; il modello di «sintesi per addizione» si
   prova con le sole reazioni scritte a mano.
+
+### Corretto
+- Simulatore: il poster della tavola periodica mostrava «undefined» al posto dei numeri atomici.
 
 ## [0.7.0] — 2026-10-11 — Catalogo delle reazioni
 

@@ -9,7 +9,7 @@ import { gfx } from '../gfx/preset.js';
 import { locale } from '../i18n/index.js';
 import { Physics } from './physics.js';
 import { buildRoom, ROOM, LAYOUT, BENCH_Y, DESK_Y, STATIONS } from './room.js';
-import { DEFS, createItem, syncItem, disposeItem, placeItem, itemMaterials, itemMassGrams } from './items.js';
+import { DEFS, createItem, syncItem, disposeItem, placeItem, itemMaterials, itemMassGrams, updateContactShadow } from './items.js';
 import { liquidLevel, pourRate, ballisticLanding } from './liquid.js';
 import { Drops, Puffs, Stream, createPuddle, puddleRadius, puddleState, stainAlphaMap } from './effects.js';
 import { Player } from './player.js';
@@ -97,7 +97,7 @@ export class LabGame {
     this.G = gfx();
     this.renderer = renderer;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xdfe6ee);
+    this.scene.background = new THREE.Color(0x1d2126);
     this.camera = new THREE.PerspectiveCamera(70, 16 / 9, 0.02, 40);
     this.envMap = null;
     if (this.G.env || this.G.post) {
@@ -2000,6 +2000,8 @@ export class LabGame {
     this.pendingBreaks.clear();
     this.physics.step(dt, this.items.map((i) => i.body));
     for (const it of this.items) syncItem(it);
+    // con le ombre vere (Professionale) l'ombra di contatto resta leggera
+    for (const it of this.items) updateContactShadow(it, this.physics, this.G.shadows ? 0.3 : 0.55);
     for (const p of this.room.props) if (!p.body.isSleeping()) this.syncProp(p);
     for (const it of this.items) if (it.def.container && it.mixture) this.pourFrom(it, dt);
     for (const [it, st] of this.streams) if (st.shown !== this.time) st.hide();
