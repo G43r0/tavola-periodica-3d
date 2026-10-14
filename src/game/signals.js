@@ -10,6 +10,8 @@ import { REDUCTION_POTENTIALS } from './reagents.js';
 const COLORED_GAS = 0.3;
 /** Solubilità (g/100 g d'acqua) sotto la quale un prodotto in soluzione precipita. */
 const INSOLUBLE = 1;
+/** Solubilità sopra la quale un gas in acqua resta sciolto (NH₃, HCl, SO₂): sotto, fa le bolle (H₂, O₂, CO₂, Cl₂). */
+const GAS_SOLUBLE = 5;
 // gruppi del catalogo le cui reazioni si fanno in soluzione anche senza la condizione esplicita
 const AQUEOUS_GROUPS = new Set(['precipitazioni', 'ioni', 'acidi-basi']);
 
@@ -38,7 +40,7 @@ export function stateOf(ctx, sid, { aqueous = false, product = false, T = AMBIEN
   const ph = phaseAt(s, T);
   if (aqueous) {
     const sol = ctx.solubility(sid, T);
-    if (ph === GAS) return sol > 0 ? 'aq' : 'g';
+    if (ph === GAS) return sol >= GAS_SOLUBLE ? 'aq' : 'g';
     if (sol >= INSOLUBLE) return 'aq';
     if (product && ph === LIQUID) return 'l';
     return ph === LIQUID ? 'l' : 's';

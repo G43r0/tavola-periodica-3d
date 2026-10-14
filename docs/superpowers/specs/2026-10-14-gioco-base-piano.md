@@ -250,7 +250,8 @@ Verificato con gli screenshot della stessa inquadratura (prima persona, bancone,
   pesanti, cianuri, cromati) e la modalità Spiega dice che sono indicativi.
 - **I nove pittogrammi GHS** disegnati come tracciati SVG (`src/game/ghs.js`): servono alle etichette e serviranno al libro.
 - **Etichette** ridisegnate: fascia della famiglia, nome (che si rimpicciolisce prima di troncarsi), formula, concentrazione,
-  avvertenza e fino a tre pittogrammi; rivolte verso il giocatore (i reagenti del bancone A sono girati di 180°).
+  avvertenza e fino a tre pittogrammi; rivolte verso il giocatore (dalla G4 sul lato che in mano guarda chi tiene il
+  barattolo; girati di 180° i reagenti di scaffale e bancone B).
 - **Tappi** a vite del colore della famiglia (ghiera sul contagocce): si tolgono mentre il reagente è in mano o appena usato
   con spatola, ansa o cartina, e tornano dopo 2,5 s.
 - **Contenuto visibile** nei barattoli di vetro, con una grana per polveri e cristalli (i cristalli blu del solfato di rame).

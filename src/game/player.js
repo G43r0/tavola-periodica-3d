@@ -6,9 +6,9 @@ import { STATIONS } from './room.js';
 const EYE = 1.62;
 const RADIUS = 0.28;
 const HALF = 0.55; // mezza altezza del cilindro della capsula: altezza totale 2·(0,55 + 0,28) = 1,66 m
-const WALK = 3.0; // m/s: più svelti del passo vero (≈ 1,4 m/s), così l'aula (10 m) si attraversa in poco più di 3 s
-const RUN = 5.2;
-const CROUCH = 1.6; // m/s accovacciati
+const WALK = 3.6; // m/s: più svelti del passo vero (≈ 1,4 m/s), così l'aula (10 m) si attraversa in meno di 3 s
+const RUN = 6.2;
+const CROUCH = 1.9; // m/s accovacciati
 const CROUCH_DROP = 0.55; // m: quanto si abbassano gli occhi accovacciandosi
 
 export class Player {
@@ -27,6 +27,7 @@ export class Player {
     this.onTeleport = null; // (da, a) → il gioco libera il posto (sgabelli spinti lì) e porta con sé l'oggetto in mano
     this.frozen = false; // manipolazione precisa o riempimento al lavandino: si sta fermi
     this.crouchT = 0; // 0 in piedi, 1 accovacciati (Ctrl)
+    this.noStrafe = false; // con un oggetto in mano A e D lo ruotano (game.js) invece di spostarsi di lato
     const start = { x: 0.15, y: HALF + RADIUS + 0.02, z: 0.4 };
     this.cc = physics.player(start, RADIUS, HALF);
   }
@@ -105,8 +106,8 @@ export class Player {
     if (this.mode === 'walk' && !blocked && !this.frozen) {
       if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) mz -= 1;
       if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) mz += 1;
-      if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) mx -= 1;
-      if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) mx += 1;
+      if (!this.noStrafe && (this.keys.has('KeyA') || this.keys.has('ArrowLeft'))) mx -= 1;
+      if (!this.noStrafe && (this.keys.has('KeyD') || this.keys.has('ArrowRight'))) mx += 1;
     }
     const len = Math.hypot(mx, mz) || 1;
     // come in Cooking Simulator: Spazio corre, Ctrl accovaccia (Maiusc è la manipolazione precisa)

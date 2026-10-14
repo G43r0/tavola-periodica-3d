@@ -37,9 +37,14 @@ test('legenda: elementi fissi con lo stato giusto (piastra, rubinetto, rifiuti)'
 
 test('legenda: con un recipiente in mano, i comandi di Cooking Simulator', () => {
   const rows = legendRows({ mode: 'walk', held: beaker, target: null, canPlace: true, canPutBack: true });
-  assert.deepEqual(keys(rows), ['lgPlace', 'lgPour', 'lgSwirl', 'lgRotate', 'lgPutBack', 'lgThrow', 'lgPrecise', 'lgDistance', 'lgHelp']);
-  assert.deepEqual(rows.map((r) => r.keys), [['lmb'], ['lmb', 'mouse'], ['e'], ['rmb', 'mousex'], ['rmb'], ['mmb'], ['shift'], ['wheel'], ['h']],
-    'clic posa, sinistro + mouse versa, destro + mouse ruota, clic destro rimette a posto, tasto centrale lancia');
+  assert.deepEqual(keys(rows), ['lgPlace', 'lgPour', 'lgSwirl', 'lgRotateKeys', 'lgPutBack', 'lgThrow', 'lgPrecise', 'lgDistance', 'lgHelp']);
+  assert.deepEqual(rows.map((r) => r.keys), [['lmb'], ['lmb', 'mouse'], ['e'], ['ad'], ['rmb'], ['mmb'], ['shift'], ['wheel'], ['h']],
+    'clic posa, sinistro + mouse versa, A e D ruotano, clic destro rimette a posto, tasto centrale lancia');
+  // con un oggetto in mano A e D ruotano: nella vista del bancone non cambiano postazione, in prima persona niente passi di lato
+  const benchHeld = legendRows({ mode: 'bench', held: beaker, target: null });
+  assert.ok(!keys(benchHeld).includes('lgStation'));
+  const fewRows = legendRows({ mode: 'walk', held: { kind: 'spatula', container: false }, target: null });
+  assert.ok(keys(fewRows).includes('lgWalkHeld') || fewRows.length === MAX_ROWS);
   assert.ok(rows.length <= MAX_ROWS);
   const turned = legendRows({ mode: 'walk', held: beaker, target: null, rotated: true });
   assert.equal(turned.find((r) => r.keys.length === 1 && r.keys[0] === 'rmb').key, 'lgCancelRotation');

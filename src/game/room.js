@@ -18,6 +18,7 @@ export const LAYOUT = {
   bunsen: { x: 1.38, z: -0.55 },
   strips: { x: 0.95, z: -0.78 },
   lamp: { x: 0.42, z: -0.8 }, // base in fondo al bancone A, il paralume sporge verso il giocatore
+  notebook: { x: -1.12, z: -0.17 }, // quaderno di laboratorio sul bancone A, davanti a sinistra
   sink: { x: -4.62, z: -0.3, w: 0.42, d: 0.5, depth: 0.24 },
   counterW: { x: -4.65, z: 0, w: 0.7, d: 5 },
   towels: { x: -4.96, z: 0.55 },
@@ -335,6 +336,57 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   lamp.bulbMat = bulbMat;
   fixtures.push(lamp);
 
+  // ------------------------------------------------------------ quaderno di laboratorio (si apre con un clic)
+  const nbk = LAYOUT.notebook;
+  const notebook = { kind: 'notebook', id: 'notebook', hit: [] };
+  const coverCanvas = document.createElement('canvas');
+  coverCanvas.width = 256;
+  coverCanvas.height = 360;
+  const coverTex = new THREE.CanvasTexture(coverCanvas);
+  coverTex.colorSpace = THREE.SRGBColorSpace;
+  coverTex.anisotropy = 8;
+  const nbGroup = new THREE.Group();
+  nbGroup.position.set(nbk.x, BENCH_Y, nbk.z);
+  nbGroup.rotation.y = 0.18;
+  group.add(nbGroup);
+  // pagine (bordo bianco) e copertina rigida con il titolo; una penna accanto
+  notebook.hit.push(mesh(new THREE.BoxGeometry(0.205, 0.016, 0.29), std({ color: 0xf1ede2, roughness: 0.9 }), 0, 0.009, 0, { parent: nbGroup }));
+  const coverMat = std({ color: 0x1f5f4a, roughness: 0.6 });
+  const coverTop = new THREE.MeshStandardMaterial({ map: coverTex, roughness: 0.6 });
+  notebook.hit.push(mesh(new THREE.BoxGeometry(0.212, 0.003, 0.297), [coverMat, coverMat, coverTop, coverMat, coverMat, coverMat], 0, 0.0185, 0, { parent: nbGroup }));
+  notebook.hit.push(mesh(new THREE.BoxGeometry(0.012, 0.019, 0.297), coverMat, -0.1, 0.0095, 0, { parent: nbGroup }));
+  const pen = mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.14, 10), std({ color: 0x23395d, roughness: 0.4 }), 0.13, 0.004, 0.02, { parent: nbGroup });
+  pen.rotation.x = Math.PI / 2;
+  physics.box(nbk.x, BENCH_Y + 0.01, nbk.z, 0.106, 0.01, 0.15, notebook, 0.18);
+  /** Copertina: titolo e riga sotto (il gioco scrive i testi nella lingua dell'interfaccia). */
+  const setNotebookCover = (title, sub) => {
+    const g = coverCanvas.getContext('2d');
+    g.fillStyle = '#1f5f4a';
+    g.fillRect(0, 0, 256, 360);
+    g.fillStyle = '#f1ede2';
+    g.fillRect(28, 60, 200, 120);
+    g.fillStyle = '#1d2733';
+    g.textAlign = 'center';
+    g.font = '700 26px "IBM Plex Sans", sans-serif';
+    const words = String(title).split(' ');
+    const mid = Math.ceil(words.length / 2);
+    g.fillText(words.slice(0, mid).join(' '), 128, 108);
+    g.fillText(words.slice(mid).join(' '), 128, 142);
+    g.font = '500 18px "IBM Plex Sans", sans-serif';
+    g.fillStyle = '#e8efe9';
+    g.fillText(sub, 128, 230);
+    g.strokeStyle = '#e8efe9';
+    g.lineWidth = 2;
+    for (let y = 270; y < 340; y += 18) {
+      g.beginPath();
+      g.moveTo(40, y);
+      g.lineTo(216, y);
+      g.stroke();
+    }
+    coverTex.needsUpdate = true;
+  };
+  fixtures.push(notebook);
+
   // cartine indicatrici
   const st = LAYOUT.strips;
   const strips = { kind: 'strips', id: 'strips', hit: [] };
@@ -567,7 +619,7 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     hood.led.color.set(hood.on ? 0x30ff60 : 0x3a1010);
   };
 
-  return { group, fixtures, zones, update, setBoard, setBalance, setLegend, bins, props, lights: { sun, hemi, ceiling, ceilingB } };
+  return { group, fixtures, zones, update, setBoard, setBalance, setLegend, setNotebookCover, bins, props, lights: { sun, hemi, ceiling, ceilingB } };
 }
 
 function fitLine(g, text, x, y, w) {

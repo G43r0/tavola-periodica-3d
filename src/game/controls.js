@@ -30,6 +30,8 @@ function fixtureRow(f, key = 'lmb') {
       return row([key], f.on ? 'lgHoodOff' : 'lgHoodOn');
     case 'lamp':
       return row([key], f.on ? 'lgLampOff' : 'lgLampOn');
+    case 'notebook':
+      return row([key], 'lgNotebook');
     case 'shower':
       return row([key], 'lgShower');
     case 'bell':
@@ -106,7 +108,7 @@ export function legendRows(s) {
         else if (f && fixtureRow(f, 'e')) out.push(fixtureRow(f, 'e'));
         else out.push(row(['e'], 'lgSwirl'));
       } else out.push(...toolRows(held, target));
-      out.push(row(['rmb', 'mousex'], 'lgRotate'));
+      out.push(row(['ad'], 'lgRotateKeys'));
       out.push(s.rotated ? row(['rmb'], 'lgCancelRotation') : row(['rmb'], 'lgPutBack', null, !s.canPutBack));
       out.push(row(['mmb'], 'lgThrow'));
       if (mode === 'walk') out.push(row(['shift'], 'lgPrecise'));
@@ -128,7 +130,12 @@ export function legendRows(s) {
   const rows = out.slice(0, MAX_ROWS - 1);
   // nella manipolazione precisa e al rubinetto si sta fermi: niente righe di movimento
   const still = held && (s.precise || s.filling);
-  const base = still ? [] : mode === 'bench' ? [row(['ad'], 'lgStation'), row(['tab'], 'lgFirstPerson')] : [row(['wasd'], 'lgWalk'), row(['tab'], 'lgBenchView')];
+  // con un oggetto in mano A e D lo ruotano: nella vista del bancone non cambiano postazione, in prima persona si
+  // cammina solo avanti e indietro
+  let base;
+  if (still) base = [];
+  else if (mode === 'bench') base = held ? [row(['tab'], 'lgFirstPerson')] : [row(['ad'], 'lgStation'), row(['tab'], 'lgFirstPerson')];
+  else base = [row(['wasd'], held ? 'lgWalkHeld' : 'lgWalk'), row(['tab'], 'lgBenchView')];
   for (const b of base) if (rows.length < MAX_ROWS - 1) rows.push(b);
   rows.push(row(['h'], 'lgHelp'));
   return rows;

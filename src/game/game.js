@@ -32,6 +32,7 @@ const PLACE_REACH = 0.6; // m: si posa con precisione solo vicino all'oggetto in
 const PLACE_LIFT = 0.002; // m sopra il piano: poi la gravità lo appoggia
 const ROT_SPEED = 0.005; // rad per pixel con R premuto
 const ROT_STEP = Math.PI / 12; // scatto della rotella con R premuto (15°)
+const ROT_KEYS = 2.4; // rad/s: rotazione dell'oggetto in mano con A e D (un giro in 2,6 s)
 const PRECISE_STEP = 0.0015; // m per pixel nella manipolazione precisa
 const PRECISE_RANGE = 0.35; // m attorno al punto di partenza
 const PUT_BACK_REACH = 1.2; // m: il clic destro rimette a posto l'oggetto solo vicino al punto da cui lo si è preso
@@ -181,6 +182,7 @@ export class LabGame {
     // una voce per colore (sali e altri inorganici hanno lo stesso tappo bianco)
     const shown = FAMILY_ORDER.filter((f, i) => FAMILY_ORDER.findIndex((g) => FAMILIES[g] === FAMILIES[f]) === i);
     this.room.setLegend(t('capLegendTitle'), shown.map((f) => ({ color: FAMILIES[f], label: t(`legend_${f}`) })));
+    this.room.setNotebookCover(t('notebookTitle'), t('notebookCover'));
     // estintore appeso al muro
     this.extinguisher = this.spawn('extinguisher', { pos: new THREE.Vector3(LAYOUT.extinguisher.x, 0.37, LAYOUT.extinguisher.z) });
     this.extinguisher.home = this.extinguisher.mesh.position.clone();
@@ -205,9 +207,12 @@ export class LabGame {
     disposeItem(item, this.env);
   }
 
-  /** Rotazione con cui un oggetto con etichetta guarda il giocatore: il bancone A si usa dal lato sud, gli altri da nord. */
+  /**
+   * Rotazione con cui un oggetto con etichetta guarda il giocatore. L'etichetta è sul lato +z dell'oggetto (in mano
+   * guarda chi lo tiene): il bancone A si usa dal lato sud (+z), così com'è; scaffale e bancone B dal lato nord, girati.
+   */
   facing(group) {
-    return group === 'bench' ? new THREE.Quaternion().setFromAxisAngle(UP, Math.PI) : null;
+    return group === 'bench' ? null : new THREE.Quaternion().setFromAxisAngle(UP, Math.PI);
   }
 
   /** Primo posto libero di un gruppo (bancone, scaffale…). */
@@ -276,7 +281,7 @@ export class LabGame {
 
   /** Contenitore di vetreria vuoto. */
   spawnGlass(kind, group = 'benchB') {
-    return this.spawn(kind, { pos: this.freeSlot(group), mixture: new Mixture(this.chem), name: this.t(`item_${kind}`) });
+    return this.spawn(kind, { pos: this.freeSlot(group), quat: this.facing(group), mixture: new Mixture(this.chem), name: this.t(`item_${kind}`) });
   }
 
   spawnTool(kind, group = 'bench', pos = null) {
@@ -1058,6 +1063,9 @@ export class LabGame {
       case 'lamp':
         f.on = !f.on;
         this.toast(f.on ? t('lampOn') : t('lampOff'));
+        break;
+      case 'notebook':
+        this.emit('notebook');
         break;
       case 'shower':
         this.fx.shower.t = 4;
@@ -2155,6 +2163,13 @@ export class LabGame {
     if (this.swirlT > 0) this.swirlT -= dt;
     // lasciato il tasto, il contenitore torna dritto da solo (e smette di versare)
     if (this.held) this.tilt = relaxTilt(this.tilt, dt, this.pouring);
+    // con un oggetto in mano A e D lo ruotano attorno alla verticale (e non si fa un passo di lato)
+    this.player.noStrafe = Boolean(this.held);
+    if (this.held && !blocked) {
+      const k = this.player.keys;
+      const dir = (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0) - (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0);
+      if (dir) this.held.rotYaw = wrapAngle((this.held.rotYaw ?? 0) + dir * ROT_KEYS * dt);
+    }
     this.player.update(dt, blocked);
     for (const b of this.pendingBreaks) this.breakItem(b);
     this.pendingBreaks.clear();
@@ -2250,6 +2265,7 @@ export class LabGame {
       bunsen: () => t(f.on ? 'stOn' : 'stOff'),
       hood: () => t(f.on ? 'stOnF' : 'stOffF'),
       lamp: () => t(f.on ? 'stLampOn' : 'stOffF'),
+      notebook: () => t('stNotebook', { n: Object.keys(this.notebook.rx).length }),
       sink: () => t(f.tap ? 'stTapOn' : 'stTapOff'),
       balance: () => `${this.fmt(Math.max(-999, this.balanceReading()), 2)} g`,
       bin: () => t(`binNote_${f.bin}`),

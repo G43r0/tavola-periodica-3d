@@ -428,11 +428,13 @@ export function createItem(env, kind, opts) {
       group.add(foot);
       item.hits.push(foot);
     }
+    // graduazione ed etichetta sul lato +z: in mano guardano chi tiene l'oggetto (il beccuccio, da cui si versa, è sul
+    // lato opposto, come si fa davvero: l'etichetta verso il palmo, così le gocce non la rovinano)
     if (def.grad) {
       const top = def.profile[def.profile.length - 1][1];
       const r = def.outer[0] + 0.0004;
       const gmesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(r, r, top, seg(24, 12), 1, true, Math.PI * 0.55, Math.PI * 0.5),
+        new THREE.CylinderGeometry(r, r, top, seg(24, 12), 1, true, -Math.PI * 0.45, Math.PI * 0.5),
         new THREE.MeshBasicMaterial({ map: gradTexture(def), transparent: true, depthWrite: false, side: THREE.DoubleSide }),
       );
       gmesh.position.y = top / 2;
@@ -444,7 +446,7 @@ export function createItem(env, kind, opts) {
       const h = Math.min(0.06, top * 0.42);
       const r = def.outer[0] + 0.0012;
       const lmesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(r, r, kind === 'dropper' ? 0.03 : h, seg(24, 12), 1, true, Math.PI * 0.55, Math.PI * 0.9),
+        new THREE.CylinderGeometry(r, r, kind === 'dropper' ? 0.03 : h, seg(24, 12), 1, true, -Math.PI * 0.45, Math.PI * 0.9),
         new THREE.MeshStandardMaterial({ map: labelTexture(opts.label), roughness: 0.7, side: THREE.FrontSide }),
       );
       lmesh.position.y = kind === 'dropper' ? 0.03 : top * 0.42;

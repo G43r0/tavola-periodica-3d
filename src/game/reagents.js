@@ -54,6 +54,15 @@ export const SOLUBILITY = {
   urea: [[0, 67], [20, 108], [60, 251], [100, 733]],
   'acido-citrico': [[0, 96], [20, 147], [60, 278], [100, 386]],
   'acetato-di-sodio': [[0, 36.2], [20, 46.4], [60, 139], [100, 170]],
+  // gas a 1 atm (CRC Handbook, «Solubility of selected gases in water»): poco solubili, ma quanto basta perché la CO₂
+  // gorgogliata nell'acqua di calce la intorbidi e il cloro sposti il bromo dai bromuri
+  co2: [[0, 0.335], [20, 0.169], [40, 0.097], [60, 0.058]],
+  Cl: [[10, 0.997], [20, 0.729], [40, 0.459], [60, 0.33]],
+  O: [[0, 0.0069], [20, 0.00434], [40, 0.0033], [60, 0.0028]],
+  N: [[0, 0.0029], [20, 0.0019], [60, 0.00105]],
+  H: [[0, 0.000192], [20, 0.00016], [60, 0.000118]],
+  h2s: [[0, 0.71], [20, 0.385], [40, 0.236]],
+  so2: [[0, 22.8], [20, 10.6], [40, 5.4]],
 };
 
 /** Sali che cristallizzano dall'acqua come idrati: anidro → [idrato, molecole d'acqua]. */

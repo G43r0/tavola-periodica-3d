@@ -15,6 +15,7 @@ import { isClick } from './controls.js';
 import { S } from '../sandbox/substances.js';
 import { GAME_STRINGS } from './game-strings.js';
 import { loadNotebook, notebookPages, percent } from './notebook.js';
+import { TUTORIAL, illustration } from './tutorial.js';
 
 const t = createT(GAME_STRINGS);
 const SAVE_KEY = 'tp3d.game';
@@ -104,6 +105,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   let fov = Math.max(FOV.min, Math.min(FOV.max, Number(save.fov) || FOV.default));
   const notebook = loadNotebook(save.notebook);
   let nbGroup = null; // gruppo aperto nel quaderno
+  let nbTab = 'tutorial'; // scheda del quaderno: tutorial o reazioni scoperte
+  let tutPage = 0; // pagina del tutorial
   let labAbove = false; // il laboratorio molecolare è aperto sopra il simulatore
   const pressed = new Set(); // tasti premuti (id della legenda): la riga corrispondente si illumina
   const pops = { looked: null, held: null }; // finestrelle accanto agli oggetti (elemento, misure)
@@ -150,6 +153,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     else if (type === 'order') showOrderIntro(data);
     else if (type === 'answers') showAnswers(data);
     else if (type === 'catalog') showCatalog();
+    else if (type === 'notebook') showNotebook('play');
     else if (type === 'careerEnd') showCareerEnd(data);
     else if (type === 'reaction') {
       reactionNote(data);
@@ -253,8 +257,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
         </fieldset>
         ${fovHtml()}
         <div class="gm-menu__foot">
-          <span class="gm-menu__left"><button type="button" class="btn-ghost" data-act="help">${icons.keyboard(16)}<span>${t('controls')}</span></button>
-          <button type="button" class="btn-ghost" data-act="notebook">${t('notebook')}</button></span>
+          <button type="button" class="btn-ghost" data-act="help">${icons.keyboard(16)}<span>${t('controls')}</span></button>
           <button type="button" class="btn-ghost" data-act="close">${icons.prev(16)}<span>${t('back')}</span></button>
         </div>
         <p class="gm-note">${t('prototypeNote')}</p>
@@ -425,7 +428,6 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       <div class="gm-stack">
         <button type="button" class="gm-primary" data-act="play">${t('resume')}</button>
         <button type="button" class="btn-ghost" data-act="help">${icons.keyboard(16)}<span>${t('controls')}</span></button>
-        <button type="button" class="btn-ghost" data-act="notebook">${t('notebook')} <kbd>N</kbd></button>
         ${game.free ? '' : `<button type="button" class="btn-ghost" data-act="restart-order">${t('restartOrder')}</button>`}
         <button type="button" class="btn-ghost" data-act="menu">${t('toMenu')}</button>
         <button type="button" class="btn-ghost" data-act="close">${t('backToTable')}</button>
@@ -439,7 +441,37 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
    * quelle scoperte con equazione, ΔH°, cosa si è visto e il collegamento al laboratorio molecolare; le altre coperte
    * (con il sottogruppo come indizio) o, se il simulatore non le sa fare, con il motivo.
    */
-  function showNotebook(back = state === 'menu' ? 'menu' : 'play') {
+  function showNotebook(back = 'play') {
+    const tabs = `<div class="gm-nb__tabs" role="tablist">${['tutorial', 'reactions'].map((k) => `<button type="button" role="tab" aria-selected="${nbTab === k}" class="gm-nb__tab ${nbTab === k ? 'is-on' : ''}" data-nb-tab="${k}">${t(k === 'tutorial' ? 'nbTabTutorial' : 'nbTabReactions')}</button>`).join('')}</div>`;
+    const body = nbTab === 'tutorial' ? tutorialHtml() : reactionsHtml();
+    showDialog(`
+      <h3>${t('notebookTitle')}</h3>
+      ${tabs}${body}
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${back}">${t('done')}</button></div>`, 'gm-notebook');
+    $('.gm-notebook').dataset.help = 'ui.gameNotebook';
+    const list = $('.gm-nb__pages');
+    if (list) list.scrollTop = 0;
+  }
+
+  /** Tutorial: l'elenco delle pagine e la pagina aperta, con l'illustrazione e i passi numerati. */
+  function tutorialHtml() {
+    const id = TUTORIAL[tutPage];
+    const nav = TUTORIAL.map((k, i) => `<button type="button" class="gm-nb__group ${i === tutPage ? 'is-on' : ''}" data-tut-page="${i}"><span>${i + 1}. ${esc(t(`tut_${k}_title`))}</span></button>`).join('');
+    const steps = t(`tut_${id}_steps`);
+    return `<div class="gm-nb">
+        <nav class="gm-nb__groups" aria-label="${t('nbTabTutorial')}">${nav}</nav>
+        <section class="gm-nb__pages gm-tut"><h4>${esc(t(`tut_${id}_title`))}</h4>
+          <figure class="gm-tut__fig">${illustration(id, (w) => t(`tutw_${w}`))}</figure>
+          <ol class="gm-tut__steps">${(Array.isArray(steps) ? steps : [steps]).map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+          <div class="gm-tut__nav"><button type="button" class="btn-ghost" data-tut-step="-1" ${tutPage === 0 ? 'disabled' : ''}>${t('tutPrev')}</button>
+            <small>${t('tutPage', { n: tutPage + 1, total: TUTORIAL.length })}</small>
+            <button type="button" class="btn-ghost" data-tut-step="1" ${tutPage === TUTORIAL.length - 1 ? 'disabled' : ''}>${t('tutNext')}</button></div>
+        </section>
+      </div>`;
+  }
+
+  /** Reazioni scoperte: i 14 gruppi con la percentuale e le pagine del gruppo scelto. */
+  function reactionsHtml() {
     const nb = notebookPages(game.chem, notebook);
     nbGroup ??= (nb.groups.find((g) => g.found) ?? nb.groups[0]).key;
     const g = nb.groups.find((x) => x.key === nbGroup) ?? nb.groups[0];
@@ -474,19 +506,13 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
         ${onOpenLab ? `<button type="button" class="gm-link" data-nb-lab="${esc(p.id)}">${t('nbOpenLab')}</button>` : ''}
       </li>`;
     };
-    showDialog(`
-      <h3>${t('notebookTitle')}</h3>
-      <p class="gm-nb__total">${t('nbTotal', { found: nb.found, doable: nb.doable, total: nb.total, p: percent(nb.found, nb.doable) })}</p>
+    return `<p class="gm-nb__total">${t('nbTotal', { found: nb.found, doable: nb.doable, total: nb.total, p: percent(nb.found, nb.doable) })}</p>
       <div class="gm-nb">
         <nav class="gm-nb__groups" aria-label="${t('nbGroups')}">${groups}</nav>
         <section class="gm-nb__pages"><h4>${esc(g.label)} <small>${t('nbGroupCount', { found: g.found, doable: g.doable, total: g.total })}</small></h4>
           ${g.found ? '' : `<p class="gm-nb__empty">${t('nbEmpty')}</p>`}
           <ol>${found.map(page).join('')}${hiddenRows.join('')}</ol></section>
-      </div>
-      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${back}">${t('done')}</button></div>`, 'gm-notebook');
-    $('.gm-notebook').dataset.help = 'ui.gameNotebook';
-    const list = $('.gm-nb__pages');
-    if (list) list.scrollTop = 0;
+      </div>`;
   }
   const equationOf = (rx, aq) => game.equationText(rx, aq);
 
@@ -526,7 +552,6 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       showMenu();
     } else if (act === 'free') startFree();
     else if (act === 'help') showHelp();
-    else if (act === 'notebook') showNotebook();
     else if (act === 'menu') showMenu();
     else if (act === 'play' || act === 'keep-playing') play();
     else if (act === 'pause') showPause();
@@ -542,6 +567,12 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       game.submitAnswers(answers);
     } else if (b.dataset.nbGroup) {
       nbGroup = b.dataset.nbGroup;
+      showNotebook($('.gm-notebook .gm-primary')?.dataset.act);
+    } else if (b.dataset.nbTab) {
+      nbTab = b.dataset.nbTab;
+      showNotebook($('.gm-notebook .gm-primary')?.dataset.act);
+    } else if (b.dataset.tutPage !== undefined || b.dataset.tutStep !== undefined) {
+      tutPage = Math.max(0, Math.min(TUTORIAL.length - 1, b.dataset.tutPage !== undefined ? Number(b.dataset.tutPage) : tutPage + Number(b.dataset.tutStep)));
       showNotebook($('.gm-notebook .gm-primary')?.dataset.act);
     } else if (b.dataset.nbLab && onOpenLab) {
       labAbove = true;
@@ -605,8 +636,9 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     }
     // movimento come in Cooking Simulator: Spazio corre, Ctrl accovaccia, Maiusc tenuto è la manipolazione precisa
     if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'Space', 'ControlLeft', 'ControlRight'].includes(code)) {
-      if (game.player.mode === 'bench' && down && (code === 'KeyA' || code === 'ArrowLeft')) game.station(-1);
-      else if (game.player.mode === 'bench' && down && (code === 'KeyD' || code === 'ArrowRight')) game.station(1);
+      // nella vista del bancone A e D cambiano postazione; con un oggetto in mano lo ruotano (game.js)
+      if (game.player.mode === 'bench' && !game.held && down && (code === 'KeyA' || code === 'ArrowLeft')) game.station(-1);
+      else if (game.player.mode === 'bench' && !game.held && down && (code === 'KeyD' || code === 'ArrowRight')) game.station(1);
       if (down) game.player.keys.add(code);
       else game.player.keys.delete(code);
       if ((code === 'ShiftLeft' || code === 'ShiftRight') && !ev.repeat) game.setPrecise(down);
@@ -667,7 +699,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     if (code === 'Tab') return 'tab';
     if (code === 'KeyH') return 'h';
     if (code === 'ShiftLeft' || code === 'ShiftRight') return 'shift';
-    if (game?.player.mode === 'bench' && ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight'].includes(code)) return 'ad';
+    if ((game?.player.mode === 'bench' || game?.held) && ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight'].includes(code)) return 'ad';
     if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) return 'wasd';
     return null;
   }

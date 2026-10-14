@@ -1040,10 +1040,6 @@
 .gm-catalog {
   width: min(760px, 100%);
 }
-.gm-menu__left {
-  display: flex;
-  gap: 8px;
-}
 .gm-stack kbd {
   margin-left: 6px;
   padding: 0 4px;
@@ -1053,13 +1049,60 @@
   border: 1px solid var(--line-2);
   border-radius: 4px;
 }
-/* quaderno di laboratorio */
+/* quaderno di laboratorio: pagine di carta, testo scuro */
 .gm-notebook {
-  width: min(880px, 100%);
+  --nb-ink: #1d2733;
+  --nb-soft: #4b5563;
+  --nb-card: #fbf8f0;
+  --nb-line: #ddd5c4;
+  --nb-accent: #1f5f4a;
+  width: min(940px, 100%);
+  color: var(--nb-ink);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 27px, rgba(70, 110, 160, 0.08) 27px 28px),
+    #f3eee2;
+  border-color: #c9bfa8;
+}
+.gm-notebook h3 {
+  color: var(--nb-accent);
+}
+.gm-notebook .gm-primary {
+  color: #ffffff;
+  background: var(--nb-accent);
+  border-color: var(--nb-accent);
+}
+.gm-notebook .btn-ghost {
+  color: var(--nb-ink);
+  background: var(--nb-card);
+  border-color: var(--nb-line);
+}
+.gm-nb__tabs {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 12px;
+  border-bottom: 2px solid var(--nb-line);
+}
+.gm-nb__tab {
+  margin-bottom: -2px;
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nb-soft);
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+}
+.gm-nb__tab.is-on {
+  color: var(--nb-accent);
+  background: var(--nb-card);
+  border-color: var(--nb-line);
+  border-bottom-color: var(--nb-card);
 }
 .gm-nb__total {
   margin: 0 0 12px;
-  color: var(--text-1);
+  color: var(--nb-soft);
 }
 .gm-nb {
   display: grid;
@@ -1083,19 +1126,19 @@
   font: inherit;
   font-size: 12.5px;
   text-align: left;
-  color: var(--text-1);
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
+  color: var(--nb-ink);
+  background: var(--nb-card);
+  border: 1px solid var(--nb-line);
   border-radius: 8px;
   cursor: pointer;
 }
 .gm-nb__group.is-on {
-  color: var(--text-0);
-  border-color: var(--accent);
+  border-color: var(--nb-accent);
+  box-shadow: inset 3px 0 0 var(--nb-accent);
 }
 .gm-nb__group small {
   font-family: var(--font-mono);
-  color: var(--text-2);
+  color: var(--nb-soft);
   white-space: nowrap;
 }
 .gm-nb__group i {
@@ -1104,7 +1147,7 @@
   right: 9px;
   bottom: 4px;
   height: 2px;
-  background: linear-gradient(90deg, var(--ok) var(--p), var(--line-2) var(--p));
+  background: linear-gradient(90deg, #2f9a4c var(--p), var(--nb-line) var(--p));
   border-radius: 1px;
 }
 .gm-nb__pages {
@@ -1113,10 +1156,11 @@
 }
 .gm-nb__pages h4 {
   margin: 0 0 8px;
+  color: var(--nb-ink);
 }
 .gm-nb__pages h4 small {
   font-weight: 400;
-  color: var(--text-2);
+  color: var(--nb-soft);
 }
 .gm-nb__pages ol {
   display: grid;
@@ -1128,37 +1172,113 @@
 .gm-nb__page {
   padding: 6px 9px;
   font-size: 12.5px;
-  background: var(--bg-2);
+  background: var(--nb-card);
+  border: 1px solid var(--nb-line);
   border-radius: 8px;
 }
 .gm-nb__page.is-found {
-  border-left: 3px solid var(--ok);
+  border-left: 3px solid #2f9a4c;
 }
 .gm-nb__page.is-off {
-  opacity: 0.55;
+  opacity: 0.6;
 }
 .gm-nb__page .gm-tags {
   margin: 3px 0 0;
 }
+.gm-notebook .gm-tag {
+  color: #24404f;
+  background: rgba(47, 111, 209, 0.12);
+}
+.gm-notebook .gm-tag--hot,
+.gm-notebook .gm-tag--warm,
+.gm-notebook .gm-tag--fire {
+  color: #8a3a0c;
+  background: rgba(236, 122, 51, 0.16);
+}
+.gm-notebook .gm-tag--cold {
+  color: #1d4f86;
+  background: rgba(76, 168, 255, 0.18);
+}
+.gm-notebook .gm-tag--precipitate,
+.gm-notebook .gm-tag--deposit {
+  color: #6b5210;
+  background: rgba(226, 173, 47, 0.2);
+}
 .gm-nb__eq {
   margin: 0;
   font-family: var(--font-mono);
-  color: var(--text-0);
+  color: var(--nb-ink);
+}
+.gm-nb__eq small {
+  font-family: var(--font-sans);
+  color: var(--nb-soft);
 }
 .gm-nb__meta,
 .gm-nb__desc,
 .gm-nb__empty {
   margin: 2px 0 0;
   font-size: 11.5px;
-  color: var(--text-2);
+  color: var(--nb-soft);
 }
 .gm-nb__desc {
-  color: var(--text-1);
+  color: var(--nb-ink);
 }
 .gm-nb__page .gm-link {
   margin-top: 3px;
   padding: 0;
   font-size: 12px;
+  color: var(--nb-accent);
+}
+/* tutorial: illustrazione e passi numerati */
+.gm-tut__fig {
+  margin: 0 0 8px;
+  background: var(--nb-card);
+  border: 1px solid var(--nb-line);
+  border-radius: 10px;
+}
+.gm-tut__svg {
+  display: block;
+  width: 100%;
+  max-height: 34vh;
+}
+.gm-tut__steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.gm-tut__steps li {
+  position: relative;
+  padding: 4px 0 4px 34px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  counter-increment: step;
+}
+.gm-tut__steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 2px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  font-weight: 700;
+  font-size: 12px;
+  color: #ffffff;
+  background: var(--nb-accent);
+  border-radius: 50%;
+}
+.gm-tut__nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+.gm-tut__nav small {
+  color: var(--nb-soft);
 }
 .gm-cat-glass,
 .gm-cat-fam {
