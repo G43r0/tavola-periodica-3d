@@ -2040,9 +2040,11 @@ export class LabGame {
       c.age += dt;
       const color = this.chem.sub(c.sid)?.colors?.[3];
       const rgb = color && color[3] > 0.3 ? color.slice(0, 3) : [200, 205, 190];
-      if (Math.random() < 0.6) {
+      // la nuvola si vede quanto è densa: le tracce (la luce sul cloruro d'argento) sono appena un velo
+      const dense = Math.min(1, c.mol / 1e-4);
+      if (Math.random() < 0.6 && dense > 0.03) {
         const v = c.vented ? [0.4, 0.5, 0] : [(Math.random() - 0.5) * 0.15, 0.08, (Math.random() - 0.5) * 0.15];
-        this.puffs.emit(c.pos.x, c.pos.y, c.pos.z, v[0], v[1], v[2], { size: 0.05, grow: 6, rgb, alpha: c.vented ? 0.2 : 0.35, life: 3 });
+        this.puffs.emit(c.pos.x, c.pos.y, c.pos.z, v[0], v[1], v[2], { size: 0.05, grow: 6, rgb, alpha: (c.vented ? 0.2 : 0.35) * dense, life: 3 });
       }
       c.mol *= Math.exp(-dt / (c.vented ? 1.5 : 9));
       if (c.age > 3 && c.mol < 2e-5) this.clouds = this.clouds.filter((q) => q !== c);

@@ -124,9 +124,9 @@ const byWhy = (a, b) => WHY_ORDER.indexOf(a.why) - WHY_ORDER.indexOf(b.why);
 /**
  * Perché le sostanze messe insieme nel contenitore non reagiscono. Per le reazioni del catalogo tra loro: la condizione
  * che manca (calore, fiamma, catalizzatore, luce, acqua), il reagente non ancora sciolto o l'unico che manca; per quelle
- * che il simulatore non fa, il motivo (corrente, raggi UV, vapore, equilibrio, organismi viventi). Se nessuna reazione
- * del catalogo le lega: un metallo meno attivo dell'idrogeno con un acido, o meno attivo del metallo del sale (serie di
- * attività dai potenziali standard). Prima le reazioni tra due o più delle sostanze presenti, poi quelle di una sola
+ * che il simulatore non fa, il motivo (corrente, raggi UV, vapore, equilibrio, organismi viventi); poi la serie di
+ * attività dai potenziali standard: un metallo meno attivo dell'idrogeno con un acido, o meno attivo del metallo del
+ * sale. In ordine: le reazioni tra due o più delle sostanze presenti, la serie di attività, quelle di una sola sostanza
  * (H₂O₂ senza catalizzatore, AgCl al buio); le reazioni con l'ossigeno dell'aria restano fuori.
  * @param {import('./mixture.js').Mixture} mix
  * @param {{flame?: boolean, light?: boolean}} env
