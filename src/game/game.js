@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { gfx } from '../gfx/preset.js';
-import { locale } from '../i18n/index.js';
+import { locale, pick } from '../i18n/index.js';
 import { Physics } from './physics.js';
 import { buildRoom, ROOM, LAYOUT, BENCH_Y, DESK_Y, STATIONS } from './room.js';
 import { DEFS, createItem, syncItem, disposeItem, placeItem, itemMaterials, itemMassGrams, updateContactShadow } from './items.js';
@@ -15,6 +15,7 @@ import { Drops, Puffs, Stream, createPuddle, puddleRadius, puddleState, stainAlp
 import { Player } from './player.js';
 import { createLabChemistry, Mixture, wasteClass, binAccepts, AMBIENT } from './mixture.js';
 import { SHELF, PRICES, UNIVERSAL_SCALE, FLAME_SALTS } from './reagents.js';
+import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
 import { ORDERS, grade } from './orders.js';
 import { legendRows, relaxTilt, tiltGain, throwSpeed } from './controls.js';
 
@@ -169,6 +170,9 @@ export class LabGame {
     this.physics.onImpact = (owner, force, other, speed) => this.impact(owner, force, other, speed);
     this.player.onTeleport = (from, to) => this.teleported(from, to);
     this.room.setBoard([t('boardWelcome'), t('boardWelcome2')]);
+    // una voce per colore (sali e altri inorganici hanno lo stesso tappo bianco)
+    const shown = FAMILY_ORDER.filter((f, i) => FAMILY_ORDER.findIndex((g) => FAMILIES[g] === FAMILIES[f]) === i);
+    this.room.setLegend(t('capLegendTitle'), shown.map((f) => ({ color: FAMILIES[f], label: t(`legend_${f}`) })));
     // estintore appeso al muro
     this.extinguisher = this.spawn('extinguisher', { pos: new THREE.Vector3(LAYOUT.extinguisher.x, 0.37, LAYOUT.extinguisher.z) });
     this.extinguisher.home = this.extinguisher.mesh.position.clone();
@@ -176,8 +180,8 @@ export class LabGame {
 
   // ------------------------------------------------------------------ oggetti
 
-  spawn(kind, { pos, quat, mixture = null, label = null, name = null, data = {} }) {
-    const item = createItem(this.env, kind, { pos, quat, mixture, label, name });
+  spawn(kind, { pos, quat, mixture = null, label = null, name = null, cap = null, data = {} }) {
+    const item = createItem(this.env, kind, { pos, quat, mixture, label, name, cap });
     item.data = { ...data };
     item.peakT = mixture?.T ?? AMBIENT;
     this.items.push(item);
@@ -193,6 +197,11 @@ export class LabGame {
     disposeItem(item, this.env);
   }
 
+  /** Rotazione con cui un oggetto con etichetta guarda il giocatore: il bancone A si usa dal lato sud, gli altri da nord. */
+  facing(group) {
+    return group === 'bench' ? new THREE.Quaternion().setFromAxisAngle(UP, Math.PI) : null;
+  }
+
   /** Primo posto libero di un gruppo (bancone, scaffale…). */
   freeSlot(group) {
     for (const [x, y, z] of SLOTS[group]) {
@@ -206,22 +215,25 @@ export class LabGame {
     return new THREE.Vector3(x + (Math.random() - 0.5) * 0.05, y + 0.25, z);
   }
 
-  /** Crea un reagente dello scaffale (soluzione, solido, indicatore) con la sua etichetta. */
-  spawnReagent(key, group = 'shelf', override = null) {
+  /**
+   * Crea un reagente dello scaffale (soluzione, solido, indicatore) nel suo contenitore, con il tappo del colore della
+   * famiglia e l'etichetta con i pericoli (stock.js).
+   */
+  spawnReagent(key, group = 'shelf', override = null, at = null) {
     const r = SHELF[key] ?? override;
     const { chem, t } = this;
+    const look = reagentLook(chem, r);
     let mix;
     let label;
-    let kind = r.kind;
     if (r.water) {
       mix = Mixture.liquid(chem, 'water', 400);
       label = { title: t('distilledWater'), formula: 'H₂O', sub: t('washbottleSub'), color: '#e8f4ff' };
     } else if (r.indicator) {
       mix = Mixture.of(chem, [['water', 25 / 18.015], [r.indicator, 0.25 / 318.3]]);
-      label = { title: chem.name(r.indicator), formula: '1 %', sub: t('indicatorSub'), hazard: 'flammable', color: '#fff6e8' };
+      label = { title: chem.name(r.indicator), formula: '1 %', sub: t('indicatorSub'), color: '#fff6e8' };
     } else if (r.solute) {
       mix = Mixture.solution(chem, r.solute, r.molar, 450);
-      label = { title: chem.name(chem.id(r.solute)), formula: chem.formula(chem.id(r.solute)), sub: `${this.fmt(r.molar, r.molar < 1 ? 2 : 1)} M · 500 mL`, color: '#ffffff' };
+      label = { title: r.name ? pick(r.name) : chem.name(chem.id(r.solute)), formula: chem.formula(chem.id(r.solute)), sub: `${this.fmt(r.molar, r.molar < 1 ? 2 : 1)} M · 500 mL`, color: '#ffffff' };
     } else if (r.liquid) {
       mix = Mixture.liquid(chem, r.liquid, 450);
       label = { title: chem.name(chem.id(r.liquid)), formula: chem.formula(chem.id(r.liquid)), sub: '500 mL', color: '#ffffff' };
@@ -229,8 +241,11 @@ export class LabGame {
       mix = Mixture.solid(chem, r.solid, r.grams ?? 120);
       label = { title: chem.name(chem.id(r.solid)), formula: chem.formula(chem.id(r.solid)), sub: `${r.grams ?? 120} g`, color: '#ffffff' };
     }
-    label.hazard ??= this.hazardOf(mix);
-    const item = this.spawn(kind, { pos: this.freeSlot(group), mixture: mix, label, name: label.title, data: { reagent: key ?? 'custom', price: r.solid ? PRICES.solidPerGram : r.water ? PRICES.waterPerMl : PRICES.solutionPerMl } });
+    Object.assign(label, { band: look.cap, bandText: t(`fam_${look.family}`), ghs: look.ghs, signal: look.signal ? t(`signal_${look.signal}`) : '' });
+    const item = this.spawn(look.kind, {
+      pos: at ?? this.freeSlot(group), quat: this.facing(group), mixture: mix, label, name: label.title, cap: look.cap,
+      data: { reagent: key ?? 'custom', price: r.solid ? PRICES.solidPerGram : r.water ? PRICES.waterPerMl : PRICES.solutionPerMl, family: look.family, ghs: look.ghs, curated: look.curated },
+    });
     return item;
   }
 
@@ -332,7 +347,16 @@ export class LabGame {
     for (const k of ['beaker100', 'beaker100', 'beaker250', 'beaker250', 'flask250', 'cylinder100']) this.spawnGlass(k, 'bench');
     this.spawnTool('spatula');
     this.spawnTool('loop', 'benchB');
-    for (const k of ['water', 'hcl1', 'naoh1', 'php', 'nacl', 'cuso4', 'zn', 'nahco3', 'vinegar', 'ethanol']) this.spawnReagent(k);
+    // sullo scaffale in ordine di famiglia (acidi, basi, sali… acqua), come i colori della legenda
+    const free = ['water', 'hcl1', 'naoh1', 'php', 'nacl', 'cuso4', 'zn', 'nahco3', 'vinegar', 'ethanol'];
+    // da sinistra a destra per chi guarda lo scaffale (verso sud, quindi da x grande a x piccola)
+    const rank = (k) => FAMILY_ORDER.indexOf(reagentLook(this.chem, SHELF[k]).family);
+    const slots = [...SLOTS.shelf].sort((a, b) => b[0] - a[0]);
+    const first = Math.floor((slots.length - free.length) / 2);
+    free.sort((a, b) => rank(a) - rank(b)).forEach((k, i) => {
+      const [x, y, z] = slots[first + i];
+      this.spawnReagent(k, 'shelf', null, new THREE.Vector3(x, y + 0.003, z));
+    });
     this.room.setBoard([this.t('freeTitle'), this.t('freeBoard1'), this.t('freeBoard2'), this.t('freeBoard3')]);
     this.player.teleport(0.15, 0.4, 0);
   }
@@ -380,7 +404,7 @@ export class LabGame {
         reuse.data.claimed = true;
         continue;
       }
-      const item = this.spawn(s.kind, { pos: this.freeSlot(group), mixture, label, name: label?.title ?? (s.labelKey ? this.t(s.labelKey) : this.t(`item_${s.kind}`)), data: { sample: s.sample } });
+      const item = this.spawn(s.kind, { pos: this.freeSlot(group), quat: label ? this.facing(group) : null, mixture, label, name: label?.title ?? (s.labelKey ? this.t(s.labelKey) : this.t(`item_${s.kind}`)), data: { sample: s.sample } });
       item.data.claimed = true;
     }
     for (const it of this.items) delete it.data.claimed;
@@ -395,7 +419,7 @@ export class LabGame {
 
   /** Stato del banco per i passi dell'esercitazione. */
   snapshot() {
-    const containers = this.items.filter((it) => it.def.container && it.mixture && !it.data.reagent).map((it) => ({ kind: it.kind, mix: it.mixture, peakT: it.peakT, item: it }));
+    const containers = this.items.filter((it) => it.def.container && it.mixture && !it.data.reagent).map((it) => ({ kind: it.kind, stock: Boolean(it.def.stock), mix: it.mixture, peakT: it.peakT, item: it }));
     return {
       containers,
       best: (key, fn) => containers.reduce((b, c) => Math.max(b, fn(c.mix)), 0),
@@ -1042,6 +1066,7 @@ export class LabGame {
   }
 
   useSpatula(sp, target, pinch) {
+    if (target) target.data.usedAt = this.time;
     const { t, chem } = this;
     if (!target?.def.container || !target.mixture) {
       this.toast(t('spatulaHint'));
@@ -1078,6 +1103,7 @@ export class LabGame {
   }
 
   useLoop(loop, target) {
+    if (target) target.data.usedAt = this.time;
     const { t, chem } = this;
     if (!target?.def.container || !target.mixture || target.mixture.isEmpty()) {
       this.toast(t('loopHint'));
@@ -1106,6 +1132,7 @@ export class LabGame {
   }
 
   useStrip(strip, target) {
+    if (target) target.data.usedAt = this.time;
     const { t } = this;
     if (!target?.def.container || !target.mixture) return;
     const ph = target.mixture.pH();
@@ -2000,6 +2027,8 @@ export class LabGame {
     this.pendingBreaks.clear();
     this.physics.step(dt, this.items.map((i) => i.body));
     for (const it of this.items) syncItem(it);
+    // tappi: tolti mentre si usa il reagente (in mano o appena preso con spatola, ansa o cartina), poi rimessi
+    for (const it of this.items) if (it.cap) it.cap.visible = it !== this.held && this.time - (it.data.usedAt ?? -9) > 2.5;
     // con le ombre vere (Professionale) l'ombra di contatto resta leggera
     for (const it of this.items) updateContactShadow(it, this.physics, this.G.shadows ? 0.3 : 0.55);
     for (const p of this.room.props) if (!p.body.isSleeping()) this.syncProp(p);

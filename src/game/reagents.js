@@ -118,33 +118,42 @@ export const PRICES = {
   solidPerGram: 0.04,
   solutionPerMl: 0.01,
   waterPerMl: 0.0005,
-  glass: { beaker100: 3, beaker250: 4, flask250: 6, cylinder100: 9, bottle: 6, dropper: 4 },
+  glass: { beaker100: 3, beaker250: 4, flask250: 6, cylinder100: 9, bottle: 6, bottleClear: 6, dropper: 4, jarGlass: 4, jarAmber: 5 },
   fines: { wrongBin: 6, sinkHazard: 10, fire: 15, toxic: 12, explosion: 25, splash: 5, mess: 2 },
 };
 
 /**
- * Reagenti dello scaffale: soluzioni pronte (chiave, molarità) e solidi nei barattoli.
- * name: nome sull'etichetta (se diverso da quello della sostanza).
+ * Reagenti dello scaffale: soluzioni pronte (chiave, molarità), liquidi e solidi. Il contenitore, il colore del tappo e
+ * l'etichetta li sceglie stock.js dai dati della sostanza.
+ * ghs / h / signal: pittogrammi, indicazioni di pericolo e avvertenza delle schede di sicurezza dei fornitori per la
+ * scuola (Merck/Sigma-Aldrich, Carlo Erba) secondo il regolamento CLP, alla concentrazione dello scaffale: una
+ * soluzione diluita ha meno pericoli della sostanza pura (HCl 1 M è solo «corrosivo per i metalli», H290).
+ * La fenolftaleina è quella in commercio, all'1 % in etanolo; nel gioco i pochi millilitri di etanolo non contano.
+ * name: nome sull'etichetta, se diverso da quello della sostanza (HCl in acqua è l'acido cloridrico).
  */
+const HCL_AQ = { it: 'Acido cloridrico', en: 'Hydrochloric acid' };
 export const SHELF = {
-  water: { kind: 'washbottle', water: true },
-  hcl01: { kind: 'bottle', solute: 'hcl', molar: 0.1 },
-  hcl1: { kind: 'bottle', solute: 'hcl', molar: 1 },
-  naoh01: { kind: 'bottle', solute: 'naoh', molar: 0.1 },
-  naoh1: { kind: 'bottle', solute: 'naoh', molar: 1 },
-  pbno3: { kind: 'bottle', solute: 'pbno32', molar: 0.1 },
-  ki01: { kind: 'bottle', solute: 'ki', molar: 0.1 },
-  agno3: { kind: 'bottle', solute: 'agno3', molar: 0.1 },
-  cuso4sol: { kind: 'bottle', solute: 'cuso4', molar: 0.5 },
-  ethanol: { kind: 'bottle', liquid: 'etanolo' },
-  vinegar: { kind: 'bottle', solute: 'acido-acetico', molar: 0.8 },
-  php: { kind: 'dropper', indicator: 'php' },
-  nacl: { kind: 'jar', solid: 'nacl' },
-  cuso4: { kind: 'jar', solid: 'cuso4-5h2o' },
-  nahco3: { kind: 'jar', solid: 'nahco3' },
-  zn: { kind: 'jar', solid: 'Zn' },
-  mg: { kind: 'jar', solid: 'Mg' },
+  water: { water: true, ghs: [], h: [] },
+  hcl01: { solute: 'hcl', molar: 0.1, name: HCL_AQ, ghs: ['GHS05'], h: ['H290'], signal: 'warning' },
+  hcl1: { solute: 'hcl', molar: 1, name: HCL_AQ, ghs: ['GHS05'], h: ['H290'], signal: 'warning' },
+  naoh01: { solute: 'naoh', molar: 0.1, ghs: ['GHS05'], h: ['H290'], signal: 'warning' },
+  naoh1: { solute: 'naoh', molar: 1, ghs: ['GHS05'], h: ['H290', 'H314'], signal: 'danger' },
+  pbno3: { solute: 'pbno32', molar: 0.1, ghs: ['GHS08', 'GHS09'], h: ['H360Df', 'H373', 'H410'], signal: 'danger' },
+  ki01: { solute: 'ki', molar: 0.1, ghs: [], h: [] },
+  agno3: { solute: 'agno3', molar: 0.1, ghs: ['GHS09'], h: ['H410'], signal: 'warning' },
+  cuso4sol: { solute: 'cuso4', molar: 0.5, ghs: ['GHS09'], h: ['H410'], signal: 'warning' },
+  ethanol: { liquid: 'etanolo', ghs: ['GHS02', 'GHS07'], h: ['H225', 'H319'], signal: 'danger' },
+  vinegar: { solute: 'acido-acetico', molar: 0.8, ghs: [], h: [] },
+  php: { indicator: 'php', ghs: ['GHS02', 'GHS07', 'GHS08'], h: ['H225', 'H319', 'H341', 'H350', 'H361f'], signal: 'danger' },
+  nacl: { solid: 'nacl', ghs: [], h: [] },
+  cuso4: { solid: 'cuso4-5h2o', ghs: ['GHS07', 'GHS09'], h: ['H302', 'H315', 'H319', 'H410'], signal: 'warning' },
+  nahco3: { solid: 'nahco3', ghs: [], h: [] },
+  zn: { solid: 'Zn', ghs: ['GHS09'], h: ['H410'], signal: 'warning' },
+  mg: { solid: 'Mg', ghs: ['GHS02'], h: ['H228', 'H251', 'H261'], signal: 'danger' },
 };
+
+/** Sostanze che la luce decompone: stanno in vetro ambrato (scuro). */
+export const LIGHT_SENSITIVE = ['agno3', 'kmno4', 'h2o2', 'hno3', 'ki', 'i2', 'br2', 'agcl', 'agbr', 'agi'];
 
 /** Sali per il saggio alla fiamma: chiave → simbolo del metallo che colora la fiamma. */
 export const FLAME_SALTS = { licl: 'Li', nacl: 'Na', kcl: 'K', cacl2: 'Ca', srcl2: 'Sr', bacl2: 'Ba', cucl2: 'Cu' };

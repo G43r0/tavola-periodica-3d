@@ -1,6 +1,6 @@
 # Gioco base — piano
 
-Data: 2026-10-14 · Stato: **in corso — G1 completata** · Parte dal prototipo del simulatore
+Data: 2026-10-14 · Stato: **in corso — G1 e G2 completate** · Parte dal prototipo del simulatore
 ([design](2026-10-13-simulatore-laboratorio-design.md), branch `ccr-9fd85180-nfjaik`, fase 9)
 
 ## Da dove partiamo
@@ -65,8 +65,8 @@ trasmissione; adattamento automatico se gli fps scendono.
 | Bottiglia ambrata | sostanze sensibili alla luce (AgNO₃, H₂O₂, KMnO₄, I₂…) | |
 | Flacone di plastica | basi forti, HF | il vetro non va bene |
 | Contagocce | indicatori, reagenti per i saggi | |
-| Bombola con valvola e manometro | gas (H₂, O₂, N₂, Cl₂, CO₂, NH₃) | solo sotto la cappa per i tossici |
-| Ampolla o barattolo sotto olio | Na, K, Li; P bianco sotto acqua | si aprono con la pinza |
+| Bombola con valvola e manometro | gas (H₂, O₂, N₂, Cl₂, CO₂, NH₃) | solo sotto la cappa per i tossici; con gli strumenti per i gas (G4) |
+| Ampolla o barattolo sotto olio | Na, K, Li; P bianco sotto acqua | si aprono con la pinza; con i metalli che reagiscono con l'acqua sullo scaffale (G3) |
 
 - **Tappi colorati per famiglia**, con una legenda sullo scaffale: acidi rosso, basi blu, sali bianco, ossidanti
   giallo, metalli grigio, organici verde, indicatori viola, gas arancione. Un colpo d'occhio dice cos'è.
@@ -74,7 +74,8 @@ trasmissione; adattamento automatico se gli fps scendono.
   GHS** disegnati in vettoriale (non emoji) presi dai dati delle sostanze (infiammabile, esplosivo, ossidante, corrosivo,
   tossico…). Testo sempre su fondo scuro o chiaro pieno, mai sul vetro.
 - **Livello e quantità**: si vede quanto ne resta; la finestrella accanto all'oggetto dà grammi o millilitri.
-- **Scaffale ordinato** per famiglia con cartellini sui ripiani; negli armadi i reagenti sbloccati con la Carriera.
+- **Scaffale ordinato** per famiglia, da sinistra a destra come la legenda; gli armadi con i reagenti sbloccati dalla
+  Carriera arrivano con la Carriera (G6).
 
 **Nuova vetreria e nuovi strumenti** (servono per le reazioni e le esercitazioni)
 
@@ -212,7 +213,7 @@ Ogni fase è giocabile da sola, con test e screenshot nei tre preset prima di pa
 | Fase | Contenuto | Dipende da |
 |---|---|---|
 | **G1** ✅ | Luce, colori della stanza, tone mapping neutro, vetro leggibile, ombre di contatto | — |
-| **G2** | Barattoli, bottiglie, bombole e ampolle nuovi; tappi colorati; etichette GHS; scaffale ordinato | G1 |
+| **G2** ✅ | Barattoli e bottiglie nuovi (vetro chiaro, ambrato, plastica); tappi colorati; etichette GHS; scaffale ordinato | G1 |
 | **G3** | Reazioni al centro: effetti osservabili, equazione nella finestrella, quaderno, condizioni nuove, scaffale ampliato con test di copertura, vista molecolare | G2 |
 | **G4** | Strumenti nuovi (buretta, pipetta, filtrazione, crogiolo, termometro, pH-metro, elettrolisi, distillazione) | G3 |
 | **G5** | Libro «Come si fa»: lettore e riquadro, strumenti, tecniche, sicurezza, pagine dei 118 elementi, ricette generate con le vignette SVG, «Prepara sul banco», «Segui la ricetta», test che esegue ogni ricetta | G4 |
@@ -232,6 +233,30 @@ Ogni fase è giocabile da sola, con test e screenshot nei tre preset prima di pa
 | oggetti che galleggiano senza ombre (Semplice e Medio) | ombra di contatto sotto ogni oggetto (disco o ellisse orientata per gli strumenti), che sbiadisce e si allarga sollevandolo |
 
 Verificato con gli screenshot della stessa inquadratura (prima persona, bancone, scaffale, cappa) nei tre preset.
+
+### G2 — fatto
+
+- **Scelta dai dati** (`src/game/stock.js`, puro e testato): per ogni reagente dello scaffale e per ognuna delle
+  sostanze del magazzino del Laboratorio libero (568 combinazioni di sostanza e forma, nessun errore) il contenitore, la
+  famiglia e i pericoli.
+  - Contenitori: barattolo di vetro (solidi), di vetro ambrato (sensibili alla luce: AgNO₃, KMnO₄, I₂, KI, alogenuri
+    d'argento), di plastica (idrossidi); bottiglia di vetro, di vetro ambrato (AgNO₃, KI, H₂O₂, HNO₃), flacone di plastica
+    (basi forti e HF); contagocce e spruzzetta come prima.
+  - Famiglia → colore del tappo e della fascia dell'etichetta, con la legenda sul pannello dello scaffale. I carbonati
+    sono sali, non organici; un nitrato diluito è un sale, solido è un ossidante.
+- **Pericoli veri** per i 17 reagenti dello scaffale: pittogrammi, frasi H e avvertenza delle schede di sicurezza alla
+  concentrazione del gioco (HCl 1 M: GHS05, H290, «Attenzione»; Pb(NO₃)₂ 0,1 M: GHS08 e GHS09, «Pericolo»). Per le altre
+  sostanze sono dedotti dai dati (infiammabile, esplosivo, ossidante, reattivo con l'acqua, acidi e basi forti, metalli
+  pesanti, cianuri, cromati) e la modalità Spiega dice che sono indicativi.
+- **I nove pittogrammi GHS** disegnati come tracciati SVG (`src/game/ghs.js`): servono alle etichette e serviranno al libro.
+- **Etichette** ridisegnate: fascia della famiglia, nome (che si rimpicciolisce prima di troncarsi), formula, concentrazione,
+  avvertenza e fino a tre pittogrammi; rivolte verso il giocatore (i reagenti del bancone A sono girati di 180°).
+- **Tappi** a vite del colore della famiglia (ghiera sul contagocce): si tolgono mentre il reagente è in mano o appena usato
+  con spatola, ansa o cartina, e tornano dopo 2,5 s.
+- **Contenuto visibile** nei barattoli di vetro, con una grana per polveri e cristalli (i cristalli blu del solfato di rame).
+- La soluzione di HCl si chiama «Acido cloridrico» sull'etichetta (non «Cloruro di idrogeno», il gas).
+- Le esercitazioni riconoscono i contenitori dei reagenti dal segno `stock`, non più dal nome del tipo.
+- Rimandati: bombole (G4, con gli strumenti per i gas), ampolle sotto olio (G3, con i metalli alcalini sullo scaffale).
 
 ## Verifiche
 

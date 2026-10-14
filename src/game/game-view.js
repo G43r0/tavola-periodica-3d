@@ -442,7 +442,8 @@ export function createGame(elements, { onClose } = {}) {
     } else if (b.dataset.spawn) {
       const key = b.dataset.spawn;
       const form = b.dataset.form;
-      const r = form === 'solid' ? { kind: 'jar', solid: key } : form === 'liquid' ? { kind: 'bottle', liquid: key } : { kind: 'bottle', solute: key, molar: form === 'sol1' ? 1 : 0.1 };
+      // contenitore, tappo ed etichetta li sceglie stock.js
+      const r = form === 'solid' ? { solid: key } : form === 'liquid' ? { liquid: key } : { solute: key, molar: form === 'sol1' ? 1 : 0.1 };
       const item = game.spawnReagent(null, 'benchB', r);
       toast(t('spawned', { name: item.name }), 'ok');
     }

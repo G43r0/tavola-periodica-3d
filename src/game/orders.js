@@ -26,8 +26,8 @@ export const ORDERS = [
       { kind: 'beaker100', at: 'bench' },
       { kind: 'cylinder100', at: 'bench' },
       { kind: 'spatula', at: 'bench' },
-      { kind: 'washbottle', at: 'shelf', reagent: 'water' },
-      { kind: 'jar', at: 'shelf', reagent: 'nacl' },
+      { at: 'shelf', reagent: 'water' },
+      { at: 'shelf', reagent: 'nacl' },
     ],
     steps: (mode) => [
       { key: 'naclStep1', done: (s) => s.best('nacl', (m) => m.grams('nacl')) >= (mode === 'simple' ? 2.5 : 2.85) },
@@ -76,9 +76,9 @@ export const ORDERS = [
       { kind: 'flask250', at: 'bench', content: { solution: ['hcl', 0.1, 25] }, labelKey: 'labelHclFlask' },
       { kind: 'beaker100', at: 'bench' },
       { kind: 'beaker100', at: 'bench' },
-      { kind: 'dropper', at: 'shelf', reagent: 'php' },
-      { kind: 'bottle', at: 'shelf', reagent: 'naoh01' },
-      { kind: 'washbottle', at: 'shelf', reagent: 'water' },
+      { at: 'shelf', reagent: 'php' },
+      { at: 'shelf', reagent: 'naoh01' },
+      { at: 'shelf', reagent: 'water' },
     ],
     steps: () => [
       { key: 'titStep1', done: (s) => s.containers.some((c) => c.mix.amount('php') > 0 && (c.mix.amount('hcl') > 0 || c.mix.amount('nacl') > 0)) },
@@ -118,15 +118,15 @@ export const ORDERS = [
       { kind: 'beaker100', at: 'bench' },
       { kind: 'beaker250', at: 'bench' },
       { kind: 'cylinder100', at: 'bench' },
-      { kind: 'bottle', at: 'shelf', reagent: 'pbno3' },
-      { kind: 'bottle', at: 'shelf', reagent: 'ki01' },
-      { kind: 'washbottle', at: 'shelf', reagent: 'water' },
+      { at: 'shelf', reagent: 'pbno3' },
+      { at: 'shelf', reagent: 'ki01' },
+      { at: 'shelf', reagent: 'water' },
     ],
     steps: (mode) => [
-      { key: 'goldStep1', done: (s) => s.containers.some((c) => c.kind !== 'bottle' && (c.mix.amount('pbno32') > 0.0008 || c.mix.amount('pbi2') > 0.0008)) },
+      { key: 'goldStep1', done: (s) => s.containers.some((c) => !c.stock && (c.mix.amount('pbno32') > 0.0008 || c.mix.amount('pbi2') > 0.0008)) },
       { key: 'goldStep2', done: (s) => s.best('pbi2', (m) => m.amount('pbi2')) > (mode === 'simple' ? 0.0005 : 0.0009) },
       { key: 'stepDeliver', done: (s) => s.delivered },
-      { key: 'goldStep4', done: (s) => s.delivered && !s.containers.some((c) => c.kind !== 'bottle' && (c.mix.amount('pbi2') > 1e-6 || c.mix.amount('pbno32') > 1e-6)) },
+      { key: 'goldStep4', done: (s) => s.delivered && !s.containers.some((c) => !c.stock && (c.mix.amount('pbi2') > 1e-6 || c.mix.amount('pbno32') > 1e-6)) },
     ],
     evaluate({ mode, product }) {
       if (!product) return { quality: 0, lines: [{ ok: false, key: 'evNoProduct' }] };
@@ -155,13 +155,13 @@ export const ORDERS = [
       { kind: 'beaker100', at: 'bench' },
       { kind: 'cylinder100', at: 'bench' },
       { kind: 'spatula', at: 'bench' },
-      { kind: 'jar', at: 'shelf', reagent: 'cuso4' },
-      { kind: 'washbottle', at: 'shelf', reagent: 'water' },
+      { at: 'shelf', reagent: 'cuso4' },
+      { at: 'shelf', reagent: 'water' },
     ],
     steps: () => [
-      { key: 'cryStep1', done: (s) => s.containers.some((c) => c.kind !== 'jar' && c.mix.dissolved('cuso4') > 0.02) },
-      { key: 'cryStep2', done: (s) => s.containers.some((c) => c.kind !== 'jar' && c.mix.amount('cuso4') + c.mix.amount('cuso4-5h2o') > 0.02 && c.mix.water < 18 && c.peakT > 360) },
-      { key: 'cryStep3', done: (s) => s.containers.some((c) => c.kind !== 'jar' && c.mix.grams('cuso4-5h2o') > 1.5 && c.mix.T < 310) },
+      { key: 'cryStep1', done: (s) => s.containers.some((c) => !c.stock && c.mix.dissolved('cuso4') > 0.02) },
+      { key: 'cryStep2', done: (s) => s.containers.some((c) => !c.stock && c.mix.amount('cuso4') + c.mix.amount('cuso4-5h2o') > 0.02 && c.mix.water < 18 && c.peakT > 360) },
+      { key: 'cryStep3', done: (s) => s.containers.some((c) => !c.stock && c.mix.grams('cuso4-5h2o') > 1.5 && c.mix.T < 310) },
       { key: 'stepDeliver', done: (s) => s.delivered },
     ],
     evaluate({ mode, product }) {
@@ -200,8 +200,8 @@ export const ORDERS = [
       }
       return [
         { kind: 'loop', at: 'bench' },
-        ...picked.map((salt, i) => ({ kind: 'jar', at: 'bench', content: { solid: [salt, 15] }, sample: i, unknown: salt })),
-        { kind: 'bottle', at: 'shelf', reagent: 'hcl1' },
+        ...picked.map((salt, i) => ({ kind: 'jarGlass', at: 'bench', content: { solid: [salt, 15] }, sample: i, unknown: salt })),
+        { at: 'shelf', reagent: 'hcl1' },
         { kind: 'beaker100', at: 'bench' },
       ];
     },

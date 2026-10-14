@@ -186,6 +186,40 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   solid(sb.w - 0.2, 0.025, 0.32, M.wood, sb.x, 1.27, sb.z + 0.18, { kind: 'surface' });
   for (const dx of [-1.6, 0, 1.6]) solid(0.03, 0.35, 0.3, M.wood, sb.x + dx, BENCH_Y + 0.17, sb.z + 0.18);
   solid(sb.w - 0.2, 0.3, 0.02, M.wood, sb.x, 1.42, sb.z + 0.34);
+  // legenda dei colori dei tappi, sul pannello dietro i reagenti (sopra le bottiglie più alte)
+  const legendCanvas = document.createElement('canvas');
+  legendCanvas.width = 2048;
+  legendCanvas.height = 64;
+  const legendTex = new THREE.CanvasTexture(legendCanvas);
+  legendTex.colorSpace = THREE.SRGBColorSpace;
+  legendTex.anisotropy = 8;
+  const legend = mesh(new THREE.PlaneGeometry(2.6, 0.08), new THREE.MeshStandardMaterial({ map: legendTex, roughness: 0.8 }), sb.x, 1.525, sb.z + 0.328, { cast: false });
+  legend.rotation.y = Math.PI;
+  /** @param {string} title @param {{color: string, label: string}[]} entries */
+  const setLegend = (title, entries) => {
+    const g = legendCanvas.getContext('2d');
+    g.fillStyle = '#f1efe8';
+    g.fillRect(0, 0, 2048, 64);
+    g.fillStyle = '#1d2733';
+    g.font = '700 30px "IBM Plex Sans", sans-serif';
+    g.textBaseline = 'middle';
+    g.fillText(title, 24, 33);
+    let x = 48 + g.measureText(title).width;
+    g.font = '500 30px "IBM Plex Sans", sans-serif';
+    for (const e of entries) {
+      g.beginPath();
+      g.arc(x + 16, 32, 15, 0, Math.PI * 2);
+      g.fillStyle = e.color;
+      g.fill();
+      g.lineWidth = 2.5;
+      g.strokeStyle = '#3b4756';
+      g.stroke();
+      g.fillStyle = '#1d2733';
+      g.fillText(e.label, x + 40, 33);
+      x += 72 + g.measureText(e.label).width;
+    }
+    legendTex.needsUpdate = true;
+  };
 
   // sgabelli: arredi mobili, il giocatore li spinge camminandoci contro (il gioco copia la fisica sulla mesh)
   const props = [];
@@ -508,7 +542,7 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     hood.led.color.set(hood.on ? 0x30ff60 : 0x3a1010);
   };
 
-  return { group, fixtures, zones, update, setBoard, setBalance, bins, props, lights: { sun, hemi, ceiling, ceilingB } };
+  return { group, fixtures, zones, update, setBoard, setBalance, setLegend, bins, props, lights: { sun, hemi, ceiling, ceilingB } };
 }
 
 function fitLine(g, text, x, y, w) {

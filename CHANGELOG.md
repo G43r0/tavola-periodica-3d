@@ -124,6 +124,15 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   e tone mapping neutro in tutti i preset, che conserva i colori veri delle soluzioni. Il vetro è limpido al centro e
   più chiaro sui bordi (effetto Fresnel), con il labbro della bocca in evidenza: non sembra più plastica grigia. Ogni
   oggetto ha un'ombra di contatto, che sbiadisce sollevandolo e mostra sopra quale punto lo si tiene.
+- **Simulatore: reagenti riconoscibili** (fase G2 del piano). Ogni reagente ha il suo contenitore, scelto dai dati:
+  barattoli di vetro, di vetro ambrato e di plastica per i solidi; bottiglie di vetro, di vetro ambrato (ciò che la luce
+  decompone) e flaconi di plastica (basi forti, HF) per le soluzioni. Il tappo ha il colore della famiglia (rosso acidi,
+  blu basi, bianco sali, giallo ossidanti, grigio metalli, verde organici, viola indicatori, azzurro acqua), spiegato da
+  una legenda sullo scaffale, e si toglie mentre si usa il reagente. Le etichette hanno la fascia della famiglia, nome,
+  formula, concentrazione, l'avvertenza e i pittogrammi GHS veri dei reagenti dello scaffale (dalle schede di
+  sicurezza, alla concentrazione del gioco); per le altre sostanze del magazzino i pericoli sono dedotti dai dati. Il
+  contenuto dei barattoli si vede, con la grana di polveri e cristalli. Lo scaffale del Laboratorio libero è in ordine
+  di famiglia. Nuove voci della modalità Spiega: «Colore del tappo» e «Pittogrammi di pericolo».
 - La Content Security Policy permette la compilazione di WebAssembly (`'wasm-unsafe-eval'`, non `eval` di JavaScript):
   serve al motore fisico Rapier del simulatore.
 - «Simula reazione» non esegue le reazioni che richiedono altro (catalizzatori, soluzione acquosa, enzimi) né gli
@@ -136,6 +145,8 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 
 ### Corretto
 - Simulatore: il poster della tavola periodica mostrava «undefined» al posto dei numeri atomici.
+- Simulatore: la modalità Spiega elencava i vecchi comandi (versare con il tasto destro, lanciare con `Q`).
+- Simulatore: la soluzione di HCl dello scaffale si chiamava «Cloruro di idrogeno» (il gas) invece di «Acido cloridrico».
 
 ## [0.7.0] — 2026-10-11 — Catalogo delle reazioni
 

@@ -625,8 +625,20 @@ export const GLOSSARY_IT = {
     t: 'Simulatore di laboratorio',
     w: 'simulatore|simulatore di laboratorio|gioco del laboratorio',
     d: 'Un gioco in prima persona nel laboratorio di chimica della scuola, ispirato ai simulatori di cucina: prendi becher e bottiglie, pesa sulla bilancia, versa inclinando il recipiente, scalda sulla piastra o sul becco Bunsen e consegna il preparato alla cattedra. Le esercitazioni sono valutate con stelle e soldi; il vetro si rompe, i liquidi si versano, i gas tossici vanno sotto la cappa e i rifiuti nel contenitore giusto. La chimica è quella vera della libreria (554 sostanze e le reazioni del catalogo), in versione realistica o semplificata.',
-    k: [['W A S D', 'cammina'], ['Clic', 'prendi / posa'], ['Tasto destro + mouse', 'versa'], ['E', 'usa'], ['Q', 'lancia'], ['Tab', 'vista del bancone'], ['Esc', 'pausa']],
-    s: ['term.reaction', 'ui.lab'],
+    k: [['W A S D', 'cammina'], ['Clic', 'prendi / posa'], ['Sinistro tenuto + mouse', 'versa'], ['E', 'usa'], ['Tasto centrale tenuto', 'lancia'], ['Tab', 'vista del bancone'], ['Esc', 'pausa']],
+    s: ['term.reaction', 'ui.lab', 'ui.gameStock'],
+  },
+  'ui.gameStock': {
+    t: 'Colore del tappo',
+    w: 'colore del tappo|tappo colorato|tappi colorati|tappi',
+    d: 'Nel simulatore il tappo dei reagenti dice a colpo d\'occhio a quale famiglia appartengono: rosso gli acidi, blu le basi, bianco i sali e gli altri composti inorganici, giallo gli ossidanti, grigio i metalli, verde i composti organici, viola gli indicatori, azzurro l\'acqua. È un codice del laboratorio della scuola, spiegato dalla legenda sullo scaffale. Anche il contenitore ha un motivo: il vetro ambrato protegge dalla luce ciò che la luce decompone (nitrato d\'argento, permanganato, acqua ossigenata), la plastica serve per le basi forti, che col tempo intaccano il vetro, e per l\'acido fluoridrico, che lo scioglie.',
+    s: ['term.ghs', 'ui.game'],
+  },
+  'term.ghs': {
+    t: 'Pittogrammi di pericolo',
+    w: 'pittogramma|pittogrammi|pittogrammi di pericolo|GHS|CLP|frasi H',
+    d: 'I nove rombi bianchi bordati di rosso del sistema GHS (in Europa regolamento CLP) che sulle etichette dicono che pericolo ha una sostanza: esplosivo, infiammabile, comburente (fa bruciare di più), gas sotto pressione, corrosivo, tossico, nocivo o irritante, pericoloso per la salute a lungo termine, pericoloso per l\'ambiente. Accanto c\'è l\'avvertenza: «Pericolo» per i casi più gravi, «Attenzione» per gli altri. I pericoli dipendono dalla concentrazione: l\'acido cloridrico 1 M è solo corrosivo per i metalli (frase H290), quello concentrato brucia la pelle. Nel simulatore i reagenti dello scaffale hanno i pittogrammi delle schede di sicurezza; per le altre sostanze del magazzino sono dedotti dai dati e sono indicativi.',
+    s: ['ui.gameStock'],
   },
   'ui.language': {
     t: 'Lingua',

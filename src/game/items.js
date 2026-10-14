@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { seg } from '../gfx/preset.js';
 import { interiorSamples, rimPoints, profileVolume, interiorGeometry, liquidMaterial } from './liquid.js';
+import { GHS } from './ghs.js';
 
 /** Profilo interno [raggio, altezza] in metri (dal fondo interno al bordo). */
 const cyl = (r, y0, y1) => [[r, y0], [r, y1]];
@@ -10,7 +11,8 @@ const cyl = (r, y0, y1) => [[r, y0], [r, y1]];
 /**
  * Definizioni. container: ha un contenuto; profile: volume interno; outer: raggio esterno e altezza; grad: tacche
  * (mL tra due tacche, mL della prima scritta); flow: portata relativa del versamento (collo stretto < 1);
- * drops: versa a gocce; mass in kg; breakable: si rompe negli urti forti.
+ * drops: versa a gocce; mass in kg; breakable: si rompe negli urti forti; stock: contenitore di un reagente del
+ * magazzino (con tappo ed etichetta); brown: vetro ambrato; plastic / opacity: plastica (HDPE) e quanto lascia vedere.
  */
 export const DEFS = {
   beaker100: { container: true, glass: true, profile: cyl(0.024, 0.003, 0.07), outer: [0.0255, 0.07], grad: [10, 20, 100], mass: 0.06, breakable: true, spout: true },
@@ -23,19 +25,37 @@ export const DEFS = {
     container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0142, 0.25], foot: [0.038, 0.012], grad: [1, 10, 100], spout: true,
     profile: cyl(0.0128, 0.012, 0.25),
   },
+  // bottiglie dei reagenti: vetro ambrato (ciò che la luce decompone), vetro chiaro, plastica per le basi forti e HF
   bottle: {
-    container: true, glass: true, mass: 0.28, breakable: true, outer: [0.04, 0.18], label: true, flow: 0.45, brown: true,
+    container: true, glass: true, mass: 0.28, breakable: true, outer: [0.04, 0.18], label: true, flow: 0.45, brown: true, stock: true,
     profile: [[0.038, 0.005], [0.038, 0.128], [0.03, 0.142], [0.0125, 0.152], [0.0115, 0.18]],
   },
+  bottleClear: {
+    container: true, glass: true, mass: 0.28, breakable: true, outer: [0.04, 0.18], label: true, flow: 0.45, stock: true,
+    profile: [[0.038, 0.005], [0.038, 0.128], [0.03, 0.142], [0.0125, 0.152], [0.0115, 0.18]],
+  },
+  bottlePE: {
+    container: true, glass: false, mass: 0.05, breakable: false, outer: [0.04, 0.18], label: true, flow: 0.45, plastic: '#e6ecef', opacity: 0.7, stock: true,
+    profile: [[0.038, 0.003], [0.038, 0.13], [0.031, 0.145], [0.0135, 0.153], [0.0125, 0.18]],
+  },
   washbottle: {
-    container: true, glass: false, mass: 0.05, breakable: false, outer: [0.038, 0.15], label: true, flow: 0.28, plastic: '#eef4f8', nozzle: true,
+    container: true, glass: false, mass: 0.05, breakable: false, outer: [0.038, 0.15], label: true, flow: 0.28, plastic: '#eef4f8', nozzle: true, stock: true,
     profile: [[0.036, 0.003], [0.036, 0.13], [0.012, 0.145], [0.006, 0.15]],
   },
   dropper: {
-    container: true, glass: true, mass: 0.04, breakable: true, outer: [0.017, 0.085], label: true, drops: true, brown: true,
+    container: true, glass: true, mass: 0.04, breakable: true, outer: [0.017, 0.085], label: true, drops: true, brown: true, stock: true,
     profile: [[0.015, 0.003], [0.015, 0.058], [0.006, 0.068], [0.004, 0.085]],
   },
-  jar: { container: true, glass: false, mass: 0.04, breakable: false, outer: [0.036, 0.085], label: true, flow: 1.2, plastic: '#f4f6f8', profile: cyl(0.034, 0.004, 0.085), wide: true },
+  // barattoli a bocca larga per i solidi: plastica (HDPE, per gli idrossidi), vetro chiaro, vetro ambrato
+  jar: { container: true, glass: false, mass: 0.04, breakable: false, outer: [0.036, 0.085], label: true, flow: 1.2, plastic: '#eef1f2', opacity: 0.62, profile: cyl(0.034, 0.004, 0.085), wide: true, stock: true },
+  jarGlass: {
+    container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0376, 0.088], label: true, flow: 1.2, wide: true, stock: true,
+    profile: [[0.036, 0.005], [0.036, 0.07], [0.031, 0.078], [0.031, 0.088]],
+  },
+  jarAmber: {
+    container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0376, 0.088], label: true, flow: 1.2, wide: true, stock: true, brown: true,
+    profile: [[0.036, 0.005], [0.036, 0.07], [0.031, 0.078], [0.031, 0.088]],
+  },
   spatula: { tool: true, mass: 0.03, size: [0.19, 0.004, 0.012] },
   loop: { tool: true, mass: 0.02, size: [0.21, 0.008, 0.008] },
   towel: { tool: true, mass: 0.004, size: [0.07, 0.018, 0.06], absorbs: 40 },
@@ -76,7 +96,7 @@ export function itemMaterials(G, envMap) {
     red: new THREE.MeshStandardMaterial({ color: 0xc8161d, roughness: 0.35, metalness: 0.2 }),
     black: new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: 0.6 }),
     cap: new THREE.MeshStandardMaterial({ color: 0x23395d, roughness: 0.5 }),
-    plastic: (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.45, transparent: true, opacity: 0.82, side: THREE.DoubleSide, depthWrite: false }),
+    plastic: (c, opacity = 0.82) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.45, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false }),
     nichrome: new THREE.MeshStandardMaterial({ color: 0x9a9286, metalness: 0.8, roughness: 0.4 }),
   };
   if (envMap) for (const m of Object.values(MATS)) if (m.isMaterial) m.envMap = envMap;
@@ -210,29 +230,58 @@ function gradTexture(def) {
   return tex;
 }
 
-/** Etichetta di un reagente: nome, formula, concentrazione e pittogramma di pericolo. */
-export function labelTexture({ title, formula = '', sub = '', hazard = null, color = '#ffffff' }) {
+/**
+ * Etichetta di un reagente: fascia del colore della famiglia (con il nome della famiglia), nome, formula,
+ * concentrazione, avvertenza («Pericolo» / «Attenzione») e fino a tre pittogrammi GHS.
+ * Il testo è sempre scuro su fondo chiaro pieno: si legge anche sul vetro e sotto luci diverse.
+ */
+export function labelTexture({ title, formula = '', sub = '', band = '#1d2733', bandText = '', ghs = [], signal = '', color = '#ffffff' }) {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 256;
   const g = canvas.getContext('2d');
   g.fillStyle = color;
   g.fillRect(0, 0, 512, 256);
-  g.fillStyle = '#1d2733';
-  g.fillRect(0, 0, 512, 14);
+  g.fillStyle = band;
+  g.fillRect(0, 0, 512, 42);
+  if (bandText) {
+    g.fillStyle = luminance(band) > 0.6 ? '#1d2733' : '#ffffff';
+    g.font = '700 26px "IBM Plex Sans", sans-serif';
+    g.fillText(bandText.toUpperCase(), 22, 31);
+  }
+  const pics = ghs.slice(0, 3);
+  const textW = pics.length ? 318 : 468;
   g.fillStyle = '#10161e';
-  g.font = '700 50px "IBM Plex Sans", sans-serif';
-  fitText(g, title, 24, 84, hazard ? 360 : 464);
-  g.font = '500 44px "IBM Plex Mono", monospace';
-  fitText(g, formula, 24, 148, hazard ? 360 : 464);
+  shrinkText(g, title, 22, 94, textW, '700 {}px "IBM Plex Sans", sans-serif', 44, 30);
+  shrinkText(g, formula, 22, 152, textW, '600 {}px "IBM Plex Mono", monospace', 46, 32);
   g.fillStyle = '#3b4756';
-  g.font = '500 32px "IBM Plex Sans", sans-serif';
-  fitText(g, sub, 24, 208, 464);
-  if (hazard) drawHazard(g, 440, 120, 56, hazard);
+  g.font = '500 28px "IBM Plex Sans", sans-serif';
+  fitText(g, sub, 22, 198, textW);
+  if (signal) {
+    g.fillStyle = '#b3001b';
+    g.font = '700 28px "IBM Plex Sans", sans-serif';
+    fitText(g, signal.toUpperCase(), 22, 240, textW);
+  }
+  // pittogrammi: uno grande, due affiancati, tre a triangolo
+  const spots = [[[420, 146, 116]], [[372, 146, 92], [460, 146, 92]], [[372, 104, 82], [460, 104, 82], [416, 190, 82]]][pics.length - 1] ?? [];
+  pics.forEach((id, i) => drawGhs(g, id, ...spots[i]));
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   return tex;
+}
+
+function luminance(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+}
+
+/** Scrive il testo rimpicciolendo il carattere (da `size` fino a `min` px) prima di troncarlo con «…». */
+function shrinkText(g, text, x, y, w, font, size, min) {
+  let px = size;
+  g.font = font.replace('{}', px);
+  while (px > min && g.measureText(String(text)).width > w) g.font = font.replace('{}', --px);
+  fitText(g, text, x, y, w);
 }
 
 function fitText(g, text, x, y, w) {
@@ -241,22 +290,65 @@ function fitText(g, text, x, y, w) {
   g.fillText(s, x, y);
 }
 
-/** Pittogramma GHS semplificato: rombo rosso con un simbolo. */
-function drawHazard(g, cx, cy, r, kind) {
+/** Pittogramma GHS: rombo bianco bordato di rosso con il simbolo nero (ghs.js), largo `size` px. */
+export function drawGhs(g, id, cx, cy, size) {
+  const def = GHS[id];
+  if (!def) return;
+  const h = size / 2;
   g.save();
-  g.translate(cx, cy);
-  g.rotate(Math.PI / 4);
-  g.fillStyle = '#fff';
-  g.strokeStyle = '#d4141c';
-  g.lineWidth = 9;
-  g.fillRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4);
-  g.strokeRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4);
+  g.beginPath();
+  g.moveTo(cx, cy - h);
+  g.lineTo(cx + h, cy);
+  g.lineTo(cx, cy + h);
+  g.lineTo(cx - h, cy);
+  g.closePath();
+  g.fillStyle = '#ffffff';
+  g.fill();
+  g.lineWidth = size * 0.075;
+  g.strokeStyle = '#e30613';
+  g.lineJoin = 'miter';
+  g.stroke();
+  // il simbolo occupa il quadrato inscritto nel rombo
+  const k = (size * 0.74) / 100;
+  g.translate(cx - 50 * k, cy - 50 * k);
+  g.scale(k, k);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  for (const p of def.parts) {
+    const color = p.white ? '#ffffff' : '#111111';
+    if (p.fill) {
+      g.fillStyle = color;
+      g.fill(new Path2D(p.fill));
+    }
+    if (p.stroke) {
+      g.strokeStyle = color;
+      g.lineWidth = p.stroke;
+      g.stroke(new Path2D(p.d));
+    }
+  }
   g.restore();
-  g.fillStyle = '#111';
-  g.font = '700 46px "IBM Plex Sans", sans-serif';
-  g.textAlign = 'center';
-  g.fillText({ corrosive: '⚗', toxic: '☠', flammable: '🔥', irritant: '!', environment: '♣' }[kind] ?? '!', cx, cy + 16);
-  g.textAlign = 'left';
+}
+
+/** Grana dei solidi (polveri e cristalli): una trama chiara che moltiplica il colore del contenuto. Condivisa. */
+let GRAIN = null;
+function grainTexture() {
+  if (GRAIN) return GRAIN;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#e6e6e6';
+  g.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 2200; i++) {
+    const v = 150 + Math.floor(Math.random() * 105);
+    g.fillStyle = `rgb(${v},${v},${v})`;
+    g.fillRect(Math.random() * 128, Math.random() * 128, 1 + Math.random() * 2, 1 + Math.random() * 2);
+  }
+  GRAIN = new THREE.CanvasTexture(c);
+  GRAIN.wrapS = GRAIN.wrapT = THREE.RepeatWrapping;
+  GRAIN.repeat.set(6, 3);
+  GRAIN.colorSpace = THREE.SRGBColorSpace;
+  GRAIN.userData.shared = true;
+  return GRAIN;
 }
 
 // ------------------------------------------------------------------ creazione
@@ -267,7 +359,8 @@ let nextId = 1;
  * Crea un oggetto del gioco.
  * @param {{scene: THREE.Scene, physics: import('./physics.js').Physics, G: object, mats: object}} env
  * @param {string} kind chiave di DEFS
- * @param {{pos: THREE.Vector3, quat?: THREE.Quaternion, mixture?: object, label?: object, name?: string}} opts
+ * @param {{pos: THREE.Vector3, quat?: THREE.Quaternion, mixture?: object, label?: object, name?: string, cap?: string}} opts
+ *   cap: colore del tappo (reagenti del magazzino)
  */
 export function createItem(env, kind, opts) {
   const def = DEFS[kind];
@@ -285,7 +378,7 @@ export function createItem(env, kind, opts) {
   };
 
   if (def.container) {
-    const glassMat = def.plastic ? mats.plastic(def.plastic) : def.brown ? mats.brown : mats.glass;
+    const glassMat = def.plastic ? mats.plastic(def.plastic, def.opacity) : def.brown ? mats.brown : mats.glass;
     const vessel = shadow(new THREE.Mesh(vesselGeometry(def), glassMat));
     vessel.renderOrder = 3;
     group.add(vessel);
@@ -306,6 +399,7 @@ export function createItem(env, kind, opts) {
     item.solidMesh.material.opacity = 1;
     item.solidMesh.material.depthWrite = true;
     item.solidMesh.material.roughness = 0.9;
+    item.solidMesh.material.map = grainTexture();
     item.solidMesh.material.userData.uniforms.uSurfaceAlpha.value = 1;
     item.solidMesh.renderOrder = 1;
     item.liquidMesh = new THREE.Mesh(geo, liquidMaterial({ physical: G.physical }));
@@ -334,7 +428,7 @@ export function createItem(env, kind, opts) {
       const h = Math.min(0.06, top * 0.42);
       const r = def.outer[0] + 0.0012;
       const lmesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(r, r, kind === 'dropper' ? 0.03 : h, seg(24, 12), 1, true, Math.PI * 0.3, Math.PI * 0.9),
+        new THREE.CylinderGeometry(r, r, kind === 'dropper' ? 0.03 : h, seg(24, 12), 1, true, Math.PI * 0.55, Math.PI * 0.9),
         new THREE.MeshStandardMaterial({ map: labelTexture(opts.label), roughness: 0.7, side: THREE.FrontSide }),
       );
       lmesh.position.y = kind === 'dropper' ? 0.03 : top * 0.42;
@@ -343,11 +437,24 @@ export function createItem(env, kind, opts) {
       item.hits.push(lmesh);
     }
     if (kind === 'dropper') {
-      // tettarella di gomma e pipetta
+      // tettarella di gomma e pipetta, con la ghiera a vite del colore della famiglia
       const bulb = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.007, 0.03, 12), mats.black));
       bulb.position.y = 0.1;
       group.add(bulb);
       item.hits.push(bulb);
+      if (opts.cap) {
+        const collar = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0078, 0.012, seg(16, 10)), new THREE.MeshStandardMaterial({ color: opts.cap, roughness: 0.45 })));
+        collar.position.y = 0.08;
+        group.add(collar);
+      }
+    } else if (opts.cap && def.stock && !def.nozzle) {
+      // tappo a vite del colore della famiglia: si toglie mentre si usa il reagente (vedi capOpen in game.js)
+      const [r, y] = def.profile[def.profile.length - 1];
+      const h = def.wide ? 0.014 : 0.02;
+      const cap = shadow(new THREE.Mesh(new THREE.CylinderGeometry(r + 0.0028, r + 0.003, h, seg(24, 12)), new THREE.MeshStandardMaterial({ color: opts.cap, roughness: 0.42 })));
+      cap.position.y = y - h * 0.35 + h / 2;
+      group.add(cap);
+      item.cap = cap;
     }
     if (def.nozzle) {
       const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.012, 16), mats.plastic('#d8e4ee'));
@@ -467,7 +574,7 @@ export function disposeItem(item, env) {
   item.mesh.traverse((o) => {
     o.geometry?.dispose?.();
     if (o.material && o.material !== env.mats.glass && o.material !== env.mats.brown && !Object.values(env.mats).includes(o.material)) {
-      o.material.map?.dispose?.();
+      if (!o.material.map?.userData.shared) o.material.map?.dispose?.();
       o.material.dispose?.();
     }
   });

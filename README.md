@@ -474,6 +474,13 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
   bilancia con tara, piastra riscaldante con agitatore (5 livelli), becco Bunsen con treppiede e reticella, ansa di
   nichel-cromo per il saggio alla fiamma, cartine indicatrici universali, carta assorbente, lavandino con rubinetto,
   cappa aspirante, doccia di emergenza, estintore a CO₂, contenitori dei rifiuti, vassoio delle consegne e campanello.
+- **Reagenti**: ogni reagente è nel suo contenitore, scelto dai dati (`src/game/stock.js`): barattoli di vetro, di vetro
+  ambrato per ciò che la luce decompone e di plastica per gli idrossidi; bottiglie di vetro, ambrate e flaconi di plastica
+  per le basi forti e l'acido fluoridrico. Il tappo ha il colore della famiglia, spiegato dalla legenda sullo scaffale
+  (rosso acidi, blu basi, bianco sali e inorganici, giallo ossidanti, grigio metalli, verde organici, viola indicatori,
+  azzurro acqua), e si toglie mentre si usa il reagente. L'etichetta riporta nome, formula, concentrazione, avvertenza
+  («Pericolo» / «Attenzione») e i pittogrammi GHS: quelli delle schede di sicurezza per i reagenti dello scaffale, dedotti
+  dai dati (indicativi) per le altre sostanze del magazzino.
 - **Grafica**: aula in toni medi (pareti verde salvia, mobili grigio ardesia, banconi neri) e luce moderata, perché la
   vetreria e i reagenti si stacchino dallo sfondo; vetro limpido al centro e più chiaro sui bordi, con il labbro della
   bocca; ombra di contatto sotto ogni oggetto; tone mapping neutro, che conserva i colori veri delle soluzioni.

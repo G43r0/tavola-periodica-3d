@@ -623,8 +623,20 @@ export const GLOSSARY_EN = {
     t: 'Laboratory simulator',
     w: 'simulator|laboratory simulator|lab game',
     d: 'A first-person game in the school chemistry lab, inspired by cooking simulators: pick up beakers and bottles, weigh on the balance, pour by tilting the vessel, heat on the hot plate or the Bunsen burner and hand in your preparation at the teacher\'s desk. Exercises are graded with stars and money; glass breaks, liquids spill, toxic gases belong under the fume hood and waste in the right container. The chemistry is the real one of the library (554 substances and the catalogue reactions), in a realistic or simplified version.',
-    k: [['W A S D', 'walk'], ['Click', 'pick up / put down'], ['Right button + mouse', 'pour'], ['E', 'use'], ['Q', 'throw'], ['Tab', 'bench view'], ['Esc', 'pause']],
-    s: ['term.reaction', 'ui.lab'],
+    k: [['W A S D', 'walk'], ['Click', 'pick up / put down'], ['Hold left + mouse', 'pour'], ['E', 'use'], ['Hold middle button', 'throw'], ['Tab', 'bench view'], ['Esc', 'pause']],
+    s: ['term.reaction', 'ui.lab', 'ui.gameStock'],
+  },
+  'ui.gameStock': {
+    t: 'Cap colour',
+    w: 'cap colour|cap color|coloured cap|colored cap|caps',
+    d: 'In the simulator the cap of a reagent tells its family at a glance: red acids, blue bases, white salts and other inorganic compounds, yellow oxidisers, grey metals, green organic compounds, purple indicators, light blue water. It is the school lab\'s code, explained by the legend on the shelf. The container has a reason too: amber glass shields from light what light decomposes (silver nitrate, permanganate, hydrogen peroxide); plastic is for strong bases, which slowly etch glass, and for hydrofluoric acid, which dissolves it.',
+    s: ['term.ghs', 'ui.game'],
+  },
+  'term.ghs': {
+    t: 'Hazard pictograms',
+    w: 'pictogram|pictograms|hazard pictograms|GHS|CLP|H statements',
+    d: 'The nine red-bordered white diamonds of the GHS (in Europe the CLP regulation) that tell on a label what hazard a substance has: explosive, flammable, oxidising (makes things burn more), gas under pressure, corrosive, toxic, harmful or irritant, long-term health hazard, hazardous to the environment. Next to them is the signal word: «Danger» for the most serious cases, «Warning» for the others. Hazards depend on concentration: 1 M hydrochloric acid is only corrosive to metals (statement H290), the concentrated acid burns the skin. In the simulator the shelf reagents carry the pictograms of their safety data sheets; for the other substances in the storeroom they are derived from the data and are indicative.',
+    s: ['ui.gameStock'],
   },
   'ui.language': {
     t: 'Language',

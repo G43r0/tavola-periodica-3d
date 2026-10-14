@@ -316,6 +316,13 @@ export const GLOSSARY_ELI6 = {
   'ui.game': {
     d: 'Un videogioco in cui entri nel laboratorio di chimica della scuola e fai gli esperimenti come un vero chimico: prendi i bicchieri di vetro, pesi, versi, scaldi e porti il risultato alla maestra. Se fai cadere un bicchiere si rompe, e la spazzatura va nel bidone giusto!',
   },
+  'ui.gameStock': {
+    d: 'Nel laboratorio il colore del tappo ti dice che cosa c\'è dentro: rosso gli acidi, blu le basi, bianco i sali, giallo le cose che fanno bruciare di più, grigio i metalli, verde le sostanze della vita e del petrolio, viola gli indicatori, azzurro l\'acqua. Le bottiglie scure proteggono dalla luce le sostanze che la luce rovina.',
+  },
+  'term.ghs': {
+    t: 'I disegni del pericolo',
+    d: 'Sono rombi bianchi con il bordo rosso e un disegno nero: la fiamma vuol dire che prende fuoco, il teschio che è velenoso, la mano rovinata che brucia la pelle, il pesce e l\'albero morti che fa male alla natura. Se c\'è scritto «Pericolo» bisogna stare molto attenti!',
+  },
   'ui.language': {
     d: 'Cambia la lingua: italiano, inglese o questa, che spiega le stesse cose con parole più semplici.',
   },
