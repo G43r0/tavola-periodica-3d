@@ -31,11 +31,13 @@ const t = createT({
     error3d: 'Impossibile caricare il visualizzatore 3D.',
     errorLab: 'Impossibile caricare il laboratorio molecolare.',
     errorSandbox: 'Impossibile caricare la sandbox.',
+    errorGame: 'Impossibile caricare il simulatore di laboratorio.',
   },
   en: {
     error3d: 'Could not load the 3D viewer.',
     errorLab: 'Could not load the molecular laboratory.',
     errorSandbox: 'Could not load the sandbox.',
+    errorGame: 'Could not load the laboratory simulator.',
   },
 });
 
@@ -78,6 +80,7 @@ const toolbar = createToolbar(app.querySelector('.toolbar'), app.querySelector('
   onInfo: info.open,
   onLab: () => openLab(),
   onSandbox: () => openSandbox(),
+  onGame: () => openGame(),
   onCategoryHover: (key) => table.highlightCategory(key),
   onSearchCommit: (text, ev) => sparks.onSearchCommit(text, ev),
 });
@@ -139,6 +142,24 @@ function openSandbox(z) {
   sandboxLoading.then((s) => s?.open(z));
 }
 
+// ------------------------------------------------------------ simulatore di laboratorio (caricato su richiesta)
+let game = null;
+let gameLoading = null;
+
+function openGame() {
+  gameLoading ??= import('./game/game-view.js')
+    .then((m) => {
+      game = m.createGame(elements, {});
+      return game;
+    })
+    .catch((err) => {
+      console.error(err);
+      gameLoading = null;
+      toast(t('errorGame'));
+    });
+  gameLoading.then((g) => g?.open());
+}
+
 createElementPanel(app.querySelector('.panel'), elements, store, {
   onInfo: info.open,
   onOpen3D: open3D,
@@ -149,7 +170,7 @@ createElementPanel(app.querySelector('.panel'), elements, store, {
 // ------------------------------------------------------------ modalità Spiega (F1)
 const explain = createExplain(elements, {
   onOpenElement: (z) => {
-    if (!viewer?.isOpen() && !lab?.isOpen() && !sandbox?.isOpen()) store.set({ selectedZ: z });
+    if (!viewer?.isOpen() && !lab?.isOpen() && !sandbox?.isOpen() && !game?.isOpen()) store.set({ selectedZ: z });
   },
 });
 
@@ -168,7 +189,7 @@ try {
 const isTyping = (t) => t instanceof HTMLElement && (t.matches('input, textarea, select') || t.isContentEditable);
 
 window.addEventListener('keydown', (ev) => {
-  if (document.querySelector('dialog[open]') || viewer?.isOpen() || lab?.isOpen() || sandbox?.isOpen()) return;
+  if (document.querySelector('dialog[open]') || viewer?.isOpen() || lab?.isOpen() || sandbox?.isOpen() || game?.isOpen()) return;
   const typing = isTyping(ev.target);
 
   if ((ev.key === '/' && !typing) || ((ev.ctrlKey || ev.metaKey) && ['f', 'k'].includes(ev.key.toLowerCase()))) {

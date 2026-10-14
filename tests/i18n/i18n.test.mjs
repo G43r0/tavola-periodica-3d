@@ -16,6 +16,7 @@ import { LAB_STRINGS } from '../../src/lab/lab-strings.js';
 import { SANDBOX_STRINGS } from '../../src/sandbox/sandbox-strings.js';
 import { SANDBOX_DESCRIBE } from '../../src/sandbox/describe-strings.js';
 import { APPEARANCE_STRINGS } from '../../src/gfx/appearance.js';
+import { GAME_STRINGS } from '../../src/game/game-strings.js';
 import { CATEGORIES } from '../../src/data/categories.js';
 import { MOLECULES } from '../../src/lab/data/molecules.js';
 import { REACTIONS } from '../../src/lab/data/reactions.js';
@@ -23,7 +24,7 @@ import { REACTIONS } from '../../src/lab/data/reactions.js';
 // un testo può essere una stringa o una funzione (quando la frase cambia con i numeri)
 const kind = (v) => (Array.isArray(v) ? 'array' : typeof v === 'function' ? 'string' : typeof v);
 
-for (const [name, table] of Object.entries({ LAB_STRINGS, SANDBOX_STRINGS, SANDBOX_DESCRIBE, APPEARANCE_STRINGS })) {
+for (const [name, table] of Object.entries({ LAB_STRINGS, SANDBOX_STRINGS, SANDBOX_DESCRIBE, APPEARANCE_STRINGS, GAME_STRINGS })) {
   test(`${name}: ogni testo italiano ha la sua traduzione inglese dello stesso tipo`, () => {
     for (const [key, value] of Object.entries(table.it)) {
       assert.ok(key in table.en, `${name}.en.${key} mancante`);
@@ -37,7 +38,7 @@ for (const [name, table] of Object.entries({ LAB_STRINGS, SANDBOX_STRINGS, SANDB
 
 test('le traduzioni usano i segnaposto {x} dell\'italiano', () => {
   const holes = (s) => [...new Set([...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1].toLowerCase()))].sort().join(',');
-  for (const [name, table] of Object.entries({ LAB_STRINGS, SANDBOX_STRINGS, SANDBOX_DESCRIBE, APPEARANCE_STRINGS })) {
+  for (const [name, table] of Object.entries({ LAB_STRINGS, SANDBOX_STRINGS, SANDBOX_DESCRIBE, APPEARANCE_STRINGS, GAME_STRINGS })) {
     for (const [key, value] of Object.entries(table.it)) {
       if (typeof value !== 'string') continue;
       const en = table.en[key];

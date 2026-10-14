@@ -11,6 +11,45 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 ## [Non rilasciato]
 
 ### Aggiunto
+- **Simulatore di laboratorio** (pulsante «Simulatore» nella barra in alto) — *prototipo giocabile*: un gioco in prima
+  persona nel laboratorio di chimica della scuola, nello stile di *Cooking Simulator*.
+  - Due visuali (prima persona e vista del bancone), fisica vera con Rapier (prendere, posare dove si guarda, lanciare,
+    rovesciare, rompere la vetreria), versamento inclinando il recipiente con il livello del liquido sempre orizzontale e
+    la portata che cresce con l'inclinazione (fino alla goccia singola).
+  - Chimica dei contenitori: scioglimento con la solubilità alla temperatura, cristallizzazione anche come idrato, pH
+    dal bilancio delle cariche, colori di ioni, indicatori e precipitati, ebollizione ed evaporazione, reazioni del
+    catalogo con condizioni e calore. Modalità *realistica* e *semplificata*.
+  - Carriera con 5 esercitazioni (soluzione di NaCl, titolazione, pioggia d'oro, cristalli di solfato di rame, saggio alla
+    fiamma) valutate con stelle e soldi; Laboratorio libero con il magazzino delle 554 sostanze.
+  - Incidenti (vetro rotto, pozze, fuoco ed estintore, gas tossici e cappa, esplosioni, schizzi e doccia di emergenza),
+    pulizia della vetreria e contenitori dei rifiuti con le multe.
+  - Testi in italiano, inglese e versione semplice; voce «Simulatore di laboratorio» nella modalità Spiega.
+  - Test del simulatore (`tests/game/`): chimica dei contenitori, fisica, liquidi, esercitazioni e valutazione.
+  - Interfaccia come in *Cooking Simulator*: legenda dei comandi piccola in basso a destra (icona del mouse o del
+    tasto e azione) che cambia con l'oggetto in mano e con ciò che si guarda, attenua le azioni che con quel bersaglio
+    non funzionano e illumina il tasto premuto (`L` la nasconde). Le informazioni importanti sono in finestrelle accanto
+    agli oggetti: ciò che si guarda (nome nella fascia gialla, millilitri e contenuto, stato di piastra, rubinetto,
+    bilancia…) e ciò che si tiene in mano (millilitri e «Versando»). Prendono il posto delle schede in basso.
+  - Versamento più facile da controllare: il recipiente torna dritto quando si lascia il tasto sinistro (e smette di
+    versare); un anello mostra dove cadrà il getto già prima della prima goccia (verde dentro un recipiente, nel
+    lavandino o nei rifiuti, rosso se fa una pozza); la finestrella dice dove si sta versando. La portata ha una zona
+    morta (il liquido resta attaccato al bordo fino a 0,5 mm di carico), una corsa del mouse più fine vicino al bordo e
+    un massimo di 150 mL/s per un becher. Mentre si versa si può correggere la mira girando lo sguardo.
+  - Getto continuo che si assottiglia cadendo e si ferma sugli ostacoli (il bordo di un altro becher, un oggetto in
+    mezzo); il liquido arriva nel recipiente quando il getto lo tocca. L'oggetto guardato ha un contorno (verde per gli
+    oggetti, ambra per gli elementi fissi).
+  - Le pozze di una soluzione, evaporando, lasciano un alone di residuo secco (anche la polvere versata) da pulire
+    con la carta: finché resta conta nel disordine della valutazione. L'aiuto (`H`) spiega legenda, finestrelle e anello.
+  - Sgabelli spingibili: il giocatore li sposta camminandoci contro e non ci resta più bloccato nel corridoio tra i
+    banconi; tornano al loro posto a ogni partita. La vetreria a terra non ferma più il giocatore.
+  - Comandi uguali a quelli di *Cooking Simulator*: clic sinistro per prendere, usare gli elementi fissi e posare, con
+    una sagoma verde (o rossa) dove si poserà l'oggetto, che al clic ci scivola in meno di 0,3 s; sinistro tenuto + mouse
+    per versare; destro tenuto + mouse per ruotare (anche il beccuccio da cui si versa) e clic destro per annullare la
+    rotazione o rimettere l'oggetto dove lo si era preso; tasto centrale tenuto per caricare il lancio (anello attorno
+    al mirino); `Maiusc` tenuto con un oggetto in mano per la manipolazione precisa (il mouse sposta, sinistro + mouse
+    alza, destro + mouse ruota e versa goccia a goccia, il tasto centrale lascia l'oggetto fermo); `Spazio` per correre
+    e `Ctrl` per accovacciarsi; clic sul lavandino con un recipiente per portarlo sotto il rubinetto (l'acqua scorre
+    tenendo premuto il sinistro, la rotella regola il getto, il clic destro smette); `E` pulisce e usa gli strumenti.
 - **Preset grafici** (pulsante con lo schermo nella barra in alto): *Semplice* per i computer poco potenti (niente
   post-processing, meno segmenti e punti, sandbox senza bagliore, niente sfocature e animazioni continue
   nell'interfaccia), *Medio* (la grafica di prima, predefinito) e *Professionale*: sovracampionamento, MSAA 4×, tone
@@ -79,6 +118,8 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 - Dati: `src/lab/data/reactions-catalogo.js` (generato dal catalogo); `reactions.js` unisce le due liste.
 
 ### Modificato
+- La Content Security Policy permette la compilazione di WebAssembly (`'wasm-unsafe-eval'`, non `eval` di JavaScript):
+  serve al motore fisico Rapier del simulatore.
 - «Simula reazione» non esegue le reazioni che richiedono altro (catalizzatori, soluzione acquosa, enzimi) né gli
   equilibri (⇌), e li segnala nel resoconto. Con più reazioni note, alcune catene cambiano (es. dopo la calcinazione e
   lo spegnimento della calce, l'acqua di calce riassorbe la CO₂).

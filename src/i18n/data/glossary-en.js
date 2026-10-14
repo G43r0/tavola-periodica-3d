@@ -570,7 +570,7 @@ export const GLOSSARY_EN = {
   'ui.logo': {
     t: 'Periodic Table 3D',
     d: 'An interactive periodic table: detailed cards for all 118 elements, 3D atomic models, a molecular lab to build molecules and simulate reactions, and a sandbox where the elements come to life.',
-    s: ['ui.view3d', 'ui.lab', 'ui.sandbox'],
+    s: ['ui.view3d', 'ui.lab', 'ui.sandbox', 'ui.game'],
   },
   'ui.table': {
     t: 'The table',
@@ -618,6 +618,13 @@ export const GLOSSARY_EN = {
     t: 'Element sandbox',
     d: 'A world made of grains where you draw with the 118 elements and with materials such as wood, water and concrete: everything melts, boils, burns, explodes and reacts according to real data.',
     k: [['Space', 'pause'], ['F', 'one step'], ['H', 'thermal view'], ['G', 'glow'], ['E', 'eraser'], ['M / W', 'stir / wind'], ['[ / ]', 'smaller / bigger brush']],
+  },
+  'ui.game': {
+    t: 'Laboratory simulator',
+    w: 'simulator|laboratory simulator|lab game',
+    d: 'A first-person game in the school chemistry lab, inspired by cooking simulators: pick up beakers and bottles, weigh on the balance, pour by tilting the vessel, heat on the hot plate or the Bunsen burner and hand in your preparation at the teacher\'s desk. Exercises are graded with stars and money; glass breaks, liquids spill, toxic gases belong under the fume hood and waste in the right container. The chemistry is the real one of the library (554 substances and the catalogue reactions), in a realistic or simplified version.',
+    k: [['W A S D', 'walk'], ['Click', 'pick up / put down'], ['Right button + mouse', 'pour'], ['E', 'use'], ['Q', 'throw'], ['Tab', 'bench view'], ['Esc', 'pause']],
+    s: ['term.reaction', 'ui.lab'],
   },
   'ui.language': {
     t: 'Language',

@@ -572,7 +572,7 @@ export const GLOSSARY_IT = {
   'ui.logo': {
     t: 'Tavola Periodica 3D',
     d: 'Una tavola periodica interattiva: schede dettagliate dei 118 elementi, modelli atomici in 3D, un laboratorio molecolare per costruire molecole e simulare reazioni e una sandbox dove gli elementi prendono vita.',
-    s: ['ui.view3d', 'ui.lab', 'ui.sandbox'],
+    s: ['ui.view3d', 'ui.lab', 'ui.sandbox', 'ui.game'],
   },
   'ui.table': {
     t: 'La tavola',
@@ -620,6 +620,13 @@ export const GLOSSARY_IT = {
     t: 'Sandbox degli elementi',
     d: 'Un mondo fatto di granelli dove disegni con i 118 elementi e con materiali come legno, acqua e calcestruzzo: tutto fonde, bolle, brucia, esplode e reagisce secondo i dati reali.',
     k: [['Spazio', 'pausa'], ['F', 'un passo'], ['H', 'vista termica'], ['G', 'bagliore'], ['E', 'gomma'], ['M / W', 'mescola / vento'], ['[ / ]', 'pennello più piccolo / più grande']],
+  },
+  'ui.game': {
+    t: 'Simulatore di laboratorio',
+    w: 'simulatore|simulatore di laboratorio|gioco del laboratorio',
+    d: 'Un gioco in prima persona nel laboratorio di chimica della scuola, ispirato ai simulatori di cucina: prendi becher e bottiglie, pesa sulla bilancia, versa inclinando il recipiente, scalda sulla piastra o sul becco Bunsen e consegna il preparato alla cattedra. Le esercitazioni sono valutate con stelle e soldi; il vetro si rompe, i liquidi si versano, i gas tossici vanno sotto la cappa e i rifiuti nel contenitore giusto. La chimica è quella vera della libreria (554 sostanze e le reazioni del catalogo), in versione realistica o semplificata.',
+    k: [['W A S D', 'cammina'], ['Clic', 'prendi / posa'], ['Tasto destro + mouse', 'versa'], ['E', 'usa'], ['Q', 'lancia'], ['Tab', 'vista del bancone'], ['Esc', 'pausa']],
+    s: ['term.reaction', 'ui.lab'],
   },
   'ui.language': {
     t: 'Lingua',

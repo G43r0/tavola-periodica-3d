@@ -22,6 +22,8 @@ const t = createT({
     labTitle: 'Laboratorio molecolare: collega gli atomi e costruisci molecole',
     sandbox: 'Sandbox',
     sandboxTitle: 'Sandbox degli elementi: polveri, liquidi e gas che fondono, bruciano e reagiscono',
+    game: 'Simulatore',
+    gameTitle: 'Simulatore di laboratorio: un gioco in prima persona nel laboratorio di chimica della scuola',
     explain: 'Spiega',
     explainTitle: 'Modalità Spiega (F1): evidenzia una parola o fai clic destro su qualcosa per sapere cos\'è',
     language: 'Lingua',
@@ -59,6 +61,8 @@ const t = createT({
     labTitle: 'Molecular laboratory: connect atoms and build molecules',
     sandbox: 'Sandbox',
     sandboxTitle: 'Element sandbox: powders, liquids and gases that melt, burn and react',
+    game: 'Simulator',
+    gameTitle: 'Laboratory simulator: a first-person game in the school chemistry lab',
     explain: 'Explain',
     explainTitle: 'Explain mode (F1): highlight a word or right-click anything to find out what it is',
     language: 'Language',
@@ -89,6 +93,7 @@ const t = createT({
     stateLabel: 'A casa è…',
     labTitle: 'Laboratorio: attacca gli atomi tra loro e costruisci molecole',
     sandboxTitle: 'Sabbiera: versa polveri, liquidi e gas e guarda cosa succede quando li scaldi o li mescoli',
+    gameTitle: 'Il gioco del laboratorio: entra nel laboratorio della scuola e fai gli esperimenti come un vero chimico',
     explainTitle: 'Modalità Spiega (F1): evidenzia una parola o premi il tasto destro su qualcosa e ti spiego cos\'è',
     info: 'Da dove vengono i dati, e come si usa',
     graphicsTitle: 'Quanto è bella la grafica',
@@ -100,7 +105,7 @@ const t = createT({
   },
 });
 
-export function createToolbar(header, legend, elements, store, { onOpen, onInfo, onLab, onSandbox, onCategoryHover, onSearchCommit }) {
+export function createToolbar(header, legend, elements, store, { onOpen, onInfo, onLab, onSandbox, onGame, onCategoryHover, onSearchCommit }) {
   header.innerHTML = `
     <div class="brand">
       <span class="brand__logo" data-help="ui.logo">${icons.atom(26)}</span>
@@ -142,6 +147,7 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
       <button type="button" class="btn-ghost reset" hidden title="${esc(t('resetTitle'))}" data-help="ui.reset">${icons.reset(15)}<span>${t('reset')}</span></button>
       <button type="button" class="btn-ghost lab-entry" data-action="lab" data-help="ui.lab" title="${esc(t('labTitle'))}">${icons.flask(16)}<span>${t('lab')}</span></button>
       <button type="button" class="btn-ghost lab-entry" data-action="sandbox" data-help="ui.sandbox" title="${esc(t('sandboxTitle'))}">${icons.sand(16)}<span>${t('sandbox')}</span></button>
+      <button type="button" class="btn-ghost lab-entry" data-action="game" data-help="ui.game" title="${esc(t('gameTitle'))}">${icons.goggles(16)}<span>${t('game')}</span></button>
       <button type="button" class="btn-ghost explain-toggle" data-action="explain" data-help="ui.explain" aria-pressed="false" title="${esc(t('explainTitle'))}">${icons.explain(16)}<span>${t('explain')}</span></button>
       <div class="gfx" data-help="ui.graphics">
         <button type="button" class="btn-ghost gfx__btn" aria-haspopup="menu" aria-expanded="false" title="${esc(t('graphicsTitle'))}">
@@ -249,6 +255,7 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
     if (ev.target.closest('[data-action="info"]')) onInfo();
     if (ev.target.closest('[data-action="lab"]')) onLab?.();
     if (ev.target.closest('[data-action="sandbox"]')) onSandbox?.();
+    if (ev.target.closest('[data-action="game"]')) onGame?.();
   });
 
   legend.addEventListener('click', (ev) => {
