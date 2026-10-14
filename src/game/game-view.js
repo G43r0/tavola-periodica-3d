@@ -10,6 +10,7 @@ import { loadPhysics } from './physics.js';
 import { LabGame } from './game.js';
 import { ORDERS } from './orders.js';
 import { SHELF } from './reagents.js';
+import { isTap } from './controls.js';
 import { S } from '../sandbox/substances.js';
 import { GAME_STRINGS } from './game-strings.js';
 
@@ -57,6 +58,7 @@ const TEMPLATE = () => `
     <div class="gm-toasts" aria-live="polite"></div>
     <div class="gm-alarm" hidden></div>
     <div class="gm-tilt" hidden><span></span></div>
+    <div class="gm-charge" hidden aria-hidden="true"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9155"/><circle class="gm-charge__fg" cx="18" cy="18" r="15.9155" pathLength="100"/></svg></div>
     <div class="gm-reactions"></div>
   </div>
   <div class="gm-overlay gm-loading" hidden><div class="gm-spinner"></div><p>${t('loading')}</p></div>
@@ -83,6 +85,7 @@ export function createGame(elements, { onClose } = {}) {
   let hudAcc = 0;
   let state = 'menu'; // menu | play | dialog | pause
   let rmb = false;
+  let rKey = null; // R premuto: { t, moved } per distinguere un tocco (raddrizza) dalla rotazione
   let save = loadSave();
   let chemMode = save.chemMode ?? 'real';
   let showInfo = true;
@@ -182,6 +185,7 @@ export function createGame(elements, { onClose } = {}) {
       pressed.clear();
       game?.setPour(false);
       game?.player.keys.clear();
+      releaseHands();
     }
   }
 
@@ -468,11 +472,13 @@ export function createGame(elements, { onClose } = {}) {
       if (down) pressed.add(id);
       else pressed.delete(id);
     }
-    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(code)) {
+    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'Space'].includes(code)) {
       if (game.player.mode === 'bench' && down && (code === 'KeyA' || code === 'ArrowLeft')) game.station(-1);
       else if (game.player.mode === 'bench' && down && (code === 'KeyD' || code === 'ArrowRight')) game.station(1);
       if (down) game.player.keys.add(code);
       else game.player.keys.delete(code);
+      // Maiusc con qualcosa in mano: manipolazione precisa finché resta premuto (a mani vuote fa correre)
+      if ((code === 'ShiftLeft' || code === 'ShiftRight') && !ev.repeat) game.setPrecise(down);
       ev.preventDefault();
       return;
     }
@@ -481,9 +487,28 @@ export function createGame(elements, { onClose } = {}) {
       ev.preventDefault();
       return;
     }
+    // Q: tenuto carica il lancio, lasciato lancia
+    if (code === 'KeyQ') {
+      if (down && !ev.repeat) game.chargeThrow();
+      else if (!down) game.throwHeld();
+      return;
+    }
+    // R: tenuto, il mouse (o la rotella, a scatti) ruota l'oggetto; un tocco lo raddrizza
+    if (code === 'KeyR') {
+      // i tempi sono quelli degli eventi (non di quando si elaborano): un fotogramma lento non trasforma un tocco in una
+      // pressione lunga
+      if (down && !ev.repeat) {
+        rKey = { t: ev.timeStamp, moved: 0 };
+        game.rotating = true;
+      } else if (!down && rKey) {
+        if (isTap((ev.timeStamp - rKey.t) / 1000, rKey.moved)) game.resetRotation();
+        rKey = null;
+        game.rotating = false;
+      }
+      return;
+    }
     if (!down) return;
-    if (code === 'KeyQ') game.throwHeld();
-    else if (code === 'Tab') {
+    if (code === 'Tab') {
       ev.preventDefault();
       game.toggleView();
       if (game.player.mode === 'walk') lock();
@@ -510,11 +535,23 @@ export function createGame(elements, { onClose } = {}) {
   window.addEventListener('blur', () => {
     game?.player.keys.clear();
     pressed.clear();
+    releaseHands();
   });
+  /** Tasti tenuti che la finestra non vedrà più rilasciare: niente precisione, riempimento, carica né rotazione. */
+  function releaseHands() {
+    if (!game) return;
+    game.setPrecise(false);
+    game.stopFilling();
+    game.charge = null;
+    game.rotating = false;
+    rKey = null;
+  }
   /** Id della legenda per un tasto (controls.js, KEY_IDS). */
   function keyId(code) {
     if (code === 'KeyE') return 'e';
     if (code === 'KeyQ') return 'q';
+    if (code === 'KeyR') return 'r';
+    if (code === 'Space') return 'space';
     if (code === 'Tab') return 'tab';
     if (code === 'KeyH') return 'h';
     if (code === 'ShiftLeft' || code === 'ShiftRight') return 'shift';
@@ -532,6 +569,11 @@ export function createGame(elements, { onClose } = {}) {
     if (ev.button === 0) {
       pressed.add('lmb');
       game.primary();
+    } else if (ev.button === 1) {
+      // tasto centrale: come Q, tenuto carica il lancio (e niente scorrimento automatico della pagina)
+      ev.preventDefault();
+      pressed.add('q');
+      game.chargeThrow();
     } else if (ev.button === 2) {
       rmb = true;
       pressed.add('rmb');
@@ -540,6 +582,10 @@ export function createGame(elements, { onClose } = {}) {
   });
   window.addEventListener('mouseup', (ev) => {
     if (ev.button === 0) pressed.delete('lmb');
+    if (ev.button === 1 && state === 'play') {
+      pressed.delete('q');
+      game?.throwHeld();
+    }
     if (ev.button === 2) {
       rmb = false;
       pressed.delete('rmb');
@@ -549,16 +595,25 @@ export function createGame(elements, { onClose } = {}) {
   stage.addEventListener('contextmenu', (e) => e.preventDefault());
   stage.addEventListener('mousemove', (ev) => {
     if (state !== 'play' || !game) return;
+    // Chromium a volte manda un salto enorme subito dopo il blocco del puntatore: si ignora
+    const jump = Math.abs(ev.movementX) > 250 || Math.abs(ev.movementY) > 250;
+    // R premuto: il mouse ruota l'oggetto (lo sguardo e, nella vista del bancone, il punto di presa restano fermi)
+    if (rKey && game.held) {
+      if (jump) return;
+      rKey.moved += Math.abs(ev.movementX) + Math.abs(ev.movementY);
+      game.rotateBy(ev.movementX, ev.movementY);
+      return;
+    }
     const r = stage.getBoundingClientRect();
     game.setMouse(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
-    // Chromium a volte manda un salto enorme subito dopo il blocco del puntatore: si ignora
-    if (Math.abs(ev.movementX) > 250 || Math.abs(ev.movementY) > 250) return;
+    if (jump) return;
     // tasto destro premuto: il mouse in su inclina in avanti (versa), in giù raddrizza; di lato si continua a girare lo
-    // sguardo (a metà velocità) per correggere la mira mentre si versa
+    // sguardo (a metà velocità) per correggere la mira mentre si versa, ma non nella manipolazione precisa
     if (rmb && game.held) {
       game.tiltBy(-ev.movementY * (game.player.mode === 'walk' ? 1 : 1.4));
-      if (game.player.mode === 'walk' && locked()) game.player.look(ev.movementX * 0.5, 0);
-    } else if (game.player.mode === 'walk' && locked()) game.player.look(ev.movementX, ev.movementY);
+      if (game.player.mode === 'walk' && locked() && !game.precise) game.player.look(ev.movementX * 0.5, 0);
+    } else if (game.precise) game.preciseMove(ev.movementX, ev.movementY);
+    else if (game.player.mode === 'walk' && locked()) game.player.look(ev.movementX, ev.movementY);
   });
   stage.addEventListener('wheel', (ev) => {
     if (state !== 'play') return;
@@ -698,6 +753,19 @@ export function createGame(elements, { onClose } = {}) {
     tilt.firstElementChild.style.transform = `rotate(${(h.tilt * 180) / Math.PI}deg)`;
   }
 
+  /** Anello attorno al mirino che si riempie mentre si carica il lancio (Q o tasto centrale tenuto). */
+  let chargeShown = -1;
+  function drawCharge() {
+    const c = state === 'play' && game.held && game.charge !== null ? Math.min(1, game.time - game.charge) : 0;
+    const pct = Math.round(c * 100);
+    if (pct === chargeShown) return;
+    chargeShown = pct;
+    const el = $('.gm-charge');
+    el.hidden = !pct;
+    el.querySelector('.gm-charge__fg').style.strokeDasharray = `${pct} 100`;
+    el.classList.toggle('is-full', pct >= 100);
+  }
+
   // ---------------------------------------------------------------- ciclo
   let frames = 0;
   let fpsT = 0;
@@ -708,7 +776,10 @@ export function createGame(elements, { onClose } = {}) {
     if (!game) return;
     if (state === 'play' || state === 'dialog') game.update(state === 'play' ? dt : 0, { blocked: state !== 'play' });
     game.render();
-    if (state !== 'menu') placePops();
+    if (state !== 'menu') {
+      placePops();
+      drawCharge();
+    }
     hudAcc += dt;
     frames++;
     fpsT += dt;

@@ -493,13 +493,8 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     hotplate.T += ((295 + hotplate.level * 60 - hotplate.T) * Math.min(1, dt * 0.5));
     plateMat.emissiveIntensity = Math.max(0, (hotplate.T - 420) / 600);
     hotplate.knob.rotation.y = -hotplate.level * 0.9;
-    // acqua del rubinetto
+    // acqua del rubinetto (lunghezza del getto: la decide il gioco, fino al recipiente sotto o al fondo del lavandino)
     sinkFix.stream.visible = sinkFix.tap;
-    if (sinkFix.tap) {
-      const h = sinkFix.spout.y - sinkFix.basin.y;
-      sinkFix.stream.scale.y = h;
-      sinkFix.stream.position.y = sinkFix.basin.y + h / 2;
-    }
     hood.lightMat.color.set(hood.on ? 0xf4f8ff : 0x3a3f46);
     hood.led.color.set(hood.on ? 0x30ff60 : 0x3a1010);
   };

@@ -349,6 +349,7 @@ function buildTool(item, env, opts) {
     }
     shapes = [{ type: 'box', hx: 0.035, hy: 0.006, hz: 0.035, y: 0.006 }];
   }
+  item.shapes = shapes; // forma del corpo: serve anche per l'ingombro quando lo si posa
   item.body = physics.dynamic({ pos: opts.pos, quat: opts.quat, shapes, mass: def.mass, owner: item, friction: 0.9, events: kind === 'extinguisher' });
 }
 

@@ -103,6 +103,26 @@ test('stanza: il giocatore spinge uno sgabello a passo d\'uomo, ma passa attrave
   assert.ok(Math.hypot(g.x - 0.6, g.z - 0.4) < 0.001, 'il becher a terra non viene calciato via');
 });
 
+test('posa: punto d\'appoggio vero sul bancone e sovrapposizioni con gli altri oggetti', () => {
+  const ph = new Physics(R);
+  ph.box(0, 0.46, 0, 1, 0.46, 0.5);
+  const foot = { r: 0.0345, hh: 0.0475 };
+  const other = ph.dynamic({ pos: { x: 0.2, y: 0.92, z: 0 }, shapes: [{ type: 'cylinder', hh: 0.0475, r: 0.0345, y: 0.0475 }], mass: 0.1 });
+  ph.step(1 / 60, [other]); // le interrogazioni vedono i collisori dopo il primo passo
+  const rest = ph.restHeight(foot, 0, 0, 1.3);
+  assert.ok(Math.abs(rest.y - 0.9675) < 0.003, `centro a riposo a ${rest.y}`);
+  assert.ok(rest.normal.y > 0.99 && !rest.collider.parent(), 'piano orizzontale e statico');
+  const onTop = ph.restHeight(foot, 0.2, 0, 1.3);
+  assert.ok(onTop.collider.parent()?.isDynamic(), 'sopra un becher l\'appoggio è un oggetto mobile');
+  assert.equal(ph.overlaps(foot, { x: 0.2, y: 0.9675, z: 0 }), true);
+  assert.equal(ph.overlaps(foot, { x: 0.3, y: 0.9675, z: 0 }), false, 'a 10 cm non tocca, e il piano sotto non conta');
+  assert.equal(ph.overlaps(foot, { x: 0.2, y: 0.9675, z: 0 }, { exclude: other }), false);
+  const spatula = { hx: 0.1, hh: 0.002, hz: 0.006 };
+  const rot = { x: 0, y: Math.sin(Math.PI / 4), z: 0, w: Math.cos(Math.PI / 4) };
+  assert.equal(ph.overlaps(spatula, { x: 0.2, y: 0.925, z: 0.12 }), false, 'spatola lungo x accanto al becher');
+  assert.equal(ph.overlaps(spatula, { x: 0.2, y: 0.925, z: 0.12 }, { rot }), true, 'girata di 90° ci passa sopra');
+});
+
 test('liquidi: volume del profilo, livello orizzontale e versamento inclinando', () => {
   const profile = [[0.033, 0.004], [0.033, 0.095]];
   const capacity = profileVolume(profile) * 1e6;

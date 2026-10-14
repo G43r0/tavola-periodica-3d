@@ -34,11 +34,13 @@ filtrazione, distillazione, audio.
 
 | | Prima persona | Vista del bancone |
 |---|---|---|
-| Muoversi | `W A S D` (`Maiusc` corre), mouse per guardare | `A` / `D` cambia postazione |
-| Prendere / posare | clic sinistro | clic sinistro (l'oggetto segue il puntatore) |
+| Muoversi | `W A S D` (`Spazio` corre; a mani vuote anche `Maiusc`), mouse per guardare | `A` / `D` cambia postazione |
+| Prendere / posare | clic sinistro; una sagoma verde o rossa mostra dove lo si poserà | clic sinistro (l'oggetto segue il puntatore) |
+| Ruotare | `R` tenuto + mouse (rotella: scatti di 15°; un tocco raddrizza) | uguale |
+| Precisione | `Maiusc` tenuto con un oggetto in mano: il mouse lo sposta, la rotella lo alza di 1 cm, il clic lo lascia fermo | — |
 | Versare | tieni premuto il tasto destro e muovi il mouse in su/giù: l'inclinazione segue il mouse; lasciando il tasto il recipiente torna dritto; di lato si corregge la mira | uguale |
-| Lanciare | `Q` | — |
-| Usare | `E` (manopole, rubinetto, bilancia, campanello, cappa, doccia; con uno strumento in mano: spatola, ansa, carta, cartina, estintore) | uguale |
+| Lanciare | `Q` tenuto (o il tasto centrale): più a lungo, più forte | — |
+| Usare | `E` (manopole, rubinetto, bilancia, campanello, cappa, doccia; con uno strumento in mano: spatola, ansa, carta, cartina, estintore); con un recipiente al lavandino `E` tenuto riempie e `Maiusc+E` lava | uguale |
 | Distanza / altezza | rotella | rotella |
 | Altro | `Tab` cambia visuale, `I` finestrelle accanto agli oggetti, `L` legenda dei comandi, `H` comandi, `Esc` pausa | |
 
@@ -51,13 +53,13 @@ filtrazione, distillazione, audio.
 | `mixture.js` | **motore chimico dei contenitori** (puro, testato): moli per sostanza, fasi (sciolta, liquida, solida, gas), temperatura, volume, massa, pH (bilancio delle cariche con acidi e basi forti e deboli), colore, solubilità con la temperatura, cristallizzazione e idrati, reazioni del catalogo con le loro condizioni, calore di reazione, evaporazione |
 | `reagents.js` | dati del gioco: solubilità, costanti acide/basiche, indicatori, reagenti dello scaffale, prezzi, classi dei rifiuti |
 | `orders.js` | le 5 esercitazioni: testi, preparazione del banco, avanzamento dei passi, valutazione (stelle, soldi, resoconto) |
-| `physics.js` | Rapier: mondo, corpi, sensori, eventi di contatto per la rottura, controllore del personaggio |
+| `physics.js` | Rapier: mondo, corpi, sensori, eventi di contatto per la rottura, controllore del personaggio, punto d'appoggio (`restHeight`) e sovrapposizioni (`overlaps`) per la posa |
 | `room.js` | l'aula di chimica: pavimento, pareti, finestre, banconi, lavandino, cappa, cattedra, lavagna, contenitori dei rifiuti, doccia, scaffali |
 | `items.js` | vetreria e strumenti: forme (profili di rivoluzione), collisori, capacità, bordo e becco |
 | `liquid.js` | disegno dei liquidi (superficie sempre orizzontale), livello del liquido da campioni del volume interno, versamento |
 | `effects.js` | fiamme, fuoco, fumo e gas, vapore, schizzi, gocce, pozze, frammenti di vetro, esplosioni |
 | `player.js` | camera in prima persona (capsula con il controllore del personaggio) e camera del bancone |
-| `controls.js` | legenda dei comandi (funzione pura `legendRows`), ritorno e sensibilità dell'inclinazione |
+| `controls.js` | legenda dei comandi (funzione pura `legendRows`), ritorno e sensibilità dell'inclinazione, velocità del lancio a carica, tocco di `R` |
 
 L'HUD (mirino, legenda, finestrelle accanto agli oggetti, scheda dell'esercitazione, soldi, avvisi) è in `game-view.js`.
 
@@ -83,8 +85,15 @@ in mano e con ciò che si guarda; le informazioni importanti in finestrelle agga
 che si guarda: nome in una fascia, millilitri e contenuto; a destra dell'oggetto in mano: millilitri e dove si sta
 versando); contorno sull'oggetto guardato. Gli sgabelli sono arredi dinamici che il giocatore spinge.
 
-Rimandato (passi 10–14 del piano nel report): anteprima del punto di posa, lancio a carica, rotazione con `R`,
-manipolazione precisa con `Maiusc` e corsa con la barra spaziatrice, rubinetto che riempie tenendo premuto `E`.
+Maneggiare gli oggetti (passi 10–14 del piano nel report): con un oggetto in mano una sagoma trasparente mostra il
+punto d'appoggio vero (l'ingombro calato sul piano con `castShape`), verde se il piano è orizzontale (normale y ≥ 0,9),
+fisso, entro 0,6 m, con il centro appoggiato e senza sovrapposizioni, rossa altrimenti; al clic l'oggetto ci scivola
+(gravità spenta, entro 1 cm e 2° o 0,3 s, sotto la velocità che rompe il vetro). Lancio a carica 1,5 + 6,5 · min(1, t)
+m/s. Rotazione con `R` salvata nell'oggetto (`rotYaw`, e `rotPitch` per gli strumenti), usata nella presa e nella posa.
+Manipolazione precisa con `Maiusc`: punto di partenza più spostamento (0,0015 m/px entro 0,35 m, 1 cm per scatto di
+rotella da −0,20 a +0,30 m), guadagno 8 s⁻¹ e 1,5 m/s, niente aiuto alla mira, inclinazione ×0,4; corsa con `Spazio`.
+`E` tenuto al lavandino porta il recipiente sotto il rubinetto (imboccatura 5 cm sotto il getto) e apre l'acqua finché
+non si lascia, portata da 5 a 50 mL/s con la rotella.
 
 ### Chimica dei contenitori
 
@@ -136,4 +145,5 @@ con trasmissione.
 `npm test` (tests/game): scioglimento e concentrazione, pH di acidi e basi, titolazione e fenolftaleina, pioggia d'oro,
 cristallizzazione ed eccesso di calore, conservazione della massa nei travasi, classi dei rifiuti, livello del liquido
 e versamento, rottura della vetreria con Rapier, valutazione delle esercitazioni, corridoio libero con gli sgabelli
-spingibili, portata e getto, aloni, righe della legenda. Prova nel browser con screenshot.
+spingibili, portata e getto, aloni, righe della legenda (anche precisione e riempimento), punto d'appoggio e
+sovrapposizioni per la posa, lancio a carica. Prova nel browser con screenshot.

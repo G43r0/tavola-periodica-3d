@@ -1,7 +1,7 @@
 // Test della legenda dei comandi (in basso a destra): righe giuste per ogni situazione. npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { legendRows, MAX_ROWS, relaxTilt, tiltGain } from '../../src/game/controls.js';
+import { legendRows, MAX_ROWS, relaxTilt, tiltGain, throwSpeed, isTap } from '../../src/game/controls.js';
 
 const keys = (rows) => rows.map((r) => r.key);
 const beaker = { kind: 'beaker250', container: true };
@@ -34,10 +34,11 @@ test('legenda: elementi fissi con lo stato giusto (piastra, rubinetto, rifiuti)'
   assert.equal(bin[0].off, true, 'senza un recipiente in mano l\'azione è attenuata');
 });
 
-test('legenda: con un contenitore in mano posa (o lascia cadere), versa, agita, lancia, distanza', () => {
+test('legenda: con un contenitore in mano posa (o lascia cadere), versa, agita, lancia, ruota, precisione, distanza', () => {
   const rows = legendRows({ mode: 'walk', held: beaker, target: null, canPlace: true });
-  assert.deepEqual(keys(rows).slice(0, 5), ['lgPlace', 'lgPour', 'lgSwirl', 'lgThrow', 'lgDistance']);
+  assert.deepEqual(keys(rows).slice(0, 6), ['lgPlace', 'lgPour', 'lgSwirl', 'lgThrow', 'lgRotate', 'lgPrecise']);
   assert.equal(rows.at(-1).key, 'lgHelp');
+  assert.ok(rows.length <= MAX_ROWS);
   const air = legendRows({ mode: 'walk', held: beaker, target: null, canPlace: false });
   assert.equal(air[0].key, 'lgDrop');
   assert.ok(!keys(air).includes('lgPlace'));
@@ -45,10 +46,22 @@ test('legenda: con un contenitore in mano posa (o lascia cadere), versa, agita, 
   assert.equal(into[1].key, 'lgPourInto');
   assert.equal(into[1].params.name, 'Becher 100 mL');
   const sink = legendRows({ mode: 'walk', held: beaker, target: { type: 'fixture', kind: 'sink' } });
-  assert.ok(keys(sink).includes('lgWash'));
+  assert.deepEqual(sink.find((r) => r.key === 'lgFill').keys, ['e'], 'E tenuto riempie');
+  assert.deepEqual(sink.find((r) => r.key === 'lgWash').keys, ['shift', 'e'], 'lavare (distruttivo) vuole Maiusc+E');
   const bin = legendRows({ mode: 'bench', held: beaker, target: { type: 'fixture', kind: 'bin', binName: 'metalli pesanti' } });
   assert.deepEqual(bin.find((r) => r.key === 'lgEmpty').params, { bin: 'metalli pesanti' });
   assert.ok(keys(bin).includes('lgHeight'), 'in vista bancone la rotella regola l\'altezza');
+  assert.ok(!keys(bin).includes('lgPrecise'), 'la modalità precisa è solo in prima persona');
+});
+
+test('legenda: modalità precisa (Maiusc tenuto) e riempimento al rubinetto (E tenuto)', () => {
+  const fine = legendRows({ mode: 'walk', held: beaker, target: null, precise: true });
+  assert.deepEqual(keys(fine), ['lgPreciseMove', 'lgPreciseHeight', 'lgPreciseLeave', 'lgPourFine', 'lgPreciseExit', 'lgHelp'], 'fermi: niente «cammina»');
+  const tool = legendRows({ mode: 'walk', held: { kind: 'spatula', container: false }, target: vessel, precise: true });
+  assert.ok(keys(tool).includes('lgSpatulaTake'), 'con uno strumento resta la sua azione');
+  const fill = legendRows({ mode: 'walk', held: beaker, target: { type: 'fixture', kind: 'sink' }, filling: true, tapFlow: 25 });
+  assert.deepEqual(keys(fill).slice(0, 2), ['lgFilling', 'lgTapFlow']);
+  assert.deepEqual(fill[1].params, { ml: 25 });
 });
 
 test('legenda: mentre si versa resta la riga dell\'inclinazione, con il tasto destro', () => {
@@ -90,4 +103,14 @@ test('inclinazione: torna dritta lasciando il tasto destro, ferma tenendolo prem
   assert.equal(tiltGain(0.001), 0.4, 'vicino al bordo la corsa del mouse è più lunga');
   assert.equal(tiltGain(-0.01), 1);
   assert.equal(tiltGain(undefined), 1);
+});
+
+test('lancio a carica e tocco di R', () => {
+  assert.equal(throwSpeed(0), 1.5);
+  assert.equal(throwSpeed(0.5), 4.75);
+  assert.equal(throwSpeed(3), 8, 'oltre un secondo non cresce più');
+  assert.equal(throwSpeed(-1), 1.5);
+  assert.equal(isTap(0.1, 2), true);
+  assert.equal(isTap(0.3, 0), false, 'tenuto a lungo: non è un tocco');
+  assert.equal(isTap(0.1, 10), false, 'con il mouse mosso si stava ruotando');
 });

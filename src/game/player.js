@@ -23,6 +23,8 @@ export class Player {
     this.camT = 1;
     this.benchCam = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
     this.onTeleport = null; // (da, a) → il gioco libera il posto (sgabelli spinti lì) e porta con sé l'oggetto in mano
+    this.holding = false; // con qualcosa in mano Maiusc è la manipolazione precisa: si corre solo con Spazio
+    this.precise = false; // manipolazione precisa in corso: si sta fermi (il mouse sposta l'oggetto, non lo sguardo)
     const start = { x: 0.15, y: HALF + RADIUS + 0.02, z: 0.4 };
     this.cc = physics.player(start, RADIUS, HALF);
   }
@@ -98,14 +100,15 @@ export class Player {
     const { controller, body } = this.cc;
     let mx = 0;
     let mz = 0;
-    if (this.mode === 'walk' && !blocked) {
+    if (this.mode === 'walk' && !blocked && !this.precise) {
       if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) mz -= 1;
       if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) mz += 1;
       if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) mx -= 1;
       if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) mx += 1;
     }
     const len = Math.hypot(mx, mz) || 1;
-    const speed = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') ? RUN : WALK;
+    const shift = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+    const speed = this.keys.has('Space') || (shift && !this.holding) ? RUN : WALK;
     const sin = Math.sin(this.yaw);
     const cos = Math.cos(this.yaw);
     const vx = ((mx * cos + mz * sin) / len) * speed;

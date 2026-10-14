@@ -450,6 +450,17 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
 - **Fisica vera**: gli oggetti si prendono, si posano dove si guarda, si lanciano, cadono e si rovesciano; la vetreria che
   urta oltre ~3,3 m/s si rompe (un becher che cade dal bancone sì, uno posato no). Gli sgabelli si spingono camminandoci
   contro; la vetreria a terra non ferma il giocatore.
+- **Maneggiare gli oggetti**: con un oggetto in mano, dove lo si poserà compare la sua sagoma, nel punto d'appoggio vero
+  (l'ingombro dell'oggetto calato sul piano): verde se lì si può, rossa se il piano è inclinato o mobile, troppo lontano
+  (oltre 0,6 m), a sbalzo o già occupato. Al clic l'oggetto scivola al suo posto in meno di 0,3 s invece di comparirci.
+  `Q` tenuto carica il lancio (da 1,5 a 8 m/s in un secondo, con un anello attorno al mirino; anche il tasto centrale).
+  `R` tenuto ruota l'oggetto con il mouse (con la rotella a scatti di 15°; un tocco lo raddrizza): per un recipiente gira
+  il beccuccio, quindi il lato da cui esce il getto, e la rotazione resta quando lo si riprende. `Maiusc` tenuto con un
+  oggetto in mano apre la manipolazione precisa: lo sguardo e i passi si fermano, il mouse sposta l'oggetto (fino a 35 cm),
+  la rotella lo alza o lo abbassa di 1 cm, il tasto destro versa goccia a goccia e il clic lo lascia lì fermo. Si corre
+  con `Spazio` (a mani vuote anche con `Maiusc`). Al lavandino, `E` tenuto porta il recipiente sotto il rubinetto e lo
+  riempie finché non si lascia (la rotella regola il getto da 5 a 50 mL/s); lavare, che svuota nello scarico, è
+  `Maiusc+E`.
 - **Versare**: tenendo premuto il tasto destro e muovendo il mouse si inclina il recipiente; lasciando il tasto torna
   dritto e smette di versare, e di lato si corregge la mira. Il livello del liquido resta orizzontale (quantile di ~300
   punti campionati nel volume interno) e il liquido esce dal punto più basso del bordo con la portata di uno stramazzo
@@ -537,7 +548,7 @@ src/
     data/reactions.js libreria delle reazioni
   game/               simulatore di laboratorio (il gioco)
     game-view.js      interfaccia: menu, HUD (legenda, finestrelle accanto agli oggetti), finestre, comandi; carica Rapier
-    controls.js       legenda dei comandi in basso a destra (funzione pura) e inclinazione del recipiente
+    controls.js       legenda dei comandi in basso a destra (funzione pura), inclinazione, lancio a carica, tocco di R
     game.js           il gioco: oggetti, presa e versamento, strumenti, calore, incidenti, rifiuti, esercitazioni
     mixture.js        chimica dei contenitori: fasi, pH, colore, solubilità, cristallizzazione, reazioni, calore
     reagents.js       solubilità, acidi e basi, idrati, gas tossici, metalli pesanti, reagenti dello scaffale, prezzi
@@ -608,9 +619,11 @@ build/icon.png        icona usata da electron-builder
 | `[` / `]`, rotella | (sandbox) pennello più piccolo / più grande |
 | clic destro / centrale | (sandbox) cancella / preleva la sostanza |
 | `Maiusc` + clic | (sandbox) linea dal punto precedente |
-| `W A S D`, mouse | (simulatore) cammina e guarda (`Maiusc`: corri) |
-| clic / tasto destro + mouse | (simulatore) prendi o posa / inclina per versare (lasciando il tasto torna dritto) |
-| `E` / `Maiusc+E` | (simulatore) usa: manopole, rubinetto, tara, cappa, campanello; con gli strumenti spatola, ansa, carta, cartina, estintore (un pizzico con la spatola) |
-| `Q` / rotella | (simulatore) lancia / distanza o altezza dell'oggetto |
+| `W A S D`, mouse | (simulatore) cammina e guarda (`Spazio`: corri; a mani vuote anche `Maiusc`) |
+| clic / tasto destro + mouse | (simulatore) prendi o posa (la sagoma mostra dove) / inclina per versare (lasciando il tasto torna dritto) |
+| `E` / `Maiusc+E` | (simulatore) usa: manopole, rubinetto, tara, cappa, campanello; con gli strumenti spatola, ansa, carta, cartina, estintore (un pizzico con la spatola); con un recipiente al lavandino `E` tenuto riempie, `Maiusc+E` lava |
+| `Q` (tenuto) / rotella | (simulatore) carica e lancia (anche il tasto centrale) / distanza o altezza dell'oggetto |
+| `R` (tenuto) + mouse | (simulatore) ruota l'oggetto in mano (rotella: scatti di 15°; un tocco lo raddrizza) |
+| `Maiusc` (tenuto) | (simulatore) con un oggetto in mano: manipolazione precisa (mouse sposta, rotella 1 cm, clic lo lascia fermo) |
 | `Tab` / `A` `D` | (simulatore) vista del bancone / postazione precedente o successiva |
 | `I` / `L` / `H` / `Esc` | (simulatore) finestrelle accanto agli oggetti / legenda dei comandi / tutti i comandi / pausa |

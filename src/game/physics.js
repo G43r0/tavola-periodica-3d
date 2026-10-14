@@ -182,7 +182,46 @@ export class Physics {
     const p = ray.pointAt(hit.timeOfImpact);
     return { toi: hit.timeOfImpact, point: { x: p.x, y: p.y, z: p.z }, normal: hit.normal, collider: hit.collider, owner: this.ownerOf(hit.collider) };
   }
+
+  /** Forma di Rapier per un ingombro: cilindro verticale { r, hh } o scatola { hx, hh, hz }, scalata di `k`. */
+  footShape(foot, k = 1) {
+    const { R } = this;
+    return foot.r !== undefined ? new R.Cylinder(foot.hh * k, foot.r * k) : new R.Cuboid(foot.hx * k, foot.hh * k, foot.hz * k);
+  }
+
+  /**
+   * Dove si fermerebbe, scendendo da `fromY`, l'ingombro `foot` (cilindro { r, hh } o scatola { hx, hh, hz }, girato di
+   * `rot`) centrato in (x, z): il suo centro a riposo, la normale della superficie toccata e il collisore. Il giocatore
+   * non conta. In Rapier 0.19.3 il campo è time_of_impact (per i raggi timeOfImpact); normal2 è la normale dell'altro
+   * collisore, in coordinate del mondo.
+   * @returns {{y: number, normal: {x,y,z}, collider: object}|null}
+   */
+  restHeight(foot, x, z, fromY, { rot = IDENTITY, exclude = null, maxDrop = 1.5 } = {}) {
+    const { R } = this;
+    const hit = this.world.castShape({ x, y: fromY, z }, rot, { x: 0, y: -1, z: 0 }, this.footShape(foot), 0, maxDrop, true, R.QueryFilterFlags.EXCLUDE_KINEMATIC, GROUPS.item, undefined, exclude ?? undefined);
+    if (!hit) return null;
+    // la normale della superficie su cui appoggia, girata verso l'alto
+    const n = hit.normal2;
+    const up = n.y < 0 ? { x: -n.x, y: -n.y, z: -n.z } : { x: n.x, y: n.y, z: n.z };
+    return { y: fromY - hit.time_of_impact, normal: up, collider: hit.collider };
+  }
+
+  /**
+   * L'ingombro `foot` centrato in `pos` (girato di `rot`) tocca qualcosa? La forma è ridotta al 95%, così un oggetto
+   * appoggiato su un piano non «tocca» il piano. predicate: (collisore) → false per ignorarlo.
+   */
+  overlaps(foot, pos, { rot = IDENTITY, exclude = null, predicate = null } = {}) {
+    const { R } = this;
+    let found = false;
+    this.world.intersectionsWithShape(pos, rot, this.footShape(foot, 0.95), () => {
+      found = true;
+      return false;
+    }, R.QueryFilterFlags.EXCLUDE_KINEMATIC, GROUPS.item, undefined, exclude ?? undefined, predicate ?? undefined);
+    return found;
+  }
 }
+
+const IDENTITY = { x: 0, y: 0, z: 0, w: 1 };
 
 function quatY(a) {
   return { x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) };

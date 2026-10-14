@@ -42,6 +42,13 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
     con la carta: finché resta conta nel disordine della valutazione. L'aiuto (`H`) spiega legenda, finestrelle e anello.
   - Sgabelli spingibili: il giocatore li sposta camminandoci contro e non ci resta più bloccato nel corridoio tra i
     banconi; tornano al loro posto a ogni partita. La vetreria a terra non ferma più il giocatore.
+  - Maneggiare gli oggetti come in *Cooking Simulator*: una sagoma verde (o rossa) mostra dove si poserà l'oggetto in
+    mano, nel punto d'appoggio vero, e al clic l'oggetto ci scivola in meno di 0,3 s; `Q` tenuto (o il tasto centrale)
+    carica il lancio, con un anello attorno al mirino; `R` tenuto ruota l'oggetto (rotella: scatti di 15°, un tocco lo
+    raddrizza), anche il beccuccio da cui si versa; `Maiusc` tenuto con un oggetto in mano apre la manipolazione precisa
+    (il mouse sposta l'oggetto, la rotella lo alza di 1 cm, il clic lo lascia fermo, si versa goccia a goccia); si corre
+    con `Spazio`. Al lavandino `E` tenuto riempie il recipiente sotto il rubinetto (la rotella regola il getto) e lavare
+    passa a `Maiusc+E`, così non si svuota più un recipiente per sbaglio.
 - **Preset grafici** (pulsante con lo schermo nella barra in alto): *Semplice* per i computer poco potenti (niente
   post-processing, meno segmenti e punti, sandbox senza bagliore, niente sfocature e animazioni continue
   nell'interfaccia), *Medio* (la grafica di prima, predefinito) e *Professionale*: sovracampionamento, MSAA 4×, tone
