@@ -1,6 +1,6 @@
 # Gioco base — piano
 
-Data: 2026-10-14 · Stato: **in corso — G1 e G2 completate** · Parte dal prototipo del simulatore
+Data: 2026-10-14 · Stato: **in corso — G1, G2 e G3 completate** · Parte dal prototipo del simulatore
 ([design](2026-10-13-simulatore-laboratorio-design.md), branch `ccr-9fd85180-nfjaik`, fase 9)
 
 ## Da dove partiamo
@@ -214,7 +214,7 @@ Ogni fase è giocabile da sola, con test e screenshot nei tre preset prima di pa
 |---|---|---|
 | **G1** ✅ | Luce, colori della stanza, tone mapping neutro, vetro leggibile, ombre di contatto | — |
 | **G2** ✅ | Barattoli e bottiglie nuovi (vetro chiaro, ambrato, plastica); tappi colorati; etichette GHS; scaffale ordinato | G1 |
-| **G3** | Reazioni al centro: effetti osservabili, equazione nella finestrella, quaderno, condizioni nuove, scaffale ampliato con test di copertura, vista molecolare | G2 |
+| **G3** ✅ | Reazioni al centro: effetti osservabili, equazione nella finestrella, quaderno, condizioni nuove, scaffale ampliato con test di copertura, vista molecolare | G2 |
 | **G4** | Strumenti nuovi (buretta, pipetta, filtrazione, crogiolo, termometro, pH-metro, elettrolisi, distillazione) | G3 |
 | **G5** | Libro «Come si fa»: lettore e riquadro, strumenti, tecniche, sicurezza, pagine dei 118 elementi, ricette generate con le vignette SVG, «Prepara sul banco», «Segui la ricetta», test che esegue ogni ricetta | G4 |
 | **G6** | Carriera: capitoli 0–4 (~25 esercitazioni) scritti come dati, pagine del libro sbloccate, relazione, negozio, reputazione, salvataggi versionati | G5 |
@@ -257,6 +257,42 @@ Verificato con gli screenshot della stessa inquadratura (prima persona, bancone,
 - La soluzione di HCl si chiama «Acido cloridrico» sull'etichetta (non «Cloruro di idrogeno», il gas).
 - Le esercitazioni riconoscono i contenitori dei reagenti dal segno `stock`, non più dal nome del tipo.
 - Rimandati: bombole (G4, con gli strumenti per i gas), ampolle sotto olio (G3, con i metalli alcalini sullo scaffale).
+
+### G3 — fatto
+
+- **Segnali osservabili** (`src/game/signals.js`, puro e testato): per ogni reazione, dai dati, i gas che si liberano (e
+  se si vedono: Cl₂, Br₂, I₂, NO₂), i prodotti insolubili (precipitato o metallo che si deposita), i solidi che si
+  consumano, il colore della soluzione prima e dopo, il calore (si scalda molto, si scalda, si raffredda), fiamma e luce.
+  L'equazione con gli stati fisici (s, l, g, aq) e il ΔH°.
+- **Effetti nel gioco**: bolle che salgono dal fondo, più fitte quanto più è veloce la reazione; fiocchi del colore del
+  precipitato che scendono; colori del liquido che cambiano in pochi decimi di secondo; gas colorati; fiammella del
+  potassio (e di Rb, Cs) sull'acqua.
+- **Finestrella del contenitore**: le ultime reazioni con equazione, ΔH° e cosa si vede; **perché non reagisce?** (nel
+  Laboratorio libero e nella chimica semplificata): la condizione che manca (calore con la temperatura, fiamma,
+  catalizzatore, luce, acqua), il reagente non sciolto o l'unico che manca, la serie di attività (potenziali standard
+  del CRC Handbook in `reagents.js`), le reazioni che il simulatore non fa (corrente, UV, vapore, equilibri, organismi).
+- **Quaderno** (`src/game/notebook.js`, `N`): salvato con la versione nel salvataggio del gioco; 1349 pagine nei 14
+  gruppi, percentuale tra le 1220 che il simulatore sa fare; le pagine scoperte hanno equazione, ΔH°, condizioni, cosa si
+  è visto, dove e quando, e il collegamento al laboratorio molecolare (che si apre sopra il gioco); le altre sono
+  raggruppate per sottogruppo, con il motivo per quelle che il simulatore non fa. Le combustioni nel fuoco contano.
+- **Condizioni nuove**: la lampada a luce forte sul bancone A fa avvenire le 16 reazioni fotochimiche del catalogo (lente:
+  circa l'1 % al minuto, il gas è in tracce). Le reazioni che chiedono una scintilla si innescano già con la fiamma del
+  Bunsen; restano fuori corrente e scarica: le elettrolisi (con l'alimentatore, G4), i gas nobili con il fluoro, l'ozono
+  e la pila al piombo.
+- **Velocità**: fattore di Arrhenius (Ea ≈ 50 kJ/mol) per le reazioni dei solidi e quelle lente; quelle tra ioni sciolti
+  restano istantanee. Le polveri più veloci dei pezzi restano da fare (serve la granulometria nei dati).
+- **ΔH°**: 176 entalpie di formazione tabulate (NBS, CRC, NIST) in `src/lab/data/formation-enthalpies.js`: il ΔH° c'è per
+  1045 reazioni del catalogo invece di 599, anche nel laboratorio molecolare e nella sandbox. La neutralizzazione vale
+  −55,8 kJ per mole d'acqua solo con le basi forti.
+- **Scaffale e armadio**: sodio, potassio e litio sullo scaffale, sotto olio di paraffina (barattolo `jarOil`, chiuso
+  all'aria; la spatola prende il metallo e lascia l'olio). L'**armadio della scuola** (`CABINET`, 47 reagenti d'uso) è nel
+  magazzino del Laboratorio libero, diviso per famiglia. `src/game/coverage.js` calcola le reazioni realizzabili, anche a
+  catena con i prodotti che restano nel contenitore: 144 con lo scaffale, 383 con l'armadio, 1166 con tutto il magazzino
+  (`node scripts/coverage.mjs`); un test fissa il minimo per gruppo. Da circa 120 reagenti previsti ne sono bastati 67
+  per triplicare la copertura; i pericoli dell'armadio sono dedotti dai dati: quelli delle schede di sicurezza arrivano
+  con i capitoli della Carriera che li sbloccano (G6).
+- **Richieste in corso d'opera**: camminata più veloce (3 m/s, corsa 5,2 m/s), campo visivo regolabile (55°–100°, nel
+  menu e nella pausa, salvato), barattoli +15 % e bottiglie +10 % (legenda dello scaffale alzata).
 
 ## Verifiche
 

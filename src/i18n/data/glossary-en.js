@@ -623,8 +623,21 @@ export const GLOSSARY_EN = {
     t: 'Laboratory simulator',
     w: 'simulator|laboratory simulator|lab game',
     d: 'A first-person game in the school chemistry lab, inspired by cooking simulators: pick up beakers and bottles, weigh on the balance, pour by tilting the vessel, heat on the hot plate or the Bunsen burner and hand in your preparation at the teacher\'s desk. Exercises are graded with stars and money; glass breaks, liquids spill, toxic gases belong under the fume hood and waste in the right container. The chemistry is the real one of the library (554 substances and the catalogue reactions), in a realistic or simplified version.',
-    k: [['W A S D', 'walk'], ['Click', 'pick up / put down'], ['Hold left + mouse', 'pour'], ['E', 'use'], ['Hold middle button', 'throw'], ['Tab', 'bench view'], ['Esc', 'pause']],
-    s: ['term.reaction', 'ui.lab', 'ui.gameStock'],
+    k: [['W A S D', 'walk'], ['Click', 'pick up / put down'], ['Hold left + mouse', 'pour'], ['E', 'use'], ['Hold middle button', 'throw'], ['Tab', 'bench view'], ['N', 'notebook'], ['Esc', 'pause']],
+    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook'],
+  },
+  'ui.gameNotebook': {
+    t: 'Lab notebook',
+    w: 'notebook|lab notebook|discovered reactions',
+    d: 'In the simulator every catalogue reaction you see happen for the first time goes into the notebook: the equation with the physical states, solid (s), liquid (l), gas (g) and dissolved in water (aq); ΔH°, negative when the reaction releases heat; what was seen (bubbles, precipitate, colour change, heat) and where you discovered it. The pages are split into the 14 catalogue groups with the percentage discovered; the ones the simulator cannot do yet (electric current, UV light, steam, equilibria, living things) say why. From each page the reaction opens in the molecular lab. The notebook is kept from one game to the next. When a mixture does not react, the vessel popup explains what is missing: heat, a flame, a catalyst, light, water, a reactant, or that the metal is less active (activity series).',
+    k: [['N', 'open the notebook']],
+    s: ['term.reaction', 'term.activitySeries', 'ui.game'],
+  },
+  'term.activitySeries': {
+    t: 'Activity series of metals',
+    w: 'activity series|electrochemical series|standard potential|reduction potential|E°',
+    d: 'Metals ordered by how easily they give up electrons, from the standard reduction potential E° (in volts): lithium −3.04, potassium −2.93, sodium −2.71, magnesium −2.37, aluminium −1.66, zinc −0.76, iron −0.45, lead −0.13, hydrogen 0, copper +0.34, silver +0.80, gold +1.50. A metal displaces from their salts the metals with a higher potential (zinc in copper sulfate gets coated with copper, copper in zinc sulfate does not) and releases hydrogen from acids like HCl only if its potential is negative: that is why copper and silver do not react with hydrochloric acid, while oxidising acids such as nitric acid dissolve them.',
+    s: ['term.reaction', 'ui.gameNotebook'],
   },
   'ui.gameStock': {
     t: 'Cap colour',

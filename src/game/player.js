@@ -6,9 +6,9 @@ import { STATIONS } from './room.js';
 const EYE = 1.62;
 const RADIUS = 0.28;
 const HALF = 0.55; // mezza altezza del cilindro della capsula: altezza totale 2·(0,55 + 0,28) = 1,66 m
-const WALK = 2.1;
-const RUN = 3.6;
-const CROUCH = 1.1; // m/s accovacciati
+const WALK = 3.0; // m/s: più svelti del passo vero (≈ 1,4 m/s), così l'aula (10 m) si attraversa in poco più di 3 s
+const RUN = 5.2;
+const CROUCH = 1.6; // m/s accovacciati
 const CROUCH_DROP = 0.55; // m: quanto si abbassano gli occhi accovacciandosi
 
 export class Player {

@@ -42,3 +42,13 @@ test('testi del simulatore: finestrelle degli elementi fissi (nome di ogni eleme
   for (const k of ['hotplate', 'bunsen', 'sink', 'balance', 'hood', 'shower', 'bell', 'store', 'towels', 'strips', 'bin', 'tray']) assert.ok(has(`fx_${k}`), `fx_${k}`);
   for (const b of BINS.filter((b) => b !== 'sink')) assert.ok(has(`binNote_${b}`), `binNote_${b}`);
 });
+
+test('testi del simulatore: reazioni (cosa si vede, perché non reagisce, quaderno) e lampada', () => {
+  for (const k of ['gas', 'coloredGas', 'precipitate', 'deposit', 'dissolves', 'colorChange', 'hot', 'warm', 'cold', 'fire']) assert.ok(has(`tag_${k}`), `tag_${k}`);
+  const whys = ['heat', 'tooHot', 'flame', 'shock', 'light', 'catalyst', 'water', 'undissolved', 'missing', 'noble', 'lessActive', 'electrolysis', 'discharge', 'steam', 'equilibrium', 'catalyst-unknown', 'living'];
+  const src = fs.readFileSync(new URL('../../src/game/signals.js', import.meta.url), 'utf8');
+  for (const w of src.match(/const WHY_ORDER = \[([^\]]+)\]/)[1].match(/'([\w-]+)'/g).map((x) => x.slice(1, -1))) assert.ok(whys.includes(w), `motivo senza testo: ${w}`);
+  for (const w of whys) assert.ok(has(`why_${w}`), `why_${w}`);
+  for (const w of ['electrolysis', 'discharge', 'steam', 'equilibrium', 'catalyst', 'living', 'other']) assert.ok(has(`nbWhy_${w}`), `nbWhy_${w}`);
+  assert.ok(has('fx_lamp'));
+});

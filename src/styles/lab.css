@@ -9,6 +9,10 @@
   color: var(--text-0);
   background: #04070c;
 }
+/* aperto dal quaderno del simulatore di laboratorio: sopra il gioco */
+.lab.is-above {
+  z-index: 80;
+}
 .lab.is-entering {
   animation: lab-in 600ms var(--ease-out) both;
 }

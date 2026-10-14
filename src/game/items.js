@@ -12,7 +12,8 @@ const cyl = (r, y0, y1) => [[r, y0], [r, y1]];
  * Definizioni. container: ha un contenuto; profile: volume interno; outer: raggio esterno e altezza; grad: tacche
  * (mL tra due tacche, mL della prima scritta); flow: portata relativa del versamento (collo stretto < 1);
  * drops: versa a gocce; mass in kg; breakable: si rompe negli urti forti; stock: contenitore di un reagente del
- * magazzino (con tappo ed etichetta); brown: vetro ambrato; plastic / opacity: plastica (HDPE) e quanto lascia vedere.
+ * magazzino (con tappo ed etichetta); brown: vetro ambrato; plastic / opacity: plastica (HDPE) e quanto lascia vedere;
+ * oil: il contenuto sta sotto olio (metalli alcalini), al riparo dall'aria.
  */
 export const DEFS = {
   beaker100: { container: true, glass: true, profile: cyl(0.024, 0.003, 0.07), outer: [0.0255, 0.07], grad: [10, 20, 100], mass: 0.06, breakable: true, spout: true },
@@ -56,6 +57,11 @@ export const DEFS = {
     container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0376, 0.088], label: true, flow: 1.2, wide: true, stock: true, brown: true,
     profile: [[0.036, 0.005], [0.036, 0.07], [0.031, 0.078], [0.031, 0.088]],
   },
+  // barattolo di vetro con l'olio di paraffina per i metalli alcalini (Na, K, Li)
+  jarOil: {
+    container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0376, 0.088], label: true, flow: 1.2, wide: true, stock: true, oil: true,
+    profile: [[0.036, 0.005], [0.036, 0.07], [0.031, 0.078], [0.031, 0.088]],
+  },
   spatula: { tool: true, mass: 0.03, size: [0.19, 0.004, 0.012] },
   loop: { tool: true, mass: 0.02, size: [0.21, 0.008, 0.008] },
   towel: { tool: true, mass: 0.004, size: [0.07, 0.018, 0.06], absorbs: 40 },
@@ -63,6 +69,16 @@ export const DEFS = {
   extinguisher: { tool: true, mass: 4, size: [0.075, 0.5, 0.075] },
   shards: { tool: true, mass: 0.05, size: [0.07, 0.01, 0.07] },
 };
+
+// barattoli e bottiglie dei reagenti un po' più grandi del vero (+15 % e +10 %): sullo scaffale si riconoscono e si
+// prendono meglio, e l'etichetta si legge da più lontano
+const enlarge = (def, k) => {
+  def.profile = def.profile.map(([r, y]) => [r * k, y * k]);
+  def.outer = def.outer.map((x) => x * k);
+  def.mass *= k * k;
+};
+for (const kind of ['jar', 'jarGlass', 'jarAmber', 'jarOil']) enlarge(DEFS[kind], 1.15);
+for (const kind of ['bottle', 'bottleClear', 'bottlePE']) enlarge(DEFS[kind], 1.1);
 
 for (const def of Object.values(DEFS)) {
   if (!def.container) continue;

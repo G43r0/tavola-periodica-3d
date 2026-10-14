@@ -71,12 +71,19 @@ const strongAcidBase = (ctx, sid) => {
   return Boolean(ab?.sa || ab?.sb);
 };
 
-/** Contenitore: vetro chiaro, vetro ambrato per ciò che la luce decompone, plastica (HDPE) per le basi forti e HF. */
+/** Metalli alcalini: si conservano sotto olio (con l'aria si ossidano, con l'umidità liberano idrogeno). */
+export const UNDER_OIL = new Set(['Li', 'Na', 'K', 'Rb', 'Cs']);
+
+/**
+ * Contenitore: vetro chiaro, vetro ambrato per ciò che la luce decompone, plastica (HDPE) per le basi forti e HF,
+ * barattolo con l'olio per i metalli alcalini.
+ */
 export function containerFor(ctx, r) {
   if (r.water) return 'washbottle';
   if (r.indicator) return 'dropper';
   const sid = mainOf(ctx, r);
   const key = ctx.sub(sid)?.key;
+  if (formOf(r) === 'solid' && ctx.sub(sid)?.kind === 'element' && UNDER_OIL.has(ctx.sub(sid).symbol)) return 'jarOil';
   const base = ctx.acidBase.get(sid)?.sb;
   const dark = LIGHT_SENSITIVE.includes(key) || LIGHT_SENSITIVE.includes(LIBRARY_KEY[key]);
   if (formOf(r) === 'solid') return base ? 'jar' : dark ? 'jarAmber' : 'jarGlass';

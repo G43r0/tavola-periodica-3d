@@ -440,8 +440,9 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
 - **Chimica** scelta all'inizio: *realistica* (si legge la bilancia, la graduazione e le etichette; la spatola prende
   quantità variabili; tolleranze strette) o *semplificata* (un cucchiaino = 1 g, quantità e pH sempre visibili,
   tolleranze larghe).
-- **Due visuali**: prima persona (`W A S D` e mouse) e vista dall'alto del bancone (`Tab`; `A`/`D` cambia postazione:
-  bancone, scaffale, lavandino, cappa, cattedra, rifiuti; l'oggetto in mano viaggia con il giocatore).
+- **Due visuali**: prima persona (`W A S D` e mouse, 3 m/s camminando e 5,2 correndo) e vista dall'alto del bancone
+  (`Tab`; `A`/`D` cambia postazione: bancone, scaffale, lavandino, cappa, cattedra, rifiuti; l'oggetto in mano viaggia
+  con il giocatore). Il campo visivo (da 55° a 100°) si regola nel menu e nella pausa.
 - **Interfaccia come in *Cooking Simulator***: in basso a destra una legenda piccola (icona del tasto e azione) mostra
   sempre i comandi del momento, cambia con l'oggetto in mano e con ciò che si guarda, attenua le azioni che lì non
   funzionano e illumina il tasto premuto (`L` la nasconde). Le informazioni importanti sono in finestrelle accanto agli
@@ -471,7 +472,8 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
   sugli ostacoli (il bordo di un altro becher); il liquido arriva quando il getto tocca il bersaglio.
 - **Strumenti**: becher da 100 e 250 mL, beuta, cilindro graduato (tacche da 1 mL), bottiglie di reagenti con etichetta e
   pittogrammi, spruzzetta di acqua distillata, contagocce di fenolftaleina, barattoli, spatola (un cucchiaino o un pizzico),
-  bilancia con tara, piastra riscaldante con agitatore (5 livelli), becco Bunsen con treppiede e reticella, ansa di
+  bilancia con tara, piastra riscaldante con agitatore (5 livelli), becco Bunsen con treppiede e reticella, lampada a luce
+  forte per le reazioni fotochimiche, ansa di
   nichel-cromo per il saggio alla fiamma, cartine indicatrici universali, carta assorbente, lavandino con rubinetto,
   cappa aspirante, doccia di emergenza, estintore a CO₂, contenitori dei rifiuti, vassoio delle consegne e campanello.
 - **Reagenti**: ogni reagente è nel suo contenitore, scelto dai dati (`src/game/stock.js`): barattoli di vetro, di vetro
@@ -480,7 +482,27 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
   (rosso acidi, blu basi, bianco sali e inorganici, giallo ossidanti, grigio metalli, verde organici, viola indicatori,
   azzurro acqua), e si toglie mentre si usa il reagente. L'etichetta riporta nome, formula, concentrazione, avvertenza
   («Pericolo» / «Attenzione») e i pittogrammi GHS: quelli delle schede di sicurezza per i reagenti dello scaffale, dedotti
-  dai dati (indicativi) per le altre sostanze del magazzino.
+  dai dati (indicativi) per le altre sostanze del magazzino. Barattoli e bottiglie sono un po' più grandi del vero (+15 % e
+  +10 %), per riconoscerli e prenderli meglio. Sodio, potassio e litio stanno sotto olio di paraffina (la spatola prende
+  il pezzetto di metallo e lascia l'olio). Nel magazzino del Laboratorio libero, oltre alle 554 sostanze, c'è l'**armadio
+  della scuola**: 47 reagenti d'uso (acidi e basi 1 M, sali 0,1 M, candeggina, acqua ossigenata 3 %, metalli, ossidi,
+  carbonati…) divisi per famiglia con il colore del tappo. Con lo scaffale si possono fare 383 reazioni del catalogo
+  (`node scripts/coverage.mjs` dà la tabella per gruppo; un test ne fissa il minimo).
+- **Reazioni al centro**: ogni reazione si vede. Il gas sale in bolle dal fondo (Zn + HCl, bicarbonato e aceto), i gas
+  colorati escono del loro colore (NO₂ bruno, Cl₂ giallo-verde), il precipitato scende in fiocchi del suo colore, il
+  colore della soluzione cambia in pochi decimi di secondo, il potassio nell'acqua fa la fiammella lilla. La finestrella
+  del contenitore mostra le reazioni appena avvenute con l'equazione bilanciata e gli stati fisici («Zn(s) + 2 HCl(aq) →
+  ZnCl₂(aq) + H₂(g)»), il ΔH° e che cosa si osserva; se non succede niente, nel Laboratorio libero e nella chimica
+  semplificata spiega **perché**: manca il calore (con la temperatura), la fiamma, il catalizzatore (H₂O₂ vuole MnO₂),
+  la luce, l'acqua o un reagente (KMnO₄ e Fe²⁺ vogliono l'acido solforico), oppure il metallo è meno attivo (il rame non
+  sposta l'idrogeno dall'HCl: E° = +0,34 V), o la reazione chiede corrente, raggi UV, vapore. La temperatura accelera le
+  reazioni lente (fattore di Arrhenius, circa il doppio ogni 10 °C). Le entalpie di formazione di 176 sostanze comuni
+  (tabelle NBS e CRC) danno il ΔH° a 1045 reazioni del catalogo invece di 599, anche nel laboratorio molecolare e nella
+  sandbox.
+- **Quaderno di laboratorio** (`N`, o dalla pausa e dal menu): ogni reazione osservata la prima volta vi resta scritta,
+  tra una partita e l'altra, con l'equazione, il ΔH°, che cosa si è visto e quando; le 1349 pagine sono divise nei 14
+  gruppi del catalogo con la percentuale scoperta tra le 1220 che il simulatore sa fare, e quelle che non sa fare dicono
+  perché. Ogni pagina si apre nel laboratorio molecolare.
 - **Grafica**: aula in toni medi (pareti verde salvia, mobili grigio ardesia, banconi neri) e luce moderata, perché la
   vetreria e i reagenti si stacchino dallo sfondo; vetro limpido al centro e più chiaro sui bordi, con il labbro della
   bocca; ombra di contatto sotto ogni oggetto; tone mapping neutro, che conserva i colori veri delle soluzioni.
@@ -555,19 +577,25 @@ src/
     data/reactions-catalogo.js le 1349 reazioni del catalogo (ordine, gruppi, condizioni)
     data/molecules.js libreria di molecole, ioni e composti ionici (con ΔHf°)
     data/molecules-reazioni.js sostanze aggiunte per il catalogo delle reazioni (ioni monoatomici, complessi, silice…)
+    data/formation-enthalpies.js ΔHf° tabulati (NBS, CRC, NIST) delle sostanze del catalogo che ne erano senza
     data/reactions.js libreria delle reazioni
   game/               simulatore di laboratorio (il gioco)
     game-view.js      interfaccia: menu, HUD (legenda, finestrelle accanto agli oggetti), finestre, comandi; carica Rapier
     controls.js       legenda dei comandi in basso a destra (funzione pura), inclinazione, lancio a carica, clic o trascinamento
     game.js           il gioco: oggetti, presa e versamento, strumenti, calore, incidenti, rifiuti, esercitazioni
     mixture.js        chimica dei contenitori: fasi, pH, colore, solubilità, cristallizzazione, reazioni, calore
-    reagents.js       solubilità, acidi e basi, idrati, gas tossici, metalli pesanti, reagenti dello scaffale, prezzi
+    reagents.js       solubilità, acidi e basi, idrati, gas tossici, metalli pesanti, potenziali standard, reagenti dello scaffale e dell'armadio, prezzi
+    stock.js          contenitore, famiglia (colore del tappo) e pericoli dell'etichetta di ogni reagente
+    ghs.js            i nove pittogrammi GHS in tracciati SVG
+    signals.js        segnali osservabili delle reazioni, equazione con gli stati fisici, «perché non reagisce?»
+    notebook.js       quaderno di laboratorio: reazioni scoperte, salvataggio, pagine per gruppo
+    coverage.js       reazioni realizzabili con un insieme di reagenti e le condizioni del laboratorio
     orders.js         le esercitazioni: preparazione del banco, passi, valutazione, stelle e soldi
     physics.js        Rapier: mondo a passo fisso, corpi, urti (rottura del vetro), raggi, controllore del personaggio
     room.js           l'aula di chimica: banconi, lavandino, cappa, cattedra, lavagna, rifiuti, doccia, luci
     items.js          vetreria e strumenti: profili reali, collisori, graduazioni, etichette
     liquid.js         livello del liquido a qualunque inclinazione, versamento, shader del liquido
-    effects.js        gocce, vapore, fumo, gas, fiamme, pozze
+    effects.js        gocce, bolle e fiocchi di precipitato, vapore, fumo, gas, fiamme, pozze
     player.js         camminata in prima persona e camera della vista del bancone
     game-strings.js   testi del simulatore nelle tre lingue
   sandbox/            sandbox degli elementi
@@ -585,11 +613,12 @@ tests/lab/            test del motore chimico (npm test)
 tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo, strumenti)
 tests/i18n/           test delle lingue e del glossario della modalità Spiega
 tests/gfx/            test dei preset grafici e dell'aspetto reale degli elementi
-tests/game/           test del simulatore (chimica dei contenitori, fisica, liquidi e getto, legenda, esercitazioni e valutazione)
+tests/game/           test del simulatore (chimica dei contenitori, segnali delle reazioni, quaderno, copertura, reagenti, fisica, liquidi e getto, legenda, esercitazioni e valutazione)
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json
   build-binding.mjs   genera binding-energies.json (X-ray Data Booklet)
+  coverage.mjs        tabella delle reazioni del simulatore realizzabili con scaffale, armadio e magazzino, per gruppo
   make-icon.mjs       genera build/icon.png (icona dell'app)
 data-sources/         dati di origine (PubChem + dati curati in italiano)
 build/icon.png        icona usata da electron-builder
@@ -638,3 +667,4 @@ build/icon.png        icona usata da electron-builder
 | `E` / `Maiusc+E` | (simulatore) pulisci e usa gli strumenti: spatola, ansa, carta, cartina, estintore (un pizzico con la spatola); con un recipiente agita, al lavandino lava, sui rifiuti svuota |
 | `Tab` / `A` `D` | (simulatore) vista del bancone / postazione precedente o successiva |
 | `I` / `L` / `H` / `Esc` | (simulatore) finestrelle accanto agli oggetti / legenda dei comandi / tutti i comandi / pausa |
+| `N` | (simulatore) quaderno di laboratorio: le reazioni scoperte |

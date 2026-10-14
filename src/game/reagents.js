@@ -118,7 +118,7 @@ export const PRICES = {
   solidPerGram: 0.04,
   solutionPerMl: 0.01,
   waterPerMl: 0.0005,
-  glass: { beaker100: 3, beaker250: 4, flask250: 6, cylinder100: 9, bottle: 6, bottleClear: 6, dropper: 4, jarGlass: 4, jarAmber: 5 },
+  glass: { beaker100: 3, beaker250: 4, flask250: 6, cylinder100: 9, bottle: 6, bottleClear: 6, dropper: 4, jarGlass: 4, jarAmber: 5, jarOil: 5 },
   fines: { wrongBin: 6, sinkHazard: 10, fire: 15, toxic: 12, explosion: 25, splash: 5, mess: 2 },
 };
 
@@ -132,6 +132,8 @@ export const PRICES = {
  * name: nome sull'etichetta, se diverso da quello della sostanza (HCl in acqua è l'acido cloridrico).
  */
 const HCL_AQ = { it: 'Acido cloridrico', en: 'Hydrochloric acid' };
+/** Nomi delle sostanze sciolte in acqua, se diversi da quelli della sostanza pura (HCl gas → acido cloridrico). */
+export const AQUEOUS_NAMES = { hcl: HCL_AQ };
 export const SHELF = {
   water: { water: true, ghs: [], h: [] },
   hcl01: { solute: 'hcl', molar: 0.1, name: HCL_AQ, ghs: ['GHS05'], h: ['H290'], signal: 'warning' },
@@ -150,10 +152,91 @@ export const SHELF = {
   nahco3: { solid: 'nahco3', ghs: [], h: [] },
   zn: { solid: 'Zn', ghs: ['GHS09'], h: ['H410'], signal: 'warning' },
   mg: { solid: 'Mg', ghs: ['GHS02'], h: ['H228', 'H251', 'H261'], signal: 'danger' },
+  // metalli alcalini: sotto olio di paraffina, che li separa dall'aria e dall'umidità; con l'acqua liberano idrogeno
+  na: { solid: 'Na', oil: true, ghs: ['GHS02', 'GHS05'], h: ['H260', 'H314'], signal: 'danger' },
+  k: { solid: 'K', oil: true, ghs: ['GHS02', 'GHS05'], h: ['H260', 'H314'], signal: 'danger' },
+  li: { solid: 'Li', oil: true, ghs: ['GHS02', 'GHS05'], h: ['H260', 'H314'], signal: 'danger' },
 };
+
+/**
+ * Armadio dei reagenti della scuola: le soluzioni, i solidi e i liquidi di un laboratorio scolastico, con le
+ * concentrazioni d'uso. Scelti per coprire le reazioni del catalogo che il simulatore sa fare: con lo scaffale se ne
+ * fanno 383, contro le 144 dello scaffale da solo (coverage.js; la tabella per gruppo con node scripts/coverage.mjs);
+ * un test ne fissa il minimo per gruppo. Nel Laboratorio libero si prendono dal magazzino; nella Carriera si
+ * sbloccheranno capitolo per capitolo. Contenitore, tappo ed etichetta li sceglie stock.js; i pericoli sono dedotti
+ * dai dati (indicativi), come per il magazzino.
+ */
+export const CABINET = {
+  // acidi
+  h2so4: { solute: 'h2so4', molar: 1 },
+  hno3: { solute: 'hno3', molar: 1 },
+  h3po4: { solute: 'h3po4', molar: 1 },
+  citric: { solid: 'acido-citrico' },
+  oxalic: { solid: 'acido-ossalico' },
+  // basi
+  nh3: { solute: 'nh3', molar: 1, name: { it: 'Ammoniaca', en: 'Ammonia solution' } },
+  koh: { solute: 'koh', molar: 1 },
+  limewater: { solute: 'caoh2', molar: 0.02, name: { it: 'Acqua di calce', en: 'Limewater' } },
+  // sali in soluzione
+  bacl2: { solute: 'bacl2', molar: 0.1 },
+  cacl2: { solute: 'cacl2', molar: 0.1 },
+  fecl3: { solute: 'fecl3', molar: 0.1 },
+  feso4: { solute: 'feso4', molar: 0.1 },
+  kbr: { solute: 'kbr', molar: 0.1 },
+  na2co3sol: { solute: 'na2co3', molar: 0.1 },
+  na2so4: { solute: 'na2so4', molar: 0.1 },
+  thio: { solute: 'na2s2o3', molar: 0.1 },
+  kscn: { solute: 'kscn', molar: 0.1 },
+  k2cro4: { solute: 'k2cro4', molar: 0.1 },
+  znso4: { solute: 'znso4', molar: 0.1 },
+  mgso4: { solute: 'mgso4', molar: 0.1 },
+  niso4: { solute: 'niso4', molar: 0.1 },
+  cocl2: { solute: 'cocl2', molar: 0.1 },
+  kmno4sol: { solute: 'kmno4', molar: 0.02 },
+  bleach: { solute: 'naclo', molar: 0.7, name: { it: 'Candeggina (ipoclorito di sodio)', en: 'Bleach (sodium hypochlorite)' } },
+  h2o2: { solute: 'h2o2', molar: 0.9, name: { it: 'Acqua ossigenata 3 %', en: 'Hydrogen peroxide 3 %' } },
+  // solidi
+  fe: { solid: 'Fe' },
+  cu: { solid: 'Cu' },
+  al: { solid: 'Al' },
+  sulfur: { solid: 'S' },
+  carbon: { solid: 'C' },
+  iodine: { solid: 'I' },
+  mno2: { solid: 'mno2' },
+  cuo: { solid: 'cuo' },
+  caco3: { solid: 'caco3' },
+  cao: { solid: 'cao' },
+  na2co3: { solid: 'na2co3' },
+  kmno4: { solid: 'kmno4' },
+  nh4cl: { solid: 'nh4cl' },
+  kno3: { solid: 'kno3' },
+  kcl: { solid: 'kcl' },
+  licl: { solid: 'licl' },
+  srcl2: { solid: 'srcl2' },
+  sio2: { solid: 'sio2' },
+  glucose: { solid: 'glucosio' },
+  sucrose: { solid: 'saccarosio' },
+  // liquidi
+  acetone: { liquid: 'acetone' },
+  glycerol: { liquid: 'glicerolo' },
+};
+
+/** Olio dei barattoli dei metalli alcalini: l'olio di paraffina è una miscela di alcani; nel gioco è il decano. */
+export const OIL = { key: 'decano', name: { it: 'Olio di paraffina', en: 'Paraffin oil' } };
 
 /** Sostanze che la luce decompone: stanno in vetro ambrato (scuro). */
 export const LIGHT_SENSITIVE = ['agno3', 'kmno4', 'h2o2', 'hno3', 'ki', 'i2', 'br2', 'agcl', 'agbr', 'agi'];
+
+/**
+ * Potenziali standard di riduzione dei metalli (V, 25 °C, coppia Mⁿ⁺/M), CRC Handbook of Chemistry and Physics,
+ * «Electrochemical series». Ordinano la serie di attività: un metallo sposta dai sali quelli con il potenziale più alto
+ * e libera idrogeno dagli acidi non ossidanti solo se il suo potenziale è negativo.
+ */
+export const REDUCTION_POTENTIALS = {
+  Li: -3.04, K: -2.93, Ba: -2.91, Ca: -2.87, Na: -2.71, Mg: -2.37, Al: -1.66, Mn: -1.19, Zn: -0.76, Cr: -0.74,
+  Fe: -0.45, Cd: -0.4, Co: -0.28, Ni: -0.26, Sn: -0.14, Pb: -0.13, Cu: 0.34, Ag: 0.8, Hg: 0.85, Pd: 0.95, Pt: 1.18,
+  Au: 1.5,
+};
 
 /** Sali per il saggio alla fiamma: chiave → simbolo del metallo che colora la fiamma. */
 export const FLAME_SALTS = { licl: 'Li', nacl: 'Na', kcl: 'K', cacl2: 'Ca', srcl2: 'Sr', bacl2: 'Ba', cucl2: 'Cu' };

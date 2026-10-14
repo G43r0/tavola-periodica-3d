@@ -17,6 +17,7 @@ export const LAYOUT = {
   hotplate: { x: -0.72, z: -0.55 },
   bunsen: { x: 1.38, z: -0.55 },
   strips: { x: 0.95, z: -0.78 },
+  lamp: { x: 0.42, z: -0.8 }, // base in fondo al bancone A, il paralume sporge verso il giocatore
   sink: { x: -4.62, z: -0.3, w: 0.42, d: 0.5, depth: 0.24 },
   counterW: { x: -4.65, z: 0, w: 0.7, d: 5 },
   towels: { x: -4.96, z: 0.55 },
@@ -185,7 +186,7 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   const sb = LAYOUT.benchB;
   solid(sb.w - 0.2, 0.025, 0.32, M.wood, sb.x, 1.27, sb.z + 0.18, { kind: 'surface' });
   for (const dx of [-1.6, 0, 1.6]) solid(0.03, 0.35, 0.3, M.wood, sb.x + dx, BENCH_Y + 0.17, sb.z + 0.18);
-  solid(sb.w - 0.2, 0.3, 0.02, M.wood, sb.x, 1.42, sb.z + 0.34);
+  solid(sb.w - 0.2, 0.34, 0.02, M.wood, sb.x, 1.44, sb.z + 0.34);
   // legenda dei colori dei tappi, sul pannello dietro i reagenti (sopra le bottiglie più alte)
   const legendCanvas = document.createElement('canvas');
   legendCanvas.width = 2048;
@@ -193,7 +194,7 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   const legendTex = new THREE.CanvasTexture(legendCanvas);
   legendTex.colorSpace = THREE.SRGBColorSpace;
   legendTex.anisotropy = 8;
-  const legend = mesh(new THREE.PlaneGeometry(2.6, 0.08), new THREE.MeshStandardMaterial({ map: legendTex, roughness: 0.8 }), sb.x, 1.525, sb.z + 0.328, { cast: false });
+  const legend = mesh(new THREE.PlaneGeometry(2.6, 0.08), new THREE.MeshStandardMaterial({ map: legendTex, roughness: 0.8 }), sb.x, 1.55, sb.z + 0.328, { cast: false });
   legend.rotation.y = Math.PI;
   /** @param {string} title @param {{color: string, label: string}[]} entries */
   const setLegend = (title, entries) => {
@@ -311,6 +312,28 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   bunsen.flameOuter = flameOuter;
   fo.visible = fi.visible = false;
   fixtures.push(bunsen);
+
+  // ------------------------------------------------------------ lampada a luce forte (reazioni fotochimiche)
+  // braccio che porta il paralume sopra il bancone: sotto la luce si decompongono, piano, il cloruro d'argento,
+  // l'acido nitrico, il permanganato (per questo stanno nel vetro ambrato)
+  const lp = LAYOUT.lamp;
+  const shadeZ = lp.z + 0.22;
+  const shadeY = BENCH_Y + 0.36;
+  const lamp = { kind: 'lamp', id: 'lamp', hit: [], on: false, zone: { x: lp.x, z: shadeZ, r: 0.13, y0: BENCH_Y - 0.02, y1: shadeY - 0.04 } };
+  lamp.hit.push(mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.02, seg(20, 10)), M.darkSteel, lp.x, BENCH_Y + 0.01, lp.z));
+  lamp.hit.push(mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.38, 8), M.steel, lp.x, BENCH_Y + 0.2, lp.z));
+  lamp.hit.push(mesh(new THREE.BoxGeometry(0.012, 0.012, 0.24), M.steel, lp.x, BENCH_Y + 0.39, lp.z + 0.11));
+  const shadeMat = std({ color: 0x2f6fd1, roughness: 0.45, side: THREE.DoubleSide });
+  lamp.hit.push(mesh(new THREE.ConeGeometry(0.06, 0.07, seg(24, 12), 1, true), shadeMat, lp.x, shadeY + 0.01, shadeZ));
+  const bulbMat = new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.3, emissive: 0xfff2d8, emissiveIntensity: 0 });
+  mesh(new THREE.SphereGeometry(0.02, 14, 10), bulbMat, lp.x, shadeY - 0.012, shadeZ, { cast: false });
+  const lampLight = new THREE.SpotLight(0xfff4e2, 0, 1.4, 0.62, 0.6, 1.5);
+  lampLight.position.set(lp.x, shadeY - 0.02, shadeZ);
+  lampLight.target.position.set(lp.x, BENCH_Y, shadeZ);
+  scene.add(lampLight, lampLight.target);
+  lamp.light = lampLight;
+  lamp.bulbMat = bulbMat;
+  fixtures.push(lamp);
 
   // cartine indicatrici
   const st = LAYOUT.strips;
@@ -532,6 +555,8 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
       if (bunsen.on) m.scale.set(b * (1 + Math.sin(t * 31 + k) * 0.05), b * (1 + Math.sin(t * 23 + k * 2) * 0.08), b * (1 + Math.cos(t * 29) * 0.05));
     }
     flameLight.intensity = bunsen.on ? 0.6 + Math.sin(t * 40) * 0.08 : 0;
+    lamp.light.intensity = lamp.on ? 7 : 0;
+    lamp.bulbMat.emissiveIntensity = lamp.on ? 2.2 : 0;
     gauzeMat.emissiveIntensity += ((bunsen.on ? 0.55 : 0) - gauzeMat.emissiveIntensity) * Math.min(1, dt * 0.6);
     hotplate.T += ((295 + hotplate.level * 60 - hotplate.T) * Math.min(1, dt * 0.5));
     plateMat.emissiveIntensity = Math.max(0, (hotplate.T - 420) / 600);

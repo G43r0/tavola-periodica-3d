@@ -7,6 +7,7 @@
 // state: stato a 25 °C e 1 atm. formula: scrittura usuale (senza carica), se diversa da quella generata.
 
 import { MORE_GROUPS, MORE_MOLECULES } from './molecules-more.js';
+import { FORMATION_ENTHALPIES } from './formation-enthalpies.js';
 import { REACTION_MOLECULES } from './molecules-reazioni.js';
 import { localizeLibrary } from '../../i18n/lab-data.js';
 
@@ -226,6 +227,8 @@ export const MOLECULE_GROUPS = MORE_GROUPS.reduce((list, g) => {
 }, [...BASE_GROUPS]);
 
 export const MOLECULES = [...BASE_MOLECULES, ...MORE_MOLECULES, ...REACTION_MOLECULES];
+// ΔHf° tabulati delle sostanze del catalogo delle reazioni che ne erano senza (formation-enthalpies.js)
+for (const m of MOLECULES) if (m.hf == null && FORMATION_ENTHALPIES[m.id] !== undefined) m.hf = FORMATION_ENTHALPIES[m.id];
 
 // nomi e testi nella lingua dell'interfaccia (in inglese; in italiano restano questi)
 localizeLibrary(MOLECULES, MOLECULE_GROUPS);

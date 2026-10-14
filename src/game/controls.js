@@ -28,6 +28,8 @@ function fixtureRow(f, key = 'lmb') {
       return row([key], 'lgTare');
     case 'hood':
       return row([key], f.on ? 'lgHoodOff' : 'lgHoodOn');
+    case 'lamp':
+      return row([key], f.on ? 'lgLampOff' : 'lgLampOn');
     case 'shower':
       return row([key], 'lgShower');
     case 'bell':

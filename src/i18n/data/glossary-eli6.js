@@ -319,6 +319,14 @@ export const GLOSSARY_ELI6 = {
   'ui.gameStock': {
     d: 'Nel laboratorio il colore del tappo ti dice che cosa c\'è dentro: rosso gli acidi, blu le basi, bianco i sali, giallo le cose che fanno bruciare di più, grigio i metalli, verde le sostanze della vita e del petrolio, viola gli indicatori, azzurro l\'acqua. Le bottiglie scure proteggono dalla luce le sostanze che la luce rovina.',
   },
+  'ui.gameNotebook': {
+    t: 'Il quaderno delle scoperte',
+    d: 'Ogni volta che fai succedere una reazione nuova, il gioco la scrive nel quaderno: che cosa hai mescolato, che cosa è venuto fuori e che cosa hai visto, come le bollicine o una polverina colorata. Più reazioni scopri, più il quaderno si riempie, come un album di figurine!',
+  },
+  'term.activitySeries': {
+    t: 'Metalli svelti e metalli pigri',
+    d: 'Alcuni metalli reagiscono subito, come il sodio e il potassio, altri sono «pigri», come il rame, l\'argento e l\'oro. Un metallo svelto riesce a prendere il posto di uno più pigro, ma non il contrario: per questo lo zinco nel liquido azzurro del rame si copre di rame rosso.',
+  },
   'term.ghs': {
     t: 'I disegni del pericolo',
     d: 'Sono rombi bianchi con il bordo rosso e un disegno nero: la fiamma vuol dire che prende fuoco, il teschio che è velenoso, la mano rovinata che brucia la pelle, il pesce e l\'albero morti che fa male alla natura. Se c\'è scritto «Pericolo» bisogna stare molto attenti!',

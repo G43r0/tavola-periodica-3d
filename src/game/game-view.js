@@ -2,17 +2,19 @@
 // Rapier e la scena si preparano alla prima apertura. La logica del gioco è in game.js.
 import * as THREE from 'three';
 import '../styles/game.css';
-import { createT } from '../i18n/index.js';
+import { createT, locale } from '../i18n/index.js';
 import { gfx } from '../gfx/preset.js';
 import { esc, normalize } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
 import { loadPhysics } from './physics.js';
-import { LabGame } from './game.js';
+import { LabGame, FOV } from './game.js';
 import { ORDERS } from './orders.js';
-import { SHELF } from './reagents.js';
+import { SHELF, CABINET } from './reagents.js';
+import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
 import { isClick } from './controls.js';
 import { S } from '../sandbox/substances.js';
 import { GAME_STRINGS } from './game-strings.js';
+import { loadNotebook, notebookPages, percent } from './notebook.js';
 
 const t = createT(GAME_STRINGS);
 const SAVE_KEY = 'tp3d.game';
@@ -67,7 +69,12 @@ const TEMPLATE = () => `
   <div class="gm-overlay gm-menu" hidden></div>
   <div class="gm-overlay gm-dialog" hidden></div>`;
 
-export function createGame(elements, { onClose } = {}) {
+/**
+ * @param {object[]} elements
+ * @param {{onClose?: Function, onOpenLab?: (reaction: string, onClose: Function) => void}} [opts] onOpenLab: apre una
+ *   reazione del quaderno nel laboratorio molecolare, sopra il simulatore (onClose quando lo si chiude)
+ */
+export function createGame(elements, { onClose, onOpenLab } = {}) {
   const root = document.createElement('div');
   root.className = 'gm';
   root.hidden = true;
@@ -94,6 +101,10 @@ export function createGame(elements, { onClose } = {}) {
   let chemMode = save.chemMode ?? 'real';
   let showInfo = true;
   let showLegend = save.legend !== false;
+  let fov = Math.max(FOV.min, Math.min(FOV.max, Number(save.fov) || FOV.default));
+  const notebook = loadNotebook(save.notebook);
+  let nbGroup = null; // gruppo aperto nel quaderno
+  let labAbove = false; // il laboratorio molecolare è aperto sopra il simulatore
   const pressed = new Set(); // tasti premuti (id della legenda): la riga corrispondente si illumina
   const pops = { looked: null, held: null }; // finestrelle accanto agli oggetti (elemento, misure)
 
@@ -114,6 +125,8 @@ export function createGame(elements, { onClose } = {}) {
     }
     stage.append(renderer.domElement);
     game = new LabGame(renderer, R, elements, { t, onEvent });
+    game.setFov(fov);
+    game.notebook = notebook;
     if (import.meta.env?.DEV) window.__game = game;
     layout();
     $('.gm-loading').hidden = true;
@@ -138,7 +151,13 @@ export function createGame(elements, { onClose } = {}) {
     else if (type === 'answers') showAnswers(data);
     else if (type === 'catalog') showCatalog();
     else if (type === 'careerEnd') showCareerEnd(data);
-    else if (type === 'reaction') reactionNote(data.equation);
+    else if (type === 'reaction') {
+      reactionNote(data);
+      if (data.isNew) {
+        save.notebook = notebook;
+        storeSave(save);
+      }
+    }
     else if (type === 'alert' && data.kind === 'splash') toast(t('splash'), 'danger', 6000);
   }
 
@@ -153,15 +172,22 @@ export function createGame(elements, { onClose } = {}) {
     setTimeout(() => el.remove(), ms + 400);
   }
 
-  function reactionNote(eq) {
+  /** ΔH° con il segno vero (−, +) e le unità. */
+  const kj = (v) => `${v < 0 ? '−' : '+'}${game.fmt(Math.abs(v), Math.abs(v) < 100 ? 1 : 0)} kJ`;
+  /** Che cosa si vede (bolle, precipitato…) come etichette brevi. */
+  const tagsHtml = (tags = []) => (tags.length ? `<span class="gm-tags">${tags.map((k) => `<i class="gm-tag gm-tag--${k}">${esc(t(`tag_${k}`))}</i>`).join('')}</span>` : '');
+
+  /** Avviso di una reazione osservata: equazione con gli stati fisici, ΔH°, cosa si vede; «nuova nel quaderno» la prima volta. */
+  function reactionNote({ equation, dH, tags, isNew }) {
     const box = $('.gm-reactions');
     const el = document.createElement('div');
-    el.className = 'gm-rx';
-    el.innerHTML = `<span>${t('reactionLabel')}</span> ${esc(eq)}`;
+    el.className = `gm-rx${isNew ? ' is-new' : ''}`;
+    el.innerHTML = `<span class="gm-rx__kind">${isNew ? t('rxNew') : t('reactionLabel')}</span> <span class="gm-rx__eq">${esc(equation)}</span>${dH !== null && dH !== undefined ? ` <small class="gm-rx__dh">ΔH° ${kj(dH)}</small>` : ''}${tagsHtml(tags)}${isNew ? `<small class="gm-rx__hint">${t('rxNewHint')}</small>` : ''}`;
     box.prepend(el);
     while (box.children.length > 3) box.lastElementChild.remove();
-    setTimeout(() => el.classList.add('is-out'), 7000);
-    setTimeout(() => el.remove(), 7500);
+    const ms = isNew ? 9000 : 7000;
+    setTimeout(() => el.classList.add('is-out'), ms);
+    setTimeout(() => el.remove(), ms + 500);
   }
 
   // ---------------------------------------------------------------- stato del gioco e puntatore
@@ -225,13 +251,19 @@ export function createGame(elements, { onClose } = {}) {
           <label><input type="radio" name="gm-chem" value="real" ${chemMode === 'real' ? 'checked' : ''}/><span><b>${t('chemReal')}</b><small>${t('chemRealText')}</small></span></label>
           <label><input type="radio" name="gm-chem" value="simple" ${chemMode === 'simple' ? 'checked' : ''}/><span><b>${t('chemSimple')}</b><small>${t('chemSimpleText')}</small></span></label>
         </fieldset>
+        ${fovHtml()}
         <div class="gm-menu__foot">
-          <button type="button" class="btn-ghost" data-act="help">${icons.keyboard(16)}<span>${t('controls')}</span></button>
+          <span class="gm-menu__left"><button type="button" class="btn-ghost" data-act="help">${icons.keyboard(16)}<span>${t('controls')}</span></button>
+          <button type="button" class="btn-ghost" data-act="notebook">${t('notebook')}</button></span>
           <button type="button" class="btn-ghost" data-act="close">${icons.prev(16)}<span>${t('back')}</span></button>
         </div>
         <p class="gm-note">${t('prototypeNote')}</p>
       </div>`;
   }
+
+  /** Cursore del campo visivo (menu principale e pausa). */
+  const fovHtml = () => `<label class="gm-fov" title="${t('fovTitle')}"><span>${t('fov')}</span>
+    <input type="range" name="gm-fov" min="${FOV.min}" max="${FOV.max}" step="1" value="${fov}"/><output>${fov}°</output></label>`;
 
   const fmtMoney = (v) => `${(game?.fmt ?? ((n, d) => n.toFixed(d)))(v, 2)} €`;
 
@@ -337,7 +369,7 @@ export function createGame(elements, { onClose } = {}) {
     showDialog(`
       <h3>${t('catalogTitle')}</h3>
       <div class="gm-cat-glass">${glass.map((k) => `<button type="button" class="btn-ghost" data-glass="${k}">${t(`item_${k}`)}</button>`).join('')}</div>
-      <div class="gm-cat-ready">${Object.keys(SHELF).map((k) => `<button type="button" class="btn-ghost" data-ready="${k}">${esc(readyName(k))}</button>`).join('')}</div>
+      <div class="gm-cat-ready">${readyHtml()}</div>
       <input type="search" class="gm-search" placeholder="${t('catalogSearch')}" aria-label="${t('catalogSearch')}" spellcheck="false"/>
       <div class="gm-cat-list"></div>
       <div class="gm-actions"><button type="button" class="gm-primary" data-act="play">${t('done')}</button></div>`, 'gm-catalog');
@@ -357,8 +389,26 @@ export function createGame(elements, { onClose } = {}) {
     $('.gm-search').addEventListener('input', (e) => render(e.target.value));
   }
 
+  /**
+   * Scaffale e armadio della scuola, divisi per famiglia (con il colore del tappo): un clic mette il reagente sul
+   * bancone B.
+   */
+  function readyHtml() {
+    const all = { ...SHELF, ...CABINET };
+    const fams = new Map();
+    for (const [k, r] of Object.entries(all)) {
+      const f = reagentLook(game.chem, r).family;
+      // sali e altri inorganici hanno lo stesso tappo: una sola riga
+      const row = FAMILY_ORDER.find((g) => FAMILIES[g] === FAMILIES[f]);
+      if (!fams.has(row)) fams.set(row, []);
+      fams.get(row).push(k);
+    }
+    return FAMILY_ORDER.filter((f) => fams.has(f)).map((f) => `<div class="gm-cat-fam"><span class="gm-cat-cap" style="background:${FAMILIES[f]}" title="${esc(t(`legend_${f}`))}"></span>
+      ${fams.get(f).sort((a, b) => readyName(a).localeCompare(readyName(b))).map((k) => `<button type="button" class="btn-ghost" data-ready="${k}">${esc(readyName(k))}</button>`).join('')}</div>`).join('');
+  }
+
   function readyName(k) {
-    const r = SHELF[k];
+    const r = SHELF[k] ?? CABINET[k];
     const c = game.chem;
     if (r.water) return t('distilledWater');
     if (r.indicator) return c.name(r.indicator);
@@ -375,12 +425,70 @@ export function createGame(elements, { onClose } = {}) {
       <div class="gm-stack">
         <button type="button" class="gm-primary" data-act="play">${t('resume')}</button>
         <button type="button" class="btn-ghost" data-act="help">${icons.keyboard(16)}<span>${t('controls')}</span></button>
+        <button type="button" class="btn-ghost" data-act="notebook">${t('notebook')} <kbd>N</kbd></button>
         ${game.free ? '' : `<button type="button" class="btn-ghost" data-act="restart-order">${t('restartOrder')}</button>`}
         <button type="button" class="btn-ghost" data-act="menu">${t('toMenu')}</button>
         <button type="button" class="btn-ghost" data-act="close">${t('backToTable')}</button>
-      </div></div>`;
+      </div>
+      ${fovHtml()}</div>`;
     d.querySelector('.gm-primary').focus({ preventScroll: true });
   }
+
+  /**
+   * Quaderno di laboratorio: i 14 gruppi del catalogo con la percentuale scoperta e, per il gruppo scelto, le pagine:
+   * quelle scoperte con equazione, ΔH°, cosa si è visto e il collegamento al laboratorio molecolare; le altre coperte
+   * (con il sottogruppo come indizio) o, se il simulatore non le sa fare, con il motivo.
+   */
+  function showNotebook(back = state === 'menu' ? 'menu' : 'play') {
+    const nb = notebookPages(game.chem, notebook);
+    nbGroup ??= (nb.groups.find((g) => g.found) ?? nb.groups[0]).key;
+    const g = nb.groups.find((x) => x.key === nbGroup) ?? nb.groups[0];
+    const groups = nb.groups.map((x) => `<button type="button" class="gm-nb__group ${x.key === g.key ? 'is-on' : ''}" data-nb-group="${x.key}">
+        <span>${esc(x.label)}</span><small>${x.found} / ${x.doable}</small><i style="--p:${percent(x.found, x.doable)}%"></i></button>`).join('');
+    // scoperte prima, con tutti i dettagli; le altre raggruppate per sottogruppo (quante restano e, per quelle che il
+    // simulatore non sa fare, il motivo)
+    const found = g.pages.filter((p) => p.found);
+    const hidden = new Map();
+    for (const p of g.pages) {
+      if (p.found) continue;
+      const k = p.r.sub ?? '';
+      const e = hidden.get(k) ?? { open: 0, off: new Map() };
+      if (p.doable) e.open++;
+      else {
+        const why = p.rx?.why ?? 'other';
+        e.off.set(why, (e.off.get(why) ?? 0) + 1);
+      }
+      hidden.set(k, e);
+    }
+    const hiddenRows = [...hidden].map(([sub, e]) => `<li class="gm-nb__page ${e.open ? '' : 'is-off'}"><p class="gm-nb__eq">? + ? → ?${e.open ? ` <small>${t('nbHidden', { n: e.open })}</small>` : ''}</p>
+      <p class="gm-nb__meta">${esc(sub)}${[...e.off].map(([why, n]) => ` · ${esc(t('nbOffCount', { n, why: t(`nbWhy_${why}`) }))}`).join('')}</p></li>`);
+    const page = (p) => {
+      const e = notebook.rx[p.id];
+      const sig = game.signals(p.rx, e.aq);
+      const when = new Date(e.first).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
+      return `<li class="gm-nb__page is-found">
+        ${p.r.name ? `<b>${esc(p.r.name)}</b>` : ''}<p class="gm-nb__eq">${esc(equationOf(p.rx, e.aq))}</p>
+        <p class="gm-nb__meta">${sig.dH !== null ? `ΔH° ${kj(sig.dH)} · ` : ''}${esc(t(e.mode === 'career' ? 'nbCareer' : 'nbFree', { date: when }))}${p.r.condText ? ` · ${esc(p.r.condText)}` : ''}</p>
+        ${tagsHtml(e.tags)}
+        ${p.r.desc ? `<p class="gm-nb__desc">${esc(p.r.desc)}</p>` : ''}
+        ${onOpenLab ? `<button type="button" class="gm-link" data-nb-lab="${esc(p.id)}">${t('nbOpenLab')}</button>` : ''}
+      </li>`;
+    };
+    showDialog(`
+      <h3>${t('notebookTitle')}</h3>
+      <p class="gm-nb__total">${t('nbTotal', { found: nb.found, doable: nb.doable, total: nb.total, p: percent(nb.found, nb.doable) })}</p>
+      <div class="gm-nb">
+        <nav class="gm-nb__groups" aria-label="${t('nbGroups')}">${groups}</nav>
+        <section class="gm-nb__pages"><h4>${esc(g.label)} <small>${t('nbGroupCount', { found: g.found, doable: g.doable, total: g.total })}</small></h4>
+          ${g.found ? '' : `<p class="gm-nb__empty">${t('nbEmpty')}</p>`}
+          <ol>${found.map(page).join('')}${hiddenRows.join('')}</ol></section>
+      </div>
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${back}">${t('done')}</button></div>`, 'gm-notebook');
+    $('.gm-notebook').dataset.help = 'ui.gameNotebook';
+    const list = $('.gm-nb__pages');
+    if (list) list.scrollTop = 0;
+  }
+  const equationOf = (rx, aq) => game.equationText(rx, aq);
 
   function showHelp() {
     const prev = state;
@@ -418,6 +526,7 @@ export function createGame(elements, { onClose } = {}) {
       showMenu();
     } else if (act === 'free') startFree();
     else if (act === 'help') showHelp();
+    else if (act === 'notebook') showNotebook();
     else if (act === 'menu') showMenu();
     else if (act === 'play' || act === 'keep-playing') play();
     else if (act === 'pause') showPause();
@@ -431,6 +540,14 @@ export function createGame(elements, { onClose } = {}) {
       const answers = {};
       form.querySelectorAll('select').forEach((s, i) => (answers[i] = s.value || null));
       game.submitAnswers(answers);
+    } else if (b.dataset.nbGroup) {
+      nbGroup = b.dataset.nbGroup;
+      showNotebook($('.gm-notebook .gm-primary')?.dataset.act);
+    } else if (b.dataset.nbLab && onOpenLab) {
+      labAbove = true;
+      onOpenLab(b.dataset.nbLab, () => {
+        labAbove = false;
+      });
     } else if (b.dataset.glass) {
       const k = b.dataset.glass;
       if (['spatula', 'loop'].includes(k)) game.spawnTool(k, 'benchB');
@@ -448,7 +565,17 @@ export function createGame(elements, { onClose } = {}) {
       toast(t('spawned', { name: item.name }), 'ok');
     }
   });
+  root.addEventListener('input', (ev) => {
+    if (ev.target.name !== 'gm-fov') return;
+    fov = Number(ev.target.value);
+    game?.setFov(fov);
+    ev.target.nextElementSibling.textContent = `${fov}°`;
+  });
   root.addEventListener('change', (ev) => {
+    if (ev.target.name === 'gm-fov') {
+      save.fov = fov;
+      storeSave(save);
+    }
     if (ev.target.name === 'gm-chem') {
       chemMode = ev.target.value;
       save.chemMode = chemMode;
@@ -459,7 +586,7 @@ export function createGame(elements, { onClose } = {}) {
   // ---------------------------------------------------------------- input
   const typing = (e) => e.target instanceof HTMLElement && e.target.matches('input, select, textarea');
   function onKey(ev, down) {
-    if (root.hidden || !game) return;
+    if (root.hidden || !game || labAbove) return;
     if (typing(ev)) return;
     if (down && ev.key === 'Escape') {
       ev.preventDefault();
@@ -507,6 +634,7 @@ export function createGame(elements, { onClose } = {}) {
       if (!showLegend) toast(t('legendHidden'));
     }
     else if (code === 'KeyH') showHelp();
+    else if (code === 'KeyN') showNotebook();
     else if (code === 'KeyF') {
       // fps per controllare le prestazioni
       fpsShow = !fpsShow;
@@ -657,14 +785,17 @@ export function createGame(elements, { onClose } = {}) {
     const rowsHtml = rowsList.map((r) => `<li><span>${esc(r.label)}${r.formula ? ` <code>${esc(r.formula)}</code>` : ''}</span><b>${esc(r.value)}</b></li>`).join('') + (more > 0 ? `<li class="gm-pop__more"><span>+${more}</span></li>` : '');
     const strip = info.swatch ? `<div class="gm-strip"><span style="background:${info.swatch}"></span><div class="gm-scale">${info.scale.map((c, i) => `<i style="background:${c}" title="pH ${i}">${i}</i>`).join('')}</div></div>` : '';
     const notes = info.notes.slice(0, 2).map((n) => `<p class="gm-pop__note">${esc(n)}</p>`).join('');
+    // reazioni appena avvenute nel contenitore e, se non succede niente, perché
+    const rx = (info.reactions ?? []).map((r) => `<p class="gm-pop__rx ${r.live ? 'is-live' : ''}"><span class="gm-pop__eq">${esc(r.eq)}</span>${r.dH !== null ? `<small>ΔH° ${kj(r.dH)}</small>` : ''}${tagsHtml(r.tags)}</p>`).join('');
+    const why = info.why ? `<div class="gm-pop__why"><b>${t('whyTitle')}</b> ${esc(info.why.text)}${info.why.eq ? `<span class="gm-pop__eq">${esc(info.why.eq)}</span>` : ''}</div>` : '';
     if (kind === 'held') {
       const status = info.status ? `<small class="gm-pop__status ${info.spilling ? 'is-bad' : ''}">${esc(info.status)}${chemMode === 'simple' && info.pouring > 0.2 ? ` · ${t('pourRate', { ml: game.fmt(info.pouring, info.pouring < 10 ? 1 : 0) })}` : ''}</small>` : '';
       const big = info.volume ? `<div class="gm-pop__big">${DROP}<b>${esc(info.volume)}</b></div>` : '';
-      return `${big}${status}<p class="gm-pop__name"><span class="gm-swatch" style="background:${info.color ?? 'transparent'}"></span>${esc(info.name)}</p>${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}${meta ? `<p class="gm-pop__meta">${meta}</p>` : ''}${strip}${info.volume ? '' : notes}`;
+      return `${big}${status}<p class="gm-pop__name"><span class="gm-swatch" style="background:${info.color ?? 'transparent'}"></span>${esc(info.name)}</p>${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}${meta ? `<p class="gm-pop__meta">${meta}</p>` : ''}${strip}${rx}${info.volume ? '' : notes}`;
     }
     const vol = info.volume ? `<p class="gm-pop__vol">${DROP}<b>${esc(info.volume)}</b>${meta ? ` <span>· ${meta}</span>` : ''}</p>` : meta ? `<p class="gm-pop__meta">${meta}</p>` : '';
     return `<header class="${info.hot ? 'is-hot' : ''} ${info.on ? 'is-on' : ''}"><span class="gm-swatch" style="background:${info.color ?? 'transparent'}"></span><h4>${esc(info.name)}</h4></header>
-      <div class="gm-pop__body">${vol}${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}${strip}${notes}</div>`;
+      <div class="gm-pop__body">${vol}${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}${strip}${rx}${notes}${why}</div>`;
   }
 
   function renderPop(kind, info) {

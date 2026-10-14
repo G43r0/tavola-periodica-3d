@@ -1,5 +1,5 @@
-// Effetti del simulatore: gocce e polveri che cadono (sfere istanziate), sbuffi morbidi di vapore, fumo, gas,
-// getto dell'estintore e fiamme (punti con uno shader), pozze sulle superfici.
+// Effetti del simulatore: gocce e polveri che cadono (sfere istanziate), bolle e fiocchi di precipitato nei
+// contenitori, sbuffi morbidi di vapore, fumo, gas, getto dell'estintore e fiamme (punti con uno shader), pozze.
 import * as THREE from 'three';
 
 const _m = new THREE.Matrix4();
@@ -265,6 +265,94 @@ export class Puffs {
     this.geo.attributes.position.needsUpdate = true;
     this.geo.attributes.aSize.needsUpdate = true;
     this.geo.attributes.aColor.needsUpdate = true;
+  }
+}
+
+/**
+ * Bolle e fiocchi dentro i contenitori: le bolle di un gas salgono dal fondo e scoppiano sulla superficie del liquido,
+ * i fiocchi di un precipitato appena formato scendono ondeggiando e si posano sul fondo. Sfere istanziate con il
+ * colore di ognuna (bolle quasi bianche, fiocchi del colore del solido).
+ */
+export class Motes {
+  constructor(scene, max = 700) {
+    this.max = max;
+    this.mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ roughness: 0.1, metalness: 0, transparent: true, opacity: 0.6, depthWrite: false }), max);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.frustumCulled = false;
+    this.mesh.count = 0;
+    this.mesh.renderOrder = 5;
+    this.mesh.setColorAt(0, new THREE.Color(1, 1, 1));
+    scene.add(this.mesh);
+    this.p = new Float32Array(max * 3);
+    this.vy = new Float32Array(max);
+    this.top = new Float32Array(max);
+    this.floor = new Float32Array(max);
+    this.life = new Float32Array(max);
+    this.size = new Float32Array(max);
+    this.phase = new Float32Array(max);
+    this.col = new Float32Array(max * 3);
+    this.n = 0;
+    this.t = 0;
+  }
+
+  /**
+   * Una bolla (vy > 0) o un fiocco (vy < 0) nel punto (x, y, z): sparisce sulla superficie `top` (la bolla) o sul
+   * fondo `floor` (il fiocco), o dopo `life` secondi.
+   */
+  emit(x, y, z, vy, r, rgb, top, floor, life = 3) {
+    if (this.n >= this.max) return;
+    const i = this.n++;
+    this.p.set([x, y, z], i * 3);
+    this.vy[i] = vy;
+    this.top[i] = top;
+    this.floor[i] = floor;
+    this.life[i] = life;
+    this.size[i] = r;
+    this.phase[i] = Math.random() * 6.28;
+    this.col.set([rgb[0] / 255, rgb[1] / 255, rgb[2] / 255], i * 3);
+  }
+
+  update(dt) {
+    this.t += dt;
+    let w = 0;
+    for (let i = 0; i < this.n; i++) {
+      this.life[i] -= dt;
+      const k = i * 3;
+      // le bolle accelerano salendo, i fiocchi scendono piano
+      if (this.vy[i] > 0) this.vy[i] = Math.min(0.25, this.vy[i] + dt * 0.4);
+      this.p[k + 1] += this.vy[i] * dt;
+      if (this.life[i] <= 0 || this.p[k + 1] > this.top[i] || this.p[k + 1] < this.floor[i]) continue;
+      if (w !== i) {
+        this.p.copyWithin(w * 3, k, k + 3);
+        this.col.copyWithin(w * 3, k, k + 3);
+        this.vy[w] = this.vy[i];
+        this.top[w] = this.top[i];
+        this.floor[w] = this.floor[i];
+        this.life[w] = this.life[i];
+        this.size[w] = this.size[i];
+        this.phase[w] = this.phase[i];
+      }
+      w++;
+    }
+    this.n = w;
+    for (let i = 0; i < w; i++) {
+      const wob = Math.sin(this.t * 9 + this.phase[i]) * 0.0006;
+      _p.set(this.p[i * 3] + wob, this.p[i * 3 + 1], this.p[i * 3 + 2] + Math.cos(this.t * 7 + this.phase[i]) * 0.0006);
+      const r = this.size[i];
+      _s.set(r, r, r);
+      _m.compose(_p, _q, _s);
+      this.mesh.setMatrixAt(i, _m);
+      _c.setRGB(this.col[i * 3], this.col[i * 3 + 1], this.col[i * 3 + 2]);
+      this.mesh.setColorAt(i, _c);
+    }
+    this.mesh.count = w;
+    this.mesh.instanceMatrix.needsUpdate = true;
+    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+  }
+
+  clear() {
+    this.n = 0;
+    this.mesh.count = 0;
   }
 }
 

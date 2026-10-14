@@ -314,6 +314,56 @@
 .gm-pop__body > .gm-pop__note:first-child {
   margin-top: 0;
 }
+.gm-pop--looked:has(.gm-pop__rx, .gm-pop__why) {
+  max-width: 300px;
+}
+.gm-pop__rx {
+  margin: 5px 0 0;
+  padding: 4px 6px;
+  line-height: 1.35;
+  background: rgba(120, 160, 200, 0.1);
+  border-left: 2px solid color-mix(in oklab, var(--accent) 70%, transparent);
+  border-radius: 3px;
+}
+.gm-pop__rx.is-live {
+  border-left-color: var(--ok);
+}
+.gm-pop__rx small {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-2);
+}
+.gm-pop__rx .gm-tags {
+  display: flex;
+  margin: 3px 0 0;
+}
+.gm-pop__eq {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-0);
+}
+.gm-pop__why {
+  margin: 5px 0 0;
+  padding: 4px 6px;
+  line-height: 1.35;
+  color: var(--text-1);
+  background: rgba(226, 173, 47, 0.1);
+  border-left: 2px solid #e2ad2f;
+  border-radius: 3px;
+}
+.gm-pop__why b {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f6cf5c;
+}
+.gm-pop__why .gm-pop__eq {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-2);
+}
 .gm-swatch {
   flex: none;
   width: 10px;
@@ -566,7 +616,7 @@
   border-radius: 8px;
   transition: opacity 500ms;
 }
-.gm-rx span {
+.gm-rx .gm-rx__kind {
   font-family: var(--font-sans);
   font-size: 10.5px;
   letter-spacing: 0.06em;
@@ -575,6 +625,64 @@
 }
 .gm-rx.is-out {
   opacity: 0;
+}
+.gm-rx.is-new {
+  border-color: var(--ok);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ok) 40%, transparent), 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.gm-rx.is-new .gm-rx__kind {
+  color: var(--ok);
+}
+.gm-rx .gm-rx__eq {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-0);
+}
+.gm-rx__dh,
+.gm-rx__hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+.gm-rx__hint {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-sans);
+}
+/* che cosa si vede: etichette brevi (bolle, precipitato, cambia colore…) */
+.gm-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.gm-tag {
+  padding: 0 5px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-style: normal;
+  line-height: 15px;
+  color: #cfe3f6;
+  background: rgba(120, 160, 200, 0.18);
+  border-radius: 4px;
+}
+.gm-tag--hot,
+.gm-tag--warm,
+.gm-tag--fire {
+  color: #ffd2b0;
+  background: rgba(236, 122, 51, 0.22);
+}
+.gm-tag--cold {
+  color: #bfe6ff;
+  background: rgba(76, 168, 255, 0.22);
+}
+.gm-tag--precipitate,
+.gm-tag--deposit {
+  color: #f1e3b6;
+  background: rgba(226, 173, 47, 0.2);
 }
 
 /* ---------------------------------------------------------------- finestre e menu */
@@ -717,6 +825,26 @@
   font-size: 11.5px;
   color: var(--text-2);
   line-height: 1.35;
+}
+.gm-fov {
+  display: grid;
+  grid-template-columns: auto 1fr 3.2em;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.gm-fov input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.gm-fov output {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  text-align: right;
+  color: var(--text-2);
 }
 .gm-menu__foot,
 .gm-actions {
@@ -912,12 +1040,152 @@
 .gm-catalog {
   width: min(760px, 100%);
 }
+.gm-menu__left {
+  display: flex;
+  gap: 8px;
+}
+.gm-stack kbd {
+  margin-left: 6px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+}
+/* quaderno di laboratorio */
+.gm-notebook {
+  width: min(880px, 100%);
+}
+.gm-nb__total {
+  margin: 0 0 12px;
+  color: var(--text-1);
+}
+.gm-nb {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 14px;
+  min-height: 0;
+}
+.gm-nb__groups {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  max-height: 56vh;
+  overflow: auto;
+}
+.gm-nb__group {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px 9px;
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  color: var(--text-1);
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.gm-nb__group.is-on {
+  color: var(--text-0);
+  border-color: var(--accent);
+}
+.gm-nb__group small {
+  font-family: var(--font-mono);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.gm-nb__group i {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 4px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--ok) var(--p), var(--line-2) var(--p));
+  border-radius: 1px;
+}
+.gm-nb__pages {
+  max-height: 56vh;
+  overflow: auto;
+}
+.gm-nb__pages h4 {
+  margin: 0 0 8px;
+}
+.gm-nb__pages h4 small {
+  font-weight: 400;
+  color: var(--text-2);
+}
+.gm-nb__pages ol {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gm-nb__page {
+  padding: 6px 9px;
+  font-size: 12.5px;
+  background: var(--bg-2);
+  border-radius: 8px;
+}
+.gm-nb__page.is-found {
+  border-left: 3px solid var(--ok);
+}
+.gm-nb__page.is-off {
+  opacity: 0.55;
+}
+.gm-nb__page .gm-tags {
+  margin: 3px 0 0;
+}
+.gm-nb__eq {
+  margin: 0;
+  font-family: var(--font-mono);
+  color: var(--text-0);
+}
+.gm-nb__meta,
+.gm-nb__desc,
+.gm-nb__empty {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+.gm-nb__desc {
+  color: var(--text-1);
+}
+.gm-nb__page .gm-link {
+  margin-top: 3px;
+  padding: 0;
+  font-size: 12px;
+}
 .gm-cat-glass,
-.gm-cat-ready {
+.gm-cat-fam {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
   margin-bottom: 10px;
+}
+.gm-cat-ready {
+  max-height: 30vh;
+  overflow: auto;
+  margin-bottom: 10px;
+}
+.gm-cat-fam {
+  margin-bottom: 6px;
+}
+.gm-cat-fam .btn-ghost {
+  height: 28px;
+  font-size: 12.5px;
+}
+.gm-cat-cap {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
 }
 .gm-search {
   width: 100%;
@@ -961,8 +1229,12 @@
 @media (max-width: 640px) {
   .gm-modes,
   .gm-chem,
-  .gm-help {
+  .gm-help,
+  .gm-nb {
     grid-template-columns: 1fr;
+  }
+  .gm-nb__groups {
+    max-height: 22vh;
   }
   .gm-pop {
     max-width: 46vw;

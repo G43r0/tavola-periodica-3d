@@ -45,10 +45,10 @@ test('scaffale: ogni reagente ha i pericoli della scheda di sicurezza (pittogram
   assert.deepEqual(look(SHELF.ethanol).ghs, ['GHS02', 'GHS07']);
 });
 
-test('contenitori: vetro chiaro, ambrato per ciò che la luce decompone, plastica per basi forti e HF', () => {
+test('contenitori: vetro chiaro, ambrato per ciò che la luce decompone, plastica per basi forti e HF, olio per i metalli alcalini', () => {
   const kinds = {
     water: 'washbottle', php: 'dropper', hcl1: 'bottleClear', naoh1: 'bottlePE', agno3: 'bottle', ki01: 'bottle',
-    nacl: 'jarGlass', cuso4: 'jarGlass', zn: 'jarGlass', ethanol: 'bottleClear',
+    nacl: 'jarGlass', cuso4: 'jarGlass', zn: 'jarGlass', ethanol: 'bottleClear', na: 'jarOil', k: 'jarOil',
   };
   for (const [k, kind] of Object.entries(kinds)) assert.equal(look(SHELF[k]).kind, kind, k);
   assert.equal(look({ solid: 'naoh' }).kind, 'jar');
@@ -56,6 +56,8 @@ test('contenitori: vetro chiaro, ambrato per ciò che la luce decompone, plastic
   assert.equal(look({ solid: 'i2' }).kind, 'jarAmber');
   assert.equal(look({ solute: 'hf', molar: 1 }).kind, 'bottlePE');
   assert.equal(look({ liquid: 'h2o2' }).kind, 'bottle');
+  assert.equal(look({ solid: 'Cs' }).kind, 'jarOil');
+  assert.equal(look({ solid: 'Mg' }).kind, 'jarGlass');
   for (const k of [...LIGHT_SENSITIVE, ...STRONG_OXIDIZERS]) assert.ok(ctx.id(k), `sostanza sconosciuta: ${k}`);
 });
 

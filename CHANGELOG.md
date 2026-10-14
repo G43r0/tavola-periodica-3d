@@ -133,6 +133,26 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   sicurezza, alla concentrazione del gioco); per le altre sostanze del magazzino i pericoli sono dedotti dai dati. Il
   contenuto dei barattoli si vede, con la grana di polveri e cristalli. Lo scaffale del Laboratorio libero è in ordine
   di famiglia. Nuove voci della modalità Spiega: «Colore del tappo» e «Pittogrammi di pericolo».
+- **Simulatore: reazioni al centro del gioco** (fase G3 del piano). Le reazioni si vedono: bolle di gas che salgono dal
+  fondo, gas colorati del loro colore, fiocchi di precipitato che scendono, cambi di colore graduali, la fiammella lilla
+  del potassio nell'acqua. La finestrella del contenitore mostra le reazioni appena avvenute con l'equazione bilanciata e
+  gli stati fisici, il ΔH° e che cosa si osserva; se non succede niente (nel Laboratorio libero e nella chimica
+  semplificata) spiega perché: calore, fiamma, catalizzatore, luce, acqua o un reagente che mancano, un metallo meno
+  attivo nella serie di attività (potenziali standard del CRC Handbook), o una reazione che chiede corrente, raggi UV o
+  vapore. Nuovo **quaderno di laboratorio** (`N`): le reazioni scoperte restano tra una partita e l'altra, divise nei 14
+  gruppi del catalogo con la percentuale, e si aprono nel laboratorio molecolare. Nuova **lampada a luce forte** sul
+  bancone per le reazioni fotochimiche (lente, come nella realtà). La temperatura accelera le reazioni lente (fattore di
+  Arrhenius). Nuovo **armadio della scuola** nel magazzino (47 reagenti d'uso divisi per famiglia): con lo scaffale si
+  fanno 383 reazioni invece di 144 (`scripts/coverage.mjs`, test della copertura per gruppo). Sodio, potassio e litio
+  sullo scaffale, sotto olio di paraffina. Più veloce camminare (3 m/s) e correre (5,2 m/s); campo visivo regolabile nel
+  menu e nella pausa; barattoli +15 % e bottiglie +10 %. Voci della modalità Spiega «Quaderno di laboratorio» e «Serie di
+  attività dei metalli».
+- **Entalpie di formazione** standard di 176 sostanze comuni (NBS, CRC Handbook, NIST: sali, ossidi, alogenuri, ioni in
+  acqua, alcuni composti organici; `src/lab/data/formation-enthalpies.js`): il ΔH° si conosce per 1045 reazioni del
+  catalogo invece di 599, nel laboratorio molecolare, nella sandbox e nel simulatore.
+- Simulatore: la neutralizzazione libera 55,8 kJ per mole d'acqua solo con una base forte; aceto e bicarbonato usano il
+  ΔH° della reazione e raffreddano un po', come nella realtà. Le soluzioni quasi incolori (acido nitrico diluito) non
+  prendono più la tinta del solido. Gli elementi biatomici si scrivono H₂, O₂, Cl₂ nelle equazioni e negli avvisi.
 - La Content Security Policy permette la compilazione di WebAssembly (`'wasm-unsafe-eval'`, non `eval` di JavaScript):
   serve al motore fisico Rapier del simulatore.
 - «Simula reazione» non esegue le reazioni che richiedono altro (catalizzatori, soluzione acquosa, enzimi) né gli
@@ -146,7 +166,9 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 ### Corretto
 - Simulatore: il poster della tavola periodica mostrava «undefined» al posto dei numeri atomici.
 - Simulatore: la modalità Spiega elencava i vecchi comandi (versare con il tasto destro, lanciare con `Q`).
-- Simulatore: la soluzione di HCl dello scaffale si chiamava «Cloruro di idrogeno» (il gas) invece di «Acido cloridrico».
+- Simulatore: la soluzione di HCl dello scaffale si chiamava «Cloruro di idrogeno» (il gas) invece di «Acido cloridrico»,
+  sull'etichetta e, dopo un travaso, nella finestrella del contenitore.
+- Simulatore: un pezzo di metallo sul fondo (lo zinco nell'acido) era descritto come «precipitato».
 
 ## [0.7.0] — 2026-10-11 — Catalogo delle reazioni
 

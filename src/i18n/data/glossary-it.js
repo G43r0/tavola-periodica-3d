@@ -625,8 +625,21 @@ export const GLOSSARY_IT = {
     t: 'Simulatore di laboratorio',
     w: 'simulatore|simulatore di laboratorio|gioco del laboratorio',
     d: 'Un gioco in prima persona nel laboratorio di chimica della scuola, ispirato ai simulatori di cucina: prendi becher e bottiglie, pesa sulla bilancia, versa inclinando il recipiente, scalda sulla piastra o sul becco Bunsen e consegna il preparato alla cattedra. Le esercitazioni sono valutate con stelle e soldi; il vetro si rompe, i liquidi si versano, i gas tossici vanno sotto la cappa e i rifiuti nel contenitore giusto. La chimica è quella vera della libreria (554 sostanze e le reazioni del catalogo), in versione realistica o semplificata.',
-    k: [['W A S D', 'cammina'], ['Clic', 'prendi / posa'], ['Sinistro tenuto + mouse', 'versa'], ['E', 'usa'], ['Tasto centrale tenuto', 'lancia'], ['Tab', 'vista del bancone'], ['Esc', 'pausa']],
-    s: ['term.reaction', 'ui.lab', 'ui.gameStock'],
+    k: [['W A S D', 'cammina'], ['Clic', 'prendi / posa'], ['Sinistro tenuto + mouse', 'versa'], ['E', 'usa'], ['Tasto centrale tenuto', 'lancia'], ['Tab', 'vista del bancone'], ['N', 'quaderno'], ['Esc', 'pausa']],
+    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook'],
+  },
+  'ui.gameNotebook': {
+    t: 'Quaderno di laboratorio',
+    w: 'quaderno|quaderno di laboratorio|reazioni scoperte',
+    d: 'Nel simulatore ogni reazione del catalogo che vedi avvenire la prima volta finisce nel quaderno: l\'equazione con gli stati fisici, solido (s), liquido (l), gas (g) e sciolto in acqua (aq); il ΔH°, negativo se la reazione libera calore; che cosa si è visto (bolle, precipitato, cambio di colore, calore) e dove l\'hai scoperta. Le pagine sono divise nei 14 gruppi del catalogo con la percentuale scoperta; quelle che il simulatore non sa ancora fare (corrente elettrica, raggi UV, vapore, equilibri, organismi viventi) dicono il perché. Da ogni pagina la reazione si apre nel laboratorio molecolare. Il quaderno resta tra una partita e l\'altra. Se una miscela non reagisce, la finestrella del contenitore spiega che cosa manca: calore, fiamma, catalizzatore, luce, acqua, un reagente, oppure che il metallo è meno attivo (serie di attività).',
+    k: [['N', 'apri il quaderno']],
+    s: ['term.reaction', 'term.activitySeries', 'ui.game'],
+  },
+  'term.activitySeries': {
+    t: 'Serie di attività dei metalli',
+    w: 'serie di attività|serie elettrochimica|potenziale standard|potenziale di riduzione|E°',
+    d: 'I metalli in ordine di quanto cedono facilmente elettroni, dal potenziale standard di riduzione E° (in volt): litio −3,04, potassio −2,93, sodio −2,71, magnesio −2,37, alluminio −1,66, zinco −0,76, ferro −0,45, piombo −0,13, idrogeno 0, rame +0,34, argento +0,80, oro +1,50. Un metallo sposta dai sali i metalli con il potenziale più alto (lo zinco nel solfato di rame si ricopre di rame, il rame nel solfato di zinco no) e libera idrogeno dagli acidi come HCl solo se il suo potenziale è negativo: per questo il rame e l\'argento non reagiscono con l\'acido cloridrico, mentre li sciolgono gli acidi ossidanti come l\'acido nitrico.',
+    s: ['term.reaction', 'ui.gameNotebook'],
   },
   'ui.gameStock': {
     t: 'Colore del tappo',
