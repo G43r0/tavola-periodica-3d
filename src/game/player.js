@@ -8,6 +8,8 @@ const RADIUS = 0.28;
 const HALF = 0.55; // mezza altezza del cilindro della capsula: altezza totale 2·(0,55 + 0,28) = 1,66 m
 const WALK = 2.1;
 const RUN = 3.6;
+const CROUCH = 1.1; // m/s accovacciati
+const CROUCH_DROP = 0.55; // m: quanto si abbassano gli occhi accovacciandosi
 
 export class Player {
   constructor(physics, camera) {
@@ -23,8 +25,8 @@ export class Player {
     this.camT = 1;
     this.benchCam = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
     this.onTeleport = null; // (da, a) → il gioco libera il posto (sgabelli spinti lì) e porta con sé l'oggetto in mano
-    this.holding = false; // con qualcosa in mano Maiusc è la manipolazione precisa: si corre solo con Spazio
-    this.precise = false; // manipolazione precisa in corso: si sta fermi (il mouse sposta l'oggetto, non lo sguardo)
+    this.frozen = false; // manipolazione precisa o riempimento al lavandino: si sta fermi
+    this.crouchT = 0; // 0 in piedi, 1 accovacciati (Ctrl)
     const start = { x: 0.15, y: HALF + RADIUS + 0.02, z: 0.4 };
     this.cc = physics.player(start, RADIUS, HALF);
   }
@@ -37,7 +39,7 @@ export class Player {
   /** Vettore «avanti» della camera e posizione degli occhi. */
   eye(out = new THREE.Vector3()) {
     const t = this.cc.body.translation();
-    return out.set(t.x, t.y - (HALF + RADIUS) + EYE, t.z);
+    return out.set(t.x, t.y - (HALF + RADIUS) + EYE - CROUCH_DROP * this.crouchT, t.z);
   }
 
   look(dx, dy) {
@@ -100,15 +102,17 @@ export class Player {
     const { controller, body } = this.cc;
     let mx = 0;
     let mz = 0;
-    if (this.mode === 'walk' && !blocked && !this.precise) {
+    if (this.mode === 'walk' && !blocked && !this.frozen) {
       if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) mz -= 1;
       if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) mz += 1;
       if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) mx -= 1;
       if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) mx += 1;
     }
     const len = Math.hypot(mx, mz) || 1;
-    const shift = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
-    const speed = this.keys.has('Space') || (shift && !this.holding) ? RUN : WALK;
+    // come in Cooking Simulator: Spazio corre, Ctrl accovaccia (Maiusc è la manipolazione precisa)
+    const crouch = this.mode === 'walk' && (this.keys.has('ControlLeft') || this.keys.has('ControlRight'));
+    this.crouchT = crouch ? Math.min(1, this.crouchT + dt * 6) : Math.max(0, this.crouchT - dt * 6);
+    const speed = crouch ? CROUCH : this.keys.has('Space') ? RUN : WALK;
     const sin = Math.sin(this.yaw);
     const cos = Math.cos(this.yaw);
     const vx = ((mx * cos + mz * sin) / len) * speed;

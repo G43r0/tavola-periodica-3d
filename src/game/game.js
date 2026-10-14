@@ -30,6 +30,7 @@ const ROT_SPEED = 0.005; // rad per pixel con R premuto
 const ROT_STEP = Math.PI / 12; // scatto della rotella con R premuto (15°)
 const PRECISE_STEP = 0.0015; // m per pixel nella manipolazione precisa
 const PRECISE_RANGE = 0.35; // m attorno al punto di partenza
+const PUT_BACK_REACH = 1.2; // m: il clic destro rimette a posto l'oggetto solo vicino al punto da cui lo si è preso
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _q = new THREE.Quaternion();
@@ -142,9 +143,10 @@ export class LabGame {
     this.ghostMats = { ok: ghostMaterial(0x5fd38d), bad: ghostMaterial(0xe0524a) };
     this.placing = null; // posa morbida: { item, pos, quat, t }, l'oggetto scivola al suo posto
     this.charge = null; // istante in cui si è cominciato a caricare il lancio (Q tenuto)
-    this.rotating = false; // R tenuto: il mouse ruota l'oggetto in mano invece di girare lo sguardo
+    this.rotating = false; // destro tenuto: il mouse ruota l'oggetto in mano invece di girare lo sguardo
+    this.rotPour = false; // nella precisione il destro inclina anche il recipiente (versamento goccia a goccia)
     this.precise = null; // manipolazione precisa (Maiusc tenuto): { anchor, off }
-    this.filling = false; // E tenuto al lavandino: il contenitore in mano si riempie sotto il rubinetto
+    this.filling = false; // clic sul lavandino con un recipiente: è sotto il rubinetto, l'acqua scorre tenendo il sinistro
     this.tapWasOn = false;
     this.tapFlow = TAP_FLOW;
     this.mouse = new THREE.Vector2(0, 0);
@@ -567,26 +569,71 @@ export class LabGame {
     }
   }
 
-  /** Clic sinistro: prende o posa. */
+  /**
+   * Clic sinistro, come in Cooking Simulator: prende, usa un elemento fisso, posa; con un recipiente in mano, sul
+   * lavandino lo porta sotto il rubinetto. Nella manipolazione precisa il sinistro serve ad alzare (con il mouse).
+   */
   primary() {
-    if (this.held) {
-      // nella manipolazione precisa l'oggetto resta esattamente dov'è, fermo
-      this.release(0, { still: Boolean(this.precise) });
+    const held = this.held;
+    const h = this.hover;
+    if (held) {
+      if (this.precise || this.filling) return;
+      if (held.def.container && h?.type === 'fixture' && h.fixture.kind === 'sink') return this.startFilling();
+      this.release();
       return;
     }
-    const h = this.hover;
     if (h?.type === 'item') this.grab(h.item);
     else if (h?.type === 'fixture') this.use(true);
+  }
+
+  /**
+   * Clic destro: smette di riempire, annulla la rotazione o rimette l'oggetto dove lo si era preso; a mani vuote
+   * abbassa la piastra.
+   */
+  secondary() {
+    if (this.filling) return this.stopFilling();
+    const item = this.held;
+    if (!item) {
+      const f = this.hover?.type === 'fixture' ? this.hover.fixture : null;
+      if (f?.kind === 'hotplate' && f.level) this.setPlate(f.level - 1);
+      return;
+    }
+    if (item.rotYaw || item.rotPitch) return this.resetRotation();
+    this.putBack();
+  }
+
+  /** Si può rimettere a posto l'oggetto in mano (preso da un piano, e lì vicino)? */
+  canPutBack() {
+    const from = this.held?.takenFrom;
+    return Boolean(from) && from.pos.distanceTo(this.held.mesh.position) <= PUT_BACK_REACH;
+  }
+
+  /** Rimette l'oggetto in mano nel punto da cui lo si è preso (scivola lì come nella posa), se è ancora libero. */
+  putBack() {
+    const item = this.held;
+    const from = item.takenFrom;
+    if (!from) return;
+    if (!this.canPutBack()) return this.toast(this.t('putBackFar'));
+    const foot = this.footprint(item);
+    const rot = { x: from.quat.x, y: from.quat.y, z: from.quat.z, w: from.quat.w };
+    if (this.physics.overlaps(foot, { x: from.pos.x, y: from.pos.y + foot.hh + PLACE_LIFT, z: from.pos.z }, { rot, exclude: item.body })) return this.toast(this.t('putBackBusy'));
+    this.letGo();
+    this.placing = { item, pos: from.pos.clone().setY(from.pos.y + PLACE_LIFT), quat: from.quat.clone(), t: 0, limit: 0.6 };
   }
 
   grab(item) {
     if (item.data.inBin) return;
     if (this.placing?.item === item) this.placing = null;
+    // da dove lo si prende, per rimetterlo a posto con il clic destro: solo se era dritto, fermo e appoggiato
+    const p = item.mesh.position;
+    const v = item.body.linvel();
+    const upright = _v.set(0, 1, 0).applyQuaternion(item.mesh.quaternion).y > 0.95;
+    const resting = upright && Math.hypot(v.x, v.y, v.z) < 0.05 && this.physics.ray({ x: p.x, y: p.y + 0.01, z: p.z }, { x: 0, y: -1, z: 0 }, 0.03, { exclude: item.body });
+    item.takenFrom = resting ? { pos: p.clone(), quat: item.mesh.quaternion.clone() } : null;
     this.held = item;
     this.tilt = 0;
     this.ghost = this.makeGhost(item);
     if (this.hover?.item === item) this.hover = null;
-    const p = item.mesh.position;
     if (this.player.mode === 'walk') this.holdDist = Math.max(0.35, Math.min(0.7, this.camera.position.distanceTo(p)));
     else this.lift = Math.max(0.1, Math.min(0.4, p.y - this.benchPlaneY() + 0.16));
     item.body.wakeUp();
@@ -682,6 +729,7 @@ export class LabGame {
     this.ghost = null;
     this.setPrecise(false);
     this.stopFilling();
+    this.endRotate();
   }
 
   /**
@@ -720,7 +768,10 @@ export class LabGame {
     pl.item.body.setGravityScale(1, true);
   }
 
-  /** Posa morbida, a ogni passo fisico: porta l'oggetto al punto di posa; entro 1 cm e 2°, o dopo 0,3 s, è posato. */
+  /**
+   * Posa morbida, a ogni passo fisico: porta l'oggetto al punto di posa; entro 1 cm e 2°, o dopo 0,3 s (0,6 s per
+   * rimetterlo a posto, che può essere più lontano), è posato.
+   */
   settle(dt) {
     const pl = this.placing;
     pl.t += dt;
@@ -729,39 +780,62 @@ export class LabGame {
     const r = body.rotation();
     const dist = Math.hypot(pl.pos.x - p.x, pl.pos.y - p.y, pl.pos.z - p.z);
     const angle = _q3.set(r.x, r.y, r.z, r.w).angleTo(pl.quat);
-    if ((dist < 0.01 && angle < 0.035) || pl.t > 0.3) this.finishPlacing();
+    if ((dist < 0.01 && angle < 0.035) || pl.t > (pl.limit ?? 0.3)) this.finishPlacing();
     else this.drive(body, pl.pos, pl.quat, 16, 3); // sotto la velocità che rompe il vetro (3,3 m/s)
   }
 
-  /** Q (o il tasto centrale) premuto: comincia a caricare il lancio. */
+  /** Tasto centrale premuto: comincia a caricare il lancio; nella manipolazione precisa lascia l'oggetto lì, fermo. */
+  middleDown() {
+    if (this.held && this.precise) this.release(0, { still: true });
+    else this.chargeThrow();
+  }
+
   chargeThrow() {
     if (this.held && this.charge === null) this.charge = this.time;
   }
 
-  /** Q lasciato: lancia, tanto più forte quanto più a lungo lo si è tenuto (da 1,5 a 8 m/s in un secondo). */
+  /** Tasto centrale lasciato: lancia, tanto più forte quanto più a lungo lo si è tenuto (da 1,5 a 8 m/s in un secondo). */
   throwHeld(seconds = null) {
-    // Q lasciato senza aver caricato (premuto a mani vuote, poi preso qualcosa): niente lancio
+    // lasciato senza aver caricato (premuto a mani vuote, poi preso qualcosa): niente lancio
     if (seconds === null && this.charge === null) return;
     const s = seconds ?? this.time - this.charge;
     this.charge = null;
     if (this.held) this.release(throwSpeed(s));
   }
 
-  /** R + mouse: ruota l'oggetto in mano attorno alla verticale (gli strumenti anche in su e in giù). */
+  /** Destro premuto con un oggetto in mano: il mouse lo ruota (nella precisione un recipiente si inclina e versa). */
+  startRotate() {
+    if (!this.held) return;
+    this.rotating = true;
+    this.rotPour = Boolean(this.precise && this.held.def.container);
+    if (this.rotPour) this.pouring = true;
+  }
+
+  endRotate() {
+    if (this.rotPour) this.pouring = false;
+    this.rotPour = false;
+    this.rotating = false;
+  }
+
+  /**
+   * Destro + mouse: ruota l'oggetto in mano attorno alla verticale; in su e in giù inclina gli strumenti e, nella
+   * manipolazione precisa, i recipienti (è così che si versa goccia a goccia).
+   */
   rotateBy(dx, dy) {
     const item = this.held;
     if (!item) return;
     item.rotYaw = wrapAngle((item.rotYaw ?? 0) - dx * ROT_SPEED);
     if (!item.def.container) item.rotPitch = clamp((item.rotPitch ?? 0) - dy * ROT_SPEED, -1.2, 1.2);
+    else if (this.rotPour) this.tiltBy(-dy);
   }
 
-  /** R + rotella: ruota a scatti di 15°. */
+  /** Destro + rotella: ruota a scatti di 15°. */
   rotateStep(dir) {
     const item = this.held;
     if (item) item.rotYaw = wrapAngle(Math.round((item.rotYaw ?? 0) / ROT_STEP) * ROT_STEP + dir * ROT_STEP);
   }
 
-  /** Un tocco di R: l'oggetto torna dritto. */
+  /** Annulla la rotazione: l'oggetto torna dritto. */
   resetRotation() {
     if (!this.held) return;
     this.held.rotYaw = 0;
@@ -770,14 +844,20 @@ export class LabGame {
 
   /**
    * Maiusc tenuto con un oggetto in mano (in prima persona): manipolazione precisa. Lo sguardo e i passi si fermano, il
-   * mouse sposta l'oggetto attorno al punto in cui era, la rotella lo alza o lo abbassa di 1 cm.
+   * mouse sposta l'oggetto attorno al punto in cui era, sinistro + mouse lo alza o lo abbassa, destro + mouse lo ruota,
+   * il tasto centrale lo lascia lì.
    */
   setPrecise(on) {
     if (on && this.held && !this.precise && this.player.mode === 'walk' && !this.filling) {
       const p = this.held.body.translation();
       this.precise = { anchor: new THREE.Vector3(p.x, p.y, p.z), off: new THREE.Vector3() };
     } else if (!on) this.precise = null;
-    this.player.precise = Boolean(this.precise);
+    this.player.frozen = Boolean(this.precise || this.filling);
+  }
+
+  /** Sinistro + mouse nella manipolazione precisa: in su alza l'oggetto, in giù lo abbassa. */
+  preciseLift(dy) {
+    if (this.precise) this.precise.off.y = clamp(this.precise.off.y - dy * PRECISE_STEP, -0.2, 0.3);
   }
 
   /** Mouse nella manipolazione precisa: a destra e a sinistra, avanti e indietro rispetto allo sguardo. */
@@ -796,7 +876,10 @@ export class LabGame {
     }
   }
 
-  /** E tenuto al lavandino con un contenitore: lo porta sotto il rubinetto e apre l'acqua finché non si lascia E. */
+  /**
+   * Clic sul lavandino con un recipiente in mano: lo porta sotto il rubinetto (fermi lì, come nella vista del lavello
+   * di Cooking Simulator). L'acqua scorre finché si tiene premuto il sinistro; il clic destro smette.
+   */
   startFilling() {
     const sink = this.fx.sink;
     const sp = sink.spout;
@@ -806,14 +889,20 @@ export class LabGame {
     }
     this.setPrecise(false);
     this.filling = true;
+    this.player.frozen = true;
     this.tilt = 0;
     this.tapWasOn = sink.tap;
-    sink.tap = true;
+  }
+
+  /** Nel riempimento: sinistro premuto apre l'acqua, lasciato la chiude. */
+  setWater(on) {
+    if (this.filling) this.fx.sink.tap = on || this.tapWasOn;
   }
 
   stopFilling() {
     if (!this.filling) return;
     this.filling = false;
+    this.player.frozen = Boolean(this.precise);
     this.fx.sink.tap = this.tapWasOn;
   }
 
@@ -821,7 +910,7 @@ export class LabGame {
     this.pouring = on && Boolean(this.held);
   }
 
-  /** Inclina l'oggetto in mano (mouse con il tasto destro); vicino al bordo, dove inizia il versamento, più finemente. */
+  /** Inclina l'oggetto in mano (mouse con il sinistro tenuto); vicino al bordo, dove inizia il versamento, più finemente. */
   tiltBy(dy) {
     if (!this.held) return;
     const max = this.held.def.container ? 2.6 : 1.2;
@@ -874,7 +963,7 @@ export class LabGame {
   /**
    * Tasto E: usa ciò che si guarda (o lo strumento in mano su ciò che si guarda).
    * @param {boolean} down premuto (true) o rilasciato (false, per l'estintore)
-   * @param {boolean} fine con Maiusc: un pizzico con la spatola, abbassa la piastra
+   * @param {boolean} fine con Maiusc: un pizzico con la spatola, abbassa la piastra (come il clic destro)
    */
   use(down = true, fine = false) {
     const held = this.held;
@@ -882,10 +971,7 @@ export class LabGame {
       this.spraying = down;
       return;
     }
-    if (!down) {
-      this.stopFilling();
-      return;
-    }
+    if (!down) return;
     const h = this.hover;
     const fixture = h?.type === 'fixture' ? h.fixture : null;
     const target = h?.type === 'item' ? h.item : null;
@@ -895,8 +981,8 @@ export class LabGame {
     if (held?.kind === 'strip') return this.useStrip(held, target);
     if (held?.kind === 'towel' && h?.type === 'puddle') return this.wipe(held, h.puddle);
     if (held?.def.container && fixture) {
-      // E tenuto riempie; lavare (il contenuto va nello scarico) vuole Maiusc+E
-      if (fixture.kind === 'sink') return fine ? this.wash(held) : this.startFilling();
+      // E pulisce, come la spugna di Cooking Simulator: il contenuto va nello scarico (riempire è il clic)
+      if (fixture.kind === 'sink') return this.wash(held);
       if (fixture.kind === 'bin') return this.emptyInto(held, fixture);
     }
     if (fixture) return this.useFixture(fixture, fine);
@@ -1907,9 +1993,8 @@ export class LabGame {
   update(dt, { blocked = false } = {}) {
     this.time += dt;
     if (this.swirlT > 0) this.swirlT -= dt;
-    // lasciato il tasto destro, il contenitore torna dritto da solo (e smette di versare)
+    // lasciato il tasto, il contenitore torna dritto da solo (e smette di versare)
     if (this.held) this.tilt = relaxTilt(this.tilt, dt, this.pouring);
-    this.player.holding = Boolean(this.held);
     this.player.update(dt, blocked);
     for (const b of this.pendingBreaks) this.breakItem(b);
     this.pendingBreaks.clear();
@@ -2023,6 +2108,8 @@ export class LabGame {
       precise: Boolean(this.precise),
       filling: this.filling,
       tapFlow: this.tapFlow,
+      rotated: Boolean(held && (held.rotYaw || held.rotPitch)),
+      canPutBack: held ? this.canPutBack() : false,
     });
   }
 

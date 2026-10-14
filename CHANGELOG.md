@@ -30,7 +30,7 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
     non funzionano e illumina il tasto premuto (`L` la nasconde). Le informazioni importanti sono in finestrelle accanto
     agli oggetti: ciò che si guarda (nome nella fascia gialla, millilitri e contenuto, stato di piastra, rubinetto,
     bilancia…) e ciò che si tiene in mano (millilitri e «Versando»). Prendono il posto delle schede in basso.
-  - Versamento più facile da controllare: il recipiente torna dritto quando si lascia il tasto destro (e smette di
+  - Versamento più facile da controllare: il recipiente torna dritto quando si lascia il tasto sinistro (e smette di
     versare); un anello mostra dove cadrà il getto già prima della prima goccia (verde dentro un recipiente, nel
     lavandino o nei rifiuti, rosso se fa una pozza); la finestrella dice dove si sta versando. La portata ha una zona
     morta (il liquido resta attaccato al bordo fino a 0,5 mm di carico), una corsa del mouse più fine vicino al bordo e
@@ -42,13 +42,14 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
     con la carta: finché resta conta nel disordine della valutazione. L'aiuto (`H`) spiega legenda, finestrelle e anello.
   - Sgabelli spingibili: il giocatore li sposta camminandoci contro e non ci resta più bloccato nel corridoio tra i
     banconi; tornano al loro posto a ogni partita. La vetreria a terra non ferma più il giocatore.
-  - Maneggiare gli oggetti come in *Cooking Simulator*: una sagoma verde (o rossa) mostra dove si poserà l'oggetto in
-    mano, nel punto d'appoggio vero, e al clic l'oggetto ci scivola in meno di 0,3 s; `Q` tenuto (o il tasto centrale)
-    carica il lancio, con un anello attorno al mirino; `R` tenuto ruota l'oggetto (rotella: scatti di 15°, un tocco lo
-    raddrizza), anche il beccuccio da cui si versa; `Maiusc` tenuto con un oggetto in mano apre la manipolazione precisa
-    (il mouse sposta l'oggetto, la rotella lo alza di 1 cm, il clic lo lascia fermo, si versa goccia a goccia); si corre
-    con `Spazio`. Al lavandino `E` tenuto riempie il recipiente sotto il rubinetto (la rotella regola il getto) e lavare
-    passa a `Maiusc+E`, così non si svuota più un recipiente per sbaglio.
+  - Comandi uguali a quelli di *Cooking Simulator*: clic sinistro per prendere, usare gli elementi fissi e posare, con
+    una sagoma verde (o rossa) dove si poserà l'oggetto, che al clic ci scivola in meno di 0,3 s; sinistro tenuto + mouse
+    per versare; destro tenuto + mouse per ruotare (anche il beccuccio da cui si versa) e clic destro per annullare la
+    rotazione o rimettere l'oggetto dove lo si era preso; tasto centrale tenuto per caricare il lancio (anello attorno
+    al mirino); `Maiusc` tenuto con un oggetto in mano per la manipolazione precisa (il mouse sposta, sinistro + mouse
+    alza, destro + mouse ruota e versa goccia a goccia, il tasto centrale lascia l'oggetto fermo); `Spazio` per correre
+    e `Ctrl` per accovacciarsi; clic sul lavandino con un recipiente per portarlo sotto il rubinetto (l'acqua scorre
+    tenendo premuto il sinistro, la rotella regola il getto, il clic destro smette); `E` pulisce e usa gli strumenti.
 - **Preset grafici** (pulsante con lo schermo nella barra in alto): *Semplice* per i computer poco potenti (niente
   post-processing, meno segmenti e punti, sandbox senza bagliore, niente sfocature e animazioni continue
   nell'interfaccia), *Medio* (la grafica di prima, predefinito) e *Professionale*: sovracampionamento, MSAA 4×, tone

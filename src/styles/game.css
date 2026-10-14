@@ -374,7 +374,8 @@
   fill: none;
 }
 .gm-mouse__on {
-  fill: #fff;
+  /* il tasto da usare, in giallo: sinistro, destro e centrale si distinguono a colpo d'occhio */
+  fill: #ffd166;
 }
 .gm-arrows {
   font-size: 11px;

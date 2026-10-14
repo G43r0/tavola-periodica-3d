@@ -450,18 +450,18 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
 - **Fisica vera**: gli oggetti si prendono, si posano dove si guarda, si lanciano, cadono e si rovesciano; la vetreria che
   urta oltre ~3,3 m/s si rompe (un becher che cade dal bancone sì, uno posato no). Gli sgabelli si spingono camminandoci
   contro; la vetreria a terra non ferma il giocatore.
-- **Maneggiare gli oggetti**: con un oggetto in mano, dove lo si poserà compare la sua sagoma, nel punto d'appoggio vero
-  (l'ingombro dell'oggetto calato sul piano): verde se lì si può, rossa se il piano è inclinato o mobile, troppo lontano
-  (oltre 0,6 m), a sbalzo o già occupato. Al clic l'oggetto scivola al suo posto in meno di 0,3 s invece di comparirci.
-  `Q` tenuto carica il lancio (da 1,5 a 8 m/s in un secondo, con un anello attorno al mirino; anche il tasto centrale).
-  `R` tenuto ruota l'oggetto con il mouse (con la rotella a scatti di 15°; un tocco lo raddrizza): per un recipiente gira
-  il beccuccio, quindi il lato da cui esce il getto, e la rotazione resta quando lo si riprende. `Maiusc` tenuto con un
-  oggetto in mano apre la manipolazione precisa: lo sguardo e i passi si fermano, il mouse sposta l'oggetto (fino a 35 cm),
-  la rotella lo alza o lo abbassa di 1 cm, il tasto destro versa goccia a goccia e il clic lo lascia lì fermo. Si corre
-  con `Spazio` (a mani vuote anche con `Maiusc`). Al lavandino, `E` tenuto porta il recipiente sotto il rubinetto e lo
-  riempie finché non si lascia (la rotella regola il getto da 5 a 50 mL/s); lavare, che svuota nello scarico, è
-  `Maiusc+E`.
-- **Versare**: tenendo premuto il tasto destro e muovendo il mouse si inclina il recipiente; lasciando il tasto torna
+- **Comandi come in *Cooking Simulator***: clic sinistro per prendere, usare gli elementi fissi e posare (dove lo si
+  poserà compare la sagoma dell'oggetto, nel punto d'appoggio vero: verde se lì si può, rossa se il piano è inclinato o
+  mobile, troppo lontano, a sbalzo o occupato; al clic l'oggetto ci scivola in meno di 0,3 s). Destro tenuto + mouse
+  ruota l'oggetto (per un recipiente anche il beccuccio da cui si versa); un clic destro annulla la rotazione o rimette
+  l'oggetto dove lo si era preso. Il tasto centrale tenuto carica il lancio (da 1,5 a 8 m/s in un secondo, con un anello
+  attorno al mirino). `Maiusc` tenuto con un oggetto in mano apre la manipolazione precisa: lo sguardo e i passi si
+  fermano, il mouse sposta l'oggetto (fino a 35 cm), sinistro + mouse lo alza o lo abbassa, destro + mouse lo ruota (un
+  recipiente si inclina e versa goccia a goccia), il tasto centrale lo lascia lì fermo. `Spazio` corre, `Ctrl`
+  accovaccia. Un clic sul lavandino con un recipiente in mano lo porta sotto il rubinetto: l'acqua scorre finché si tiene
+  premuto il sinistro (la rotella regola il getto da 5 a 50 mL/s), il clic destro smette. `E` pulisce e usa gli
+  strumenti (al lavandino lava il recipiente, che si svuota nello scarico).
+- **Versare**: tenendo premuto il tasto sinistro e muovendo il mouse si inclina il recipiente; lasciando il tasto torna
   dritto e smette di versare, e di lato si corregge la mira. Il livello del liquido resta orizzontale (quantile di ~300
   punti campionati nel volume interno) e il liquido esce dal punto più basso del bordo con la portata di uno stramazzo
   (Q ≈ 1,77 · b · h^1,5, fino a 150 mL/s per un becher): sotto 0,5 mm di carico resta attaccato al bordo, poi esce
@@ -548,7 +548,7 @@ src/
     data/reactions.js libreria delle reazioni
   game/               simulatore di laboratorio (il gioco)
     game-view.js      interfaccia: menu, HUD (legenda, finestrelle accanto agli oggetti), finestre, comandi; carica Rapier
-    controls.js       legenda dei comandi in basso a destra (funzione pura), inclinazione, lancio a carica, tocco di R
+    controls.js       legenda dei comandi in basso a destra (funzione pura), inclinazione, lancio a carica, clic o trascinamento
     game.js           il gioco: oggetti, presa e versamento, strumenti, calore, incidenti, rifiuti, esercitazioni
     mixture.js        chimica dei contenitori: fasi, pH, colore, solubilità, cristallizzazione, reazioni, calore
     reagents.js       solubilità, acidi e basi, idrati, gas tossici, metalli pesanti, reagenti dello scaffale, prezzi
@@ -619,11 +619,12 @@ build/icon.png        icona usata da electron-builder
 | `[` / `]`, rotella | (sandbox) pennello più piccolo / più grande |
 | clic destro / centrale | (sandbox) cancella / preleva la sostanza |
 | `Maiusc` + clic | (sandbox) linea dal punto precedente |
-| `W A S D`, mouse | (simulatore) cammina e guarda (`Spazio`: corri; a mani vuote anche `Maiusc`) |
-| clic / tasto destro + mouse | (simulatore) prendi o posa (la sagoma mostra dove) / inclina per versare (lasciando il tasto torna dritto) |
-| `E` / `Maiusc+E` | (simulatore) usa: manopole, rubinetto, tara, cappa, campanello; con gli strumenti spatola, ansa, carta, cartina, estintore (un pizzico con la spatola); con un recipiente al lavandino `E` tenuto riempie, `Maiusc+E` lava |
-| `Q` (tenuto) / rotella | (simulatore) carica e lancia (anche il tasto centrale) / distanza o altezza dell'oggetto |
-| `R` (tenuto) + mouse | (simulatore) ruota l'oggetto in mano (rotella: scatti di 15°; un tocco lo raddrizza) |
-| `Maiusc` (tenuto) | (simulatore) con un oggetto in mano: manipolazione precisa (mouse sposta, rotella 1 cm, clic lo lascia fermo) |
+| `W A S D`, mouse | (simulatore) cammina e guarda (`Spazio`: corri; `Ctrl`: accovacciati) |
+| clic sinistro | (simulatore) prendi, usa gli elementi fissi, posa (la sagoma mostra dove); sul lavandino con un recipiente: riempi |
+| sinistro tenuto + mouse | (simulatore) con un recipiente: inclina per versare (lasciando il tasto torna dritto) |
+| destro tenuto + mouse / clic destro | (simulatore) ruota l'oggetto / annulla la rotazione o rimetti a posto (sulla piastra: abbassa) |
+| tasto centrale (tenuto) / rotella | (simulatore) carica e lancia / distanza o altezza dell'oggetto |
+| `Maiusc` (tenuto) | (simulatore) con un oggetto in mano: manipolazione precisa (mouse sposta, sinistro + mouse alza, destro + mouse ruota, centrale lascia) |
+| `E` / `Maiusc+E` | (simulatore) pulisci e usa gli strumenti: spatola, ansa, carta, cartina, estintore (un pizzico con la spatola); con un recipiente agita, al lavandino lava, sui rifiuti svuota |
 | `Tab` / `A` `D` | (simulatore) vista del bancone / postazione precedente o successiva |
 | `I` / `L` / `H` / `Esc` | (simulatore) finestrelle accanto agli oggetti / legenda dei comandi / tutti i comandi / pausa |

@@ -10,7 +10,7 @@ import { loadPhysics } from './physics.js';
 import { LabGame } from './game.js';
 import { ORDERS } from './orders.js';
 import { SHELF } from './reagents.js';
-import { isTap } from './controls.js';
+import { isClick } from './controls.js';
 import { S } from '../sandbox/substances.js';
 import { GAME_STRINGS } from './game-strings.js';
 
@@ -37,9 +37,11 @@ const rows = (list) => list.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('
 const stars = (n) => Array.from({ length: 5 }, (_, i) => `<span class="gm-star ${n >= i + 1 ? 'is-full' : n >= i + 0.5 ? 'is-half' : ''}">★</span>`).join('');
 
 /** Mouse disegnato, con evidenziato il tasto sinistro (l), destro (r) o la rotella (w). */
-const mouseIcon = (part) => `<svg class="gm-mouse" viewBox="0 0 14 20" width="12" height="17" aria-hidden="true"><rect x="1" y="1" width="12" height="18" rx="6"/><path d="M1 8h12M7 1v7" class="gm-mouse__line"/>${
+const mouseIcon = (part) => `<svg class="gm-mouse" viewBox="0 0 14 20" width="14" height="20" aria-hidden="true"><rect x="1" y="1" width="12" height="18" rx="6"/><path d="M1 8h12M7 1v7" class="gm-mouse__line"/>${
   part === 'l' ? '<path d="M7 1.5A5.5 5.5 0 0 0 1.5 7v.5H7z" class="gm-mouse__on"/>' : part === 'r' ? '<path d="M7 1.5A5.5 5.5 0 0 1 12.5 7v.5H7z" class="gm-mouse__on"/>' : part === 'w' ? '<rect x="5.8" y="2.8" width="2.4" height="4.2" rx="1.2" class="gm-mouse__on"/>' : ''
 }</svg>`;
+/** Frecce accanto al mouse nella legenda: movimento in su e in giù (versare, alzare) o di lato (ruotare). */
+const ARROWS = { mouse: '↕', mousex: '↔' };
 const DROP = '<svg class="gm-drop" viewBox="0 0 10 14" width="9" height="12" aria-hidden="true"><path d="M5 .8C3.4 3.4 1 6.2 1 8.9a4 4 0 0 0 8 0C9 6.2 6.6 3.4 5 .8z"/></svg>';
 
 const TEMPLATE = () => `
@@ -84,8 +86,10 @@ export function createGame(elements, { onClose } = {}) {
   let lastT = 0;
   let hudAcc = 0;
   let state = 'menu'; // menu | play | dialog | pause
-  let rmb = false;
-  let rKey = null; // R premuto: { t, moved } per distinguere un tocco (raddrizza) dalla rotazione
+  // tasti del mouse premuti: per distinguere un clic da un trascinamento (come in Cooking Simulator il sinistro posa con
+  // un clic e versa trascinando, il destro annulla o rimette a posto con un clic e ruota trascinando)
+  let lmb = null; // { moved, done, pour }
+  let rmb = null; // { moved, dx, dy }
   let save = loadSave();
   let chemMode = save.chemMode ?? 'real';
   let showInfo = true;
@@ -181,9 +185,7 @@ export function createGame(elements, { onClose } = {}) {
     $('.gm-dialog').hidden = s !== 'dialog' && s !== 'pause';
     if (s !== 'play') {
       unlock();
-      rmb = false;
       pressed.clear();
-      game?.setPour(false);
       game?.player.keys.clear();
       releaseHands();
     }
@@ -472,39 +474,20 @@ export function createGame(elements, { onClose } = {}) {
       if (down) pressed.add(id);
       else pressed.delete(id);
     }
-    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'Space'].includes(code)) {
+    // movimento come in Cooking Simulator: Spazio corre, Ctrl accovaccia, Maiusc tenuto è la manipolazione precisa
+    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'Space', 'ControlLeft', 'ControlRight'].includes(code)) {
       if (game.player.mode === 'bench' && down && (code === 'KeyA' || code === 'ArrowLeft')) game.station(-1);
       else if (game.player.mode === 'bench' && down && (code === 'KeyD' || code === 'ArrowRight')) game.station(1);
       if (down) game.player.keys.add(code);
       else game.player.keys.delete(code);
-      // Maiusc con qualcosa in mano: manipolazione precisa finché resta premuto (a mani vuote fa correre)
       if ((code === 'ShiftLeft' || code === 'ShiftRight') && !ev.repeat) game.setPrecise(down);
       ev.preventDefault();
       return;
     }
+    // E: pulire e usare gli strumenti (tenuto, l'estintore spruzza)
     if (code === 'KeyE') {
       if (!ev.repeat) game.use(down, ev.shiftKey);
       ev.preventDefault();
-      return;
-    }
-    // Q: tenuto carica il lancio, lasciato lancia
-    if (code === 'KeyQ') {
-      if (down && !ev.repeat) game.chargeThrow();
-      else if (!down) game.throwHeld();
-      return;
-    }
-    // R: tenuto, il mouse (o la rotella, a scatti) ruota l'oggetto; un tocco lo raddrizza
-    if (code === 'KeyR') {
-      // i tempi sono quelli degli eventi (non di quando si elaborano): un fotogramma lento non trasforma un tocco in una
-      // pressione lunga
-      if (down && !ev.repeat) {
-        rKey = { t: ev.timeStamp, moved: 0 };
-        game.rotating = true;
-      } else if (!down && rKey) {
-        if (isTap((ev.timeStamp - rKey.t) / 1000, rKey.moved)) game.resetRotation();
-        rKey = null;
-        game.rotating = false;
-      }
       return;
     }
     if (!down) return;
@@ -537,21 +520,20 @@ export function createGame(elements, { onClose } = {}) {
     pressed.clear();
     releaseHands();
   });
-  /** Tasti tenuti che la finestra non vedrà più rilasciare: niente precisione, riempimento, carica né rotazione. */
+  /** Tasti tenuti che la finestra non vedrà più rilasciare: niente versamento, precisione, acqua, carica né rotazione. */
   function releaseHands() {
+    lmb = null;
+    rmb = null;
     if (!game) return;
+    game.setPour(false);
     game.setPrecise(false);
-    game.stopFilling();
+    game.setWater(false);
+    game.endRotate();
     game.charge = null;
-    game.rotating = false;
-    rKey = null;
   }
   /** Id della legenda per un tasto (controls.js, KEY_IDS). */
   function keyId(code) {
     if (code === 'KeyE') return 'e';
-    if (code === 'KeyQ') return 'q';
-    if (code === 'KeyR') return 'r';
-    if (code === 'Space') return 'space';
     if (code === 'Tab') return 'tab';
     if (code === 'KeyH') return 'h';
     if (code === 'ShiftLeft' || code === 'ShiftRight') return 'shift';
@@ -560,6 +542,8 @@ export function createGame(elements, { onClose } = {}) {
     return null;
   }
 
+  // mouse come in Cooking Simulator: sinistro prende, usa e posa (trascinando con un recipiente versa; nella precisione
+  // alza), destro ruota trascinando (un clic annulla la rotazione o rimette a posto), tasto centrale lancia
   stage.addEventListener('mousedown', (ev) => {
     if (state !== 'play') return;
     if (game.player.mode === 'walk' && !locked()) {
@@ -568,28 +552,44 @@ export function createGame(elements, { onClose } = {}) {
     }
     if (ev.button === 0) {
       pressed.add('lmb');
-      game.primary();
+      lmb = { moved: 0, done: false, pour: false };
+      if (game.filling) {
+        game.setWater(true);
+        lmb.done = true;
+      } else if (!game.held || (!game.held.def.container && !game.precise)) {
+        // prendere, usare un elemento fisso o posare uno strumento: subito, al clic
+        game.primary();
+        lmb.done = true;
+      }
     } else if (ev.button === 1) {
-      // tasto centrale: come Q, tenuto carica il lancio (e niente scorrimento automatico della pagina)
       ev.preventDefault();
-      pressed.add('q');
-      game.chargeThrow();
+      pressed.add('mmb');
+      game.middleDown();
     } else if (ev.button === 2) {
-      rmb = true;
       pressed.add('rmb');
-      game.setPour(true);
+      rmb = { moved: 0, dx: 0, dy: 0 };
+      game.startRotate();
     }
   });
   window.addEventListener('mouseup', (ev) => {
-    if (ev.button === 0) pressed.delete('lmb');
-    if (ev.button === 1 && state === 'play') {
-      pressed.delete('q');
-      game?.throwHeld();
-    }
-    if (ev.button === 2) {
-      rmb = false;
+    if (ev.button === 0 && lmb) {
+      pressed.delete('lmb');
+      const l = lmb;
+      lmb = null;
+      if (state !== 'play' || !game) return;
+      if (game.filling) game.setWater(false);
+      else if (l.pour) game.setPour(false);
+      else if (!l.done && isClick(l.moved)) game.primary(); // un clic con il recipiente: posa (o riempi al lavandino)
+    } else if (ev.button === 1) {
+      pressed.delete('mmb');
+      if (state === 'play') game?.throwHeld();
+    } else if (ev.button === 2 && rmb) {
       pressed.delete('rmb');
-      game?.setPour(false);
+      const r = rmb;
+      rmb = null;
+      if (!game) return;
+      game.endRotate();
+      if (state === 'play' && isClick(r.moved)) game.secondary();
     }
   });
   stage.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -597,23 +597,46 @@ export function createGame(elements, { onClose } = {}) {
     if (state !== 'play' || !game) return;
     // Chromium a volte manda un salto enorme subito dopo il blocco del puntatore: si ignora
     const jump = Math.abs(ev.movementX) > 250 || Math.abs(ev.movementY) > 250;
-    // R premuto: il mouse ruota l'oggetto (lo sguardo e, nella vista del bancone, il punto di presa restano fermi)
-    if (rKey && game.held) {
-      if (jump) return;
-      rKey.moved += Math.abs(ev.movementX) + Math.abs(ev.movementY);
-      game.rotateBy(ev.movementX, ev.movementY);
+    const dx = jump ? 0 : ev.movementX;
+    const dy = jump ? 0 : ev.movementY;
+    const walk = game.player.mode === 'walk';
+    // destro tenuto con un oggetto in mano: il mouse lo ruota (lo sguardo e, nella vista del bancone, il punto di presa
+    // restano fermi). La rotazione parte oltre i 4 pixel, così un clic non gira l'oggetto prima di annullare
+    if (rmb && game.held) {
+      rmb.moved += Math.abs(dx) + Math.abs(dy);
+      rmb.dx += dx;
+      rmb.dy += dy;
+      if (!isClick(rmb.moved)) {
+        game.rotateBy(rmb.dx, rmb.dy);
+        rmb.dx = 0;
+        rmb.dy = 0;
+      }
       return;
     }
     const r = stage.getBoundingClientRect();
     game.setMouse(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
     if (jump) return;
-    // tasto destro premuto: il mouse in su inclina in avanti (versa), in giù raddrizza; di lato si continua a girare lo
-    // sguardo (a metà velocità) per correggere la mira mentre si versa, ma non nella manipolazione precisa
-    if (rmb && game.held) {
-      game.tiltBy(-ev.movementY * (game.player.mode === 'walk' ? 1 : 1.4));
-      if (game.player.mode === 'walk' && locked() && !game.precise) game.player.look(ev.movementX * 0.5, 0);
-    } else if (game.precise) game.preciseMove(ev.movementX, ev.movementY);
-    else if (game.player.mode === 'walk' && locked()) game.player.look(ev.movementX, ev.movementY);
+    if (lmb && game.held && !game.filling) {
+      lmb.moved += Math.abs(dx) + Math.abs(dy);
+      // nella manipolazione precisa sinistro + mouse alza e abbassa l'oggetto
+      if (game.precise) {
+        game.preciseLift(dy);
+        return;
+      }
+      // con un recipiente, sinistro tenuto + mouse: in su inclina (versa), in giù raddrizza; di lato si continua a
+      // girare lo sguardo, a metà velocità, per correggere la mira
+      if (game.held.def.container && !lmb.done && !isClick(lmb.moved)) {
+        if (!lmb.pour) {
+          lmb.pour = true;
+          game.setPour(true);
+        }
+        game.tiltBy(-dy * (walk ? 1 : 1.4));
+        if (walk && locked()) game.player.look(dx * 0.5, 0);
+        return;
+      }
+    }
+    if (game.precise) game.preciseMove(dx, dy);
+    else if (walk && locked()) game.player.look(dx, dy);
   });
   stage.addEventListener('wheel', (ev) => {
     if (state !== 'play') return;
@@ -661,8 +684,9 @@ export function createGame(elements, { onClose } = {}) {
   /** Tasti di una riga della legenda: mouse disegnato per i tasti del mouse, tasti della tastiera per gli altri. */
   function keyHtml(k) {
     const label = t(`key_${k}`);
-    if (k === 'lmb' || k === 'rmb' || k === 'wheel') return `<span class="gm-key" title="${esc(label)}">${mouseIcon(k[0])}</span>`;
-    if (k === 'mouse') return `<span class="gm-key" title="${esc(label)}">${mouseIcon('')}<b class="gm-arrows">↕</b></span>`;
+    if (k === 'lmb' || k === 'rmb') return `<span class="gm-key" title="${esc(label)}">${mouseIcon(k[0])}</span>`;
+    if (k === 'wheel' || k === 'mmb') return `<span class="gm-key" title="${esc(label)}">${mouseIcon('w')}</span>`;
+    if (k === 'mouse' || k === 'mousex') return `<span class="gm-key" title="${esc(label)}">${mouseIcon('')}<b class="gm-arrows">${ARROWS[k]}</b></span>`;
     return label.split(/\s+\/\s+|\s+/).map((c) => `<kbd>${esc(c)}</kbd>`).join('');
   }
 
@@ -672,8 +696,8 @@ export function createGame(elements, { onClose } = {}) {
   function renderLegend(rowsList) {
     const html = showLegend
       ? rowsList.map((r) => {
-        // «tasto destro + mouse»: un solo mouse disegnato, con le frecce del movimento accanto
-        const keys = r.keys.map((k) => (k === 'mouse' && r.keys.length > 1 ? '<b class="gm-arrows">↕</b>' : keyHtml(k))).join('');
+        // «tasto + mouse»: un solo mouse disegnato, con le frecce del movimento accanto
+        const keys = r.keys.map((k) => (ARROWS[k] && r.keys.length > 1 ? `<b class="gm-arrows">${ARROWS[k]}</b>` : keyHtml(k))).join('');
         return `<li class="${r.off ? 'is-off' : ''} ${r.keys.some((k) => pressed.has(k)) ? 'is-down' : ''}"><span class="gm-keys">${keys}</span><span>${esc(t(r.key, r.params ?? undefined))}</span></li>`;
       }).join('')
       : '';

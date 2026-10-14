@@ -34,13 +34,13 @@ filtrazione, distillazione, audio.
 
 | | Prima persona | Vista del bancone |
 |---|---|---|
-| Muoversi | `W A S D` (`Spazio` corre; a mani vuote anche `Maiusc`), mouse per guardare | `A` / `D` cambia postazione |
-| Prendere / posare | clic sinistro; una sagoma verde o rossa mostra dove lo si poserà | clic sinistro (l'oggetto segue il puntatore) |
-| Ruotare | `R` tenuto + mouse (rotella: scatti di 15°; un tocco raddrizza) | uguale |
-| Precisione | `Maiusc` tenuto con un oggetto in mano: il mouse lo sposta, la rotella lo alza di 1 cm, il clic lo lascia fermo | — |
-| Versare | tieni premuto il tasto destro e muovi il mouse in su/giù: l'inclinazione segue il mouse; lasciando il tasto il recipiente torna dritto; di lato si corregge la mira | uguale |
-| Lanciare | `Q` tenuto (o il tasto centrale): più a lungo, più forte | — |
-| Usare | `E` (manopole, rubinetto, bilancia, campanello, cappa, doccia; con uno strumento in mano: spatola, ansa, carta, cartina, estintore); con un recipiente al lavandino `E` tenuto riempie e `Maiusc+E` lava | uguale |
+| Muoversi | `W A S D` (`Spazio` corre, `Ctrl` accovaccia), mouse per guardare | `A` / `D` cambia postazione |
+| Prendere / usare / posare | clic sinistro; una sagoma verde o rossa mostra dove lo si poserà | clic sinistro (l'oggetto segue il puntatore) |
+| Versare | tieni premuto il tasto sinistro e muovi il mouse in su/giù: l'inclinazione segue il mouse; lasciando il tasto il recipiente torna dritto; di lato si corregge la mira | uguale |
+| Ruotare | destro tenuto + mouse; un clic destro annulla la rotazione o rimette l'oggetto dove lo si era preso | uguale |
+| Precisione | `Maiusc` tenuto con un oggetto in mano: il mouse lo sposta, sinistro + mouse lo alza, destro + mouse lo ruota (un recipiente versa goccia a goccia), il tasto centrale lo lascia fermo | — |
+| Lanciare | tasto centrale tenuto: più a lungo, più forte | — |
+| Usare | `E` (pulire e usare gli strumenti: spatola, ansa, carta, cartina, estintore; con un recipiente agita, al lavandino lava, sui rifiuti svuota; anche gli elementi fissi); clic sul lavandino con un recipiente: riempi tenendo premuto il sinistro, clic destro per smettere | uguale |
 | Distanza / altezza | rotella | rotella |
 | Altro | `Tab` cambia visuale, `I` finestrelle accanto agli oggetti, `L` legenda dei comandi, `H` comandi, `Esc` pausa | |
 
@@ -85,15 +85,20 @@ in mano e con ciò che si guarda; le informazioni importanti in finestrelle agga
 che si guarda: nome in una fascia, millilitri e contenuto; a destra dell'oggetto in mano: millilitri e dove si sta
 versando); contorno sull'oggetto guardato. Gli sgabelli sono arredi dinamici che il giocatore spinge.
 
+Comandi: lo schema classico di *Cooking Simulator* per PC descritto nel report (clic sinistro prende, usa e posa,
+sinistro tenuto + mouse versa; destro tenuto ruota, un clic destro annulla la rotazione o rimette a posto; tasto
+centrale lancia a carica; `Maiusc` tenuto per la manipolazione precisa; `Spazio` corre, `Ctrl` accovaccia; `E` pulisce e
+usa gli strumenti). Clic e trascinamento si distinguono con una soglia di 4 pixel (`isClick` in `controls.js`).
+
 Maneggiare gli oggetti (passi 10–14 del piano nel report): con un oggetto in mano una sagoma trasparente mostra il
 punto d'appoggio vero (l'ingombro calato sul piano con `castShape`), verde se il piano è orizzontale (normale y ≥ 0,9),
 fisso, entro 0,6 m, con il centro appoggiato e senza sovrapposizioni, rossa altrimenti; al clic l'oggetto ci scivola
 (gravità spenta, entro 1 cm e 2° o 0,3 s, sotto la velocità che rompe il vetro). Lancio a carica 1,5 + 6,5 · min(1, t)
-m/s. Rotazione con `R` salvata nell'oggetto (`rotYaw`, e `rotPitch` per gli strumenti), usata nella presa e nella posa.
-Manipolazione precisa con `Maiusc`: punto di partenza più spostamento (0,0015 m/px entro 0,35 m, 1 cm per scatto di
-rotella da −0,20 a +0,30 m), guadagno 8 s⁻¹ e 1,5 m/s, niente aiuto alla mira, inclinazione ×0,4; corsa con `Spazio`.
-`E` tenuto al lavandino porta il recipiente sotto il rubinetto (imboccatura 5 cm sotto il getto) e apre l'acqua finché
-non si lascia, portata da 5 a 50 mL/s con la rotella.
+m/s. Rotazione salvata nell'oggetto (`rotYaw`, e `rotPitch` per gli strumenti), usata nella presa e nella posa; il
+punto da cui lo si è preso (`takenFrom`, se era dritto e appoggiato) serve a rimetterlo a posto entro 1,2 m.
+Manipolazione precisa: punto di partenza più spostamento (0,0015 m/px entro 0,35 m, altezza da −0,20 a +0,30 m),
+guadagno 8 s⁻¹ e 1,5 m/s, niente aiuto alla mira, inclinazione ×0,4. Al lavandino il recipiente va sotto il rubinetto
+(imboccatura 5 cm sotto il getto), il giocatore si ferma e l'acqua scorre finché si tiene il sinistro, da 5 a 50 mL/s.
 
 ### Chimica dei contenitori
 
