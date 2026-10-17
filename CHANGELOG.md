@@ -162,7 +162,7 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   invece di una pozza.
 - **Corretto**: il calore delle reazioni scalda o raffredda anche il recipiente (prima solo il contenuto: il carbonato di
   calcio che si decompone nel crogiolo scendeva a 1 K, alcune reazioni salivano a migliaia di gradi); il magazzino del
-  Laboratorio libero mostra di nuovo i metalli in pezzi (zinco, ferro, rame…); il crogiolo nella fiamma del Bunsen arriva
+  Laboratorio libero mostra i metalli in pezzi (zinco, ferro, rame…), che per un errore non comparivano; il crogiolo nella fiamma del Bunsen arriva
   a circa 900 °C anche nel calcolo della copertura (317 reazioni con lo scaffale, 504 con l'armadio, 1182 con il
   magazzino).
 - **Simulatore: strumenti del laboratorio** (fase G4 del piano). **Termometro** e **pH-metro** che si immergono nel
