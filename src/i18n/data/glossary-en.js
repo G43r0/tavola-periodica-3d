@@ -624,7 +624,7 @@ export const GLOSSARY_EN = {
     w: 'simulator|laboratory simulator|lab game',
     d: 'A first-person game in the school chemistry lab, inspired by cooking simulators: pick up beakers and bottles, weigh on the balance, pour by tilting the vessel, heat on the hot plate or the Bunsen burner and hand in your preparation at the teacher\'s desk. Exercises are graded with stars and money; glass breaks, liquids spill, toxic gases belong under the fume hood and waste in the right container. The chemistry is the real one of the library (554 substances and the catalogue reactions), in a realistic or simplified version.',
     k: [['W A S D', 'walk'], ['A / D', 'with an object in hand: rotate it'], ['Click', 'pick up / put down'], ['Hold left', 'pour (mouse ↑ more, ↓ less)'], ['Hold right + mouse', 'tilt'], ['E', 'use'], ['Hold middle button', 'throw'], ['Tab', 'bench view'], ['N', 'notebook'], ['Esc', 'pause']],
-    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook'],
+    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook', 'ui.gameCareer'],
   },
   'ui.gameNotebook': {
     t: 'Lab notebook',
@@ -632,6 +632,13 @@ export const GLOSSARY_EN = {
     d: 'The notebook lies on the bench, front left (or press N): click it to open it. It has two tabs. The illustrated tutorial explains the controls and the lab techniques, page by page. Under discovered reactions, every catalogue reaction you see happen for the first time is recorded: the equation with the physical states, solid (s), liquid (l), gas (g) and dissolved in water (aq); ΔH°, negative when the reaction releases heat; what was seen (bubbles, precipitate, colour change, heat) and where you discovered it. The pages are split into the 14 catalogue groups with the percentage discovered; the ones the simulator cannot do yet (electric discharges, UV light, steam, equilibria, living things) say why. From each page the reaction opens in the molecular lab. The notebook is kept from one game to the next. When a mixture does not react, the vessel popup explains what is missing: heat, a flame, a catalyst, light, water, a reactant, or that the metal is less active (activity series).',
     k: [['N', 'open the notebook'], ['Click the notebook', 'open it from the bench']],
     s: ['term.reaction', 'term.activitySeries', 'ui.game'],
+  },
+  'ui.gameCareer': {
+    t: 'Simulator Career',
+    w: 'career|chapters|lab report|reputation|lab shop|profiles',
+    d: 'The simulator Career is a school year in chapters: controls and safety, measurements and solutions, acids and bases, precipitation and analysis, gases, then heat and crystals, redox, flames, organic chemistry and the exam. Each exercise has the teacher\'s brief, the steps on the blackboard (ticked off by themselves when the container engine sees you did them) and a grade with the tolerances of realistic or simplified chemistry: 0 to 5 stars for the preparation, safety and time, plus money. After handing in, the lab report asks two or three questions about why: right answers give extra stars. With at least 2 stars the exercise is passed; once a chapter is passed the next one opens if your reputation with the teacher is high enough (it rises with stars and right answers, falls with accidents). Money is spent in the shop: goggles and lab coat, spare glassware, digital thermometer, precision balance, stronger fume hood, cabinet key. The «How to» book opens its pages with the chapters. Each profile has its own Career and notebook; saves have a version and upgrade by themselves.',
+    k: [['Click Career', 'open the chapter map'], ['Bell', 'hand in the preparation or answer']],
+    s: ['ui.game', 'ui.gameBook', 'ui.gameNotebook'],
   },
   'ui.gameBook': {
     t: '«How to» book',

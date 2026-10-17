@@ -2,13 +2,14 @@
 // Rapier e la scena si preparano alla prima apertura. La logica del gioco è in game.js.
 import * as THREE from 'three';
 import '../styles/game.css';
-import { createT, locale } from '../i18n/index.js';
+import { createT, locale, pick } from '../i18n/index.js';
 import { gfx } from '../gfx/preset.js';
 import { esc, normalize } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
 import { loadPhysics } from './physics.js';
 import { LabGame, FOV } from './game.js';
-import { ORDERS } from './orders.js';
+import { CHAPTERS, EXERCISES, EXERCISE_BY_ID, chapterExercises, chapterState, exerciseOpen, nextExercise, reputation, repTitle, recordResult, SHOP, canBuy, buy, passed, newCareer, bookUnlocks } from './career.js';
+import { migrate, activeProfile, addProfile, renameProfile, deleteProfile, selectProfile, updateActive, newer } from './save.js';
 import { SHELF, CABINET } from './reagents.js';
 import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
 import { isClick, POUR_HOLD_MS } from './controls.js';
@@ -17,23 +18,34 @@ import { loadNotebook, notebookPages, percent } from './notebook.js';
 import { TUTORIAL, illustration } from './tutorial.js';
 import { storeIndex } from './book.js';
 import { createBookView } from './book-view.js';
+import { TOOL_PAGES, TECHNIQUE_PAGES, SAFETY_PAGES } from './data/book-pages.js';
 
 const t = createT(GAME_STRINGS);
 const SAVE_KEY = 'tp3d.game';
 const HUD_HZ = 10;
 
-function loadSave() {
+// Salvataggi (save.js): in localStorage e, nell'app Electron, anche nel file dei dati dell'utente (il più recente vince)
+function readLocal() {
   try {
-    return JSON.parse(globalThis.localStorage?.getItem(SAVE_KEY) || 'null') ?? {};
+    return JSON.parse(globalThis.localStorage?.getItem(SAVE_KEY) || 'null');
   } catch {
-    return {};
+    return null;
   }
 }
-function storeSave(data) {
+function writeLocal(data) {
   try {
     globalThis.localStorage?.setItem(SAVE_KEY, JSON.stringify(data));
   } catch {
     /* il salvataggio non è disponibile: i progressi valgono fino alla chiusura */
+  }
+}
+/** Il salvataggio nel file dell'app Electron, se c'è (già nella versione nuova). */
+async function readDesktop() {
+  try {
+    const text = await globalThis.window?.desktop?.gameSave?.read();
+    return text ? migrate(JSON.parse(text), undefined, (n) => t('profileDefault', { n })) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -100,12 +112,38 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   // un clic e versa tenuto, il destro annulla o rimette a posto con un clic e inclina trascinando)
   let lmb = null; // { moved, done, pour, t }
   let rmb = null; // { moved, dy }
-  let save = loadSave();
-  let chemMode = save.chemMode ?? 'real';
+  const profileName = (n) => t('profileDefault', { n });
+  let save = migrate(readLocal(), undefined, profileName);
+  let chemMode = save.settings.chemMode;
   let showInfo = true;
-  let showLegend = save.legend !== false;
-  let fov = Math.max(FOV.min, Math.min(FOV.max, Number(save.fov) || FOV.default));
-  const notebook = loadNotebook(save.notebook);
+  let showLegend = save.settings.legend;
+  let fov = Math.max(FOV.min, Math.min(FOV.max, Number(save.settings.fov) || FOV.default));
+  let notebook = loadNotebook(activeProfile(save).notebook);
+  /** Scrive il salvataggio (con l'ora, per scegliere il più recente tra il file dell'app e localStorage). */
+  function storeSave() {
+    save = { ...save, savedAt: new Date().toISOString() };
+    writeLocal(save);
+    try {
+      globalThis.window?.desktop?.gameSave?.write(JSON.stringify(save));
+    } catch {
+      /* niente file: resta localStorage */
+    }
+  }
+  const profile = () => activeProfile(save);
+  const career = () => profile().career;
+  /** Aggiorna la Carriera del profilo attivo (e il gioco, se è nella Carriera). */
+  function setCareer(c) {
+    save = updateActive(save, { career: c });
+    storeSave();
+    if (game?.mode === 'career') game.setCareer(c);
+  }
+  /** Cambia profilo: Carriera e quaderno sono suoi. */
+  function useProfile(next) {
+    save = next;
+    notebook = loadNotebook(profile().notebook);
+    if (game) game.notebook = notebook;
+    storeSave();
+  }
   let nbGroup = null; // gruppo aperto nel quaderno
   let nbTab = 'tutorial'; // scheda del quaderno: tutorial o reazioni scoperte
   let tutPage = 0; // pagina del tutorial
@@ -117,7 +155,14 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   // ---------------------------------------------------------------- avvio
   async function boot() {
     $('.gm-loading').hidden = false;
-    const R = await loadPhysics();
+    const [R, file] = await Promise.all([loadPhysics(), readDesktop()]);
+    if (file && newer(save, file) === file) {
+      save = file;
+      chemMode = save.settings.chemMode;
+      showLegend = save.settings.legend;
+      fov = Math.max(FOV.min, Math.min(FOV.max, Number(save.settings.fov) || FOV.default));
+      notebook = loadNotebook(profile().notebook);
+    }
     const G = gfx();
     renderer = new THREE.WebGLRenderer({ antialias: G.antialias, powerPreference: 'high-performance' });
     renderer.setPixelRatio(G.pixelRatio(window.devicePixelRatio || 1));
@@ -156,16 +201,16 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     else if (type === 'result') showResult(data);
     else if (type === 'order') showOrderIntro(data);
     else if (type === 'answers') showAnswers(data);
-    else if (type === 'catalog') showCatalog();
+    else if (type === 'report') showReport(data);
+    else if (type === 'catalog') showCatalog(data);
     else if (type === 'notebook') showNotebook('play');
     else if (type === 'book') showBook();
     else if (type === 'follow') renderFollow();
-    else if (type === 'careerEnd') showCareerEnd(data);
     else if (type === 'reaction') {
       reactionNote(data);
       if (data.isNew) {
-        save.notebook = notebook;
-        storeSave(save);
+        save = updateActive(save, { notebook });
+        storeSave();
       }
     }
     else if (type === 'alert' && data.kind === 'splash') toast(t('splash'), 'danger', 6000);
@@ -241,21 +286,25 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   // ---------------------------------------------------------------- menu principale
   function showMenu() {
     setState('menu');
-    const career = save.career ?? null;
-    const done = career ? career.index : 0;
+    const c = career();
+    const done = EXERCISES.filter((e) => passed(c, e.id)).length;
+    const started = Object.keys(c.results ?? {}).length > 0;
+    const rep = reputation(c);
     $('.gm-menu').innerHTML = `
       <div class="gm-menu__card">
         <p class="gm-eyebrow">${t('eyebrow')}</p>
         <h2>${t('title')}</h2>
         <p class="gm-lead">${t('menuLead')}</p>
+        <p class="gm-profile">${icons.book(14)} <span>${t('profileLabel')}</span> <b>${esc(profile().name)}</b>
+          <button type="button" class="gm-link" data-act="profiles">${t('profileChange')}</button></p>
         <div class="gm-modes">
           <button type="button" class="gm-big" data-act="career">
-            <b>${career && done < ORDERS.length ? t('careerContinue') : t('careerStart')}</b>
-            <span>${career ? t('careerProgress', { n: Math.min(done + 1, ORDERS.length), total: ORDERS.length, money: fmtMoney(career.money ?? 0) }) : t('careerText')}</span>
+            <b>${started ? t('careerContinue') : t('careerStart')}</b>
+            <span>${started ? t('careerProgress', { n: done, total: EXERCISES.length, rep, title: t(`rep_${repTitle(rep)}`), money: fmtMoney(c.money ?? 0) }) : t('careerText')}</span>
           </button>
           <button type="button" class="gm-big" data-act="free"><b>${t('freeStart')}</b><span>${t('freeText')}</span></button>
         </div>
-        ${career ? `<button type="button" class="gm-link" data-act="career-reset">${t('careerReset')}</button>` : ''}
+        ${started ? `<button type="button" class="gm-link" data-act="career-reset">${t('careerReset')}</button>` : ''}
         <fieldset class="gm-chem">
           <legend>${t('chemLegend')}</legend>
           <label><input type="radio" name="gm-chem" value="real" ${chemMode === 'real' ? 'checked' : ''}/><span><b>${t('chemReal')}</b><small>${t('chemRealText')}</small></span></label>
@@ -276,10 +325,80 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
 
   const fmtMoney = (v) => `${(game?.fmt ?? ((n, d) => n.toFixed(d)))(v, 2)} €`;
 
-  function startCareer(reset = false) {
-    if (reset || !save.career || save.career.index >= ORDERS.length) save.career = { index: 0, money: 0, stars: [] };
-    storeSave(save);
-    game.startCareer(chemMode, save.career.index, save.career.money);
+  // ---------------------------------------------------------------- profili
+  function showProfiles(editing = null) {
+    const rows = save.profiles.map((p) => {
+      const rep = reputation(p.career);
+      const done = EXERCISES.filter((e) => passed(p.career, e.id)).length;
+      const on = p.id === save.active;
+      const name = editing === p.id
+        ? `<input class="gm-search gm-profile__name" data-profile-name="${esc(p.id)}" value="${esc(p.name)}" maxlength="24" aria-label="${esc(t('profileRename'))}" spellcheck="false"/>`
+        : `<b>${esc(p.name)}</b>`;
+      return `<li class="gm-profile__row ${on ? 'is-on' : ''}">
+        <span class="gm-profile__who">${name}<small>${esc(t('profileStats', { n: done, total: EXERCISES.length, rep, money: fmtMoney(p.career.money ?? 0) }))}</small></span>
+        <span class="gm-profile__btns">
+          ${editing === p.id ? `<button type="button" class="btn-ghost" data-profile-save="${esc(p.id)}">${t('profileSave')}</button>` : `<button type="button" class="btn-ghost" data-profile-edit="${esc(p.id)}">${t('profileRename')}</button>`}
+          ${save.profiles.length > 1 ? `<button type="button" class="btn-ghost" data-profile-del="${esc(p.id)}">${t('profileDelete')}</button>` : ''}
+          ${on ? `<span class="gm-small">${t('profileActive')}</span>` : `<button type="button" class="gm-primary" data-profile-use="${esc(p.id)}">${t('profileUse')}</button>`}
+        </span></li>`;
+    }).join('');
+    showDialog(`
+      <h3>${t('profilesTitle')}</h3>
+      <p class="gm-small">${t('profilesText')}</p>
+      <ul class="gm-profiles">${rows}</ul>
+      <div class="gm-actions">
+        ${save.profiles.length < 8 ? `<button type="button" class="btn-ghost" data-act="profile-new">${icons.plus(14)}<span>${t('profileNew')}</span></button>` : ''}
+        <button type="button" class="gm-primary" data-act="menu">${t('done')}</button></div>`, 'gm-profiles-card');
+    $('[data-profile-name]')?.focus();
+  }
+
+  // ---------------------------------------------------------------- Carriera
+  /** Mappa dei capitoli: reputazione, soldi, esercitazioni con le stelle, negozio e libro. */
+  function showMap() {
+    const c = career();
+    const rep = reputation(c);
+    const next = nextExercise(c);
+    const chapters = CHAPTERS.map((ch) => {
+      const stt = chapterState(c, ch.id);
+      const list = chapterExercises(ch.id);
+      let note = '';
+      if (stt === 'soon') note = t('chSoon');
+      else if (stt === 'locked') {
+        let prev = ch.id - 1;
+        while (prev > 0 && !chapterExercises(prev).length) prev--;
+        note = list.length && !chapterExercises(prev).every((e) => passed(c, e.id)) ? t('chLockedPrev', { n: prev }) : t('chLockedRep', { rep: ch.rep });
+      } else note = t('chProgress', { n: list.filter((e) => passed(c, e.id)).length, total: list.length });
+      const exs = list.map((e) => {
+        const res = c.results?.[e.id];
+        const open = exerciseOpen(c, e.id);
+        return `<button type="button" class="gm-ex ${passed(c, e.id) ? 'is-passed' : ''}" data-ex="${e.id}" ${open ? '' : 'disabled'}>
+          <span>${esc(t(`${e.id}Title`))}</span><span class="gm-ex__stars">${res ? stars(res.stars) : open ? `<small>${t('exNew')}</small>` : ''}</span></button>`;
+      }).join('');
+      return `<li class="gm-ch is-${stt}">
+        <div class="gm-ch__head"><b>${t('chapterN', { n: ch.id })} · ${esc(t(`chapter${ch.id}Title`))}</b><small>${esc(note)}</small></div>
+        <p class="gm-ch__text">${esc(t(`chapter${ch.id}Text`))}</p>
+        ${exs ? `<div class="gm-ch__ex">${exs}</div>` : ''}</li>`;
+    }).join('');
+    showDialog(`
+      <div class="gm-map__top">
+        <div><p class="gm-eyebrow">${esc(profile().name)}</p><h3>${t('mapTitle')}</h3></div>
+        <div class="gm-rep" title="${esc(t('repHelp'))}"><span>${t('repLabel')}: <b>${esc(t(`rep_${repTitle(rep)}`))}</b></span><i style="--p:${rep}%"></i><small>${rep} / 100</small></div>
+        <div class="gm-map__money"><span>${t('moneyLabel')}</span><b>${fmtMoney(c.money ?? 0)}</b></div>
+      </div>
+      <ol class="gm-chapters">${chapters}</ol>
+      <div class="gm-actions">
+        <button type="button" class="btn-ghost" data-act="menu">${t('toMenu')}</button>
+        <button type="button" class="btn-ghost" data-act="shop">${t('shopTitle')}</button>
+        <button type="button" class="btn-ghost" data-act="map-book">${icons.book(14)}<span>${t('bookTitle')}</span></button>
+        ${next ? `<button type="button" class="gm-primary" data-ex="${next.id}">${t('mapNext', { title: t(`${next.id}Title`) })}</button>` : ''}
+      </div>`, 'gm-map');
+    $('.gm-map').dataset.help = 'ui.gameCareer';
+  }
+
+  /** Comincia un'esercitazione. fresh: la stanza si svuota (dalla mappa); dal resoconto, il banco resta com'è. */
+  function startExercise(id, fresh = true) {
+    if (!exerciseOpen(career(), id)) return;
+    game.startCareer(chemMode, id, career(), { fresh });
   }
 
   function startFree() {
@@ -298,71 +417,155 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     d.querySelector('button.gm-primary')?.focus({ preventScroll: true });
   }
 
-  function showOrderIntro({ index, def }) {
-    const brief = t(`${def.id}Brief${chemMode === 'simple' ? 'Simple' : ''}`);
-    const steps = t(`${def.id}Board`);
+  /** Pagine del libro indicate dall'insegnante (pulsanti che aprono il libro su quella pagina). */
+  function bookRefs(ex) {
+    const label = (p) => {
+      const [kind, id] = p.split(':');
+      const list = kind === 'tool' ? TOOL_PAGES : kind === 'tech' ? TECHNIQUE_PAGES : SAFETY_PAGES;
+      const page = list.find((x) => x.id === id);
+      return page ? pick(page).title : p;
+    };
+    return (ex.book ?? []).map((p) => `<button type="button" class="gm-chip" data-bk-open="${esc(p)}">${icons.book(12)} ${esc(label(p))}</button>`).join('');
+  }
+
+  function showOrderIntro({ ex }) {
+    const list = chapterExercises(ex.chapter);
+    const steps = ex.steps.map((st) => t(st.key, game.stepParams(ex)));
     showDialog(`
-      <p class="gm-eyebrow">${t('orderN', { n: index + 1, title: '' }).replace(/[:·—-]\s*$/, '')} / ${ORDERS.length}</p>
-      <h3>${t(`${def.id}Title`)}</h3>
-      <p class="gm-teacher">${icons.book(16)} ${brief}</p>
-      <ul class="gm-steps" aria-label="${t('boardLabel')}">${(Array.isArray(steps) ? steps : [steps]).map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
-      <p class="gm-small">${t('orderPay', { pay: fmtMoney(def.pay), min: Math.round(def.par / 60) })}</p>
-      <div class="gm-actions"><button type="button" class="gm-primary" data-act="play">${t('start')}</button></div>`);
+      <p class="gm-eyebrow">${t('chapterN', { n: ex.chapter })} · ${esc(t(`chapter${ex.chapter}Title`))} · ${list.indexOf(ex) + 1} / ${list.length}</p>
+      <h3>${t(`${ex.id}Title`)}</h3>
+      <p class="gm-teacher">${icons.book(16)} ${game.briefText(ex)}</p>
+      <ol class="gm-steps gm-steps--numbered" aria-label="${t('boardLabel')}">${steps.map((x, i) => `<li>${i + 1}. ${esc(x)}</li>`).join('')}</ol>
+      ${ex.book?.length ? `<p class="gm-bookrefs"><span>${t('introBook')}</span>${bookRefs(ex)}</p>` : ''}
+      <p class="gm-small">${t('orderPay', { pay: fmtMoney(ex.pay), min: Math.max(1, Math.round(ex.par / 60)) })}</p>
+      <div class="gm-actions"><button type="button" class="btn-ghost" data-act="map">${t('mapTitle')}</button><button type="button" class="gm-primary" data-act="play">${t('start')}</button></div>`);
+  }
+
+  /** Testo di un'opzione della relazione o di una risposta: «@chiave» è un testo tradotto, il resto si mostra così. */
+  const optText = (o) => (o.startsWith('@') ? t(o.slice(1)) : o);
+
+  /** Relazione di laboratorio: due o tre domande sul perché; le risposte giuste danno stelle in più. */
+  function showReport({ ex, questions }) {
+    const qs = questions.map((q, i) => `<fieldset class="gm-rq"><legend>${i + 1}. ${esc(t(q.q))}</legend>
+      ${q.opts.map((o, k) => `<label><input type="radio" name="rq${i}" value="${k}"/><span>${esc(optText(o))}</span></label>`).join('')}</fieldset>`).join('');
+    showDialog(`
+      <p class="gm-eyebrow">${esc(t(`${ex.id}Title`))}</p>
+      <h3>${t('reportTitle')}</h3>
+      <p class="gm-small">${t('reportText')}</p>
+      <form class="gm-report">${qs}</form>
+      <div class="gm-actions"><button type="button" class="btn-ghost" data-act="report-skip">${t('reportSkip')}</button><button type="button" class="gm-primary" data-act="report-submit">${t('reportSubmit')}</button></div>`, 'gm-reportcard');
   }
 
   function showResult(r) {
-    save.career ??= { index: 0, money: 0, stars: [] };
-    save.career.stars[r.index] = Math.max(save.career.stars[r.index] ?? 0, r.stars);
-    save.career.index = Math.max(save.career.index, r.index + 1);
-    save.career.money = r.money;
-    storeSave(save);
+    const before = career();
+    const repBefore = reputation(before);
+    const next = recordResult(before, r.id, { stars: r.stars, report: r.report.right, money: r.money, incidents: r.incidents });
+    setCareer(next);
+    const repAfter = reputation(next);
     const mark = (ok) => (ok === true ? 'ok' : ok === 'warn' ? 'warn' : 'bad');
-    const lines = r.lines.map((l) => `<li class="gm-line gm-line--${mark(l.ok)}">${esc(t(l.key, formatParams(l.p)))}</li>`).join('');
+    const lines = r.lines.map((l) => `<li class="gm-line gm-line--${mark(l.ok)}">${esc(lineText(l))}</li>`).join('');
+    const rq = r.report.total ? r.report.questions.map((q, i) => {
+      const ok = r.report.answers[i] === q.right;
+      return `<li class="gm-line gm-line--${ok ? 'ok' : 'bad'}">${esc(t(q.q))} — ${esc(optText(q.opts[q.right]))}</li>`;
+    }).join('') : '';
+    const following = nextExercise(next);
+    const repDelta = repAfter - repBefore;
     showDialog(`
-      <p class="gm-eyebrow">${t('resultEyebrow', { n: r.index + 1 })}</p>
-      <h3>${t(`${r.def.id}Title`)}</h3>
+      <p class="gm-eyebrow">${t('chapterN', { n: r.ex.chapter })} · ${esc(t(`chapter${r.ex.chapter}Title`))}</p>
+      <h3>${t(`${r.ex.id}Title`)}</h3>
       <div class="gm-stars" aria-label="${t('starsLabel', { n: r.stars })}">${stars(r.stars)}</div>
+      ${r.stars > r.base ? `<p class="gm-small">${t('reportBonus', { n: game.fmt(r.stars - r.base, 1) })}</p>` : ''}
       <ul class="gm-lines">${lines}</ul>
+      ${rq ? `<h4 class="gm-sub">${t('reportTitle')}: ${r.report.right} / ${r.report.total}</h4><ul class="gm-lines">${rq}</ul>` : ''}
       <dl class="gm-bill">
         ${rows([
           [t('billQuality'), `${Math.round(r.quality * 100)} %`],
           [t('billSafety'), `${Math.round(r.safety * 100)} %${r.mess ? ` · ${t('billMess', { n: r.mess })}` : ''}${r.incidents ? ` · ${t('billIncidents', { n: r.incidents })}` : ''}`],
-          [t('billTime'), `${fmtTime(r.elapsed)} / ${fmtTime(r.def.par)}`],
+          [t('billTime'), `${fmtTime(r.elapsed)} / ${fmtTime(r.ex.par)}`],
           [t('billPay'), `+ ${fmtMoney(r.earned)}`],
           [t('billCosts'), `− ${fmtMoney(r.reagents)}${r.fines ? ` (${t('billFines')}: ${fmtMoney(r.fines)})` : ''}`],
           [t('billTotal'), `<b>${fmtMoney(r.money)}</b>`],
+          [t('repLabel'), `${repAfter} / 100${repDelta ? ` (${repDelta > 0 ? '+' : '−'}${Math.abs(repDelta)})` : ''} · ${esc(t(`rep_${repTitle(repAfter)}`))}`],
         ])}
       </dl>
-      ${r.def.answers ? '' : `<p class="gm-small">${t('resultCleanup')}</p>`}
+      ${r.stars < 2 ? `<p class="gm-small">${t('resultRetry')}</p>` : r.ex.deliver === 'answers' ? '' : `<p class="gm-small">${t('resultCleanup')}</p>`}
       <div class="gm-actions">
-        <button type="button" class="btn-ghost" data-act="menu">${t('toMenu')}</button>
-        ${r.last ? `<button type="button" class="gm-primary" data-act="career-end">${t('finish')}</button>` : `<button type="button" class="gm-primary" data-act="next">${t('nextOrder')}</button>`}
+        <button type="button" class="btn-ghost" data-act="map">${t('mapTitle')}</button>
+        <button type="button" class="btn-ghost" data-ex-retry="${r.id}">${t('retry')}</button>
+        ${following ? `<button type="button" class="gm-primary" data-ex-next="${following.id}">${t('nextOrder')}</button>` : `<button type="button" class="gm-primary" data-act="keep-playing">${t('keepPlaying')}</button>`}
       </div>`, 'gm-result');
   }
 
-  function showCareerEnd({ money }) {
-    const total = (save.career?.stars ?? []).reduce((a, b) => a + (b || 0), 0);
-    showDialog(`
-      <h3>${t('careerEndTitle')}</h3>
-      <div class="gm-stars">${stars(total / ORDERS.length)}</div>
-      <p>${t('careerEndText', { stars: total, max: ORDERS.length * 5, money: fmtMoney(money) })}</p>
-      <p class="gm-small">${t('careerEndNext')}</p>
-      <div class="gm-actions"><button type="button" class="btn-ghost" data-act="keep-playing">${t('keepPlaying')}</button><button type="button" class="gm-primary" data-act="menu">${t('toMenu')}</button></div>`);
+  /** Riga del resoconto: i numeri formattati; per le risposte, il nome della risposta data e di quella giusta. */
+  function lineText(l) {
+    const p = { ...(l.p ?? {}) };
+    if (l.key === 'evSampleAns' || l.key === 'evAnswerNum') {
+      const ex = EXERCISE_BY_ID.get(p.ex);
+      p.answer = answerLabel(ex, p.answer);
+      p.right = answerLabel(ex, p.right);
+    }
+    return t(l.key, formatParams(p));
   }
 
-  function showAnswers({ count, metals }) {
-    const names = Object.fromEntries(metals.map((m) => [m, game.chem.sub(game.chem.id(m)).name]));
+  /** Nome di una risposta: il testo tradotto (ans_<valore>), il nome dell'elemento (saggio alla fiamma) o il numero. */
+  function answerLabel(ex, v) {
+    if (v === null || v === undefined || v === '' || v === '—') return '—';
+    if (ex?.answers?.type === 'number') return `${game.fmt(Number(String(v).replace(',', '.')), 2)} ${ex.answers.unit}`;
+    if (ex?.answers?.options === 'flame') return `${game.chem.sub(game.chem.id(v))?.name ?? v} (${v})`;
+    return t(`ans_${v}`);
+  }
+
+  /** Risposte: un menu per ogni campione (a scelta) o un numero. */
+  function showAnswers({ ex, count, options }) {
+    const a = ex.answers;
+    const field = (i) => (a.type === 'number'
+      ? `<label>${count > 1 ? t('sampleName', { s: 'ABCDE'[i] }) : t(`${ex.id}Question`)}
+          <span class="gm-answer__num"><input type="text" inputmode="decimal" name="s${i}" autocomplete="off" spellcheck="false"/> <span>${esc(a.unit)}</span></span></label>`
+      : `<label>${t('sampleName', { s: 'ABCDE'[i] })}
+          <select name="s${i}"><option value="">—</option>${options.map((o) => `<option value="${esc(o)}">${esc(answerLabel(ex, o))}</option>`).join('')}</select></label>`);
     showDialog(`
       <h3>${t('answersTitle')}</h3>
-      <p>${t('answersText')}</p>
-      <form class="gm-answers">
-        ${Array.from({ length: count }, (_, i) => `<label>${t('sampleName', { s: 'ABC'[i] })}
-          <select name="s${i}"><option value="">—</option>${metals.map((m) => `<option value="${m}">${esc(names[m])} (${m})</option>`).join('')}</select></label>`).join('')}
-      </form>
+      <p>${t(`${ex.id}AnswersText`) !== `${ex.id}AnswersText` ? t(`${ex.id}AnswersText`) : t('answersText')}</p>
+      <form class="gm-answers">${Array.from({ length: count }, (_, i) => field(i)).join('')}</form>
       <div class="gm-actions"><button type="button" class="btn-ghost" data-act="play">${t('notYet')}</button><button type="button" class="gm-primary" data-act="submit-answers">${t('deliver')}</button></div>`);
+    $('.gm-answers input, .gm-answers select')?.focus();
   }
 
-  function showCatalog() {
+  /** Negozio: migliorie del laboratorio da comprare con i soldi della Carriera. */
+  function showShop(back = 'map') {
+    const c = career();
+    const items = SHOP.map((x) => {
+      const owned = (c.owned ?? []).includes(x.id);
+      return `<li class="gm-shop__row ${owned ? 'is-owned' : ''}"><span><b>${esc(t(`shop_${x.id}`))}</b><small>${esc(t(`shop_${x.id}Text`))}</small></span>
+        <span class="gm-shop__buy">${owned ? `<span class="gm-small">${t('shopOwned')}</span>` : `<button type="button" class="gm-primary" data-buy="${x.id}" ${canBuy(c, x.id) ? '' : 'disabled'}>${fmtMoney(x.price)}</button>`}</span></li>`;
+    }).join('');
+    showDialog(`
+      <h3>${t('shopTitle')}</h3>
+      <p class="gm-small">${t('shopText', { money: fmtMoney(c.money ?? 0) })}</p>
+      <ul class="gm-shop">${items}</ul>
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${back}">${t('done')}</button></div>`, 'gm-shopcard');
+  }
+
+  /** Conferma prima di ricominciare la Carriera del profilo. */
+  function showResetConfirm() {
+    showDialog(`
+      <h3>${t('careerResetTitle')}</h3>
+      <p>${t('careerResetText', { name: esc(profile().name) })}</p>
+      <div class="gm-actions"><button type="button" class="btn-ghost" data-act="menu">${t('cancel')}</button><button type="button" class="gm-primary gm-danger" data-act="career-reset-yes">${t('careerResetYes')}</button></div>`);
+  }
+
+  function showCatalog({ cabinet = false } = {}) {
+    // nella Carriera, con la chiave dell'armadio (negozio): solo vetreria, scaffale e armadio della scuola
+    if (cabinet) {
+      const glass = ['beaker100', 'beaker250', 'flask250', 'cylinder100'];
+      showDialog(`
+        <h3>${t('cabinetTitle')}</h3>
+        <p class="gm-small">${t('cabinetText')}</p>
+        <div class="gm-cat-glass">${glass.map((k) => `<button type="button" class="btn-ghost" data-glass="${k}">${t(`item_${k}`)}</button>`).join('')}</div>
+        <div class="gm-cat-ready">${readyHtml()}</div>
+        <div class="gm-actions"><button type="button" class="gm-primary" data-act="play">${t('done')}</button></div>`, 'gm-catalog');
+      return;
+    }
     // le stesse forme che usano le ricette del libro (book.js): sostanze della libreria e metalli in pezzi
     const all = [...storeIndex(game.chem)].map(([sid, e]) => {
       const s = game.chem.sub(sid);
@@ -520,11 +723,13 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
 
   // ---------------------------------------------------------------- libro «Come si fa»
   /** Apre il libro (o una sua pagina: 'recipe:<id>', 'element:<z>'), come finestra sopra il gioco. */
-  function showBook(target = null) {
+  /** Libro «Come si fa». back: dove torna «Fatto» (il gioco, o la mappa della Carriera, con le pagine del profilo). */
+  function showBook(target = null, back = 'play') {
     if (!bookView) return;
+    if (back === 'map') game.bookLocks = bookUnlocks(career());
     if (target) bookView.open(target);
     showDialog(`<h3>${t('bookTitle')}</h3><div class="gm-bk__body"></div>
-      <div class="gm-actions"><button type="button" class="gm-primary" data-act="play">${t('done')}</button></div>`, 'gm-book');
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${back}">${t('done')}</button></div>`, 'gm-book');
     $('.gm-book').dataset.help = 'ui.gameBook';
     renderBook();
   }
@@ -602,6 +807,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     const out = {};
     for (const [k, v] of Object.entries(p)) {
       if (typeof v !== 'number') out[k] = v;
+      else if (!Number.isFinite(v)) out[k] = '—';
       else if (k === 'value' || k === 'target') out[k] = game.fmt(v, Math.abs(v) < 1 ? 3 : Math.abs(v) < 10 ? 2 : 1);
       else out[k] = game.fmt(v, 0);
     }
@@ -618,25 +824,59 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     else if (act === 'book') showBook();
     else if (act === 'stop-follow') game.stopFollow();
     else if (b.dataset.bkOpen) showBook(b.dataset.bkOpen);
-    else if (act === 'career') startCareer();
-    else if (act === 'career-reset') {
-      save.career = null;
-      storeSave(save);
+    else if (act === 'career' || act === 'map') showMap();
+    else if (act === 'career-reset') showResetConfirm();
+    else if (act === 'career-reset-yes') {
+      save = updateActive(save, { career: newCareer() });
+      storeSave();
       showMenu();
+    } else if (act === 'profiles') showProfiles();
+    else if (act === 'profile-new') {
+      const next = addProfile(save, t('profileDefault', { n: save.profiles.length + 1 }));
+      if (next) useProfile(next);
+      showProfiles(next ? profile().id : null);
+    } else if (b.dataset.profileUse) {
+      useProfile(selectProfile(save, b.dataset.profileUse));
+      showProfiles();
+    } else if (b.dataset.profileEdit) showProfiles(b.dataset.profileEdit);
+    else if (b.dataset.profileSave) {
+      const input = $(`[data-profile-name="${b.dataset.profileSave}"]`);
+      save = renameProfile(save, b.dataset.profileSave, input?.value ?? '');
+      storeSave();
+      showProfiles();
+    } else if (b.dataset.profileDel) {
+      useProfile(deleteProfile(save, b.dataset.profileDel));
+      showProfiles();
+    } else if (act === 'shop') showShop();
+    else if (b.dataset.buy) {
+      const next = buy(career(), b.dataset.buy);
+      if (next) {
+        setCareer(next);
+        toast(t('shopBought', { name: t(`shop_${b.dataset.buy}`) }), 'ok');
+      }
+      showShop();
+    } else if (act === 'map-book') showBook(null, 'map');
+    else if (b.dataset.ex) startExercise(b.dataset.ex, true);
+    else if (b.dataset.exRetry) startExercise(b.dataset.exRetry, false);
+    else if (b.dataset.exNext) startExercise(b.dataset.exNext, false);
+    else if (act === 'report-submit' || act === 'report-skip') {
+      const answers = [];
+      if (act === 'report-submit') $('.gm-report')?.querySelectorAll('fieldset').forEach((f, i) => {
+        const v = f.querySelector('input:checked')?.value;
+        answers[i] = v === undefined ? -1 : Number(v);
+      });
+      game.finishReport(answers);
     } else if (act === 'free') startFree();
     else if (act === 'help') showHelp();
     else if (act === 'menu') showMenu();
     else if (act === 'play' || act === 'keep-playing') play();
     else if (act === 'pause') showPause();
-    else if (act === 'next') game.nextOrder();
-    else if (act === 'career-end') game.nextOrder();
     else if (act === 'restart-order') {
-      game.clearRoom();
-      game.startOrder(game.order?.index ?? 0);
+      if (game.order) startExercise(game.order.id, true);
     } else if (act === 'submit-answers') {
       const form = $('.gm-answers');
       const answers = {};
-      form.querySelectorAll('select').forEach((s, i) => (answers[i] = s.value || null));
+      form.querySelectorAll('select, input').forEach((s, i) => (answers[i] = s.value || null));
       game.submitAnswers(answers);
     } else if (b.dataset.nbGroup) {
       nbGroup = b.dataset.nbGroup;
@@ -688,13 +928,13 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       return;
     }
     if (ev.target.name === 'gm-fov') {
-      save.fov = fov;
-      storeSave(save);
+      save = { ...save, settings: { ...save.settings, fov } };
+      storeSave();
     }
     if (ev.target.name === 'gm-chem') {
       chemMode = ev.target.value;
-      save.chemMode = chemMode;
-      storeSave(save);
+      save = { ...save, settings: { ...save.settings, chemMode } };
+      storeSave();
     }
   });
 
@@ -744,8 +984,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     } else if (code === 'KeyI') showInfo = !showInfo;
     else if (code === 'KeyL') {
       showLegend = !showLegend;
-      save.legend = showLegend;
-      storeSave(save);
+      save = { ...save, settings: { ...save.settings, legend: showLegend } };
+      storeSave();
       lastLegendHtml = null;
       if (!showLegend) toast(t('legendHidden'));
     }
@@ -1010,7 +1250,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     let orderHtml = '';
     if (h.order) {
       const late = h.order.elapsed > h.order.par;
-      orderHtml = `<header><span>${t('orderShort', { n: h.order.n })}</span><b class="${late ? 'is-late' : ''}">${fmtSec(h.order.elapsed)}</b></header>
+      orderHtml = `<header><span>${t('orderShort', { n: h.order.n, ch: h.order.chapter })}</span><b class="${late ? 'is-late' : ''}">${fmtSec(h.order.elapsed)}</b></header>
         <h4>${esc(h.order.title)}</h4>
         <ol>${h.order.steps.map((s) => `<li class="${s.done ? 'is-done' : ''}">${esc(s.text)}</li>`).join('')}</ol>`;
     } else if (h.free) orderHtml = `<h4>${t('freeTitle')}</h4><p>${t('freeHud')}</p>`;

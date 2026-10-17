@@ -19,7 +19,7 @@ import { SHELF, CABINET, OIL, PRICES, UNIVERSAL_SCALE, FLAME_SALTS, AQUEOUS_NAME
 import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
 import { reactionSignals, signalTags, equation, whyNot } from './signals.js';
 import { emptyNotebook, recordReaction } from './notebook.js';
-import { ORDERS, grade } from './orders.js';
+import { EXERCISE_BY_ID, pickSamples, sampleValue, contentMixture, evaluateExercise, stepsDone, answerCount, answerOptions, reportQuestions, gradeExercise, bookUnlocks, chapterExercises } from './career.js';
 import { legendRows, relaxTilt, tiltGain, throwSpeed } from './controls.js';
 import { Apparatus, PERMANENT_TOOLS } from './apparatus.js';
 import { nextLevel } from './apparatus-logic.js';
@@ -397,6 +397,7 @@ export class LabGame {
     this.mode = 'free';
     this.free = true;
     this.chemMode = chemMode;
+    this.setCareer(null);
     this.clearRoom();
     this.order = null;
     for (const k of ['beaker100', 'beaker100', 'beaker250', 'beaker250', 'flask250', 'cylinder100', 'crucible', 'dish']) this.spawnGlass(k, 'bench');
@@ -416,72 +417,118 @@ export class LabGame {
     this.player.teleport(0.15, 0.4, 0);
   }
 
-  startCareer(chemMode, index = 0, money = 0) {
+  /**
+   * Comincia un'esercitazione della Carriera (career.js; i dati sono in data/career-exercises.js). career: la Carriera
+   * del profilo (soldi, cose comprate, risultati: servono al negozio e al libro). fresh: la stanza si svuota (si parte
+   * dal menu o dalla mappa); altrimenti gli oggetti dell'esercitazione di prima restano sul banco e vanno puliti.
+   */
+  startCareer(chemMode, id, career, { fresh = true } = {}) {
     this.mode = 'career';
     this.free = false;
     this.chemMode = chemMode;
-    this.money = money;
-    this.clearRoom();
-    this.player.teleport(0.15, 0.4, 0);
-    this.startOrder(index);
+    this.setCareer(career);
+    if (fresh || !this.order) {
+      this.clearRoom();
+      this.player.teleport(0.15, 0.4, 0);
+    }
+    this.startExercise(id);
   }
 
-  /** Prepara il banco per l'esercitazione `index` (gli oggetti delle precedenti restano: vanno puliti!). */
-  startOrder(index) {
-    const def = ORDERS[index];
-    if (!def) return;
-    const unknowns = [];
-    const setup = def.setup(this.chemMode);
-    for (const s of setup) {
+  /** La Carriera del profilo: soldi, migliorie comprate nel negozio, pagine del libro aperte. */
+  setCareer(career) {
+    this.career = career ?? null;
+    this.money = career?.money ?? 0;
+    this.upgrades = new Set(this.free ? [] : career?.owned ?? []);
+    this.bookLocks = this.free || !career ? null : bookUnlocks(career);
+  }
+
+  /** Una miglioria del negozio è attiva (solo nella Carriera). */
+  has(upgrade) {
+    return !this.free && Boolean(this.upgrades?.has(upgrade));
+  }
+
+  /** Prepara il banco per un'esercitazione (gli oggetti delle precedenti restano: vanno puliti!). */
+  startExercise(id) {
+    const ex = EXERCISE_BY_ID.get(id);
+    if (!ex) return;
+    const { chem } = this;
+    const samples = pickSamples(ex).map((x) => ({ ...x, value: sampleValue(chem, ex, x) }));
+    this.order = {
+      id, ex, def: ex, start: this.time, unknowns: samples, answers: null, costs: 0, fines: 0, incidents: 0, wrongBins: 0,
+      broken: 0, delivered: false, product: null, pending: null, flameSeen: new Set(), ev: {}, gas: {}, rx: new Set(),
+      phRead: new Set(), done: [], dirty: new Set(), dirtyStart: 0, fireTime: null,
+    };
+    const o = this.order;
+    for (const s of ex.setup) {
+      const group = s.at === 'bench' ? 'bench' : 'benchB';
       if (s.reagent) {
-        this.spawnReagent(s.reagent, s.at === 'bench' ? 'bench' : 'shelf');
+        // un reagente che è già sullo scaffale (dall'esercitazione prima) non si raddoppia
+        if (!this.items.some((it) => it.data.reagent === s.reagent)) this.spawnReagent(s.reagent, s.at === 'bench' ? 'bench' : 'shelf');
+        continue;
+      }
+      if (s.puddle) {
+        const at = this.freeSlot('bench');
+        this.spill(contentMixture(chem, s.puddle), new THREE.Vector3(at.x, BENCH_Y + 0.001, at.z), null);
         continue;
       }
       if (DEFS[s.kind].tool) {
-        this.spawnTool(s.kind, s.at === 'bench' ? 'bench' : 'benchB');
+        // spatola e ansa: una basta; le cartine e la carta si consumano
+        if (['spatula', 'loop'].includes(s.kind) && this.items.some((it) => it.kind === s.kind)) continue;
+        this.spawnTool(s.kind, group);
         continue;
       }
-      const group = s.at === 'bench' ? 'bench' : 'benchB';
-      let mixture = new Mixture(this.chem);
+      let mixture = s.content ? contentMixture(chem, s.content) : new Mixture(chem);
       let label = null;
-      if (s.content?.solution) {
-        const [solute, M, ml] = s.content.solution;
-        mixture = Mixture.solution(this.chem, solute, M, ml);
-      } else if (s.content?.solid) {
-        mixture = Mixture.solid(this.chem, ...s.content.solid);
-      }
       if (s.sample !== undefined) {
-        label = { title: this.t('sampleName', { s: 'ABC'[s.sample] }), formula: '?', sub: this.t('unknownSub'), color: '#fff8d8' };
-        unknowns[s.sample] = s.unknown;
+        mixture = contentMixture(chem, samples[s.sample].content);
+        label = { title: this.t('sampleName', { s: 'ABCDE'[s.sample] }), formula: '?', sub: this.t('unknownSub'), color: '#fff8d8' };
       }
-      const reuse = !s.content && this.items.find((it) => it.kind === s.kind && it.mixture?.isEmpty() && !it.data.claimed && !it.data.reagent);
+      const reuse = !s.content && s.sample === undefined && this.items.find((it) => it.kind === s.kind && it.mixture?.isEmpty() && !it.dirty && !it.data.claimed && !it.data.reagent);
       if (reuse) {
         reuse.data.claimed = true;
         continue;
       }
-      const item = this.spawn(s.kind, { pos: this.freeSlot(group), quat: label ? this.facing(group) : null, mixture, label, name: label?.title ?? (s.labelKey ? this.t(s.labelKey) : this.t(`item_${s.kind}`)), data: { sample: s.sample } });
+      const item = this.spawn(s.kind, { pos: this.freeSlot(group), quat: label ? this.facing(group) : null, mixture, label, name: label?.title ?? (s.label ? this.t(s.label) : this.t(`item_${s.kind}`)), data: { sample: s.sample } });
       item.data.claimed = true;
+      if (s.dirty) {
+        item.dirty = true;
+        o.dirty.add(item);
+      }
+      if (s.fire) {
+        const top = new THREE.Vector3(0, item.def.height ?? 0.02, 0).add(item.mesh.position);
+        this.startFire({ item, sid: chem.id(s.content.liquid[0]), pos: top, scripted: true });
+      }
+    }
+    // vetreria di scorta (negozio): un becher da 100 e uno da 250 mL in più, se non ce ne sono di liberi
+    if (this.has('glassKit')) {
+      for (const k of ['beaker100', 'beaker250']) if (!this.items.some((it) => it.kind === k && it.mixture?.isEmpty() && !it.dirty && !it.data.claimed)) this.spawnGlass(k, 'bench').data.claimed = true;
     }
     for (const it of this.items) delete it.data.claimed;
-    this.order = {
-      index, def, start: this.time, unknowns, answers: null, costs: 0, fines: 0, incidents: 0, wrongBins: 0, broken: 0,
-      delivered: false, flameSeen: new Set(), log: [],
-    };
-    const steps = this.t(`${def.id}Board`);
-    this.room.setBoard([this.t('orderN', { n: index + 1, title: this.t(`${def.id}Title`) }), ...(Array.isArray(steps) ? steps : [steps])]);
-    this.emit('order', { index, def });
+    o.dirtyStart = o.dirty.size;
+    const steps = ex.steps.map((st) => this.t(st.key, this.stepParams(ex)));
+    this.room.setBoard([this.t('exBoardTitle', { ch: ex.chapter, title: this.t(`${ex.id}Title`) }), ...steps]);
+    this.emit('order', { ex });
   }
 
-  /** Stato del banco per i passi dell'esercitazione. */
+  /** Stato del banco per i passi e la valutazione (career.js, check ed evaluateExercise). */
   snapshot() {
-    const containers = this.items.filter((it) => it.def.container && it.mixture && !it.data.reagent).map((it) => ({ kind: it.kind, stock: Boolean(it.def.stock), mix: it.mixture, peakT: it.peakT, item: it }));
+    const o = this.order;
+    const containers = this.items.filter((it) => it.def.container && it.mixture && !it.data.reagent).map((it) => ({ kind: it.kind, stock: Boolean(it.def.stock), mix: it.mixture, peakT: it.peakT, sample: it.data.sample, item: it }));
+    const tray = this.onTray().filter((it) => it.def.container && it.mixture && !it.data.reagent);
+    let dirtyLeft = 0;
+    for (const it of o?.dirty ?? []) if (this.items.includes(it) && (it.dirty || (it.mixture && !it.mixture.isEmpty()))) dirtyLeft++;
     return {
-      containers,
-      best: (key, fn) => containers.reduce((b, c) => Math.max(b, fn(c.mix)), 0),
-      delivered: Boolean(this.order?.delivered),
-      bunsenOn: this.fx.bunsen.on,
-      flameSeen: this.order?.flameSeen ?? new Set(),
+      mode: this.chemMode, ctx: this.chem, containers, product: o?.product ?? null, delivered: Boolean(o?.delivered),
+      answers: o?.answers ?? null, unknowns: o?.unknowns ?? [], ev: o?.ev ?? {}, gas: o?.gas ?? {}, rx: o?.rx ?? new Set(),
+      flame: o?.flameSeen ?? new Set(), bunsen: this.fx.bunsen.on, fires: this.fires.length, mess: this.mess(),
+      dirtyStart: o?.dirtyStart ?? 0, dirtyLeft, held: this.held?.kind ?? '', tray: tray.length, phRead: o?.phRead ?? new Set(),
+      fireTime: o?.fireTime ?? Infinity,
     };
+  }
+
+  /** Conta un evento dell'esercitazione in corso (tara, lavaggio, smaltimento, fuoco spento…). */
+  note(name, n = 1) {
+    if (this.order && !this.free) this.order.ev[name] = (this.order.ev[name] ?? 0) + n;
   }
 
   /** Oggetti sul vassoio della cattedra. */
@@ -497,20 +544,29 @@ export class LabGame {
       if (it === this.held) continue;
       if (it.kind === 'shards') n++;
       else if (((it.kind === 'towel' || it.kind === 'filterPaper') && !it.mixture?.isEmpty()) || (it.kind === 'strip' && it.data.used)) n++;
-      else if (it.data.deliveredOrder !== undefined && it.data.deliveredOrder !== this.order?.index && it.mixture && it.mixture.liquidVolume + it.mixture.solidVolume > RESIDUE_ML * 2) n++;
+      else if (it.data.deliveredOrder !== undefined && it.data.deliveredOrder !== this.order?.id && it.mixture && it.mixture.liquidVolume + it.mixture.solidVolume > RESIDUE_ML * 2) n++;
     }
     return n + this.fires.length + this.clouds.filter((c) => !c.vented).length;
   }
 
-  /** Campanello: consegna il preparato (o apre le risposte del saggio alla fiamma). */
+  /** Campanello: consegna il preparato, chiude un'esercitazione senza preparato o apre le risposte. */
   ringBell() {
     if (this.free || !this.order) {
       this.toast(this.t('bellFree'));
       return;
     }
-    const { def } = this.order;
-    if (def.answers) {
-      this.emit('answers', { count: this.order.unknowns.length, metals: [...new Set(Object.values(FLAME_SALTS))] });
+    const o = this.order;
+    if (o.delivered) {
+      this.toast(this.t('alreadyDelivered'));
+      return;
+    }
+    const mode = o.ex.deliver ?? 'tray';
+    if (mode === 'answers') {
+      this.emit('answers', { ex: o.ex, count: answerCount(o.ex, o.unknowns), options: answerOptions(o.ex) });
+      return;
+    }
+    if (mode === 'bell') {
+      this.finishOrder({ product: null });
       return;
     }
     const tray = this.onTray().filter((it) => it.def.container && it.mixture && !it.mixture.isEmpty() && !it.data.reagent);
@@ -522,35 +578,46 @@ export class LabGame {
     this.finishOrder({ product });
   }
 
-  /** Risposte del saggio alla fiamma (dall'interfaccia). */
+  /** Risposte (campioni incogniti, misure) dall'interfaccia. */
   submitAnswers(answers) {
-    if (!this.order) return;
+    if (!this.order || this.order.delivered) return;
     this.order.answers = answers;
     this.finishOrder({ product: null });
   }
 
+  /**
+   * Consegna: valuta subito (career.js) e chiede la relazione di laboratorio; il voto arriva con finishReport, che
+   * aggiunge le stelle della relazione.
+   */
   finishOrder({ product }) {
     const o = this.order;
     o.delivered = true;
-    const ev = o.def.evaluate({ mode: this.chemMode, product, answers: o.answers ?? {}, unknowns: o.unknowns, ctx: this.chem });
-    const elapsed = this.time - o.start;
-    const mess = this.mess();
-    const costs = Math.round((o.costs + o.fines) * 100) / 100;
-    const g = grade({ quality: ev.quality, elapsed, par: o.def.par, mess, incidents: o.incidents, wrongBins: o.wrongBins, pay: o.def.pay, costs });
-    this.money = Math.round((this.money + g.net) * 100) / 100;
-    if (product) product.data.deliveredOrder = o.index;
-    const result = { index: o.index, def: o.def, ...g, quality: ev.quality, lines: ev.lines, elapsed, mess, costs, reagents: o.costs, fines: o.fines, incidents: o.incidents, money: this.money, last: o.index === ORDERS.length - 1 };
-    this.emit('result', result);
-    return result;
+    o.product = product?.mixture ?? null;
+    const ev = evaluateExercise(o.ex, this.snapshot(), this.chemMode);
+    if (product) product.data.deliveredOrder = o.id;
+    o.pending = { quality: ev.quality, lines: ev.lines, elapsed: this.time - o.start, mess: this.mess(), costs: Math.round((o.costs + o.fines) * 100) / 100 };
+    o.questions = reportQuestions(o.ex);
+    if (o.questions.length) this.emit('report', { ex: o.ex, questions: o.questions });
+    else this.finishReport([]);
   }
 
-  nextOrder() {
-    const next = (this.order?.index ?? -1) + 1;
-    if (next >= ORDERS.length) {
-      this.emit('careerEnd', { money: this.money });
-      return;
-    }
-    this.startOrder(next);
+  /** Relazione consegnata (o saltata): stelle, paga e resoconto. answers: indice scelto per ogni domanda. */
+  finishReport(answers = []) {
+    const o = this.order;
+    const p = o?.pending;
+    if (!p) return null;
+    const questions = o.questions ?? [];
+    const right = questions.filter((q, i) => answers[i] === q.right).length;
+    const g = gradeExercise(o.ex, { quality: p.quality, elapsed: p.elapsed, mess: p.mess, incidents: o.incidents, wrongBins: o.wrongBins, costs: p.costs, reportRight: right, reportTotal: questions.length });
+    this.money = Math.round((this.money + g.net) * 100) / 100;
+    o.pending = null;
+    const result = {
+      id: o.id, ex: o.ex, def: o.ex, ...g, quality: p.quality, lines: p.lines, elapsed: p.elapsed, mess: p.mess, costs: p.costs,
+      reagents: o.costs, fines: o.fines, incidents: o.incidents, money: this.money,
+      report: { right, total: questions.length, answers, questions },
+    };
+    this.emit('result', result);
+    return result;
   }
 
   // ------------------------------------------------------------------ messaggi e incidenti
@@ -560,6 +627,7 @@ export class LabGame {
   }
 
   fine(kind, text) {
+    this.note(kind);
     if (this.order && !this.free) {
       this.order.fines += PRICES.fines[kind] ?? 0;
       if (['fire', 'toxic', 'explosion', 'splash', 'sinkHazard'].includes(kind)) this.order.incidents++;
@@ -1147,6 +1215,7 @@ export class LabGame {
         break;
       case 'balance':
         f.tare = this.balanceReading(true);
+        this.note('tare');
         this.toast(t('tared'));
         break;
       case 'hood':
@@ -1171,6 +1240,7 @@ export class LabGame {
         break;
       case 'store':
         if (this.free) this.emit('catalog');
+        else if (this.has('cabinetKey')) this.emit('catalog', { cabinet: true });
         else this.toast(t('storeCareer'));
         break;
       case 'towels':
@@ -1269,6 +1339,7 @@ export class LabGame {
     }
     strip.data.used = true;
     strip.data.ph = ph;
+    this.order?.phRead.add(target.id);
     const c = UNIVERSAL_SCALE[Math.max(0, Math.min(14, Math.round(ph)))];
     strip.pad.material.color.set(c);
     this.emit('strip', { ph, color: c });
@@ -1288,18 +1359,22 @@ export class LabGame {
     const c = towel.mixture.appearance().liquid;
     towel.paper.material.color.setRGB(0.6 + c[0] / 640, 0.6 + c[1] / 640, 0.6 + c[2] / 640);
     this.updatePuddle(puddle);
+    this.note('wiped');
     this.toast(this.t('wiped'));
   }
 
   /** Lava un contenitore al lavandino: il contenuto va nello scarico (se si può), il vetro torna pulito. */
   wash(item) {
     if (item.mixture && !item.mixture.isEmpty()) {
+      // il velo rimasto dopo aver svuotato il recipiente nei rifiuti è un risciacquo: va nello scarico senza multa
+      const rinse = item.mixture.liquidVolume <= RESIDUE_ML * 1.5 && item.mixture.solidVolume < 0.05;
       const content = item.mixture.takeFraction(1);
       content.add(item.mixture.takeFraction(1, { solidOnly: true }));
-      this.disposeWaste(content, 'sink', item, true);
+      if (!rinse) this.disposeWaste(content, 'sink', item, true);
       item.mixture.clear();
     }
     item.dirty = false;
+    this.note('washed');
     this.toast(this.t('washed', { name: this.itemName(item) }));
   }
 
@@ -1328,10 +1403,14 @@ export class LabGame {
     const binName = this.t(`bin_${bin}`);
     if (bin === 'sink') {
       if (cls !== 'sink') this.fine('sinkHazard', this.t('sinkHazard', { what: this.t(`waste_${cls}`) }));
+      else this.note('disposed:sink');
       return;
     }
     if (!binAccepts(bin, cls)) this.fine('wrongBin', this.t('wrongBin', { bin: binName, right: this.t(`bin_${cls === 'solid' ? 'solid' : cls}`) }));
-    else if (once) this.toast(this.t('disposedOk', { bin: binName }), 'ok');
+    else {
+      this.note(`disposed:${bin}`);
+      if (once) this.toast(this.t('disposedOk', { bin: binName }), 'ok');
+    }
   }
 
   // ------------------------------------------------------------------ controllo dell'oggetto in mano (a ogni passo fisico)
@@ -1542,6 +1621,11 @@ export class LabGame {
 
   startSplash() {
     if (this.splash) return;
+    // occhiali e camice (negozio): gli schizzi non arrivano agli occhi né alla pelle
+    if (this.has('goggles')) {
+      this.toast(this.t('gogglesSaved'), 'ok');
+      return;
+    }
     this.splash = { t: 15 };
     this.emit('alert', { kind: 'splash' });
   }
@@ -1935,7 +2019,9 @@ export class LabGame {
   /** Dentro la cappa accesa? */
   inHood(p) {
     const z = this.fx.hood.zone;
-    return this.fx.hood.on && p.x > z.x0 && p.x < z.x1 && p.z > z.z0 && p.z < z.z1 && p.y > z.y0 - 0.05 && p.y < z.y1;
+    // la cappa più potente (negozio) aspira anche un po' fuori dal piano
+    const m = this.has('hoodPro') ? 0.2 : 0;
+    return this.fx.hood.on && p.x > z.x0 - m && p.x < z.x1 + m && p.z > z.z0 - m && p.z < z.z1 + m && p.y > z.y0 - 0.05 && p.y < z.y1 + m;
   }
 
   chemistry(dt) {
@@ -1954,9 +2040,11 @@ export class LabGame {
       const top = _v.set(0, item.def.height, 0).applyMatrix4(item.mesh.matrixWorld).clone();
       // vapore sopra i liquidi caldi
       if (mix.T > 345 && mix.water > 0.5 && Math.random() < (mix.T - 345) / 40) this.puffs.emit(top.x, top.y, top.z, (Math.random() - 0.5) * 0.05, 0.25, (Math.random() - 0.5) * 0.05, { size: 0.02, grow: 4, rgb: [245, 248, 252], alpha: 0.35, life: 1.6 });
+      item.mixture.peakT = item.peakT;
       for (const [sid, mol] of ev.gases) {
         if (mol <= 1e-7) continue;
         if (sid === WATER) continue;
+        if (this.order) this.order.gas[sid] = (this.order.gas[sid] ?? 0) + mol;
         if (chem.toxic.has(sid)) this.toxicGas(sid, mol, top);
         else if (Math.random() < Math.min(1, mol * 2000)) {
           const c = chem.sub(sid)?.colors?.[3];
@@ -2188,6 +2276,7 @@ export class LabGame {
   /** Prima volta che si osserva una reazione in questa partita: avviso con l'equazione e voce nel quaderno. */
   noteReaction(id, sig, aq) {
     if (this.follow?.recipe.id === id) this.follow.rxSeen = true;
+    this.order?.rx.add(id);
     this.seenRx ??= new Set();
     if (this.seenRx.has(id)) return;
     this.seenRx.add(id);
@@ -2215,12 +2304,17 @@ export class LabGame {
     }
   }
 
-  startFire({ item = null, puddle = null, sid = 0, pos }) {
+  /** Un fuoco. scripted: acceso dall'esercitazione (la prova di evacuazione), senza multa e più lungo. */
+  startFire({ item = null, puddle = null, sid = 0, pos, scripted = false }) {
     if (this.fires.length > 12) return;
     // appena spento con l'estintore (o con la doccia) non si riaccende subito: la CO₂ copre la zona
     const owner = item ?? puddle;
     if (owner && (owner.noFire ?? 0) > this.time) return;
-    this.fires.push({ item, puddle, sid, pos: pos.clone(), fuel: item?.kind === 'towel' ? 8 : 30, hit: 0, age: 0 });
+    this.fires.push({ item, puddle, sid, pos: pos.clone(), fuel: scripted ? 150 : item?.kind === 'towel' ? 8 : 30, hit: 0, age: 0, scripted });
+    if (scripted) {
+      this.alarm = 6;
+      return;
+    }
     // una sola multa per un fuoco che si riaccende
     if (this.time - (this.lastFireFine ?? -99) > 10) {
       this.lastFireFine = this.time;
@@ -2292,7 +2386,11 @@ export class LabGame {
         this.fires = this.fires.filter((q) => q !== f);
         const owner = f.item ?? f.puddle;
         if (owner) owner.noFire = this.time + 8;
-        if (f.hit > 0.8) this.toast(this.t('fireOut'), 'ok');
+        if (f.hit > 0.8) {
+          this.toast(this.t('fireOut'), 'ok');
+          this.note('fireOut');
+          if (this.order && this.order.fireTime === null) this.order.fireTime = this.time - this.order.start;
+        }
         if (f.puddle) this.updatePuddle(f.puddle);
       }
     }
@@ -2408,6 +2506,11 @@ export class LabGame {
   // ------------------------------------------------------------------ bilancia
 
   /** Lettura della bilancia (g): oggetti appoggiati sul piatto, meno la tara. */
+  /** Decimali della bilancia: due, tre con la bilancia di precisione del negozio. */
+  balanceDigits() {
+    return this.has('balancePro') ? 3 : 2;
+  }
+
   balanceReading(raw = false) {
     const pan = this.fx.balance.pan;
     let g = 0;
@@ -2451,6 +2554,8 @@ export class LabGame {
     for (const p of this.room.props) if (!p.body.isSleeping()) this.syncProp(p);
     for (const it of this.items) if (it.def.container && it.mixture) this.pourFrom(it, dt);
     this.apparatus.update(dt);
+    // pH-metro immerso con una lettura: il campione conta come misurato
+    if (this.order && this.held?.kind === 'phmeter' && this.probing && this.held.data.reading !== null) this.order.phRead.add(this.probing.id);
     for (const [it, st] of this.streams) if (st.shown !== this.time) st.hide();
     this.deliverStreams();
     // acqua del rubinetto nei contenitori sotto il getto
@@ -2484,7 +2589,7 @@ export class LabGame {
         this.updatePuddle(pd);
       }
     }
-    this.room.setBalance(`${this.fmt(Math.max(-999, this.balanceReading()), 2)} g`);
+    this.room.setBalance(`${this.fmt(Math.max(-999, this.balanceReading()), this.balanceDigits())} g`);
     this.room.update(dt, this.time);
     this.drops.update(dt);
     this.grains.update(dt);
@@ -2548,7 +2653,7 @@ export class LabGame {
       notebook: () => t('stNotebook', { n: Object.keys(this.notebook.rx).length }),
       book: () => t('stBook', { n: this.book.recipes.length }),
       sink: () => t(f.tap ? 'stTapOn' : 'stTapOff'),
-      balance: () => `${this.fmt(Math.max(-999, this.balanceReading()), 2)} g`,
+      balance: () => `${this.fmt(Math.max(-999, this.balanceReading()), this.balanceDigits())} g`,
       bin: () => t(`binNote_${f.bin}`),
     }[f.kind];
     if (state) out.notes.push(state());
@@ -2717,14 +2822,15 @@ export class LabGame {
     const o = this.order;
     let steps = [];
     if (o) {
-      const snap = this.snapshot();
-      steps = o.def.steps(this.chemMode).map((s) => ({ text: this.t(s.key, this.stepParams(o.def)), done: s.done(snap) }));
+      // i passi fatti restano spuntati (career.js, stepsDone)
+      o.done = stepsDone(o.ex, this.snapshot(), this.chemMode, o.done);
+      steps = o.ex.steps.map((st, i) => ({ text: this.t(st.key, this.stepParams(o.ex)), done: o.done[i] }));
     }
     return {
       legend: this.legend(),
       held: this.heldInfo(),
       looked: this.lookedInfo(),
-      order: o ? { n: o.index + 1, title: this.t(`${o.def.id}Title`), brief: this.t(`${o.def.id}Brief${this.chemMode === 'simple' ? 'Simple' : ''}`), steps, elapsed: this.time - o.start, par: o.def.par, costs: o.costs + o.fines } : null,
+      order: o ? { chapter: o.ex.chapter, n: chapterExercises(o.ex.chapter).indexOf(o.ex) + 1, title: this.t(`${o.ex.id}Title`), brief: this.briefText(o.ex), steps, elapsed: this.time - o.start, par: o.ex.par, costs: o.costs + o.fines } : null,
       money: this.money,
       free: this.free,
       mode: this.player.mode,
@@ -2768,6 +2874,12 @@ export class LabGame {
     if (h?.type === 'item' && h.item !== this.held) looked = top(h.item);
     else if (h?.type === 'fixture' || h?.type === 'puddle') looked = h.point.clone();
     return { held: this.held ? top(this.held) : null, looked, camera: this.camera };
+  }
+
+  /** Consegna dell'insegnante, nella versione della chimica semplificata se c'è. */
+  briefText(ex) {
+    const key = `${ex.id}BriefSimple`;
+    return this.chemMode === 'simple' && this.t(key) !== key ? this.t(key) : this.t(`${ex.id}Brief`);
   }
 
   stepParams(def) {

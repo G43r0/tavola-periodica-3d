@@ -1,6 +1,6 @@
 # Gioco base — piano
 
-Data: 2026-10-14 · Stato: **in corso — G1, G2, G3, G4 e G5 completate** · Parte dal prototipo del simulatore
+Data: 2026-10-14 · Stato: **in corso — G1, G2, G3, G4, G5 e G6 completate** · Parte dal prototipo del simulatore
 ([design](2026-10-13-simulatore-laboratorio-design.md), branch `ccr-9fd85180-nfjaik`, fase 9)
 
 ## Da dove partiamo
@@ -217,7 +217,7 @@ Ogni fase è giocabile da sola, con test e screenshot nei tre preset prima di pa
 | **G3** ✅ | Reazioni al centro: effetti osservabili, equazione nella finestrella, quaderno, condizioni nuove, scaffale ampliato con test di copertura, vista molecolare | G2 |
 | **G4** ✅ | Strumenti nuovi (buretta, pipetta, filtrazione, crogiolo, termometro, pH-metro, elettrolisi, distillazione) | G3 |
 | **G5** ✅ | Libro «Come si fa»: lettore e riquadro, strumenti, tecniche, sicurezza, pagine dei 118 elementi, ricette generate con le vignette SVG, «Prepara sul banco», «Segui la ricetta», test che esegue ogni ricetta | G4 |
-| **G6** | Carriera: capitoli 0–4 (~25 esercitazioni) scritti come dati, pagine del libro sbloccate, relazione, negozio, reputazione, salvataggi versionati | G5 |
+| **G6** ✅ | Carriera: capitoli 0–4 (~25 esercitazioni) scritti come dati, pagine del libro sbloccate, relazione, negozio, reputazione, salvataggi versionati | G5 |
 | **G7** | Carriera: capitoli 5–9, verifiche, pagella, sfide a tempo, richieste extra | G6 |
 | **G8** | Rifinitura: dettagli della stanza, effetti, audio (se lo vogliamo), prestazioni, inglese e «Spiegamelo come se avessi 6 anni», modalità Spiega, README e CHANGELOG | G7 |
 
@@ -375,6 +375,43 @@ Verificato con gli screenshot della stessa inquadratura (prima persona, bancone,
   (leggeva `el.Z` invece di `el.z`); `LAB_MAX_T` sale a 1173 K (crogiolo nella fiamma del Bunsen).
 - Rimandati: le pagine sbloccate dai capitoli e il libro nelle verifiche (G6, con la Carriera); i collegamenti alla
   scheda dell'elemento nella tavola; le molecole in piccolo accanto all'equazione.
+
+### G6 — fatto
+
+- **Esercitazioni come dati** (`src/game/data/career-exercises.js`, letti da `src/game/career.js`, puro e testato):
+  ognuna dice cosa c'è sul banco (vetreria, strumenti, reagenti dello scaffale e dell'armadio, campioni incogniti
+  estratti da un elenco, recipienti sporchi, una pozza, un fuoco), i passi con la condizione che li spunta, come si
+  consegna (preparato sul vassoio, solo il campanello, risposte), gli obiettivi con le tolleranze per la chimica
+  realistica e semplificata, le penalità, le domande della relazione, le pagine del libro e una soluzione. Le condizioni
+  sono un piccolo linguaggio: misure sulle miscele (`grams`, `molar`, `volume`, `ph`, `saturation`, `massPct`,
+  `density`, `leftover`…) e sullo stato del banco (`$ev:tare`, `$gas:H`, `$phRead`, `$fires`, `$mess`, `$tray`…),
+  con «un contenitore che», «quanti», «nessuno». I passi fatti restano spuntati.
+- **27 esercitazioni**: i capitoli 0–4 completi (25, tra cui le tre di prima: soluzione di NaCl, titolazione, pioggia
+  d'oro) più cristalli (capitolo 5) e saggio alla fiamma (capitolo 7); i capitoli 6, 8 e 9 sono «in arrivo». Ogni
+  reazione usata è stata provata prima con il motore (AgCl bianco, AgBr crema, AgI giallo; Cu(OH)₂ blu, Fe(OH)₃
+  ruggine, Fe(OH)₂ verde, Mg(OH)₂ bianco; H₂, CO₂, O₂ con MnO₂; l'acqua di calce che si intorbida e con troppa CO₂ torna
+  limpida). Un test esegue la soluzione di ognuna nelle due chimiche (qualità ≥ 90 %) e controlla che i lavori sbagliati
+  prendano poco.
+- **Relazione di laboratorio**: 2–3 domande a scelta per esercitazione, con le opzioni mescolate; tutte giuste danno
+  una stella in più, metà mezza (fino a 5).
+- **Reputazione** (0–100), calcolata dai risultati migliori: 2 punti per stella meno 3, +1 per risposta giusta, −2 per
+  incidente; sei titoli da «Matricola» a «Capo del laboratorio». Un capitolo si apre superando quello prima (tutte le
+  esercitazioni con almeno 2 stelle) e con la reputazione richiesta; nel capitolo le esercitazioni si aprono in ordine.
+- **Negozio**: occhiali e camice, vetreria di scorta, termometro digitale, bilancia di precisione (0,001 g), cappa più
+  potente, chiave dell'armadio; ognuna cambia davvero il laboratorio.
+- **Libro nella Carriera**: aperte la sicurezza, le pagine delle esercitazioni dei capitoli aperti e i gruppi di
+  ricette dei capitoli (acido-base dal 2, precipitazioni e ioni dal 3, spostamento e decomposizioni dal 4…); le altre
+  hanno il lucchetto con il capitolo che le apre. Nella consegna l'insegnante indica le pagine che servono.
+- **Interfaccia**: mappa dell'anno scolastico con reputazione e soldi, consegna con le pagine del libro, risposte a
+  scelta e numeriche, relazione, resoconto con la reputazione guadagnata, «Riprova» e «Prossima esercitazione».
+- **Salvataggi** (`src/game/save.js`): versione 2 con le impostazioni e fino a 8 profili (Carriera e quaderno di
+  ognuno); la versione 1 passa da sola alla 2 tenendo stelle, soldi, impostazioni e quaderno (e dando per fatto il
+  capitolo 0 a chi aveva già cominciato); i campi rotti si correggono. Nell'app Electron il salvataggio è anche in un
+  file nella cartella dei dati dell'utente (scritto passando da un file temporaneo, con la copia precedente); vince il
+  più recente.
+- **Correzione**: il velo che resta dopo aver svuotato un recipiente nei rifiuti si sciacqua al lavandino senza multa.
+- Rimandati alla G7: verifiche di fine capitolo con i campioni incogniti, pagella, sfide a tempo, richieste extra, i
+  capitoli 5–9; il libro nelle verifiche (metodi sì, soluzione no).
 
 ## Verifiche
 

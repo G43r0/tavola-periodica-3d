@@ -16,6 +16,8 @@ import { PRODUCTION } from './data/element-production.js';
 
 const CHAPTERS = ['tools', 'techniques', 'safety', 'elements', 'recipes'];
 const HAND = { tools: TOOL_PAGES, techniques: TECHNIQUE_PAGES, safety: SAFETY_PAGES };
+/** Prefisso delle pagine scritte a mano negli elenchi della Carriera (career.js: 'tool:balance', 'tech:weigh'…). */
+const PAGE_PREFIX = { tools: 'tool', techniques: 'tech', safety: 'safety' };
 const CH_KEY = { tools: 'bkChTools', techniques: 'bkChTechniques', safety: 'bkChSafety', elements: 'bkChElements', recipes: 'bkChRecipes' };
 const MAX_LIST = 120;
 
@@ -51,6 +53,18 @@ const ghsIcon = (id) => `<svg class="gm-bk__ghs" viewBox="0 0 40 40" role="img" 
 export function createBookView({ game, t, kj, canOpenLab }) {
   const st = { chapter: null, page: null, group: null, query: '', shelfOnly: false };
   const chem = () => game.chem;
+  // Carriera: pagine e gruppi di ricette aperti dai capitoli (career.js, bookUnlocks; null = tutto aperto)
+  const locks = () => game.bookLocks ?? null;
+  const pageKey = (chapter, p) => `${PAGE_PREFIX[chapter]}:${p.id}`;
+  const pageOpen = (chapter, p) => !locks() || locks().pages.has(pageKey(chapter, p));
+  const recipeOpen = (r) => !locks() || locks().groups.has(r.rx.group);
+  const openRecipes = () => game.book.recipes.filter(recipeOpen);
+  const lockIcon = '<svg class="gm-bk__lock" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  /** Pagina chiusa: si apre con il capitolo della Carriera che la usa. */
+  const lockedPage = (title, key) => {
+    const ch = locks()?.chapterOf.get(key);
+    return `<article class="gm-bk__page gm-bk__locked"><h4>${lockIcon} ${esc(title)}</h4><p>${esc(ch === undefined ? t('bkLockedLater') : t('bkLocked', { n: ch }))}</p></article>`;
+  };
   // nomi a metà frase in minuscolo («di zinco»), ma non le sigle («EDTA») né le formule
   const lc = (s) => (s && s.length > 1 && /\p{Lu}/u.test(s[0]) && /\p{Ll}/u.test(s[1]) ? s[0].toLocaleLowerCase() + s.slice(1) : s);
   const lname = (sid) => lc(chem().name(sid));
@@ -169,6 +183,7 @@ export function createBookView({ game, t, kj, canOpenLab }) {
   // ---------------------------------------------------------------- pagine
 
   function recipePage(r) {
+    if (!recipeOpen(r)) return lockedPage(recipeTitle(r), `group:${r.rx.group}`);
     const lk = looks(r);
     const sig = r.signals;
     const eq = equation(chem(), r.rx, { aqueous: r.aqueous });
@@ -216,6 +231,7 @@ export function createBookView({ game, t, kj, canOpenLab }) {
 
   function handPage(chapter, p) {
     const x = pick(p);
+    if (!pageOpen(chapter, p)) return lockedPage(x.title, pageKey(chapter, p));
     const list = (arr) => (arr ?? []).map((s) => `<li>${esc(s)}</li>`).join('');
     return `<article class="gm-bk__page">
       <h4>${esc(x.title)}</h4>
@@ -261,7 +277,7 @@ export function createBookView({ game, t, kj, canOpenLab }) {
   }
 
   function recipeList() {
-    let list = game.book.recipes;
+    let list = openRecipes();
     if (st.shelfOnly) list = list.filter((r) => r.shelfOnly);
     const q = normalize(st.query.trim());
     if (q) list = list.filter((r) => q.split(/\s+/).every((w) => hay(r).includes(w)));
@@ -281,7 +297,7 @@ export function createBookView({ game, t, kj, canOpenLab }) {
     const chapters = CHAPTERS.map((c) => `<button type="button" class="gm-nb__group ${st.chapter === c ? 'is-on' : ''}" data-bk-chapter="${c}"><span>${esc(t(CH_KEY[c]))}</span></button>`).join('');
     let sub = '';
     if (HAND[st.chapter]) {
-      sub = HAND[st.chapter].map((p, i) => `<button type="button" class="gm-bk__navitem ${st.page?.i === i ? 'is-on' : ''}" data-bk-hand="${i}">${esc(pick(p).title)}</button>`).join('');
+      sub = HAND[st.chapter].map((p, i) => `<button type="button" class="gm-bk__navitem ${st.page?.i === i ? 'is-on' : ''} ${pageOpen(st.chapter, p) ? '' : 'is-locked'}" data-bk-hand="${i}">${pageOpen(st.chapter, p) ? '' : lockIcon}${esc(pick(p).title)}</button>`).join('');
     } else if (st.chapter === 'elements') {
       sub = `<div class="gm-bk__elgrid">${game.book.elements.map((e) => {
         const s = chem().sub(e.z);
@@ -290,7 +306,10 @@ export function createBookView({ game, t, kj, canOpenLab }) {
     } else if (st.chapter === 'recipes') {
       const counts = new Map();
       for (const r of game.book.recipes) if (!st.shelfOnly || r.shelfOnly) counts.set(r.rx.group, (counts.get(r.rx.group) ?? 0) + 1);
-      sub = REACTION_GROUPS.filter((g) => counts.get(g.key)).map((g) => `<button type="button" class="gm-bk__navitem ${st.group === g.key && !st.query ? 'is-on' : ''}" data-bk-group="${g.key}">${esc(g.label)} <small>${counts.get(g.key)}</small></button>`).join('');
+      // nella Carriera i gruppi ancora chiusi restano in elenco, con il lucchetto e il capitolo che li apre
+      sub = REACTION_GROUPS.filter((g) => counts.get(g.key)).map((g) => (!locks() || locks().groups.has(g.key)
+        ? `<button type="button" class="gm-bk__navitem ${st.group === g.key && !st.query ? 'is-on' : ''}" data-bk-group="${g.key}">${esc(g.label)} <small>${counts.get(g.key)}</small></button>`
+        : `<span class="gm-bk__navitem is-locked" title="${esc(t('bkLocked', { n: locks().chapterOf.get(`group:${g.key}`) ?? '—' }))}">${lockIcon}${esc(g.label)} <small>${esc(t('bkChapterShort', { n: locks().chapterOf.get(`group:${g.key}`) ?? '—' }))}</small></span>`)).join('');
     }
     return `<nav class="gm-nb__groups gm-bk__nav" aria-label="${esc(t('bookTitle'))}">
       <button type="button" class="gm-nb__group ${!st.chapter ? 'is-on' : ''}" data-bk-chapter=""><span>${esc(t('bkHome'))}</span></button>
@@ -319,18 +338,25 @@ export function createBookView({ game, t, kj, canOpenLab }) {
     if (st.chapter === 'elements') return elementPage(st.page?.z ?? 29);
     if (HAND[st.chapter]) return handPage(st.chapter, HAND[st.chapter][0]);
     const card = (c, n) => `<button type="button" class="gm-bk__card" data-bk-chapter="${c}"><b>${esc(t(CH_KEY[c]))}</b><small>${n}</small></button>`;
+    const countOpen = (c) => (locks() ? `${HAND[c].filter((p) => pageOpen(c, p)).length} / ${HAND[c].length}` : HAND[c].length);
     return `<div class="gm-bk__page gm-bk__home"><p>${esc(t('bkIntro'))}</p>
-      <div class="gm-bk__cards">${card('tools', TOOL_PAGES.length)}${card('techniques', TECHNIQUE_PAGES.length)}${card('safety', SAFETY_PAGES.length)}${card('elements', 118)}${card('recipes', game.book.recipes.length)}</div>
+      <div class="gm-bk__cards">${card('tools', countOpen('tools'))}${card('techniques', countOpen('techniques'))}${card('safety', countOpen('safety'))}${card('elements', 118)}${card('recipes', locks() ? `${openRecipes().length} / ${game.book.recipes.length}` : game.book.recipes.length)}</div>
+      ${locks() ? `<p class="gm-bk__note">${esc(t('bkCareerNote'))}</p>` : ''}
       <p class="gm-bk__note">${esc(t('bkElemNuclear'))}</p></div>`;
   }
 
   return {
     state: st,
     html: () => `<div class="gm-nb gm-bk">${nav()}<section class="gm-nb__pages gm-bk__main">${main()}</section></div>`,
-    /** Apre una pagina: 'recipe:<id>', 'element:<z>', o un capitolo. */
+    /** Apre una pagina: 'recipe:<id>', 'element:<z>', 'tool:<id>', 'tech:<id>', 'safety:<id>', o un capitolo. */
     open(target) {
       const [kind, id] = String(target).split(':');
-      if (kind === 'recipe') {
+      const hand = Object.keys(PAGE_PREFIX).find((c) => PAGE_PREFIX[c] === kind);
+      if (hand) {
+        st.chapter = hand;
+        const i = HAND[hand].findIndex((p) => p.id === id);
+        st.page = i >= 0 ? { type: 'hand', i } : null;
+      } else if (kind === 'recipe') {
         st.chapter = 'recipes';
         st.page = { type: 'recipe', id };
         st.group = game.book.byId.get(id)?.rx.group ?? st.group;

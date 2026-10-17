@@ -323,6 +323,10 @@ export const GLOSSARY_ELI6 = {
     t: 'Il quaderno delle scoperte',
     d: 'Ogni volta che fai succedere una reazione nuova, il gioco la scrive nel quaderno: che cosa hai mescolato, che cosa è venuto fuori e che cosa hai visto, come le bollicine o una polverina colorata. Più reazioni scopri, più il quaderno si riempie, come un album di figurine! Il quaderno è sul bancone e dentro ci sono anche le istruzioni con i disegni, per imparare a usare ogni attrezzo.',
   },
+  'ui.gameCareer': {
+    t: 'L\'anno di scuola nel laboratorio',
+    d: 'Nella Carriera fai un esperimento dopo l\'altro, come a scuola: la maestra ti dice cosa fare e tu prendi le stelline. Dopo ogni esperimento rispondi a due domande: se rispondi giusto prendi una stellina in più! Con i soldi compri cose utili, come gli occhiali o una bilancia più precisa. Più sei bravo e attento, più la maestra si fida di te e ti apre nuovi capitoli.',
+  },
   'ui.gameBook': {
     t: 'Il libro degli esperimenti',
     d: 'È come un libro di ricette di cucina, ma per la chimica: ti dice quanta polverina mettere, quanto liquido versare, se scaldare e che cosa vedrai succedere, passo per passo e con i disegni. Tutti gli esperimenti del libro funzionano davvero nel gioco!',

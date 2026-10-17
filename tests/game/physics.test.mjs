@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import * as THREE from 'three';
 import { loadPhysics, Physics } from '../../src/game/physics.js';
 import { interiorSamples, rimPoints, liquidLevel, profileVolume } from '../../src/game/liquid.js';
-import { ORDERS, ORDER_BY_ID, grade, score } from '../../src/game/orders.js';
+import { grade, score } from '../../src/game/orders.js';
 import { createLabChemistry, Mixture } from '../../src/game/mixture.js';
 import { LAYOUT, BENCH_Y, STOOL } from '../../src/game/room.js';
 
@@ -143,40 +143,6 @@ test('liquidi: volume del profilo, livello orizzontale e versamento inclinando',
   m.makeRotationX(-Math.PI / 12);
   l = liquidLevel(samples, rim, m, 0.5);
   assert.ok(l.level < l.rimY);
-});
-
-test('esercitazioni: ognuna ha preparazione, passi e testi', () => {
-  assert.equal(ORDERS.length, 5);
-  for (const o of ORDERS) {
-    assert.ok(o.setup('real').length >= 3, o.id);
-    assert.ok(o.steps('real').length >= 3, o.id);
-    assert.ok(o.pay > 0 && o.par > 60);
-  }
-});
-
-test('valutazione: una soluzione perfetta prende il massimo, una sbagliata no', () => {
-  const perfect = Mixture.solution(ctx, 'nacl', 0.5, 100);
-  const good = ORDER_BY_ID.nacl.evaluate({ mode: 'real', product: { mixture: perfect } });
-  assert.ok(good.quality > 0.95, `qualità ${good.quality}`);
-  const weak = Mixture.solution(ctx, 'nacl', 0.3, 100);
-  assert.ok(ORDER_BY_ID.nacl.evaluate({ mode: 'real', product: { mixture: weak } }).quality < 0.6);
-  // nella modalità semplificata la stessa soluzione è valutata più largamente
-  const close = Mixture.solution(ctx, 'nacl', 0.47, 100);
-  assert.ok(ORDER_BY_ID.nacl.evaluate({ mode: 'simple', product: { mixture: close } }).quality > ORDER_BY_ID.nacl.evaluate({ mode: 'real', product: { mixture: close } }).quality);
-  // con l'acqua del rubinetto c'è una penalità nella modalità realistica
-  const tap = Mixture.solution(ctx, 'nacl', 0.5, 100);
-  tap.addSpecies(ctx.id('cacl2'), 1e-4, true);
-  const tapEv = ORDER_BY_ID.nacl.evaluate({ mode: 'real', product: { mixture: tap } });
-  assert.ok(tapEv.lines.some((l) => l.key === 'evTapWater'));
-  // titolazione: al punto equivalente con l'indicatore
-  const tit = Mixture.solution(ctx, 'hcl', 0.1, 25);
-  tit.add(Mixture.of(ctx, [['php', 5e-6]]));
-  tit.add(Mixture.solution(ctx, 'naoh', 0.1, 25.2));
-  for (let i = 0; i < 60; i++) tit.tick(1 / 30);
-  assert.ok(ORDER_BY_ID.titration.evaluate({ mode: 'real', product: { mixture: tit } }).quality > 0.9);
-  // saggio alla fiamma: due risposte giuste su tre
-  const fl = ORDER_BY_ID.flame.evaluate({ answers: { 0: 'Na', 1: 'K', 2: 'Li' }, unknowns: ['nacl', 'kcl', 'srcl2'] });
-  assert.ok(Math.abs(fl.quality - 2 / 3) < 1e-9);
 });
 
 test('stelle e soldi: qualità, sicurezza e tempo', () => {

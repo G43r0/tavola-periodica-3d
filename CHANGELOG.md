@@ -160,6 +160,16 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 - **Simulatore: i solidi non si comportano più come liquidi**: nel recipiente la superficie segue il recipiente fino
   all'angolo di riposo (35°) e poi scivola; versati cadono in grani e su bancone e pavimento fanno un mucchietto conico
   invece di una pozza.
+- **Simulatore: Carriera in capitoli** (fase G6 del piano). Un anno di scuola: i capitoli 0–4 completi (comandi e
+  sicurezza, misure e soluzioni, acidi e basi, precipitazioni e analisi, gas) e le esercitazioni dei cristalli e del
+  saggio alla fiamma, 27 in tutto, scritte come dati (`src/game/data/career-exercises.js`) e lette da
+  `src/game/career.js`; un test le risolve tutte con il motore dei contenitori. Relazione di laboratorio con stelle in
+  più, reputazione con l'insegnante che apre i capitoli, negozio (occhiali e camice, vetreria di scorta, termometro
+  digitale, bilancia di precisione, cappa più potente, chiave dell'armadio), pagine del libro aperte dai capitoli e
+  indicate nella consegna, mappa dell'anno scolastico. Profili (fino a 8) e salvataggi con la versione e la
+  migrazione dalla versione di prima (`src/game/save.js`); nell'app Electron anche su file. Voce «Carriera del
+  simulatore» nella modalità Spiega. Corretto: il velo rimasto dopo aver svuotato un recipiente nei rifiuti si
+  sciacqua senza multa.
 - **Simulatore: versare è facile, come in *Cooking Simulator***. Si tiene premuto il sinistro: sopra un recipiente, il
   lavandino o un bidone la bocca va sull'apertura e il recipiente si inclina da solo finché esce un filo, e continua a
   inclinarsi mentre si svuota; il mouse in su versa più forte, in giù più piano. Altrove (o spostando lo sguardo dal

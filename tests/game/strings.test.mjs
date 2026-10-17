@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { GAME_STRINGS } from '../../src/game/game-strings.js';
-import { ORDERS } from '../../src/game/orders.js';
+import { EXERCISES, CHAPTERS, SHOP, REP_TITLES, answerOptions } from '../../src/game/career.js';
 import { DEFS } from '../../src/game/items.js';
 import { BINS } from '../../src/game/mixture.js';
 import { STATIONS } from '../../src/game/room.js';
@@ -12,7 +12,7 @@ import { KEY_IDS } from '../../src/game/controls.js';
 const has = (key) => key in GAME_STRINGS.it && key in GAME_STRINGS.en;
 
 test('testi del simulatore: chiavi scritte nel codice', () => {
-  const src = ['game.js', 'game-view.js', 'orders.js', 'apparatus.js', 'book-view.js'].map((f) => fs.readFileSync(new URL(`../../src/game/${f}`, import.meta.url), 'utf8')).join('\n');
+  const src = ['game.js', 'game-view.js', 'orders.js', 'career.js', 'apparatus.js', 'book-view.js'].map((f) => fs.readFileSync(new URL(`../../src/game/${f}`, import.meta.url), 'utf8')).join('\n');
   // t('chiave'…) e key: 'chiave' (passi e righe della valutazione)
   const keys = new Set([...src.matchAll(/\bt\('([a-zA-Z][\w]*)'/g), ...src.matchAll(/key: '([a-zA-Z][\w]*)'/g), ...src.matchAll(/\? '(ev[A-Z]\w*)' : '(ev[A-Z]\w*)'/g)].flatMap((m) => m.slice(1)).filter(Boolean));
   assert.ok(keys.size > 100);
@@ -20,8 +20,19 @@ test('testi del simulatore: chiavi scritte nel codice', () => {
 });
 
 test('testi del simulatore: chiavi composte (esercitazioni, oggetti, rifiuti, postazioni)', () => {
-  for (const o of ORDERS) for (const suffix of ['Title', 'Brief', 'BriefSimple', 'Board']) assert.ok(has(`${o.id}${suffix}`), `${o.id}${suffix}`);
-  for (const o of ORDERS) assert.ok(Array.isArray(GAME_STRINGS.it[`${o.id}Board`]) && Array.isArray(GAME_STRINGS.en[`${o.id}Board`]));
+  for (const ex of EXERCISES) {
+    for (const suffix of ['Title', 'Brief']) assert.ok(has(`${ex.id}${suffix}`), `${ex.id}${suffix}`);
+    for (const st of ex.steps) assert.ok(has(st.key), `${ex.id}: ${st.key}`);
+    for (const g of [...ex.goals, ...(ex.penalties ?? [])]) if (g.line && !g.answers) assert.ok(has(g.line), `${ex.id}: ${g.line}`);
+    for (const r of ex.report ?? []) {
+      assert.ok(has(r.q), `${ex.id}: ${r.q}`);
+      for (const o of r.opts) if (o.startsWith('@')) assert.ok(has(o.slice(1)), `${ex.id}: ${o}`);
+    }
+    if (ex.answers?.type === 'choice' && ex.answers.options !== 'flame') for (const o of answerOptions(ex)) assert.ok(has(`ans_${o}`), `ans_${o}`);
+  }
+  for (const c of CHAPTERS) for (const suffix of ['Title', 'Text']) assert.ok(has(`chapter${c.id}${suffix}`), `chapter${c.id}${suffix}`);
+  for (const x of SHOP) for (const suffix of ['', 'Text']) assert.ok(has(`shop_${x.id}${suffix}`), `shop_${x.id}${suffix}`);
+  for (const r of REP_TITLES) assert.ok(has(`rep_${r.id}`), `rep_${r.id}`);
   for (const k of Object.keys(DEFS)) assert.ok(has(`item_${k}`), `item_${k}`);
   for (const b of BINS) assert.ok(has(`bin_${b}`), `bin_${b}`);
   for (const w of ['sink', 'heavy', 'inorganic', 'organic', 'solid']) assert.ok(has(`waste_${w}`), `waste_${w}`);

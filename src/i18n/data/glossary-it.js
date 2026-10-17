@@ -626,7 +626,14 @@ export const GLOSSARY_IT = {
     w: 'simulatore|simulatore di laboratorio|gioco del laboratorio',
     d: 'Un gioco in prima persona nel laboratorio di chimica della scuola, ispirato ai simulatori di cucina: prendi becher e bottiglie, pesa sulla bilancia, versa inclinando il recipiente, scalda sulla piastra o sul becco Bunsen e consegna il preparato alla cattedra. Le esercitazioni sono valutate con stelle e soldi; il vetro si rompe, i liquidi si versano, i gas tossici vanno sotto la cappa e i rifiuti nel contenitore giusto. La chimica è quella vera della libreria (554 sostanze e le reazioni del catalogo), in versione realistica o semplificata.',
     k: [['W A S D', 'cammina'], ['A / D', 'con un oggetto in mano: ruotalo'], ['Clic', 'prendi / posa'], ['Sinistro tenuto', 'versa (mouse ↑ più, ↓ meno)'], ['Destro tenuto + mouse', 'inclina'], ['E', 'usa'], ['Tasto centrale tenuto', 'lancia'], ['Tab', 'vista del bancone'], ['N', 'quaderno'], ['Esc', 'pausa']],
-    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook'],
+    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook', 'ui.gameCareer'],
+  },
+  'ui.gameCareer': {
+    t: 'Carriera del simulatore',
+    w: 'carriera|capitoli|relazione di laboratorio|reputazione|negozio del laboratorio|profili',
+    d: 'La Carriera del simulatore è un anno di scuola in capitoli: comandi e sicurezza, misure e soluzioni, acidi e basi, precipitazioni e analisi, gas, poi calore e cristalli, ossidoriduzioni, fiamme, chimica organica ed esame. Ogni esercitazione ha una consegna dell\'insegnante, i passi sulla lavagna (si spuntano da soli quando il motore dei contenitori riconosce che li hai fatti) e una valutazione con le tolleranze della chimica realistica o semplificata: da 0 a 5 stelle per il preparato, la sicurezza e il tempo, più i soldi. Dopo la consegna la relazione di laboratorio fa due o tre domande sul perché: le risposte giuste danno stelle in più. Con almeno 2 stelle l\'esercitazione è superata; superato un capitolo, il prossimo si apre se la reputazione con l\'insegnante basta (sale con le stelle e le relazioni giuste, scende con gli incidenti). I soldi si spendono nel negozio: occhiali e camice, vetreria di scorta, termometro digitale, bilancia di precisione, cappa più potente, chiave dell\'armadio. Il libro «Come si fa» apre le sue pagine con i capitoli. Ogni profilo ha la sua Carriera e il suo quaderno; i salvataggi hanno una versione e passano da soli alla nuova.',
+    k: [['Clic sulla Carriera', 'apri la mappa dei capitoli'], ['Campanello', 'consegna il preparato o rispondi']],
+    s: ['ui.game', 'ui.gameBook', 'ui.gameNotebook'],
   },
   'ui.gameNotebook': {
     t: 'Quaderno di laboratorio',

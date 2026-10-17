@@ -453,7 +453,8 @@ export class Apparatus {
     const v = g.held === it ? g.probing : null;
     const mix = v?.mixture && v.mixture.liquidVolume > 1 ? v.mixture : null;
     if (it.kind === 'thermometer') {
-      it.data.reading = relax(it.data.reading, mix ? mix.T : AMBIENT, dt, 2.5);
+      // il termometro digitale del negozio risponde in mezzo secondo invece che in due e mezzo
+      it.data.reading = relax(it.data.reading, mix ? mix.T : AMBIENT, dt, g.has?.('thermoPro') ? 0.5 : 2.5);
       const L = clamp(0.012 + ((it.data.reading - 263.15) / 120) * 0.15, 0.008, 0.18);
       it.column.scale.y = L;
       it.column.position.x = 0.09 - L / 2;

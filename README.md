@@ -432,11 +432,30 @@ dall'insegnante, le prepara al bancone e le consegna alla cattedra. Modelli e gr
 fisica è quella di [Rapier](https://rapier.rs) (WebAssembly incluso nell'app, caricato solo alla prima apertura).
 Design e decisioni: `docs/superpowers/specs/2026-10-13-simulatore-laboratorio-design.md`.
 
-**Stato: prototipo giocabile** per provare comandi e fisica. La Carriera in capitoli, il negozio e gli ampliamenti del
-laboratorio, la reputazione e le sfide a tempo arriveranno nelle prossime versioni.
+**Stato: prototipo giocabile.** La Carriera ha i capitoli da 0 a 4 completi (27 esercitazioni in tutto, con le due dei
+capitoli 5 e 7); verifiche di fine capitolo, pagella, sfide a tempo e i capitoli 5–9 arriveranno nella fase G7 del
+[piano del gioco base](docs/superpowers/specs/2026-10-14-gioco-base-piano.md).
 
-- **Modalità**: *Carriera* (5 esercitazioni valutate con stelle e soldi, progressi salvati) e *Laboratorio libero*
-  (tutti gli strumenti e un magazzino con le 554 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
+- **Modalità**: *Carriera* (un anno di scuola in capitoli, vedi sotto) e *Laboratorio libero* (tutti gli strumenti e un
+  magazzino con le 554 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
+- **Carriera**: dieci capitoli, ognuno con 4–6 esercitazioni. 0 · comandi e sicurezza (portare l'acqua alla cattedra,
+  misurare 50 mL, pesare 2,00 g, pulire il bancone, spegnere un fuoco con l'estintore); 1 · misure e soluzioni
+  (soluzione di NaCl, diluizione, densità di un liquido misterioso, soluzione satura, sciroppo al 10 %); 2 · acidi e basi
+  (acido, neutro o basico, diluire un acido, neutralizzare con il pH-metro, titolazione, l'aceto del supermercato);
+  3 · precipitazioni e analisi (pioggia d'oro, cloruro d'argento, filtrazione del solfato di bario, riconoscere
+  alogenuri e cationi); 4 · gas (idrogeno dallo zinco, vulcano di bicarbonato, ossigeno con un catalizzatore, acqua di
+  calce e CO₂, ammoniaca sotto la cappa); 5 e 7 · cristalli di solfato di rame e saggio alla fiamma. Le esercitazioni
+  sono **dati** (`src/game/data/career-exercises.js`): cosa c'è sul banco, i campioni incogniti, i passi con la
+  condizione che li spunta, gli obiettivi con le tolleranze della chimica realistica e semplificata, le domande della
+  relazione, le pagine del libro e una soluzione; `career.js` li legge e un test esegue la soluzione di ognuna con il
+  motore dei contenitori. Dopo la consegna la **relazione di laboratorio** fa 2–3 domande sul perché (le risposte giuste
+  danno fino a una stella in più); con 2 stelle l'esercitazione è superata. La **reputazione** con l'insegnante (0–100,
+  dalle stelle migliori e dalle relazioni, meno gli incidenti) apre i capitoli insieme a quello prima. Il **negozio**
+  vende occhiali e camice (niente doccia per gli schizzi), vetreria di scorta, termometro digitale, bilancia di
+  precisione (0,001 g), cappa più potente e la chiave dell'armadio (il magazzino della scuola anche nella Carriera). Il
+  libro «Come si fa» apre le sue pagine con i capitoli e l'insegnante indica quelle che servono. **Profili** (fino a 8),
+  ognuno con la sua Carriera e il suo quaderno; i **salvataggi** hanno una versione e passano da soli dalla vecchia alla
+  nuova (`src/game/save.js`); nell'app Electron sono anche in un file nella cartella dei dati dell'utente.
 - **Chimica** scelta all'inizio: *realistica* (si legge la bilancia, la graduazione e le etichette; la spatola prende
   quantità variabili; tolleranze strette) o *semplificata* (un cucchiaino = 1 g, quantità e pH sempre visibili,
   tolleranze larghe).
@@ -632,7 +651,7 @@ src/
   game/               simulatore di laboratorio (il gioco)
     game-view.js      interfaccia: menu, HUD (legenda, finestrelle accanto agli oggetti), finestre, comandi; carica Rapier
     controls.js       legenda dei comandi in basso a destra (funzione pura), inclinazione, lancio a carica, clic o trascinamento
-    game.js           il gioco: oggetti, presa e versamento, strumenti, calore, incidenti, rifiuti, esercitazioni
+    game.js           il gioco: oggetti, presa e versamento, strumenti, calore, incidenti, rifiuti, esercitazioni della Carriera
     apparatus.js      buretta, imbuto, distillazione, alimentatore, bombole, pinza, termometro, pH-metro e pipetta nel gioco
     apparatus-room.js i loro supporti nell'aula: sostegni, mantello con refrigerante, alimentatore, bombole, bagno di ghiaccio
     apparatus-logic.js regole pure degli strumenti: rubinetto, tensioni, letture, refrigerante
@@ -640,7 +659,7 @@ src/
     book.js           libro «Come si fa»: magazzino, ricette generate dalle reazioni (dosi, passi, controlli), esecuzione nel motore
     book-view.js      lettore del libro: indice, pagine, ricette, elementi, ricerca
     book-figures.js   vignette SVG dei passi delle ricette e delle pagine scritte a mano
-    data/             pagine scritte a mano del libro, come si ottengono gli elementi, ricette verificate (generato)
+    data/             esercitazioni della Carriera, pagine scritte a mano del libro, come si ottengono gli elementi, ricette verificate (generato)
     mixture.js        chimica dei contenitori: fasi, pH, colore, solubilità, cristallizzazione, reazioni, calore
     reagents.js       solubilità, acidi e basi, idrati, gas tossici, metalli pesanti, potenziali standard, reagenti dello scaffale e dell'armadio, prezzi
     stock.js          contenitore, famiglia (colore del tappo) e pericoli dell'etichetta di ogni reagente
@@ -648,7 +667,9 @@ src/
     signals.js        segnali osservabili delle reazioni, equazione con gli stati fisici, «perché non reagisce?»
     notebook.js       quaderno di laboratorio: reazioni scoperte, salvataggio, pagine per gruppo
     coverage.js       reazioni realizzabili con un insieme di reagenti e le condizioni del laboratorio
-    orders.js         le esercitazioni: preparazione del banco, passi, valutazione, stelle e soldi
+    career.js         la Carriera: capitoli, misure e condizioni dichiarative, valutazione, relazione, reputazione, negozio
+    orders.js         punteggio, stelle e paga delle esercitazioni
+    save.js           salvataggi con la versione, migrazione e profili
     physics.js        Rapier: mondo a passo fisso, corpi, urti (rottura del vetro), raggi, controllore del personaggio
     room.js           l'aula di chimica: banconi, lavandino, cappa, cattedra, lavagna, rifiuti, doccia, luci
     items.js          vetreria e strumenti: profili reali, collisori, graduazioni, etichette
@@ -671,7 +692,7 @@ tests/lab/            test del motore chimico (npm test)
 tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo, strumenti)
 tests/i18n/           test delle lingue e del glossario della modalità Spiega
 tests/gfx/            test dei preset grafici e dell'aspetto reale degli elementi
-tests/game/           test del simulatore (chimica dei contenitori, segnali delle reazioni, quaderno e tutorial, libro e ricette, copertura, reagenti, strumenti, fisica, liquidi, solidi e getto, legenda, esercitazioni e valutazione)
+tests/game/           test del simulatore (chimica dei contenitori, segnali delle reazioni, quaderno e tutorial, libro e ricette, copertura, reagenti, strumenti, fisica, liquidi, solidi e getto, legenda, Carriera e salvataggi)
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json
