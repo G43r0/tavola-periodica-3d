@@ -42,8 +42,32 @@ function fixtureRow(f, key = 'lmb') {
       return row([key], 'lgTowels');
     case 'strips':
       return row([key], 'lgStrips');
+    case 'tongs':
+      return row([key], f.on ? 'lgTongsBack' : 'lgTongsTake');
+    case 'mantle':
+      return row([key], f.level ? 'lgMantleUp' : 'lgMantleOn', { n: f.level });
+    case 'power':
+      return row([key], 'lgPowerUp', { v: nextVoltsLabel(f.level) });
+    case 'gas':
+      return row([key], f.on ? 'lgValveClose' : 'lgValveOpen', { gas: f.gas ?? '' });
     default:
       return null;
+  }
+}
+
+/** Tensione dopo un clic sull'alimentatore (per la legenda): 0 → 2 → 4 → 6 → 9 → 12 → 0 V. */
+const VOLT_STEPS = [0, 2, 4, 6, 9, 12];
+const nextVoltsLabel = (v) => VOLT_STEPS[(VOLT_STEPS.indexOf(v) + 1) % VOLT_STEPS.length];
+
+/** Apparecchi fissi (buretta, imbuto, pallone): cosa fa il clic (o E, con qualcosa in mano). */
+function rigRows(target, key = 'lmb') {
+  switch (target.rig) {
+    case 'burette':
+      return [row([key], `lgStopcock${(target.level + 1) % 4}`), ...(target.level && key === 'lmb' ? [row(['rmb'], 'lgStopcockClose')] : [])];
+    case 'funnel':
+      return [row([key], 'lgFilterPaper')];
+    default:
+      return [];
   }
 }
 
@@ -63,6 +87,15 @@ function toolRows(held, target) {
       return [row(['e'], target?.stain ? 'lgWipeStain' : 'lgWipe', null, target?.type !== 'puddle')];
     case 'extinguisher':
       return [row(['e'], 'lgSpray')];
+    case 'thermometer':
+    case 'phmeter':
+      return [row(['e'], 'lgReadout', null, !held.probing)];
+    case 'pipette':
+      if (target?.type === 'fixture' && target.kind === 'sink') return [row(['e'], 'lgWashPipette')];
+      if (target?.type === 'fixture' && target.kind === 'bin') return [row(['e'], 'lgEmpty', { bin: target.binName ?? '' }, !held.loaded)];
+      return held.loaded
+        ? [row(['e'], 'lgPipetteOut', null, !held.probing), row(['shift', 'e'], 'lgPipetteOne', null, !held.probing)]
+        : [row(['e'], 'lgPipetteIn', null, !held.probing)];
     default:
       return [];
   }
@@ -74,7 +107,9 @@ function toolRows(held, target) {
  *          target: null|{type: 'item'|'fixture'|'puddle', kind?: string, name?: string, container?: boolean,
  *                         on?: boolean, level?: number, binName?: string, stain?: boolean},
  *          canPlace?: boolean, pouring?: boolean, precise?: boolean, filling?: boolean, tapFlow?: number,
- *          rotated?: boolean, canPutBack?: boolean}} s
+ *          rotated?: boolean, canPutBack?: boolean, tongs?: boolean}} s
+ *   target.rig: apparecchio fisso (buretta, imbuto, pallone) con target.level = posizione del rubinetto; target.hot:
+ *   scotta (senza la pinza non si prende); held.probing: lo strumento in mano è immerso in un recipiente
  * @returns {{keys: string[], key: string, params: object|null, off: boolean}[]}
  */
 export function legendRows(s) {
@@ -106,6 +141,7 @@ export function legendRows(s) {
         if (f?.kind === 'sink') out.push(row(['e'], 'lgWash'));
         else if (f?.kind === 'bin') out.push(row(['e'], 'lgEmpty', { bin: f.binName ?? '' }));
         else if (f && fixtureRow(f, 'e')) out.push(fixtureRow(f, 'e'));
+        else if (target?.rig && rigRows(target, 'e').length) out.push(rigRows(target, 'e')[0]);
         else out.push(row(['e'], 'lgSwirl'));
       } else out.push(...toolRows(held, target));
       out.push(row(['ad'], 'lgRotateKeys'));
@@ -115,14 +151,17 @@ export function legendRows(s) {
       out.push(row(['wheel'], mode === 'bench' ? 'lgHeight' : 'lgDistance'));
     }
   } else if (target?.type === 'item') {
-    out.push(row(['lmb'], 'lgTake', { name: target.name ?? '' }));
+    if (target.rig) out.push(...rigRows(target));
+    else if (target.hot && !s.tongs) out.push(row(['lmb'], 'lgTooHot', { name: target.name ?? '' }, true));
+    else out.push(row(['lmb'], s.tongs ? 'lgTakeTongs' : 'lgTake', { name: target.name ?? '' }));
   } else if (f) {
     const r = fixtureRow(f);
     if (r) out.push(r);
-    if (f.kind === 'hotplate') {
-      if (f.level) out.push(row(['rmb'], 'lgPlateDown'));
+    if (f.kind === 'hotplate' || f.kind === 'mantle') {
+      if (f.level) out.push(row(['rmb'], f.kind === 'mantle' ? 'lgMantleDown' : 'lgPlateDown'));
       out.push(row(['wheel'], 'lgPlateWheel'));
     }
+    if (f.kind === 'power' && f.on) out.push(row(['rmb'], 'lgPowerOff'));
     if (f.kind === 'bin') out.push(row(['e'], 'lgBinNeedsVessel', { bin: f.binName ?? '' }, true));
   } else if (target?.type === 'puddle') {
     out.push(row(['e'], target.stain ? 'lgNeedTowelStain' : 'lgNeedTowel', null, true));

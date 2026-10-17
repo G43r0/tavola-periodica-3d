@@ -93,6 +93,46 @@ test('legenda: strumenti attenuati quando il bersaglio non va bene', () => {
   assert.equal(stain.find((r) => r.key === 'lgWipeStain').off, false);
 });
 
+test('legenda: strumenti della fase G4 (sonde, pipetta, buretta, imbuto, pinza, mantello, alimentatore, bombole)', () => {
+  const thermo = { kind: 'thermometer', container: false };
+  assert.equal(legendRows({ mode: 'walk', held: thermo, target: null }).find((r) => r.key === 'lgReadout').off, true,
+    'fuori dal liquido la lettura è attenuata');
+  assert.equal(legendRows({ mode: 'walk', held: { ...thermo, kind: 'phmeter', probing: true }, target: vessel })
+    .find((r) => r.key === 'lgReadout').off, false);
+  const pip = { kind: 'pipette', container: false };
+  assert.equal(legendRows({ mode: 'walk', held: { ...pip, probing: true }, target: vessel })[1].key, 'lgPipetteIn');
+  const loaded = legendRows({ mode: 'walk', held: { ...pip, loaded: true, probing: true }, target: vessel });
+  assert.deepEqual(loaded.slice(1, 3).map((r) => [r.key, r.keys]), [['lgPipetteOut', ['e']], ['lgPipetteOne', ['shift', 'e']]],
+    'Maiusc + E versa un millilitro');
+  assert.equal(legendRows({ mode: 'walk', held: pip, target: { type: 'fixture', kind: 'sink' } })[1].key, 'lgWashPipette');
+  assert.equal(legendRows({ mode: 'walk', held: pip, target: { type: 'fixture', kind: 'bin', binName: 'acidi' } })
+    .find((r) => r.key === 'lgEmpty').off, true, 'la pipetta vuota non ha niente da buttare');
+  // gli apparecchi fissi non si prendono: il clic li usa
+  const burette = { type: 'item', kind: 'burette', container: true, rig: 'burette', level: 0 };
+  assert.deepEqual(keys(legendRows({ mode: 'walk', held: null, target: burette })).slice(0, 1), ['lgStopcock1']);
+  const open = legendRows({ mode: 'walk', held: null, target: { ...burette, level: 3 } });
+  assert.deepEqual(keys(open).slice(0, 2), ['lgStopcock0', 'lgStopcockClose']);
+  assert.equal(legendRows({ mode: 'walk', held: beaker, target: { ...burette, level: 1 } })[2].key, 'lgStopcock2',
+    'con un becher in mano il rubinetto si gira con E');
+  assert.equal(legendRows({ mode: 'walk', held: null, target: { type: 'item', container: true, rig: 'funnel' } })[0].key, 'lgFilterPaper');
+  // un recipiente che scotta si prende solo con la pinza
+  const hot = { ...vessel, hot: true };
+  const bare = legendRows({ mode: 'walk', held: null, target: hot });
+  assert.deepEqual([bare[0].key, bare[0].off], ['lgTooHot', true]);
+  assert.equal(legendRows({ mode: 'walk', held: null, target: hot, tongs: true })[0].key, 'lgTakeTongs');
+  assert.equal(legendRows({ mode: 'walk', held: null, target: { type: 'fixture', kind: 'tongs', on: false } })[0].key, 'lgTongsTake');
+  assert.equal(legendRows({ mode: 'walk', held: null, target: { type: 'fixture', kind: 'tongs', on: true } })[0].key, 'lgTongsBack');
+  const mantle = legendRows({ mode: 'walk', held: null, target: { type: 'fixture', kind: 'mantle', level: 2 } });
+  assert.deepEqual(keys(mantle).slice(0, 3), ['lgMantleUp', 'lgMantleDown', 'lgPlateWheel']);
+  assert.equal(legendRows({ mode: 'walk', held: null, target: { type: 'fixture', kind: 'mantle', level: 0 } })[0].key, 'lgMantleOn');
+  const power = legendRows({ mode: 'walk', held: null, target: { type: 'fixture', kind: 'power', level: 12, on: true } });
+  assert.deepEqual([power[0].key, power[0].params, power[1].key], ['lgPowerUp', { v: 0 }, 'lgPowerOff'], 'da 12 V torna a 0');
+  assert.deepEqual(legendRows({ mode: 'walk', held: null, target: { type: 'fixture', kind: 'power', level: 4 } })[0].params, { v: 6 });
+  const valve = legendRows({ mode: 'walk', held: null, target: { type: 'fixture', kind: 'gas', gas: 'Cl₂', on: false } });
+  assert.deepEqual([valve[0].key, valve[0].params], ['lgValveOpen', { gas: 'Cl₂' }]);
+  assert.equal(legendRows({ mode: 'walk', held: beaker, target: { type: 'fixture', kind: 'gas', gas: 'H₂', on: true } })[2].key, 'lgValveClose');
+});
+
 test('legenda: mai più di MAX_ROWS righe, l\'aiuto sempre in fondo', () => {
   const cases = [
     { mode: 'walk', held: null, target: { type: 'fixture', kind: 'hotplate', level: 3 } },

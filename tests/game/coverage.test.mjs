@@ -63,3 +63,16 @@ test('copertura: senza la lampada le reazioni con la luce non si fanno', () => {
   const dark = reachable(ctx, ['agcl'], { light: false });
   assert.ok(lit.ids.size > dark.ids.size);
 });
+
+test('copertura: l\'alimentatore e le bombole della cappa allargano il laboratorio', () => {
+  const keys = keysOf(SHELF, CABINET);
+  const all = reachable(ctx, keys);
+  const noElectro = reachable(ctx, keys, { electro: false });
+  const noGas = reachable(ctx, keys, { gases: [] });
+  assert.ok(all.ids.size >= 480, `con alimentatore e bombole: ${all.ids.size}`);
+  assert.ok(all.ids.size > noElectro.ids.size, 'le elettrolisi');
+  assert.ok(all.ids.size > noGas.ids.size + 20, `i gas: ${noGas.ids.size} → ${all.ids.size}`);
+  const electro = [...all.ids].filter((id) => ctx.rxById.get(id).electro);
+  assert.ok(electro.length >= 3, `${electro.length} elettrolisi`);
+  for (const id of electro) assert.ok(!noElectro.ids.has(id), id);
+});

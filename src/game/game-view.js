@@ -368,7 +368,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       .filter((x) => x && x.st !== 'gas');
     const metals = game.chem.subs.elements.filter((el) => el.Z < 84 && game.chem.sub(el.Z).mp > 295 && !['P', 'As', 'Se'].includes(el.symbol)).map((el) => ({ key: el.symbol, sid: el.Z, name: game.chem.sub(el.Z).name, formula: el.symbol, st: 'solid', soluble: false }));
     const all = [...lib, ...metals];
-    const glass = ['beaker100', 'beaker250', 'flask250', 'cylinder100', 'spatula', 'loop'];
+    const glass = ['beaker100', 'beaker250', 'flask250', 'cylinder100', 'crucible', 'dish', 'spatula', 'loop'];
     showDialog(`
       <h3>${t('catalogTitle')}</h3>
       <div class="gm-cat-glass">${glass.map((k) => `<button type="button" class="btn-ghost" data-glass="${k}">${t(`item_${k}`)}</button>`).join('')}</div>
@@ -822,10 +822,10 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     const why = info.why ? `<div class="gm-pop__why"><b>${t('whyTitle')}</b> ${esc(info.why.text)}${info.why.eq ? `<span class="gm-pop__eq">${esc(info.why.eq)}</span>` : ''}</div>` : '';
     if (kind === 'held') {
       const status = info.status ? `<small class="gm-pop__status ${info.spilling ? 'is-bad' : ''}">${esc(info.status)}${chemMode === 'simple' && info.pouring > 0.2 ? ` · ${t('pourRate', { ml: game.fmt(info.pouring, info.pouring < 10 ? 1 : 0) })}` : ''}</small>` : '';
-      const big = info.volume ? `<div class="gm-pop__big">${DROP}<b>${esc(info.volume)}</b></div>` : '';
+      const big = info.volume ? `<div class="gm-pop__big">${DROP}<b>${esc(info.volume)}</b></div>` : info.readout ? `<div class="gm-pop__big gm-pop__big--read"><b>${esc(info.readout)}</b></div>` : '';
       return `${big}${status}<p class="gm-pop__name"><span class="gm-swatch" style="background:${info.color ?? 'transparent'}"></span>${esc(info.name)}</p>${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}${meta ? `<p class="gm-pop__meta">${meta}</p>` : ''}${strip}${rx}${info.volume ? '' : notes}`;
     }
-    const vol = info.volume ? `<p class="gm-pop__vol">${DROP}<b>${esc(info.volume)}</b>${meta ? ` <span>· ${meta}</span>` : ''}</p>` : meta ? `<p class="gm-pop__meta">${meta}</p>` : '';
+    const vol = info.volume ? `<p class="gm-pop__vol">${DROP}<b>${esc(info.volume)}</b>${meta ? ` <span>· ${meta}</span>` : ''}</p>` : info.readout ? `<p class="gm-pop__vol"><b>${esc(info.readout)}</b></p>` : meta ? `<p class="gm-pop__meta">${meta}</p>` : '';
     return `<header class="${info.hot ? 'is-hot' : ''} ${info.on ? 'is-on' : ''}"><span class="gm-swatch" style="background:${info.color ?? 'transparent'}"></span><h4>${esc(info.name)}</h4></header>
       <div class="gm-pop__body">${vol}${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}${strip}${rx}${notes}${why}</div>`;
   }

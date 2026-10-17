@@ -120,7 +120,7 @@ export function signalTags(sig) {
 // ------------------------------------------------------------------ perché non reagisce?
 
 // dal più utile (si può fare subito qualcosa) al meno utile
-const WHY_ORDER = ['heat', 'flame', 'catalyst', 'light', 'water', 'undissolved', 'missing', 'tooHot', 'lessActive', 'noble', 'electrolysis', 'discharge', 'steam', 'shock', 'equilibrium', 'catalyst-unknown', 'living'];
+const WHY_ORDER = ['heat', 'flame', 'catalyst', 'light', 'water', 'undissolved', 'conduct', 'missing', 'tooHot', 'lessActive', 'noble', 'electrolysis', 'discharge', 'steam', 'shock', 'equilibrium', 'catalyst-unknown', 'living'];
 const byWhy = (a, b) => WHY_ORDER.indexOf(a.why) - WHY_ORDER.indexOf(b.why);
 
 /**

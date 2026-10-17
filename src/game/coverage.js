@@ -1,11 +1,13 @@
 // Copertura delle reazioni: quali reazioni del catalogo si possono fare nel simulatore con un insieme di reagenti e
-// con le condizioni che il laboratorio sa dare (calore della piastra e del Bunsen, fiamma, luce della lampada,
-// l'acqua e l'ossigeno dell'aria). Anche a catena: i prodotti che restano nel contenitore (non i gas che se ne vanno)
+// con le condizioni che il laboratorio sa dare (calore della piastra e del Bunsen, fiamma, luce della lampada, la
+// corrente dell'alimentatore, i gas delle bombole, l'acqua e l'ossigeno dell'aria). Anche a catena: i prodotti che
+// restano nel contenitore (non i gas che se ne vanno)
 // diventano reagenti delle reazioni successive. Serve a scegliere i reagenti dello scaffale e dell'armadio e a fissare
 // con un test la copertura minima per gruppo. Modulo puro (niente DOM).
 import { WATER } from '../sandbox/substances.js';
 import { stateOf, aqueousOf } from './signals.js';
 import { SHELF } from './reagents.js';
+import { CYLINDER_GASES } from './apparatus-logic.js';
 
 /** Temperatura massima che si raggiunge in un contenitore sul Bunsen (K): la reticella arriva al rosso. */
 export const LAB_MAX_T = 1000;
@@ -17,15 +19,16 @@ export const reagentKey = (r) => (r.water ? 'water' : r.solute ?? r.solid ?? r.l
  * Reazioni realizzabili.
  * @param {object} ctx contesto chimico (createLabChemistry)
  * @param {string[]} keys sostanze disponibili (chiavi della libreria o simboli)
- * @param {{maxT?: number, light?: boolean, flame?: boolean}} [lab] condizioni del laboratorio
+ * @param {{maxT?: number, light?: boolean, flame?: boolean, electro?: boolean, gases?: string[]}} [lab] condizioni
+ *   del laboratorio: electro = c'è l'alimentatore, gases = i gas delle bombole
  * @returns {{ids: Set<string>, byGroup: Map<string, number>, species: Set<number>}}
  */
-export function reachable(ctx, keys, { maxT = LAB_MAX_T, light = true, flame = true } = {}) {
-  const have = new Set([WATER, ...keys.map((k) => ctx.id(k)).filter(Boolean)]);
+export function reachable(ctx, keys, { maxT = LAB_MAX_T, light = true, flame = true, electro = true, gases = CYLINDER_GASES } = {}) {
+  const have = new Set([WATER, ...[...keys, ...gases].map((k) => ctx.id(k)).filter(Boolean)]);
   const ids = new Set();
   const can = (rx) => {
     const c = rx.cond;
-    if (c.shock || (c.light && !light) || (c.ignite && !flame)) return false;
+    if (c.shock || (c.light && !light) || (c.ignite && !flame) || (rx.electro && !electro)) return false;
     if (Math.max(c.minT, c.hot ? 450 : 0) > maxT) return false;
     if (c.catalysts && ![...c.catalysts].some((s) => have.has(s))) return false;
     return rx.reactants.every((r) => have.has(r.sid) || (r.sid === ctx.O2 && rx.air >= 0));

@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { seg } from '../gfx/preset.js';
 import { CATEGORY } from '../data/categories.js';
+import { buildApparatus } from './apparatus-room.js';
 
 export const ROOM = { W: 10, D: 8, H: 3.2 };
 export const BENCH_Y = 0.92;
@@ -19,6 +20,14 @@ export const LAYOUT = {
   strips: { x: 0.95, z: -0.78 },
   lamp: { x: 0.42, z: -0.8 }, // base in fondo al bancone A, il paralume sporge verso il giocatore
   notebook: { x: -1.12, z: -0.17 }, // quaderno di laboratorio sul bancone A, davanti a sinistra
+  probes: { x: -0.8, z: -0.15 }, // termometro, pH-metro e pipetta, sdraiati davanti alla piastra
+  burette: { x: 1.06, z: -0.46 }, // sostegno con la buretta, a sinistra del Bunsen
+  tongs: { x: 1.24, z: -0.76 }, // pinza per il crogiolo, accanto al Bunsen
+  filter: { x: -4.5, z: -1.25 }, // bancone del lavandino: sostegno con l'imbuto e la carta da filtro
+  icebath: { x: -4.55, z: 0.36 },
+  still: { x: -4.55, z: 1.2 }, // distillazione: mantello e pallone, il refrigerante scende verso sud
+  power: { x: 4.84, z: -2.3 }, // cappa: alimentatore, gli elettrodi pendono 36 cm verso il giocatore
+  gasRack: { x: 4.9, z0: -1.14, step: -0.095, outX: 4.5, outZ: -1.33 }, // cappa: bombole (da sud a nord) e uscita del gas
   sink: { x: -4.62, z: -0.3, w: 0.42, d: 0.5, depth: 0.24 },
   counterW: { x: -4.65, z: 0, w: 0.7, d: 5 },
   towels: { x: -4.96, z: 0.55 },
@@ -44,6 +53,7 @@ export const STATIONS = [
   { key: 'bench', cam: [0.15, 1.72, 0.62], look: [0.15, BENCH_Y, -0.48], stand: [0.15, 0.35] },
   { key: 'shelf', cam: [0, 1.9, 0.62], look: [0, 1.05, 1.62], stand: [0, 0.75] },
   { key: 'sink', cam: [-3.55, 1.72, -0.3], look: [-4.6, BENCH_Y - 0.05, -0.3], stand: [-3.7, -0.3] },
+  { key: 'still', cam: [-3.6, 1.7, 1.45], look: [-4.6, BENCH_Y + 0.05, 1.45], stand: [-3.7, 1.45] },
   { key: 'hood', cam: [3.45, 1.78, -1.8], look: [4.6, BENCH_Y + 0.05, -1.8], stand: [3.6, -1.8] },
   { key: 'desk', cam: [0.5, 1.6, -1.9], look: [0.5, DESK_Y, -2.75], stand: [0.5, -2.0] },
   { key: 'bins', cam: [-3.3, 1.75, 2.55], look: [-3.3, 0.55, 3.65], stand: [-3.3, 2.6] },
@@ -597,6 +607,9 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   scene.add(flameLight);
   bunsen.light = flameLight;
 
+  // ------------------------------------------------------------ apparecchi della fase G4 (apparatus-room.js)
+  const apparatus = buildApparatus({ group, scene, physics, fixtures, mesh, box, solid, std, M, BENCH_Y, LAYOUT, canvasTexture });
+
   const zones = { hood: hood.zone, tray: tray.zone, basin: sinkFix.basin, bins, balancePan: balance.pan, plate: hotplate.plate, gauze: bunsen.gauze, flame: bunsen.flame };
 
   const update = (dt, t) => {
@@ -617,9 +630,10 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     sinkFix.stream.visible = sinkFix.tap;
     hood.lightMat.color.set(hood.on ? 0xf4f8ff : 0x3a3f46);
     hood.led.color.set(hood.on ? 0x30ff60 : 0x3a1010);
+    apparatus.update(dt);
   };
 
-  return { group, fixtures, zones, update, setBoard, setBalance, setLegend, setNotebookCover, bins, props, lights: { sun, hemi, ceiling, ceilingB } };
+  return { group, fixtures, zones, update, setBoard, setBalance, setLegend, setNotebookCover, bins, props, apparatus, lights: { sun, hemi, ceiling, ceilingB } };
 }
 
 function fitLine(g, text, x, y, w) {

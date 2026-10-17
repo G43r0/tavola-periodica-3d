@@ -12,7 +12,7 @@ import { KEY_IDS } from '../../src/game/controls.js';
 const has = (key) => key in GAME_STRINGS.it && key in GAME_STRINGS.en;
 
 test('testi del simulatore: chiavi scritte nel codice', () => {
-  const src = ['game.js', 'game-view.js', 'orders.js'].map((f) => fs.readFileSync(new URL(`../../src/game/${f}`, import.meta.url), 'utf8')).join('\n');
+  const src = ['game.js', 'game-view.js', 'orders.js', 'apparatus.js'].map((f) => fs.readFileSync(new URL(`../../src/game/${f}`, import.meta.url), 'utf8')).join('\n');
   // t('chiave'…) e key: 'chiave' (passi e righe della valutazione)
   const keys = new Set([...src.matchAll(/\bt\('([a-zA-Z][\w]*)'/g), ...src.matchAll(/key: '([a-zA-Z][\w]*)'/g), ...src.matchAll(/\? '(ev[A-Z]\w*)' : '(ev[A-Z]\w*)'/g)].flatMap((m) => m.slice(1)).filter(Boolean));
   assert.ok(keys.size > 100);
@@ -28,6 +28,8 @@ test('testi del simulatore: chiavi composte (esercitazioni, oggetti, rifiuti, po
   for (const s of STATIONS) assert.ok(has(`station_${s.key}`), `station_${s.key}`);
   for (const s of ['aq', 'solid', 'liquid', 'gas']) assert.ok(has(`state_${s}`));
   for (const a of ['fire', 'toxic', 'alarm']) assert.ok(has(`alarm_${a}`));
+  // posizioni del rubinetto della buretta (avviso, finestrella, legenda)
+  for (let n = 0; n < 4; n++) for (const k of ['stopcock', 'stopcockSt', 'lgStopcock']) assert.ok(has(`${k}${n}`), `${k}${n}`);
 });
 
 test('testi del simulatore: legenda dei comandi (azioni e tasti)', () => {
@@ -39,13 +41,13 @@ test('testi del simulatore: legenda dei comandi (azioni e tasti)', () => {
 });
 
 test('testi del simulatore: finestrelle degli elementi fissi (nome di ogni elemento, rifiuti)', () => {
-  for (const k of ['hotplate', 'bunsen', 'sink', 'balance', 'hood', 'shower', 'bell', 'store', 'towels', 'strips', 'bin', 'tray']) assert.ok(has(`fx_${k}`), `fx_${k}`);
+  for (const k of ['hotplate', 'bunsen', 'sink', 'balance', 'hood', 'shower', 'bell', 'store', 'towels', 'strips', 'bin', 'tray', 'notebook', 'lamp', 'tongs', 'mantle', 'power', 'gas', 'icebath']) assert.ok(has(`fx_${k}`), `fx_${k}`);
   for (const b of BINS.filter((b) => b !== 'sink')) assert.ok(has(`binNote_${b}`), `binNote_${b}`);
 });
 
 test('testi del simulatore: reazioni (cosa si vede, perché non reagisce, quaderno) e lampada', () => {
   for (const k of ['gas', 'coloredGas', 'precipitate', 'deposit', 'dissolves', 'colorChange', 'hot', 'warm', 'cold', 'fire']) assert.ok(has(`tag_${k}`), `tag_${k}`);
-  const whys = ['heat', 'tooHot', 'flame', 'shock', 'light', 'catalyst', 'water', 'undissolved', 'missing', 'noble', 'lessActive', 'electrolysis', 'discharge', 'steam', 'equilibrium', 'catalyst-unknown', 'living'];
+  const whys = ['heat', 'tooHot', 'flame', 'shock', 'light', 'catalyst', 'water', 'undissolved', 'conduct', 'missing', 'noble', 'lessActive', 'electrolysis', 'discharge', 'steam', 'equilibrium', 'catalyst-unknown', 'living'];
   const src = fs.readFileSync(new URL('../../src/game/signals.js', import.meta.url), 'utf8');
   for (const w of src.match(/const WHY_ORDER = \[([^\]]+)\]/)[1].match(/'([\w-]+)'/g).map((x) => x.slice(1, -1))) assert.ok(whys.includes(w), `motivo senza testo: ${w}`);
   for (const w of whys) assert.ok(has(`why_${w}`), `why_${w}`);
