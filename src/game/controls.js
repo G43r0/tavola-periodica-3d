@@ -84,7 +84,7 @@ function toolRows(held, target) {
     case 'strip':
       return [row(['e'], 'lgStrip', null, !onVessel)];
     case 'towel':
-      return [row(['e'], target?.stain ? 'lgWipeStain' : 'lgWipe', null, target?.type !== 'puddle')];
+      return [row(['e'], target?.heap ? 'lgWipeHeap' : target?.stain ? 'lgWipeStain' : 'lgWipe', null, target?.type !== 'puddle')];
     case 'extinguisher':
       return [row(['e'], 'lgSpray')];
     case 'thermometer':
@@ -105,7 +105,7 @@ function toolRows(held, target) {
  * Righe della legenda.
  * @param {{mode: 'walk'|'bench', held: null|{kind: string, container: boolean, loaded?: boolean},
  *          target: null|{type: 'item'|'fixture'|'puddle', kind?: string, name?: string, container?: boolean,
- *                         on?: boolean, level?: number, binName?: string, stain?: boolean},
+ *                         on?: boolean, level?: number, binName?: string, stain?: boolean, heap?: boolean},
  *          canPlace?: boolean, pouring?: boolean, precise?: boolean, filling?: boolean, tapFlow?: number,
  *          rotated?: boolean, canPutBack?: boolean, tongs?: boolean}} s
  *   target.rig: apparecchio fisso (buretta, imbuto, pallone) con target.level = posizione del rubinetto; target.hot:
@@ -164,7 +164,7 @@ export function legendRows(s) {
     if (f.kind === 'power' && f.on) out.push(row(['rmb'], 'lgPowerOff'));
     if (f.kind === 'bin') out.push(row(['e'], 'lgBinNeedsVessel', { bin: f.binName ?? '' }, true));
   } else if (target?.type === 'puddle') {
-    out.push(row(['e'], target.stain ? 'lgNeedTowelStain' : 'lgNeedTowel', null, true));
+    out.push(row(['e'], target.heap ? 'lgNeedTowelHeap' : target.stain ? 'lgNeedTowelStain' : 'lgNeedTowel', null, true));
   }
   const rows = out.slice(0, MAX_ROWS - 1);
   // nella manipolazione precisa e al rubinetto si sta fermi: niente righe di movimento

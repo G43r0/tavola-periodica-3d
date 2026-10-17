@@ -91,6 +91,10 @@ test('legenda: strumenti attenuati quando il bersaglio non va bene', () => {
   assert.equal(towel.find((r) => r.key === 'lgWipe').off, false);
   const stain = legendRows({ mode: 'walk', held: { kind: 'towel', container: false }, target: { type: 'puddle', stain: true } });
   assert.equal(stain.find((r) => r.key === 'lgWipeStain').off, false);
+  // un solido versato fa un mucchietto: si raccoglie con la carta
+  const heap = { type: 'puddle', stain: false, heap: true };
+  assert.equal(legendRows({ mode: 'walk', held: { kind: 'towel', container: false }, target: heap }).find((r) => r.key === 'lgWipeHeap').off, false);
+  assert.equal(legendRows({ mode: 'walk', held: null, target: heap })[0].key, 'lgNeedTowelHeap');
 });
 
 test('legenda: strumenti della fase G4 (sonde, pipetta, buretta, imbuto, pinza, mantello, alimentatore, bombole)', () => {

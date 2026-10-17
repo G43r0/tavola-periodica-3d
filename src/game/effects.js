@@ -10,9 +10,13 @@ const _c = new THREE.Color();
 
 /** Gocce, granelli di polvere e schegge: piccole sfere con fisica balistica. */
 export class Drops {
-  constructor(scene, max = 900) {
+  /** grain: grani di un solido versato (opachi, irregolari, non si allungano cadendo) invece di gocce. */
+  constructor(scene, max = 900, { grain = false } = {}) {
     this.max = max;
-    this.mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ roughness: 0.15, metalness: 0, transparent: true, opacity: 0.85 }), max);
+    this.grain = grain;
+    const geo = grain ? new THREE.DodecahedronGeometry(1, 0) : new THREE.IcosahedronGeometry(1, 1);
+    const mat = grain ? new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0 }) : new THREE.MeshStandardMaterial({ roughness: 0.15, metalness: 0, transparent: true, opacity: 0.85 });
+    this.mesh = new THREE.InstancedMesh(geo, mat, max);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.frustumCulled = false;
     this.mesh.count = 0;
@@ -63,8 +67,8 @@ export class Drops {
     for (let i = 0; i < w; i++) {
       _p.set(this.p[i * 3], this.p[i * 3 + 1], this.p[i * 3 + 2]);
       const r = this.size[i];
-      // le gocce si allungano nella direzione della caduta
-      _s.set(r, r * (1 + Math.min(2, Math.abs(this.v[i * 3 + 1]) * 0.6)), r);
+      // le gocce si allungano nella direzione della caduta, i grani no
+      _s.set(r, this.grain ? r : r * (1 + Math.min(2, Math.abs(this.v[i * 3 + 1]) * 0.6)), r);
       _m.compose(_p, _q, _s);
       this.mesh.setMatrixAt(i, _m);
       _c.setRGB(this.col[i * 3], this.col[i * 3 + 1], this.col[i * 3 + 2]);
@@ -363,6 +367,22 @@ export function createPuddle(scene, x, y, z) {
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(x, y + 0.002, z);
   mesh.renderOrder = 1;
+  scene.add(mesh);
+  return mesh;
+}
+
+let heapGeo = null;
+/**
+ * Mucchietto di un solido versato su un piano: un cono con la cima arrotondata, alto e largo 1 (si scala con raggio e
+ * altezza di heapSize), con la grana dei solidi.
+ */
+export function createHeap(scene, x, y, z, map) {
+  // il profilo va dalla base alla cima, così le normali guardano fuori
+  heapGeo ??= new THREE.LatheGeometry([[1, 0], [0.97, 0.04], [0.75, 0.28], [0.4, 0.66], [0.14, 0.96], [0, 1]].map(([r, h]) => new THREE.Vector2(r, h)), 20);
+  const mesh = new THREE.Mesh(heapGeo, new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.95, map }));
+  mesh.position.set(x, y + 0.0005, z);
+  mesh.rotation.y = Math.random() * Math.PI * 2;
+  mesh.castShadow = false;
   scene.add(mesh);
   return mesh;
 }

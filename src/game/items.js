@@ -375,7 +375,7 @@ export function drawGhs(g, id, cx, cy, size) {
 
 /** Grana dei solidi (polveri e cristalli): una trama chiara che moltiplica il colore del contenuto. Condivisa. */
 let GRAIN = null;
-function grainTexture() {
+export function grainTexture() {
   if (GRAIN) return GRAIN;
   const c = document.createElement('canvas');
   c.width = c.height = 128;

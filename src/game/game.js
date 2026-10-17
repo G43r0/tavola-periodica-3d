@@ -9,9 +9,9 @@ import { gfx } from '../gfx/preset.js';
 import { locale, pick } from '../i18n/index.js';
 import { Physics } from './physics.js';
 import { buildRoom, ROOM, LAYOUT, BENCH_Y, DESK_Y, STATIONS } from './room.js';
-import { DEFS, createItem, syncItem, disposeItem, placeItem, itemMaterials, itemMassGrams, updateContactShadow } from './items.js';
-import { liquidLevel, pourRate, ballisticLanding } from './liquid.js';
-import { Drops, Motes, Puffs, Stream, createPuddle, puddleRadius, puddleState, stainAlphaMap } from './effects.js';
+import { DEFS, createItem, syncItem, disposeItem, placeItem, itemMaterials, itemMassGrams, updateContactShadow, grainTexture } from './items.js';
+import { liquidLevel, pourRate, ballisticLanding, reposeNormal, heapSize } from './liquid.js';
+import { Drops, Motes, Puffs, Stream, createPuddle, createHeap, puddleRadius, puddleState, stainAlphaMap } from './effects.js';
 import { Player } from './player.js';
 import { createLabChemistry, Mixture, wasteClass, binAccepts, AMBIENT } from './mixture.js';
 import { S } from '../sandbox/substances.js';
@@ -43,6 +43,10 @@ const _v2 = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
 const _q3 = new THREE.Quaternion();
+const _sp = new THREE.Vector3();
+const _ss = new THREE.Vector3();
+const _sv = new THREE.Vector3();
+const _sq = new THREE.Quaternion();
 /** Campo visivo verticale della camera (gradi): valore iniziale e limiti del cursore nelle impostazioni. */
 export const FOV = { min: 55, max: 100, default: 70 };
 const UP = new THREE.Vector3(0, 1, 0);
@@ -129,6 +133,7 @@ export class LabGame {
     this.fires = [];
     this.clouds = [];
     this.drops = new Drops(this.scene);
+    this.grains = new Drops(this.scene, 900, { grain: true });
     this.motes = new Motes(this.scene); // bolle e fiocchi di precipitato nei contenitori
     this.sigCache = new Map(); // segnali osservabili di ogni reazione (in acqua o no)
     this.notebook = emptyNotebook(); // il quaderno vero lo passa game-view.js dal salvataggio
@@ -307,7 +312,10 @@ export class LabGame {
   /** Svuota la stanza (tranne l'estintore) per una nuova partita. */
   clearRoom() {
     for (const it of [...this.items]) if (it !== this.extinguisher && !it.permanent) this.removeItem(it);
-    for (const p of this.puddles) p.mesh.removeFromParent();
+    for (const p of this.puddles) {
+      p.mesh.removeFromParent();
+      p.heapMesh?.removeFromParent();
+    }
     this.puddles = [];
     this.fires = [];
     this.clouds = [];
@@ -468,7 +476,7 @@ export class LabGame {
 
   /** Disordine: pozze, vetri rotti, carta e cartine abbandonate, fuochi, gas, preparati vecchi non smaltiti. */
   mess() {
-    let n = this.puddles.filter((p) => p.stain || p.mix.liquidVolume + p.mix.solidVolume > 1).length;
+    let n = this.puddles.filter((p) => p.stain || p.heap || p.mix.liquidVolume + p.mix.solidVolume > 1).length;
     for (const it of this.items) {
       if (it === this.held) continue;
       if (it.kind === 'shards') n++;
@@ -580,8 +588,12 @@ export class LabGame {
       }
     }
     for (const p of this.puddles) {
-      targets.push(p.mesh);
-      owner.set(p.mesh, { type: 'puddle', puddle: p });
+      // il raggio colpisce anche le mesh nascoste: la pozza o l'alone solo se si vedono, il mucchietto se c'è
+      for (const m of [p.mesh, p.heapMesh]) {
+        if (!m?.visible) continue;
+        targets.push(m);
+        owner.set(m, { type: 'puddle', puddle: p });
+      }
     }
     const hits = ray.intersectObjects(targets, false);
     const hit = hits[0];
@@ -1058,7 +1070,9 @@ export class LabGame {
     }
     if (fixture) return this.useFixture(fixture, fine);
     if (held?.def.container) {
+      // agitando, anche la polvere si livella
       this.swirlT = 1.2;
+      held.solidUp?.set(0, 1, 0);
       return;
     }
     if (target && !held) this.grab(target);
@@ -1567,6 +1581,21 @@ export class LabGame {
     return { p: lip.addScaledVector(out, 0.003), out, speed };
   }
 
+  /**
+   * Normale (nel mondo) della superficie del solido in un recipiente. Un solido non si livella come un liquido: la sua
+   * superficie si inclina con il recipiente finché non è più ripida dell'angolo di riposo, poi scivola. La normale si
+   * tiene nelle coordinate del recipiente (item.solidUp), così un cumulo scivolato resta inclinato quando il recipiente
+   * torna dritto; agitandolo (E) si livella.
+   */
+  solidNormal(item) {
+    item.mesh.matrixWorld.decompose(_sp, _sq, _ss);
+    item.solidUp ??= new THREE.Vector3(0, 1, 0);
+    const w = _sv.copy(item.solidUp).applyQuaternion(_sq);
+    const n = reposeNormal([w.x, w.y, w.z]);
+    item.solidUp.set(n[0], n[1], n[2]).applyQuaternion(_sq.invert()).normalize();
+    return n;
+  }
+
   /** Versa dal contenitore se il liquido (o la polvere) supera il punto più basso del bordo. */
   pourFrom(item, dt) {
     const mix = item.mixture;
@@ -1579,10 +1608,11 @@ export class LabGame {
     const liquid = lv > RESIDUE_ML;
     const vol = liquid ? lv + sv * 0.3 : sv;
     if (vol <= (liquid ? RESIDUE_ML : 0.02)) return;
-    const info = liquidLevel(def.samples, def.rim, item.mesh.matrixWorld, Math.min(1.2, vol / def.capacity));
+    // un solido non si livella: esce quando la sua superficie, inclinata al massimo dell'angolo di riposo, supera il bordo
+    const normal = liquid ? undefined : this.solidNormal(item);
+    const info = liquidLevel(def.samples, def.rim, item.mesh.matrixWorld, Math.min(1.2, vol / def.capacity), normal);
     item.levelInfo = info;
-    let h = info.level - info.rimY;
-    if (!liquid) h -= 0.004; // la polvere scorre solo oltre l'angolo di riposo
+    const h = info.level - info.rimY;
     item.pourHead = Math.min(h, 0.05);
     const q = pourRate({ h, R: def.rimR, flow: def.flow ?? 1, powder: !liquid, overfull: info.level === Infinity });
     if (q <= 0) return;
@@ -1621,10 +1651,20 @@ export class LabGame {
       }
       return;
     }
-    // poche gocce (contagocce, polvere, filo sottile)
+    if (!liquid) {
+      // un solido cade in grani opachi che non si allungano, un po' sparpagliati
+      const n = Math.min(10, 2 + Math.floor(q * dt * 8));
+      for (let i = 0; i < n; i++) {
+        const r = 0.0005 + Math.random() * 0.0007;
+        const j = () => (Math.random() - 0.5) * 0.004;
+        this.grains.emit(p.x + j(), p.y + j() * 0.5, p.z + j(), out.x * speed + j() * 8, -0.02 - Math.random() * 0.06, out.z * speed + j() * 8, r, col, 1.2, dest.y);
+      }
+      return;
+    }
+    // poche gocce (contagocce, filo sottile)
     const n = def.drops ? 1 : Math.min(5, 1 + Math.floor(q * dt * 2));
     for (let i = 0; i < n; i++) {
-      const r = def.drops ? 0.0022 : Math.min(0.004, (liquid ? 0.0012 : 0.0008) + Math.sqrt(q) * 0.00028);
+      const r = def.drops ? 0.0022 : Math.min(0.004, 0.0012 + Math.sqrt(q) * 0.00028);
       this.drops.emit(p.x + (Math.random() - 0.5) * 0.002, p.y, p.z + (Math.random() - 0.5) * 0.002, out.x * speed, -0.05, out.z * speed, r, col, 1.2, dest.y);
     }
   }
@@ -1679,6 +1719,8 @@ export class LabGame {
       this.puddles.push(pd);
       if (!this.free && mix.liquidVolume > 2) this.toast(this.t('spilled'), 'warn');
     }
+    // un solido asciutto non si spande: si ammucchia
+    if (mix.liquidVolume < 0.05 && mix.solidVolume > 0.002) pd.heap = true;
     pd.mix.add(mix);
     this.updatePuddle(pd);
   }
@@ -1693,15 +1735,30 @@ export class LabGame {
     const state = puddleState(lv, sv, pd.mix.mass - pd.mix.water);
     if (state === 'gone') {
       pd.mesh.removeFromParent();
+      pd.heapMesh?.removeFromParent();
       this.puddles = this.puddles.filter((q) => q !== pd);
       return;
     }
-    const wasStain = pd.stain;
-    pd.stain = state === 'stain';
-    if (!pd.stain) pd.maxR = Math.max(pd.maxR ?? 0, puddleRadius(lv + sv));
-    pd.r = pd.stain ? pd.maxR ?? puddleRadius(sv) : puddleRadius(lv + sv);
-    pd.mesh.scale.setScalar(pd.r);
     const a = pd.mix.appearance();
+    // il solido versato resta un mucchietto conico con l'angolo di riposo, finché non si scioglie
+    if (pd.heap && sv < 0.005) pd.heap = false;
+    const heap = pd.heap ? heapSize(sv) : null;
+    if (heap) {
+      pd.heapMesh ??= createHeap(this.scene, pd.pos.x, pd.pos.y, pd.pos.z, grainTexture());
+      pd.heapMesh.scale.set(heap.r, heap.h, heap.r);
+      pd.heapMesh.material.color.setRGB(a.solid[0] / 255, a.solid[1] / 255, a.solid[2] / 255);
+      pd.heapMesh.material.roughness = a.solidKind === 'crystals' ? 0.35 : 0.95;
+    }
+    if (pd.heapMesh) pd.heapMesh.visible = Boolean(heap);
+    const wet = state === 'wet';
+    const wasStain = pd.stain;
+    pd.stain = state === 'stain' && !heap;
+    const spread = lv + (heap ? 0 : sv);
+    if (wet) pd.maxR = Math.max(pd.maxR ?? 0, puddleRadius(spread));
+    const discR = pd.stain ? pd.maxR ?? puddleRadius(sv) : puddleRadius(spread);
+    pd.mesh.visible = wet || pd.stain;
+    pd.mesh.scale.setScalar(discR);
+    pd.r = Math.max(pd.mesh.visible ? discR : 0, heap ? heap.r : 0);
     const c = pd.stain ? a.solid : a.turbid > 0.3 ? a.turbidColor : a.liquid;
     const mat = pd.mesh.material;
     mat.color.setRGB(c[0] / 255, c[1] / 255, c[2] / 255);
@@ -1723,9 +1780,14 @@ export class LabGame {
     const sv = mix.solidVolume;
     const m = item.mesh.matrixWorld;
     if (sv > 0.01) {
-      const s = liquidLevel(def.samples, def.rim, m, Math.min(1, sv / def.capacity));
+      // il solido appena arrivato in un recipiente vuoto ha la superficie piana; poi segue il recipiente (angolo di riposo)
+      if (!item.solidMesh.visible) item.solidUp?.set(0, 1, 0);
+      const n = this.solidNormal(item);
+      const s = liquidLevel(def.samples, def.rim, m, Math.min(1, sv / def.capacity), n);
+      const u = item.solidMesh.material.userData.uniforms;
       item.solidMesh.visible = true;
-      item.solidMesh.material.userData.uniforms.uLevel.value = s.level === Infinity ? 1e3 : s.level;
+      u.uLevel.value = s.level === Infinity ? 1e3 : s.level;
+      u.uNormal.value.set(n[0], n[1], n[2]);
     } else item.solidMesh.visible = false;
     if (lv > 0.05) {
       const l = liquidLevel(def.samples, def.rim, m, Math.min(1, (lv + sv * 0.35) / def.capacity));
@@ -2263,6 +2325,7 @@ export class LabGame {
     this.room.setBalance(`${this.fmt(Math.max(-999, this.balanceReading()), 2)} g`);
     this.room.update(dt, this.time);
     this.drops.update(dt);
+    this.grains.update(dt);
     this.motes.update(dt);
     const hz = this.fx.hood;
     this.puffs.update(dt, hz.on ? (x, y, z) => (x > hz.zone.x0 - 0.3 && z > hz.zone.z0 && z < hz.zone.z1 ? [1.2, 1.6, 0] : null) : null);
@@ -2302,6 +2365,7 @@ export class LabGame {
     if (h.type === 'puddle') {
       const mix = h.puddle.mix;
       const look = mix.appearance();
+      if (h.puddle.heap && mix.liquidVolume < 0.05) return { name: t('lookHeap'), rows: [], notes: [t('lookHeapNote')], volume: `${this.fmt(mix.mass, mix.mass < 10 ? 2 : 1)} g`, color: rgbCss(look.solid) };
       if (h.puddle.stain) return { name: t('lookStain'), rows: [], notes: [t('lookStainNote')], color: rgbCss(look.solid) };
       return { name: t('lookPuddle'), rows: [], notes: [t('lookPuddleNote')], volume: `≈ ${this.fmt(Math.max(1, Math.round(mix.liquidVolume)), 0)} mL`, color: rgbCss(look.liquid) };
     }
@@ -2336,7 +2400,7 @@ export class LabGame {
     const held = this.held;
     let target = null;
     if (h?.type === 'item') target = { type: 'item', kind: h.item.kind, name: this.itemName(h.item), container: Boolean(h.item.def.container), rig: h.item.rig ?? null, level: h.item.rig === 'burette' ? this.apparatus.stopcock : 0, hot: !this.tongs && this.apparatus.isHot(h.item) };
-    else if (h?.type === 'puddle') target = { type: 'puddle', stain: Boolean(h.puddle.stain) };
+    else if (h?.type === 'puddle') target = { type: 'puddle', stain: Boolean(h.puddle.stain), heap: Boolean(h.puddle.heap) && h.puddle.mix.liquidVolume < 0.05 };
     else if (h?.type === 'fixture') {
       const f = h.fixture;
       const on = f.kind === 'sink' ? f.tap : f.kind === 'tongs' ? f.taken : f.kind === 'gas' ? f.open : f.kind === 'power' ? f.volts > 0 : f.on;
