@@ -147,6 +147,21 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   sullo scaffale, sotto olio di paraffina. Più veloce camminare (3 m/s) e correre (5,2 m/s); campo visivo regolabile nel
   menu e nella pausa; barattoli +15 % e bottiglie +10 %. Voci della modalità Spiega «Quaderno di laboratorio» e «Serie di
   attività dei metalli».
+- **Simulatore: strumenti del laboratorio** (fase G4 del piano). **Termometro** e **pH-metro** che si immergono nel
+  recipiente e si leggono nella finestrella; **pipetta graduata** da 10 mL (tutta o un millilitro alla volta);
+  **buretta** da 50 mL su sostegno con lo zero in alto, la scala a 0,05 mL e il rubinetto a quattro posizioni (chiuso,
+  goccia a goccia, a filo, aperto); **imbuto con la carta da filtro**, che trattiene il precipitato; nuova postazione di
+  **distillazione** con il pallone sul mantello riscaldante, la testa con il termometro e il refrigerante, da cui
+  gocciolano i vapori che condensano (da acqua ed etanolo distilla prima l'etanolo, a 78 °C); **bagno di ghiaccio**;
+  **crogiolo** e **capsula di porcellana**, che reggono il Bunsen fino al rosso; la **pinza** per i recipienti che
+  scottano (sopra i 60 °C a mani nude non si prendono). Sotto la cappa l'**alimentatore** da 0 a 12 V con gli elettrodi di
+  grafite fa le **elettrolisi** del catalogo con la legge di Faraday (corrente solo con un elettrolita; se l'acqua è
+  distillata il gioco spiega che non conduce) e cinque **bombole** (O₂, H₂, CO₂, Cl₂, NH₃) fanno gorgogliare il gas nel
+  recipiente all'uscita. Con l'alimentatore e le bombole le reazioni realizzabili diventano 315 con lo scaffale (erano
+  153) e 494 con l'armadio (erano 395); il simulatore ne sa fare 1231. Il **quaderno** è un oggetto sul bancone e ha un
+  **tutorial** di 17 pagine illustrate, dai comandi alle tecniche. Con un oggetto in mano `A` e `D` lo ruotano; barattoli e
+  bottiglie presi in mano mostrano l'etichetta a chi li tiene; camminata a 3,6 m/s e corsa a 6,2 m/s (+20 %). Nuove voci
+  della modalità Spiega: strumenti del laboratorio, titolazione, filtrazione, distillazione, elettrolisi.
 - **Entalpie di formazione** standard di 176 sostanze comuni (NBS, CRC Handbook, NIST: sali, ossidi, alogenuri, ioni in
   acqua, alcuni composti organici; `src/lab/data/formation-enthalpies.js`): il ΔH° si conosce per 1045 reazioni del
   catalogo invece di 599, nel laboratorio molecolare, nella sandbox e nel simulatore.

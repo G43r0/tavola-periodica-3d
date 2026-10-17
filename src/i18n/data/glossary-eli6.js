@@ -321,7 +321,27 @@ export const GLOSSARY_ELI6 = {
   },
   'ui.gameNotebook': {
     t: 'Il quaderno delle scoperte',
-    d: 'Ogni volta che fai succedere una reazione nuova, il gioco la scrive nel quaderno: che cosa hai mescolato, che cosa è venuto fuori e che cosa hai visto, come le bollicine o una polverina colorata. Più reazioni scopri, più il quaderno si riempie, come un album di figurine!',
+    d: 'Ogni volta che fai succedere una reazione nuova, il gioco la scrive nel quaderno: che cosa hai mescolato, che cosa è venuto fuori e che cosa hai visto, come le bollicine o una polverina colorata. Più reazioni scopri, più il quaderno si riempie, come un album di figurine! Il quaderno è sul bancone e dentro ci sono anche le istruzioni con i disegni, per imparare a usare ogni attrezzo.',
+  },
+  'ui.gameInstruments': {
+    t: 'Gli attrezzi del chimico',
+    d: 'Nel laboratorio ci sono attrezzi speciali: un tubo lungo con un rubinetto che fa scendere il liquido una goccia alla volta, una cannuccia di vetro che misura i millilitri, un termometro e un misuratore che dice se un liquido è acido. C\'è un imbuto con la carta che trattiene la polverina, un pallone che fa bollire i liquidi e li raccoglie di nuovo freddi, una scatola con i fili che fa passare la corrente nell\'acqua e le bombole piene di gas. Le cose bollenti si prendono con la pinza, mai con le mani!',
+  },
+  'term.titration': {
+    t: 'Contare le gocce',
+    d: 'Vuoi sapere quanto è forte un acido? Ci aggiungi una goccia alla volta di una base di cui conosci la forza, finché un colorante magico cambia colore, per esempio diventa rosa. Contando quante gocce ci sono volute, sai quanto era forte l\'acido.',
+  },
+  'term.filtration': {
+    t: 'Filtrare',
+    d: 'È come il colino della pasta, ma con la carta: il liquido passa e la polverina resta sopra. Lo zucchero o il sale sciolti però passano con l\'acqua, perché sono diventati piccolissimi.',
+  },
+  'term.distillation': {
+    t: 'Distillare',
+    d: 'Fai bollire un miscuglio di liquidi: quello che bolle prima diventa vapore, sale in un tubo freddo, torna liquido e gocciola in un altro bicchiere. Così separi l\'alcol dall\'acqua, o fai l\'acqua purissima lasciando il sale nel pallone.',
+  },
+  'term.electrolysis': {
+    t: 'Rompere con la corrente',
+    d: 'Metti due bastoncini collegati a una pila nell\'acqua salata: la corrente spacca l\'acqua e da un bastoncino escono bollicine di idrogeno, dall\'altro di ossigeno. Nell\'acqua pura invece la corrente non passa: ci vuole un po\' di sale!',
   },
   'term.activitySeries': {
     t: 'Metalli svelti e metalli pigri',

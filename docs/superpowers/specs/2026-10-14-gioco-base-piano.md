@@ -1,6 +1,6 @@
 # Gioco base — piano
 
-Data: 2026-10-14 · Stato: **in corso — G1, G2 e G3 completate** · Parte dal prototipo del simulatore
+Data: 2026-10-14 · Stato: **in corso — G1, G2, G3 e G4 completate** · Parte dal prototipo del simulatore
 ([design](2026-10-13-simulatore-laboratorio-design.md), branch `ccr-9fd85180-nfjaik`, fase 9)
 
 ## Da dove partiamo
@@ -215,7 +215,7 @@ Ogni fase è giocabile da sola, con test e screenshot nei tre preset prima di pa
 | **G1** ✅ | Luce, colori della stanza, tone mapping neutro, vetro leggibile, ombre di contatto | — |
 | **G2** ✅ | Barattoli e bottiglie nuovi (vetro chiaro, ambrato, plastica); tappi colorati; etichette GHS; scaffale ordinato | G1 |
 | **G3** ✅ | Reazioni al centro: effetti osservabili, equazione nella finestrella, quaderno, condizioni nuove, scaffale ampliato con test di copertura, vista molecolare | G2 |
-| **G4** | Strumenti nuovi (buretta, pipetta, filtrazione, crogiolo, termometro, pH-metro, elettrolisi, distillazione) | G3 |
+| **G4** ✅ | Strumenti nuovi (buretta, pipetta, filtrazione, crogiolo, termometro, pH-metro, elettrolisi, distillazione) | G3 |
 | **G5** | Libro «Come si fa»: lettore e riquadro, strumenti, tecniche, sicurezza, pagine dei 118 elementi, ricette generate con le vignette SVG, «Prepara sul banco», «Segui la ricetta», test che esegue ogni ricetta | G4 |
 | **G6** | Carriera: capitoli 0–4 (~25 esercitazioni) scritti come dati, pagine del libro sbloccate, relazione, negozio, reputazione, salvataggi versionati | G5 |
 | **G7** | Carriera: capitoli 5–9, verifiche, pagella, sfide a tempo, richieste extra | G6 |
@@ -294,6 +294,52 @@ Verificato con gli screenshot della stessa inquadratura (prima persona, bancone,
   con i capitoli della Carriera che li sbloccano (G6).
 - **Richieste in corso d'opera**: camminata più veloce (3 m/s, corsa 5,2 m/s), campo visivo regolabile (55°–100°, nel
   menu e nella pausa, salvato), barattoli +15 % e bottiglie +10 % (legenda dello scaffale alzata).
+
+### G4 — fatto
+
+- **Regole pure** in `src/game/apparatus-logic.js` (testate in `tests/game/apparatus.test.mjs`): portate del rubinetto
+  della buretta (0; 0,12; 0,8; 3 mL/s), lettura con lo zero in alto arrotondata a 0,05 mL, tensioni 0–12 V, livelli del
+  mantello come la piastra, lettura delle sonde che insegue il valore vero (termometro τ = 2,5 s, pH-metro τ = 0,4 s),
+  vapori che condensano nel refrigerante (acqua e sostanze che bollono sopra 300 K), corrente sul display.
+- **Apparecchi fissi** (`src/game/apparatus.js`, supporti in `apparatus-room.js`): buretta, imbuto e pallone sono
+  recipienti veri con un corpo fisso (`physics.fix`), contorno ambra; un clic li usa invece di prenderli. La buretta
+  (profilo interno di 50,6 mL tra la base del tubo e lo zero) si riempie versandoci dentro dall'alto e versa dalla punta,
+  goccia a goccia (gocce da 0,05 mL), a filo o aperta; la finestrella legge la scala o dice che il liquido è sopra lo
+  zero. L'imbuto filtra per gravità (2 mL/s, più lento quando resta poco liquido): passa tutto ciò che è sciolto, il
+  solido resta sulla carta, che si toglie con un clic diventando un oggetto da buttare. Il pallone sul mantello
+  (riscaldamento fino a 275 W, recipiente chiuso) manda nel refrigerante i vapori: quelli che condensano gocciolano
+  dall'uscita a 5 °C sopra l'ambiente, gli altri escono; la testa ha un display con la temperatura del vapore.
+- **Sonde** (termometro, pH-metro, pipetta): corpi che attraversano gli oggetti (gruppo di collisione `ghost`), con una
+  scatola invisibile per prenderli; tenute in mano si inclinano verso il basso e, guardando un recipiente, la punta
+  scende vicino al fondo. Tornano al loro posto se finiscono nei rifiuti o a ogni nuova partita. La pipetta preleva fino
+  a 10 mL (il reagente si paga), li rilascia tutti o un millilitro (`Maiusc+E`), si lava al lavandino e si svuota nei
+  rifiuti.
+- **Calore**: il bagno di ghiaccio porta l'ambiente del recipiente a 0 °C con uno scambio forte; la porcellana (calore
+  specifico 0,85 J/g·K, materiale suo) diventa rossa sopra i 500 °C e irraggia; sopra i 60 °C un recipiente scotta e
+  senza la pinza (sul suo supporto accanto alla buretta) non si prende. La pinza si vede in mano e stringe l'oggetto.
+- **Elettrolisi**: un recipiente posato sotto gli elettrodi (con almeno 8 mL di liquido) riceve la tensione
+  dell'alimentatore; la corrente dipende dalla conducibilità degli ioni sciolti (Na₂SO₄ 0,5 M a 6 V: circa 0,65 A) e fa
+  avvenire la più specifica delle 11 elettrolisi del catalogo che sono possibili, con l'estensione della legge di
+  Faraday in un tempo 20 volte più veloce del reale. Bolle sui due elettrodi; «perché non reagisce?» dice se manca la
+  corrente o se la soluzione non conduce. Limite: il catalogo non ha l'elettrolisi del solfato di rame, che quindi dà
+  l'elettrolisi dell'acqua (idrogeno e ossigeno) invece del rame al catodo.
+- **Bombole** sotto la cappa (O₂, H₂, CO₂, Cl₂, NH₃, con il colore dell'ogiva della norma EN 1089-3): il volantino apre
+  e chiude, il gas (4·10⁻⁴ mol/s) esce dal tubo pescante nel recipiente posato all'uscita e lì si scioglie o reagisce;
+  verificati Na + Cl₂, Zn caldo + Cl₂, NaOH + CO₂, NaOH + Cl₂ (ipoclorito), CuO caldo + H₂ → Cu, acqua di calce + CO₂,
+  KBr + Cl₂, HCl + NH₃. L'azoto è rimasto fuori: aggiungerebbe 5 reazioni (litio e magnesio con l'azoto, la sintesi
+  dell'ammoniaca con il catalizzatore).
+- **Copertura** (`coverage.js` conta la corrente e i gas delle bombole): 315 reazioni con lo scaffale (153 senza
+  alimentatore e bombole), 494 con l'armadio (395), 1174 con tutto il magazzino, su 1231 che il simulatore sa fare.
+- **Legenda, finestrelle e testi**: righe per ogni strumento (rubinetto, carta da filtro, pinza, mantello, alimentatore,
+  volantini, sonde, pipetta), lettura grande delle sonde nella finestrella, testi in italiano e inglese; voci della
+  modalità Spiega «Strumenti del laboratorio», «Titolazione», «Filtrazione», «Distillazione», «Elettrolisi» (anche nella
+  versione semplice).
+- **Richieste in corso d'opera**: con un oggetto in mano `A` e `D` lo ruotano (in prima persona al posto dei passi di
+  lato, nella vista del bancone al posto del cambio di postazione); barattoli e bottiglie presi in mano mostrano sempre
+  l'etichetta a chi li tiene; il quaderno è un oggetto sul bancone A (si apre con un clic) con un tutorial di 17 pagine
+  illustrate in SVG (`src/game/tutorial.js`); camminata 3,6 m/s e corsa 6,2 m/s (+20 %).
+- Rimandati: provette e portaprovette, propipetta, beuta da vuoto, triangolo, accenditore piezoelettrico, raccolta dei
+  gas su acqua; arriveranno con le esercitazioni che li usano (G6).
 
 ## Verifiche
 

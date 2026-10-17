@@ -11,8 +11,8 @@ semplici), e la **modalità Spiega** (`F1`) apre una scheda su qualsiasi parola 
 Tre **preset grafici** (Semplice, Medio, Professionale) adattano la grafica al computer; il Professionale mostra anche
 l'**aspetto reale** di ogni elemento (colori e materiali veri) in un campione 3D.
 Il **simulatore di laboratorio** è un gioco in prima persona nel laboratorio di chimica della scuola, nello stile di
-*Cooking Simulator*: si prendono becher e bottiglie, si pesa, si versa inclinando, si scalda e si consegna il preparato
-all'insegnante, con la fisica vera degli oggetti e la chimica delle 554 sostanze e delle reazioni del catalogo.
+*Cooking Simulator*: si prendono becher e bottiglie, si pesa, si versa inclinando, si scalda, si titola con la buretta,
+si filtra, si distilla, si fa l'elettrolisi e si consegna il preparato all'insegnante, con la fisica vera degli oggetti e la chimica delle 554 sostanze e delle reazioni del catalogo.
 Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 
 | Fase | Contenuto | Stato |
@@ -432,17 +432,17 @@ dall'insegnante, le prepara al bancone e le consegna alla cattedra. Modelli e gr
 fisica è quella di [Rapier](https://rapier.rs) (WebAssembly incluso nell'app, caricato solo alla prima apertura).
 Design e decisioni: `docs/superpowers/specs/2026-10-13-simulatore-laboratorio-design.md`.
 
-**Stato: prototipo giocabile** per provare comandi e fisica. Negozio e ampliamenti del laboratorio, reputazione,
-tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione arriveranno nelle prossime versioni.
+**Stato: prototipo giocabile** per provare comandi e fisica. Negozio e ampliamenti del laboratorio, reputazione, sfide
+a tempo e il libro «Come si fa» arriveranno nelle prossime versioni.
 
 - **Modalità**: *Carriera* (5 esercitazioni valutate con stelle e soldi, progressi salvati) e *Laboratorio libero*
   (tutti gli strumenti e un magazzino con le 554 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
 - **Chimica** scelta all'inizio: *realistica* (si legge la bilancia, la graduazione e le etichette; la spatola prende
   quantità variabili; tolleranze strette) o *semplificata* (un cucchiaino = 1 g, quantità e pH sempre visibili,
   tolleranze larghe).
-- **Due visuali**: prima persona (`W A S D` e mouse, 3 m/s camminando e 5,2 correndo) e vista dall'alto del bancone
-  (`Tab`; `A`/`D` cambia postazione: bancone, scaffale, lavandino, cappa, cattedra, rifiuti; l'oggetto in mano viaggia
-  con il giocatore). Il campo visivo (da 55° a 100°) si regola nel menu e nella pausa.
+- **Due visuali**: prima persona (`W A S D` e mouse, 3,6 m/s camminando e 6,2 correndo) e vista dall'alto del bancone
+  (`Tab`; `A`/`D` cambia postazione: bancone, scaffale, lavandino, distillazione, cappa, cattedra, rifiuti; l'oggetto in
+  mano viaggia con il giocatore). Con un oggetto in mano `A` e `D` lo ruotano (in prima persona, invece dei passi di lato). Il campo visivo (da 55° a 100°) si regola nel menu e nella pausa.
 - **Interfaccia come in *Cooking Simulator***: in basso a destra una legenda piccola (icona del tasto e azione) mostra
   sempre i comandi del momento, cambia con l'oggetto in mano e con ciò che si guarda, attenua le azioni che lì non
   funzionano e illumina il tasto premuto (`L` la nasconde). Le informazioni importanti sono in finestrelle accanto agli
@@ -473,8 +473,7 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
 - **Strumenti**: becher da 100 e 250 mL, beuta, cilindro graduato (tacche da 1 mL), bottiglie di reagenti con etichetta e
   pittogrammi, spruzzetta di acqua distillata, contagocce di fenolftaleina, barattoli, spatola (un cucchiaino o un pizzico),
   bilancia con tara, piastra riscaldante con agitatore (5 livelli), becco Bunsen con treppiede e reticella, lampada a luce
-  forte per le reazioni fotochimiche, ansa di
-  nichel-cromo per il saggio alla fiamma, cartine indicatrici universali, carta assorbente, lavandino con rubinetto,
+  forte per le reazioni fotochimiche, crogiolo e capsula di porcellana, ansa di nichel-cromo per il saggio alla fiamma, cartine indicatrici universali, carta assorbente, lavandino con rubinetto,
   cappa aspirante, doccia di emergenza, estintore a CO₂, contenitori dei rifiuti, vassoio delle consegne e campanello.
 - **Reagenti**: ogni reagente è nel suo contenitore, scelto dai dati (`src/game/stock.js`): barattoli di vetro, di vetro
   ambrato per ciò che la luce decompone e di plastica per gli idrossidi; bottiglie di vetro, ambrate e flaconi di plastica
@@ -486,8 +485,26 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
   +10 %), per riconoscerli e prenderli meglio. Sodio, potassio e litio stanno sotto olio di paraffina (la spatola prende
   il pezzetto di metallo e lascia l'olio). Nel magazzino del Laboratorio libero, oltre alle 554 sostanze, c'è l'**armadio
   della scuola**: 47 reagenti d'uso (acidi e basi 1 M, sali 0,1 M, candeggina, acqua ossigenata 3 %, metalli, ossidi,
-  carbonati…) divisi per famiglia con il colore del tappo. Con lo scaffale si possono fare 383 reazioni del catalogo
-  (`node scripts/coverage.mjs` dà la tabella per gruppo; un test ne fissa il minimo).
+  carbonati…) divisi per famiglia con il colore del tappo. Con lo scaffale, l'armadio, l'alimentatore e le bombole si
+  possono fare 494 reazioni del catalogo (315 con il solo scaffale; `node scripts/coverage.mjs` dà la tabella per gruppo,
+  un test ne fissa il minimo).
+- **Strumenti di misura e apparecchi**: il **termometro** e il **pH-metro** si immergono nel recipiente guardato e si
+  leggono nella finestrella (il termometro sale piano, il pH-metro si stabilizza in un attimo). La **pipetta graduata**
+  preleva fino a 10 mL (`E`) e li rilascia tutti o un millilitro alla volta (`Maiusc+E`); si lava al lavandino. La
+  **buretta** da 50 mL sul sostegno, con lo zero in alto e la scala a 0,05 mL, si riempie versandoci dentro dall'alto;
+  il rubinetto ha quattro posizioni (chiuso, goccia a goccia, a filo, aperto; clic destro per chiudere). L'**imbuto con
+  la carta da filtro** fa passare il liquido con i soluti nel recipiente sotto e trattiene il precipitato: la carta si
+  toglie con un clic e si butta. Alla postazione di distillazione il **pallone sul mantello riscaldante** (5 livelli),
+  con testa, termometro e refrigerante, fa gocciolare nel recipiente all'uscita i vapori che condensano (acqua, etanolo,
+  acetone; i gas come la CO₂ escono): da acqua ed etanolo distilla prima l'etanolo a 78 °C. Nel **bagno di ghiaccio** un
+  recipiente si raffredda verso 0 °C. Sotto la cappa l'**alimentatore** (0, 2, 4, 6, 9, 12 V) con due elettrodi di
+  grafite fa l'**elettrolisi** del recipiente posato sotto: la corrente passa solo se la soluzione contiene un elettrolita
+  (l'acqua distillata non conduce, e la finestrella lo dice) e cresce con la tensione; i prodotti seguono la legge di
+  Faraday (Na₂SO₄: idrogeno e ossigeno, HCl: idrogeno e cloro, salamoia: soda e ipoclorito). Cinque **bombole** (O₂, H₂,
+  CO₂, Cl₂, NH₃) con il volantino fanno gorgogliare il gas nel recipiente all'uscita, dove si scioglie o reagisce (la CO₂
+  intorbida l'acqua di calce, il cloro sposta il bromo, l'idrogeno riduce l'ossido di rame caldo); il cloro e l'ammoniaca che
+  escono senza un recipiente sotto fanno scattare l'allarme se la cappa è spenta. Sopra i 60 °C un recipiente **scotta**: si prende con la **pinza**, che si
+  prende dal suo supporto accanto alla buretta.
 - **Reazioni al centro**: ogni reazione si vede. Il gas sale in bolle dal fondo (Zn + HCl, bicarbonato e aceto), i gas
   colorati escono del loro colore (NO₂ bruno, Cl₂ giallo-verde), il precipitato scende in fiocchi del suo colore, il
   colore della soluzione cambia in pochi decimi di secondo, il potassio nell'acqua fa la fiammella lilla. La finestrella
@@ -495,14 +512,19 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
   ZnCl₂(aq) + H₂(g)»), il ΔH° e che cosa si osserva; se non succede niente, nel Laboratorio libero e nella chimica
   semplificata spiega **perché**: manca il calore (con la temperatura), la fiamma, il catalizzatore (H₂O₂ vuole MnO₂),
   la luce, l'acqua o un reagente (KMnO₄ e Fe²⁺ vogliono l'acido solforico), oppure il metallo è meno attivo (il rame non
-  sposta l'idrogeno dall'HCl: E° = +0,34 V), o la reazione chiede corrente, raggi UV, vapore. La temperatura accelera le
+  sposta l'idrogeno dall'HCl: E° = +0,34 V), serve la corrente dell'alimentatore, la soluzione non conduce, o la reazione
+  chiede una scarica, raggi UV o vapore. La temperatura accelera le
   reazioni lente (fattore di Arrhenius, circa il doppio ogni 10 °C). Le entalpie di formazione di 176 sostanze comuni
   (tabelle NBS e CRC) danno il ΔH° a 1045 reazioni del catalogo invece di 599, anche nel laboratorio molecolare e nella
   sandbox.
-- **Quaderno di laboratorio** (`N`, o dalla pausa e dal menu): ogni reazione osservata la prima volta vi resta scritta,
-  tra una partita e l'altra, con l'equazione, il ΔH°, che cosa si è visto e quando; le 1349 pagine sono divise nei 14
-  gruppi del catalogo con la percentuale scoperta tra le 1220 che il simulatore sa fare, e quelle che non sa fare dicono
-  perché. Ogni pagina si apre nel laboratorio molecolare.
+- **Quaderno di laboratorio**: è un oggetto sul bancone, davanti a sinistra (un clic lo apre; anche `N`, la pausa e il
+  menu). Ha due schede. Il **tutorial** ha 17 pagine illustrate, dai comandi alle tecniche: muoversi, prendere e girare,
+  versare, pesare, acqua e lavaggio, scaldare, pH e temperatura, pipetta, buretta, filtrare, crogiolo e pinza,
+  distillare, elettrolisi, gas dalle bombole, reazioni, sicurezza e rifiuti. Nelle **reazioni scoperte** ogni reazione
+  osservata la prima volta resta scritta, tra una partita e l'altra, con l'equazione, il ΔH°, che cosa si è visto e
+  quando; le 1349 pagine sono divise nei 14 gruppi del catalogo con la percentuale scoperta tra le 1231 che il simulatore
+  sa fare, e quelle che non sa fare dicono perché. Ogni pagina si apre nel laboratorio molecolare.
+- **Etichette verso di sé**: un barattolo o una bottiglia preso in mano mostra sempre l'etichetta a chi lo tiene.
 - **Grafica**: aula in toni medi (pareti verde salvia, mobili grigio ardesia, banconi neri) e luce moderata, perché la
   vetreria e i reagenti si stacchino dallo sfondo; vetro limpido al centro e più chiaro sui bordi, con il labbro della
   bocca; ombra di contatto sotto ogni oggetto; tone mapping neutro, che conserva i colori veri delle soluzioni.
@@ -583,6 +605,10 @@ src/
     game-view.js      interfaccia: menu, HUD (legenda, finestrelle accanto agli oggetti), finestre, comandi; carica Rapier
     controls.js       legenda dei comandi in basso a destra (funzione pura), inclinazione, lancio a carica, clic o trascinamento
     game.js           il gioco: oggetti, presa e versamento, strumenti, calore, incidenti, rifiuti, esercitazioni
+    apparatus.js      buretta, imbuto, distillazione, alimentatore, bombole, pinza, termometro, pH-metro e pipetta nel gioco
+    apparatus-room.js i loro supporti nell'aula: sostegni, mantello con refrigerante, alimentatore, bombole, bagno di ghiaccio
+    apparatus-logic.js regole pure degli strumenti: rubinetto, tensioni, letture, refrigerante
+    tutorial.js       le pagine del tutorial del quaderno con le illustrazioni SVG
     mixture.js        chimica dei contenitori: fasi, pH, colore, solubilità, cristallizzazione, reazioni, calore
     reagents.js       solubilità, acidi e basi, idrati, gas tossici, metalli pesanti, potenziali standard, reagenti dello scaffale e dell'armadio, prezzi
     stock.js          contenitore, famiglia (colore del tappo) e pericoli dell'etichetta di ogni reagente
@@ -613,7 +639,7 @@ tests/lab/            test del motore chimico (npm test)
 tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo, strumenti)
 tests/i18n/           test delle lingue e del glossario della modalità Spiega
 tests/gfx/            test dei preset grafici e dell'aspetto reale degli elementi
-tests/game/           test del simulatore (chimica dei contenitori, segnali delle reazioni, quaderno, copertura, reagenti, fisica, liquidi e getto, legenda, esercitazioni e valutazione)
+tests/game/           test del simulatore (chimica dei contenitori, segnali delle reazioni, quaderno e tutorial, copertura, reagenti, strumenti, fisica, liquidi e getto, legenda, esercitazioni e valutazione)
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json
@@ -664,7 +690,8 @@ build/icon.png        icona usata da electron-builder
 | destro tenuto + mouse / clic destro | (simulatore) ruota l'oggetto / annulla la rotazione o rimetti a posto (sulla piastra: abbassa) |
 | tasto centrale (tenuto) / rotella | (simulatore) carica e lancia / distanza o altezza dell'oggetto |
 | `Maiusc` (tenuto) | (simulatore) con un oggetto in mano: manipolazione precisa (mouse sposta, sinistro + mouse alza, destro + mouse ruota, centrale lascia) |
-| `E` / `Maiusc+E` | (simulatore) pulisci e usa gli strumenti: spatola, ansa, carta, cartina, estintore (un pizzico con la spatola); con un recipiente agita, al lavandino lava, sui rifiuti svuota |
+| `E` / `Maiusc+E` | (simulatore) pulisci e usa gli strumenti: spatola, ansa, carta, cartina, estintore, termometro, pH-metro, pipetta (un pizzico con la spatola, un millilitro con la pipetta); con un recipiente agita, al lavandino lava, sui rifiuti svuota |
+| `A` `D` | (simulatore) con un oggetto in mano: ruotalo |
 | `Tab` / `A` `D` | (simulatore) vista del bancone / postazione precedente o successiva |
 | `I` / `L` / `H` / `Esc` | (simulatore) finestrelle accanto agli oggetti / legenda dei comandi / tutti i comandi / pausa |
-| `N` | (simulatore) quaderno di laboratorio: le reazioni scoperte |
+| `N` | (simulatore) quaderno di laboratorio: il tutorial e le reazioni scoperte (anche con un clic sul quaderno del bancone) |
