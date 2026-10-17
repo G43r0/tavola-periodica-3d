@@ -9,8 +9,8 @@ import { stateOf, aqueousOf } from './signals.js';
 import { SHELF } from './reagents.js';
 import { CYLINDER_GASES } from './apparatus-logic.js';
 
-/** Temperatura massima che si raggiunge in un contenitore sul Bunsen (K): la reticella arriva al rosso. */
-export const LAB_MAX_T = 1000;
+/** Temperatura massima che si raggiunge in un crogiolo nella fiamma del Bunsen (K): circa 900 °C, il rosso vivo. */
+export const LAB_MAX_T = 1173;
 
 /** Sostanza principale di un reagente dello scaffale o dell'armadio (chiave della libreria o simbolo). */
 export const reagentKey = (r) => (r.water ? 'water' : r.solute ?? r.solid ?? r.liquid ?? null);

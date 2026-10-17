@@ -23,6 +23,8 @@ import { ORDERS, grade } from './orders.js';
 import { legendRows, relaxTilt, tiltGain, throwSpeed } from './controls.js';
 import { Apparatus, PERMANENT_TOOLS } from './apparatus.js';
 import { nextLevel } from './apparatus-logic.js';
+import { bookRecipes, elementPages, reagentOf } from './book.js';
+import BOOK_VERIFIED from './data/book-verified.js';
 
 const WATER = 123;
 const REACH = 2.3;
@@ -192,6 +194,8 @@ export class LabGame {
     const shown = FAMILY_ORDER.filter((f, i) => FAMILY_ORDER.findIndex((g) => FAMILIES[g] === FAMILIES[f]) === i);
     this.room.setLegend(t('capLegendTitle'), shown.map((f) => ({ color: FAMILIES[f], label: t(`legend_${f}`) })));
     this.room.setNotebookCover(t('notebookTitle'), t('notebookCover'));
+    this.room.setBookCover(t('bookTitle'), t('bookCover'));
+    this.follow = null; // ricetta del libro che si sta seguendo (riquadro con i passi)
     // estintore appeso al muro
     this.extinguisher = this.spawn('extinguisher', { pos: new THREE.Vector3(LAYOUT.extinguisher.x, 0.37, LAYOUT.extinguisher.z) });
     this.extinguisher.home = this.extinguisher.mesh.position.clone();
@@ -311,6 +315,10 @@ export class LabGame {
 
   /** Svuota la stanza (tranne l'estintore) per una nuova partita. */
   clearRoom() {
+    if (this.follow) {
+      this.follow = null;
+      this.emit('follow');
+    }
     for (const it of [...this.items]) if (it !== this.extinguisher && !it.permanent) this.removeItem(it);
     for (const p of this.puddles) {
       p.mesh.removeFromParent();
@@ -1106,6 +1114,9 @@ export class LabGame {
       case 'notebook':
         this.emit('notebook');
         break;
+      case 'book':
+        this.emit('book');
+        break;
       case 'shower':
         this.fx.shower.t = 4;
         break;
@@ -1262,6 +1273,7 @@ export class LabGame {
    */
   disposeWaste(mix, bin, source = null, once = false) {
     if (!mix || mix.isEmpty()) return;
+    if (this.follow?.rxSeen) this.follow.wasted = true;
     const cls = wasteClass(mix);
     const key = `${source?.id ?? 0}:${bin}`;
     const last = this.lastDisposal.get(key);
@@ -2026,8 +2038,110 @@ export class LabGame {
     this.flames.emit(p.x + (Math.random() - 0.5) * r, y + 0.004, p.z + (Math.random() - 0.5) * r, 0, 0.25, 0, { size: 0.012, grow: 1.8, rgb: c, alpha: 0.85, life: 0.3 });
   }
 
+  // ------------------------------------------------------------------ libro «Come si fa»
+
+  /** Le ricette del libro (solo quelle che il motore esegue davvero) e le pagine degli elementi, costruite una volta. */
+  get book() {
+    if (!this.bookCache) {
+      this.bookCache = bookRecipes(this.chem, BOOK_VERIFIED);
+      this.bookCache.elements = elementPages(this.chem, this.bookCache);
+    }
+    return this.bookCache;
+  }
+
+  /**
+   * «Prepara sul banco» (Laboratorio libero): mette sul bancone B il recipiente della ricetta, gli strumenti (cilindro,
+   * spatola) e i reagenti, quelli dello scaffale come sono e gli altri dal magazzino nella forma della ricetta.
+   * @returns {string[]} nomi di ciò che è stato messo sul banco
+   */
+  prepareRecipe(recipe) {
+    const out = [];
+    this.spawnGlass(recipe.vessel, 'benchB');
+    out.push(this.t(`item_${recipe.vessel}`));
+    if (recipe.ingredients.some((x) => x.form === 'solution' || (x.form === 'liquid' && x.sid !== WATER))) {
+      this.spawnGlass('cylinder100', 'benchB');
+      out.push(this.t('item_cylinder100'));
+    }
+    if (recipe.ingredients.some((x) => x.form === 'solid')) {
+      this.spawnTool('spatula', 'benchB');
+      out.push(this.t('item_spatula'));
+    }
+    for (const x of recipe.ingredients) {
+      if (x.role === 'air' || x.role === 'gas' || x.sid === WATER) continue;
+      const item = x.shelf ? this.spawnReagent(x.shelf, 'benchB') : this.spawnReagent(null, 'benchB', reagentOf(x));
+      out.push(item.name);
+    }
+    if (recipe.ingredients.some((x) => x.sid === WATER)) {
+      this.spawnReagent('water', 'benchB');
+      out.push(this.t('distilledWater'));
+    }
+    return out;
+  }
+
+  /** Comincia a seguire una ricetta: i passi si spuntano da soli quando il gioco li riconosce. */
+  followRecipe(id) {
+    const recipe = this.book.byId.get(id);
+    this.follow = recipe ? { recipe, done: recipe.steps.map(() => false), top: -1, rxSeen: false, wasted: false, warned: new Set(), complete: false, t: 0 } : null;
+    this.emit('follow');
+  }
+
+  stopFollow() {
+    this.follow = null;
+    this.emit('follow');
+  }
+
+  /**
+   * Spunta i passi della ricetta seguita (ogni 0,25 s): un ingrediente è nel recipiente, la temperatura è arrivata, la
+   * reazione è avvenuta, la cappa è accesa, il contenuto è finito nei rifiuti. Un passo fatto spunta anche quelli
+   * prima (chi va avanti li ha fatti); avvisa se un ingrediente è più del doppio della dose.
+   */
+  updateFollow() {
+    const f = this.follow;
+    if (!f || f.complete || this.time - f.t < 0.25) return;
+    f.t = this.time;
+    const r = f.recipe;
+    const vessels = this.items.filter((it) => it.def.container && it.mixture && !it.data.reagent && !it.rig && !it.mixture.isEmpty());
+    const has = (sid, mol) => vessels.some((it) => (it.mixture.n.get(sid) ?? 0) >= mol);
+    const keys = new Set(r.ingredients.filter((x) => x.role === 'reactant').map((x) => x.sid));
+    const observe = r.steps.findIndex((x) => x.kind === 'observe');
+    r.steps.forEach((step, i) => {
+      if (f.done[i]) return;
+      const c = step.check;
+      let ok = false;
+      if (c.type === 'has') ok = has(c.sid, c.mol);
+      else if (c.type === 'temp') ok = vessels.some((it) => [...keys].some((sid) => (it.mixture.n.get(sid) ?? 0) > 0) && it.mixture.T >= c.T - 10);
+      else if (c.type === 'rx') ok = f.rxSeen;
+      else if (c.type === 'hood') ok = this.fx.hood.on;
+      else if (c.type === 'waste') ok = f.wasted;
+      if (f.rxSeen && i <= observe) ok = true;
+      f.done[i] = ok;
+    });
+    let top = -1;
+    f.done.forEach((d, i) => {
+      if (d) top = i;
+    });
+    for (let i = 0; i < top; i++) f.done[i] = true;
+    if (top > f.top) {
+      f.top = top;
+      this.emit('follow');
+    }
+    for (const x of r.ingredients) {
+      if (x.role !== 'reactant' || !x.mol || f.warned.has(x.sid)) continue;
+      if (has(x.sid, x.mol * 2.2)) {
+        f.warned.add(x.sid);
+        this.toast(this.t('bkDoseWarn', { name: this.chem.name(x.sid) }), 'warn');
+      }
+    }
+    if (f.done.every(Boolean)) {
+      f.complete = true;
+      this.toast(this.t('bkPanelDone'), 'ok');
+      this.emit('follow');
+    }
+  }
+
   /** Prima volta che si osserva una reazione in questa partita: avviso con l'equazione e voce nel quaderno. */
   noteReaction(id, sig, aq) {
+    if (this.follow?.recipe.id === id) this.follow.rxSeen = true;
     this.seenRx ??= new Set();
     if (this.seenRx.has(id)) return;
     this.seenRx.add(id);
@@ -2310,6 +2424,7 @@ export class LabGame {
     for (const it of this.items) this.updateContents(it, dt);
     this.updateHazards(dt);
     this.checkBins();
+    this.updateFollow();
     this.updateHover();
     this.updateAim();
     this.updateOutline();
@@ -2384,6 +2499,7 @@ export class LabGame {
       hood: () => t(f.on ? 'stOnF' : 'stOffF'),
       lamp: () => t(f.on ? 'stLampOn' : 'stOffF'),
       notebook: () => t('stNotebook', { n: Object.keys(this.notebook.rx).length }),
+      book: () => t('stBook', { n: this.book.recipes.length }),
       sink: () => t(f.tap ? 'stTapOn' : 'stTapOff'),
       balance: () => `${this.fmt(Math.max(-999, this.balanceReading()), 2)} g`,
       bin: () => t(`binNote_${f.bin}`),

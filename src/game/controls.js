@@ -32,6 +32,8 @@ function fixtureRow(f, key = 'lmb') {
       return row([key], f.on ? 'lgLampOff' : 'lgLampOn');
     case 'notebook':
       return row([key], 'lgNotebook');
+    case 'book':
+      return row([key], 'lgBook');
     case 'shower':
       return row([key], 'lgShower');
     case 'bell':

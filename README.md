@@ -432,8 +432,8 @@ dall'insegnante, le prepara al bancone e le consegna alla cattedra. Modelli e gr
 fisica è quella di [Rapier](https://rapier.rs) (WebAssembly incluso nell'app, caricato solo alla prima apertura).
 Design e decisioni: `docs/superpowers/specs/2026-10-13-simulatore-laboratorio-design.md`.
 
-**Stato: prototipo giocabile** per provare comandi e fisica. Negozio e ampliamenti del laboratorio, reputazione, sfide
-a tempo e il libro «Come si fa» arriveranno nelle prossime versioni.
+**Stato: prototipo giocabile** per provare comandi e fisica. La Carriera in capitoli, il negozio e gli ampliamenti del
+laboratorio, la reputazione e le sfide a tempo arriveranno nelle prossime versioni.
 
 - **Modalità**: *Carriera* (5 esercitazioni valutate con stelle e soldi, progressi salvati) e *Laboratorio libero*
   (tutti gli strumenti e un magazzino con le 554 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
@@ -486,7 +486,7 @@ a tempo e il libro «Come si fa» arriveranno nelle prossime versioni.
   il pezzetto di metallo e lascia l'olio). Nel magazzino del Laboratorio libero, oltre alle 554 sostanze, c'è l'**armadio
   della scuola**: 47 reagenti d'uso (acidi e basi 1 M, sali 0,1 M, candeggina, acqua ossigenata 3 %, metalli, ossidi,
   carbonati…) divisi per famiglia con il colore del tappo. Con lo scaffale, l'armadio, l'alimentatore e le bombole si
-  possono fare 494 reazioni del catalogo (315 con il solo scaffale; `node scripts/coverage.mjs` dà la tabella per gruppo,
+  possono fare 504 reazioni del catalogo (317 con il solo scaffale; `node scripts/coverage.mjs` dà la tabella per gruppo,
   un test ne fissa il minimo).
 - **Strumenti di misura e apparecchi**: il **termometro** e il **pH-metro** si immergono nel recipiente guardato e si
   leggono nella finestrella (il termometro sale piano, il pH-metro si stabilizza in un attimo). La **pipetta graduata**
@@ -505,6 +505,28 @@ a tempo e il libro «Come si fa» arriveranno nelle prossime versioni.
   intorbida l'acqua di calce, il cloro sposta il bromo, l'idrogeno riduce l'ossido di rame caldo); il cloro e l'ammoniaca che
   escono senza un recipiente sotto fanno scattare l'allarme se la cappa è spenta. Sopra i 60 °C un recipiente **scotta**: si prende con la **pinza**, che si
   prende dal suo supporto accanto alla buretta.
+- **Libro «Come si fa»** (sul bancone A e sulla cattedra, oppure `B`, o dalla pausa): le pagine degli strumenti (24),
+  delle tecniche (15: pesare con la tara, leggere il menisco, diluire, filtrare, titolare, distillare…) e della sicurezza
+  (i nove pittogrammi, le sostanze da non mescolare, gli incidenti, i rifiuti), ognuna con la sua vignetta; i 118
+  elementi, con come si ottengono davvero (miniera e industria, aria liquida, elettrolisi, sottoprodotto, reattore o
+  acceleratore, dalle fonti CRC Handbook e Greenwood ed Earnshaw), le ricette del libro che li liberano e le altre
+  reazioni del catalogo che li liberano con il motivo per cui il laboratorio non le fa (un forno oltre i 900 °C, un sale
+  fuso, un gas che il laboratorio non ha…); le **ricette** di 668 reazioni del catalogo, generate dai dati
+  (`src/game/book.js`): ingredienti nelle forme che il magazzino dà davvero (solido, liquido, soluzione 0,1 o 1 M, gas
+  delle bombole, aria), con le dosi calcolate dalle masse molari per una dose da scuola e un leggero eccesso, lette sulla
+  bilancia (0,05 g) e sul cilindro (1 mL); il recipiente; la piastra al livello giusto (calcolato con le perdite di
+  calore del recipiente) o il Bunsen; i passi numerati con una vignetta ciascuno, colorata con i colori veri dei
+  reagenti; cosa si osserva, i pittogrammi dei reagenti, la cappa per i gas tossici e il contenitore dei rifiuti; dove il
+  gioco semplifica. Ogni ricetta è eseguita dal motore dei contenitori (`node scripts/book.mjs`, controllato dai test):
+  il libro non promette nulla che il gioco non faccia. Ricerca per nome, formula o elemento e filtro «solo con lo
+  scaffale». Nel Laboratorio libero **«Prepara sul banco»** mette sul bancone B recipiente, strumenti e reagenti;
+  **«Segui la ricetta»** apre un riquadro in basso a sinistra con i passi, che si spuntano da soli quando il gioco li
+  riconosce (ingrediente nel recipiente, temperatura raggiunta, reazione avvenuta, cappa accesa, rifiuto smaltito), con un
+  avviso se una dose è più del doppio.
+- **Solidi che non si comportano come liquidi**: nel recipiente la superficie di una polvere o di un sale si inclina con
+  il recipiente fino all'angolo di riposo (35°) e poi scivola, e resta inclinata quando lo si raddrizza (si livella
+  agitando); versato, il solido esce solo quando il cumulo arriva al bordo e cade in grani; su bancone e pavimento fa un
+  mucchietto conico, che si raccoglie con la carta.
 - **Reazioni al centro**: ogni reazione si vede. Il gas sale in bolle dal fondo (Zn + HCl, bicarbonato e aceto), i gas
   colorati escono del loro colore (NO₂ bruno, Cl₂ giallo-verde), il precipitato scende in fiocchi del suo colore, il
   colore della soluzione cambia in pochi decimi di secondo, il potassio nell'acqua fa la fiammella lilla. La finestrella
@@ -518,12 +540,13 @@ a tempo e il libro «Come si fa» arriveranno nelle prossime versioni.
   (tabelle NBS e CRC) danno il ΔH° a 1045 reazioni del catalogo invece di 599, anche nel laboratorio molecolare e nella
   sandbox.
 - **Quaderno di laboratorio**: è un oggetto sul bancone, davanti a sinistra (un clic lo apre; anche `N`, la pausa e il
-  menu). Ha due schede. Il **tutorial** ha 17 pagine illustrate, dai comandi alle tecniche: muoversi, prendere e girare,
+  menu). Ha due schede. Il **tutorial** ha 18 pagine illustrate, dai comandi alle tecniche: il libro, muoversi, prendere e girare,
   versare, pesare, acqua e lavaggio, scaldare, pH e temperatura, pipetta, buretta, filtrare, crogiolo e pinza,
   distillare, elettrolisi, gas dalle bombole, reazioni, sicurezza e rifiuti. Nelle **reazioni scoperte** ogni reazione
   osservata la prima volta resta scritta, tra una partita e l'altra, con l'equazione, il ΔH°, che cosa si è visto e
   quando; le 1349 pagine sono divise nei 14 gruppi del catalogo con la percentuale scoperta tra le 1231 che il simulatore
-  sa fare, e quelle che non sa fare dicono perché. Ogni pagina si apre nel laboratorio molecolare.
+  sa fare, e quelle che non sa fare dicono perché. Ogni pagina si apre nel laboratorio molecolare e, se c'è, nella
+  ricetta del libro.
 - **Etichette verso di sé**: un barattolo o una bottiglia preso in mano mostra sempre l'etichetta a chi lo tiene.
 - **Grafica**: aula in toni medi (pareti verde salvia, mobili grigio ardesia, banconi neri) e luce moderata, perché la
   vetreria e i reagenti si stacchino dallo sfondo; vetro limpido al centro e più chiaro sui bordi, con il labbro della
@@ -609,6 +632,10 @@ src/
     apparatus-room.js i loro supporti nell'aula: sostegni, mantello con refrigerante, alimentatore, bombole, bagno di ghiaccio
     apparatus-logic.js regole pure degli strumenti: rubinetto, tensioni, letture, refrigerante
     tutorial.js       le pagine del tutorial del quaderno con le illustrazioni SVG
+    book.js           libro «Come si fa»: magazzino, ricette generate dalle reazioni (dosi, passi, controlli), esecuzione nel motore
+    book-view.js      lettore del libro: indice, pagine, ricette, elementi, ricerca
+    book-figures.js   vignette SVG dei passi delle ricette e delle pagine scritte a mano
+    data/             pagine scritte a mano del libro, come si ottengono gli elementi, ricette verificate (generato)
     mixture.js        chimica dei contenitori: fasi, pH, colore, solubilità, cristallizzazione, reazioni, calore
     reagents.js       solubilità, acidi e basi, idrati, gas tossici, metalli pesanti, potenziali standard, reagenti dello scaffale e dell'armadio, prezzi
     stock.js          contenitore, famiglia (colore del tappo) e pericoli dell'etichetta di ogni reagente
@@ -639,12 +666,13 @@ tests/lab/            test del motore chimico (npm test)
 tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo, strumenti)
 tests/i18n/           test delle lingue e del glossario della modalità Spiega
 tests/gfx/            test dei preset grafici e dell'aspetto reale degli elementi
-tests/game/           test del simulatore (chimica dei contenitori, segnali delle reazioni, quaderno e tutorial, copertura, reagenti, strumenti, fisica, liquidi e getto, legenda, esercitazioni e valutazione)
+tests/game/           test del simulatore (chimica dei contenitori, segnali delle reazioni, quaderno e tutorial, libro e ricette, copertura, reagenti, strumenti, fisica, liquidi, solidi e getto, legenda, esercitazioni e valutazione)
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json
   build-binding.mjs   genera binding-energies.json (X-ray Data Booklet)
   coverage.mjs        tabella delle reazioni del simulatore realizzabili con scaffale, armadio e magazzino, per gruppo
+  book.mjs            esegue ogni ricetta del libro «Come si fa» e scrive src/game/data/book-verified.js
   make-icon.mjs       genera build/icon.png (icona dell'app)
 data-sources/         dati di origine (PubChem + dati curati in italiano)
 build/icon.png        icona usata da electron-builder
@@ -695,3 +723,4 @@ build/icon.png        icona usata da electron-builder
 | `Tab` / `A` `D` | (simulatore) vista del bancone / postazione precedente o successiva |
 | `I` / `L` / `H` / `Esc` | (simulatore) finestrelle accanto agli oggetti / legenda dei comandi / tutti i comandi / pausa |
 | `N` | (simulatore) quaderno di laboratorio: il tutorial e le reazioni scoperte (anche con un clic sul quaderno del bancone) |
+| `B` | (simulatore) libro «Come si fa»: strumenti, tecniche, sicurezza, elementi, ricette (anche con un clic sul libro) |

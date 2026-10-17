@@ -12,7 +12,7 @@ import { KEY_IDS } from '../../src/game/controls.js';
 const has = (key) => key in GAME_STRINGS.it && key in GAME_STRINGS.en;
 
 test('testi del simulatore: chiavi scritte nel codice', () => {
-  const src = ['game.js', 'game-view.js', 'orders.js', 'apparatus.js'].map((f) => fs.readFileSync(new URL(`../../src/game/${f}`, import.meta.url), 'utf8')).join('\n');
+  const src = ['game.js', 'game-view.js', 'orders.js', 'apparatus.js', 'book-view.js'].map((f) => fs.readFileSync(new URL(`../../src/game/${f}`, import.meta.url), 'utf8')).join('\n');
   // t('chiave'…) e key: 'chiave' (passi e righe della valutazione)
   const keys = new Set([...src.matchAll(/\bt\('([a-zA-Z][\w]*)'/g), ...src.matchAll(/key: '([a-zA-Z][\w]*)'/g), ...src.matchAll(/\? '(ev[A-Z]\w*)' : '(ev[A-Z]\w*)'/g)].flatMap((m) => m.slice(1)).filter(Boolean));
   assert.ok(keys.size > 100);
@@ -41,7 +41,7 @@ test('testi del simulatore: legenda dei comandi (azioni e tasti)', () => {
 });
 
 test('testi del simulatore: finestrelle degli elementi fissi (nome di ogni elemento, rifiuti)', () => {
-  for (const k of ['hotplate', 'bunsen', 'sink', 'balance', 'hood', 'shower', 'bell', 'store', 'towels', 'strips', 'bin', 'tray', 'notebook', 'lamp', 'tongs', 'mantle', 'power', 'gas', 'icebath']) assert.ok(has(`fx_${k}`), `fx_${k}`);
+  for (const k of ['hotplate', 'bunsen', 'sink', 'balance', 'hood', 'shower', 'bell', 'store', 'towels', 'strips', 'bin', 'tray', 'notebook', 'lamp', 'tongs', 'mantle', 'power', 'gas', 'icebath', 'book']) assert.ok(has(`fx_${k}`), `fx_${k}`);
   for (const b of BINS.filter((b) => b !== 'sink')) assert.ok(has(`binNote_${b}`), `binNote_${b}`);
 });
 
@@ -53,4 +53,15 @@ test('testi del simulatore: reazioni (cosa si vede, perché non reagisce, quader
   for (const w of whys) assert.ok(has(`why_${w}`), `why_${w}`);
   for (const w of ['electrolysis', 'discharge', 'steam', 'equilibrium', 'catalyst', 'living', 'other']) assert.ok(has(`nbWhy_${w}`), `nbWhy_${w}`);
   assert.ok(has('fx_lamp'));
+});
+
+test('testi del simulatore: libro «Come si fa» (passi, osservazioni, colori, vie degli elementi, motivi)', () => {
+  const kinds = ['hood', 'vessel', 'weigh', 'measure', 'liquid', 'water', 'aux', 'catalyst', 'stir', 'plate', 'bunsen', 'bunsenAny', 'flame', 'lamp', 'power', 'gas', 'wait', 'waitLight', 'observe', 'filter', 'tongs', 'dispose', 'disposeSink'];
+  for (const k of kinds) assert.ok(has(`bk_step_${k}`), `bk_step_${k}`);
+  for (const k of ['gas', 'coloredGas', 'precipitate', 'deposit', 'dissolves', 'colorChange', 'hot', 'warm', 'cold', 'fire', 'none']) assert.ok(has(`bkObs_${k}`), `bkObs_${k}`);
+  for (const k of ['white', 'grey', 'black', 'red', 'orange', 'yellow', 'green', 'blue', 'violet', 'brown', 'pink', 'none']) assert.ok(has(`bkColor_${k}`), `bkColor_${k}`);
+  for (const k of ['native', 'air', 'industry', 'electrolysis', 'byproduct', 'reactor', 'accelerator', 'decay']) assert.ok(has(`bkWay_${k}`), `bkWay_${k}`);
+  for (const k of ['tooHot', 'molten', 'unavailable', 'catalyst', 'gasOnly', 'shock', 'lowO2', 'engine', 'equilibrium', 'discharge', 'steam', 'living', 'catalystOff', 'other']) assert.ok(has(`bkWhy_${k}`), `bkWhy_${k}`);
+  for (const k of ['time', 'yield', 'electro', 'light', 'fire']) assert.ok(has(`bkReal_${k}`), `bkReal_${k}`);
+  for (const k of ['balance', 'cylinder', 'plate', 'bunsen', 'lamp', 'power', 'gas', 'tongs', 'filter', 'hood']) assert.ok(has(`bkTools_${k}`), `bkTools_${k}`);
 });

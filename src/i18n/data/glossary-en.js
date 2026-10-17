@@ -624,7 +624,7 @@ export const GLOSSARY_EN = {
     w: 'simulator|laboratory simulator|lab game',
     d: 'A first-person game in the school chemistry lab, inspired by cooking simulators: pick up beakers and bottles, weigh on the balance, pour by tilting the vessel, heat on the hot plate or the Bunsen burner and hand in your preparation at the teacher\'s desk. Exercises are graded with stars and money; glass breaks, liquids spill, toxic gases belong under the fume hood and waste in the right container. The chemistry is the real one of the library (554 substances and the catalogue reactions), in a realistic or simplified version.',
     k: [['W A S D', 'walk'], ['A / D', 'with an object in hand: rotate it'], ['Click', 'pick up / put down'], ['Hold left + mouse', 'pour'], ['E', 'use'], ['Hold middle button', 'throw'], ['Tab', 'bench view'], ['N', 'notebook'], ['Esc', 'pause']],
-    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments'],
+    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook'],
   },
   'ui.gameNotebook': {
     t: 'Lab notebook',
@@ -632,6 +632,13 @@ export const GLOSSARY_EN = {
     d: 'The notebook lies on the bench, front left (or press N): click it to open it. It has two tabs. The illustrated tutorial explains the controls and the lab techniques, page by page. Under discovered reactions, every catalogue reaction you see happen for the first time is recorded: the equation with the physical states, solid (s), liquid (l), gas (g) and dissolved in water (aq); ΔH°, negative when the reaction releases heat; what was seen (bubbles, precipitate, colour change, heat) and where you discovered it. The pages are split into the 14 catalogue groups with the percentage discovered; the ones the simulator cannot do yet (electric discharges, UV light, steam, equilibria, living things) say why. From each page the reaction opens in the molecular lab. The notebook is kept from one game to the next. When a mixture does not react, the vessel popup explains what is missing: heat, a flame, a catalyst, light, water, a reactant, or that the metal is less active (activity series).',
     k: [['N', 'open the notebook'], ['Click the notebook', 'open it from the bench']],
     s: ['term.reaction', 'term.activitySeries', 'ui.game'],
+  },
+  'ui.gameBook': {
+    t: '«How to» book',
+    w: 'how to|how to book|recipe|recipes',
+    d: 'In the simulator the «How to» book lies on bench A and on the teacher\'s desk (or press B). It explains the lab\'s tools, techniques and safety; it tells how each of the 118 elements is really obtained (a chemical reaction frees them from compounds, only nuclear reactions make new ones); it turns the catalogue reactions into recipes: the ingredients with doses worked out from molar masses and a slight excess, the vessel and how to heat it, illustrated steps, what you see, the hazard pictograms and where the waste goes. Every recipe has been run by the game engine: the book promises nothing the game does not do. In the Free lab «Set up on the bench» puts reagents and glassware on the bench; «Follow the recipe» opens a panel with the steps, which tick themselves off. Search finds recipes by name, formula or element.',
+    k: [['B', 'open the book'], ['Click the book', 'open it from the bench or the desk']],
+    s: ['ui.game', 'ui.gameNotebook', 'ui.gameInstruments', 'term.mole'],
   },
   'ui.gameInstruments': {
     t: 'Lab instruments',

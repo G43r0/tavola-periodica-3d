@@ -323,6 +323,10 @@ export const GLOSSARY_ELI6 = {
     t: 'Il quaderno delle scoperte',
     d: 'Ogni volta che fai succedere una reazione nuova, il gioco la scrive nel quaderno: che cosa hai mescolato, che cosa è venuto fuori e che cosa hai visto, come le bollicine o una polverina colorata. Più reazioni scopri, più il quaderno si riempie, come un album di figurine! Il quaderno è sul bancone e dentro ci sono anche le istruzioni con i disegni, per imparare a usare ogni attrezzo.',
   },
+  'ui.gameBook': {
+    t: 'Il libro degli esperimenti',
+    d: 'È come un libro di ricette di cucina, ma per la chimica: ti dice quanta polverina mettere, quanto liquido versare, se scaldare e che cosa vedrai succedere, passo per passo e con i disegni. Tutti gli esperimenti del libro funzionano davvero nel gioco!',
+  },
   'ui.gameInstruments': {
     t: 'Gli attrezzi del chimico',
     d: 'Nel laboratorio ci sono attrezzi speciali: un tubo lungo con un rubinetto che fa scendere il liquido una goccia alla volta, una cannuccia di vetro che misura i millilitri, un termometro e un misuratore che dice se un liquido è acido. C\'è un imbuto con la carta che trattiene la polverina, un pallone che fa bollire i liquidi e li raccoglie di nuovo freddi, una scatola con i fili che fa passare la corrente nell\'acqua e le bombole piene di gas. Le cose bollenti si prendono con la pinza, mai con le mani!',

@@ -605,6 +605,8 @@ export class Mixture {
     if (this.isEmpty()) return ev;
     const { heatW = 0, lossWK = 0.5, Tenv = AMBIENT, containerC = 0, area = 20, stir = 0, open = true, flame = false, light = false, volts = 0 } = env;
     const dtT = dt * HEAT_SPEED;
+    // il calore delle reazioni scalda (o raffredda) anche il recipiente, come quello che arriva da fuori
+    this.vesselC = containerC;
     this.mix = Math.max(stir, this.mix * Math.exp(-dt / 2));
 
     // calore dall'esterno e dispersione verso l'ambiente
@@ -736,7 +738,7 @@ export class Mixture {
       this.n.set(sid, mol - x);
       this.n.set(hyd.sid, (this.n.get(hyd.sid) ?? 0) + x);
       ev.gases.push([WATER, hyd.w * x]);
-      this.heat(-hyd.w * x * 57000 * 0.2);
+      this.heat(-hyd.w * x * 57000 * 0.2, this.vesselC ?? 0);
     }
   }
 
@@ -829,7 +831,7 @@ export class Mixture {
       // calore: in soluzione la neutralizzazione libera 55,8 kJ per mole d'acqua formata
       let dH = rx.neutral && allDissolved ? -55.8 * rx.neutral : rx.dH ?? (rx.group === 'combustioni' ? -600 : -10);
       if (hasWater && !rx.neutral) dH = Math.max(-150, Math.min(80, dH));
-      this.heat(-dH * 1000 * ext, 0, ev.gases);
+      this.heat(-dH * 1000 * ext, this.vesselC ?? 0, ev.gases);
       ev.reactions.add(rx.id);
       ev.extent.set(rx.id, (ev.extent.get(rx.id) ?? 0) + ext);
     }
@@ -876,7 +878,7 @@ export class Mixture {
     if (!(ext > TINY)) return;
     this.apply(best, ext, hasWater, ev);
     // l'energia viene dall'alimentatore: il contenuto si scalda appena (effetto Joule), non del ΔH della reazione
-    this.heat(I * env.volts * dt * 0.05);
+    this.heat(I * env.volts * dt * 0.05, this.vesselC ?? 0);
     ev.reactions.add(best.id);
     ev.extent.set(best.id, (ev.extent.get(best.id) ?? 0) + ext);
   }
@@ -917,7 +919,7 @@ export class Mixture {
     const ext = Math.min(mol / fr.c, (rate * dt) / fr.c);
     this.n.set(fuel, mol - fr.c * ext);
     for (const p of rx.products) if (p.sid !== WATER) this.n.set(p.sid, (this.n.get(p.sid) ?? 0) + p.c * ext);
-    this.heat(Math.min(-(rx.dH ?? -600), 3000) * 1000 * ext * 0.15);
+    this.heat(Math.min(-(rx.dH ?? -600), 3000) * 1000 * ext * 0.15, this.vesselC ?? 0);
     this.prune();
     return fr.c * ext;
   }

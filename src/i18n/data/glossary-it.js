@@ -626,7 +626,7 @@ export const GLOSSARY_IT = {
     w: 'simulatore|simulatore di laboratorio|gioco del laboratorio',
     d: 'Un gioco in prima persona nel laboratorio di chimica della scuola, ispirato ai simulatori di cucina: prendi becher e bottiglie, pesa sulla bilancia, versa inclinando il recipiente, scalda sulla piastra o sul becco Bunsen e consegna il preparato alla cattedra. Le esercitazioni sono valutate con stelle e soldi; il vetro si rompe, i liquidi si versano, i gas tossici vanno sotto la cappa e i rifiuti nel contenitore giusto. La chimica è quella vera della libreria (554 sostanze e le reazioni del catalogo), in versione realistica o semplificata.',
     k: [['W A S D', 'cammina'], ['A / D', 'con un oggetto in mano: ruotalo'], ['Clic', 'prendi / posa'], ['Sinistro tenuto + mouse', 'versa'], ['E', 'usa'], ['Tasto centrale tenuto', 'lancia'], ['Tab', 'vista del bancone'], ['N', 'quaderno'], ['Esc', 'pausa']],
-    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments'],
+    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook'],
   },
   'ui.gameNotebook': {
     t: 'Quaderno di laboratorio',
@@ -634,6 +634,13 @@ export const GLOSSARY_IT = {
     d: 'Il quaderno è sul bancone, davanti a sinistra (oppure premi N): si apre con un clic e ha due schede. Il tutorial illustrato spiega i comandi e le tecniche del laboratorio, pagina per pagina. Nelle reazioni scoperte ogni reazione del catalogo che vedi avvenire la prima volta finisce nel quaderno: l\'equazione con gli stati fisici, solido (s), liquido (l), gas (g) e sciolto in acqua (aq); il ΔH°, negativo se la reazione libera calore; che cosa si è visto (bolle, precipitato, cambio di colore, calore) e dove l\'hai scoperta. Le pagine sono divise nei 14 gruppi del catalogo con la percentuale scoperta; quelle che il simulatore non sa ancora fare (scariche elettriche, raggi UV, vapore, equilibri, organismi viventi) dicono il perché. Da ogni pagina la reazione si apre nel laboratorio molecolare. Il quaderno resta tra una partita e l\'altra. Se una miscela non reagisce, la finestrella del contenitore spiega che cosa manca: calore, fiamma, catalizzatore, luce, acqua, un reagente, oppure che il metallo è meno attivo (serie di attività).',
     k: [['N', 'apri il quaderno'], ['Clic sul quaderno', 'aprilo dal bancone']],
     s: ['term.reaction', 'term.activitySeries', 'ui.game'],
+  },
+  'ui.gameBook': {
+    t: 'Libro «Come si fa»',
+    w: 'come si fa|libro come si fa|ricetta|ricette',
+    d: 'Nel simulatore il libro «Come si fa» è sul bancone A e sulla cattedra (oppure premi B). Spiega gli strumenti, le tecniche e la sicurezza del laboratorio; dice come si ottiene davvero ognuno dei 118 elementi (una reazione chimica li libera dai composti, solo le reazioni nucleari ne creano di nuovi); trasforma le reazioni del catalogo in ricette: gli ingredienti con le dosi calcolate dalle masse molari e un leggero eccesso, il recipiente e come scaldare, i passi illustrati, che cosa si osserva, i pittogrammi di pericolo e dove va il rifiuto. Ogni ricetta è stata eseguita dal motore del gioco: il libro non promette nulla che il gioco non faccia. Nel Laboratorio libero «Prepara sul banco» mette sul bancone reagenti e vetreria; «Segui la ricetta» apre un riquadro con i passi, che si spuntano da soli. La ricerca trova le ricette per nome, formula o elemento.',
+    k: [['B', 'apri il libro'], ['Clic sul libro', 'aprilo dal bancone o dalla cattedra']],
+    s: ['ui.game', 'ui.gameNotebook', 'ui.gameInstruments', 'term.mole'],
   },
   'ui.gameInstruments': {
     t: 'Strumenti del laboratorio',

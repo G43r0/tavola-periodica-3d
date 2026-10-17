@@ -147,6 +147,24 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   sullo scaffale, sotto olio di paraffina. Più veloce camminare (3 m/s) e correre (5,2 m/s); campo visivo regolabile nel
   menu e nella pausa; barattoli +15 % e bottiglie +10 %. Voci della modalità Spiega «Quaderno di laboratorio» e «Serie di
   attività dei metalli».
+- **Simulatore: libro «Come si fa»** (fase G5 del piano), sul bancone A e sulla cattedra (oppure `B`): 24 pagine di
+  strumenti, 15 di tecniche e 5 di sicurezza scritte a mano, con una vignetta SVG ciascuna; le pagine dei 118 elementi
+  con come si ottengono davvero (nuovi dati con la fonte, `src/game/data/element-production.js`), le ricette che li
+  liberano e il motivo per cui le altre reazioni non si fanno nel laboratorio; **668 ricette** generate dalle reazioni del
+  catalogo (`src/game/book.js`), con ingredienti nelle forme del magazzino, dosi calcolate dalle masse molari e
+  arrotondate come sulla bilancia e sul cilindro, la piastra al livello giusto o il Bunsen, passi illustrati, cosa si
+  osserva, pericoli e smaltimento. Ogni ricetta è eseguita dal motore dei contenitori (`node scripts/book.mjs`, test).
+  Ricerca per nome, formula o elemento, filtro «solo con lo scaffale»; **«Prepara sul banco»** nel Laboratorio libero e
+  **«Segui la ricetta»** con un riquadro dei passi che si spuntano da soli. Pagina del tutorial e voce della modalità
+  Spiega sul libro.
+- **Simulatore: i solidi non si comportano più come liquidi**: nel recipiente la superficie segue il recipiente fino
+  all'angolo di riposo (35°) e poi scivola; versati cadono in grani e su bancone e pavimento fanno un mucchietto conico
+  invece di una pozza.
+- **Corretto**: il calore delle reazioni scalda o raffredda anche il recipiente (prima solo il contenuto: il carbonato di
+  calcio che si decompone nel crogiolo scendeva a 1 K, alcune reazioni salivano a migliaia di gradi); il magazzino del
+  Laboratorio libero mostra di nuovo i metalli in pezzi (zinco, ferro, rame…); il crogiolo nella fiamma del Bunsen arriva
+  a circa 900 °C anche nel calcolo della copertura (317 reazioni con lo scaffale, 504 con l'armadio, 1182 con il
+  magazzino).
 - **Simulatore: strumenti del laboratorio** (fase G4 del piano). **Termometro** e **pH-metro** che si immergono nel
   recipiente e si leggono nella finestrella; **pipetta graduata** da 10 mL (tutta o un millilitro alla volta);
   **buretta** da 50 mL su sostegno con lo zero in alto, la scala a 0,05 mL e il rubinetto a quattro posizioni (chiuso,

@@ -1,7 +1,8 @@
 // Tutorial del quaderno di laboratorio: una pagina per ogni cosa da saper fare (muoversi, prendere e girare gli oggetti,
 // versare, pesare, scaldare, misurare, gli strumenti, le reazioni, la sicurezza), con un'illustrazione stilizzata
 // disegnata qui in SVG (nessuna immagine scaricata) e i passi in game-strings.js (tut_<id>_title, tut_<id>_steps).
-// Lo stesso stile servirà alle vignette del libro «Come si fa». Modulo puro (niente DOM): restituisce stringhe SVG.
+// Lo stesso stile serve alle vignette del libro «Come si fa» (book-figures.js). Modulo puro (niente DOM): restituisce
+// stringhe SVG.
 import { GHS } from './ghs.js';
 
 const INK = '#1d2733';
@@ -23,7 +24,7 @@ const g = (inner, transform) => `<g transform="${transform}">${inner}</g>`;
 /** Becher: angolo in basso a sinistra (x, y), larghezza w, altezza h; liquido fino a `level` (0–1) del colore dato. */
 function beaker(x, y, w, h, { level = 0.5, color = WATER, grad = true } = {}) {
   const lh = h * level;
-  let s = `<rect x="${f(x + 2)}" y="${f(y - lh)}" width="${f(w - 4)}" height="${f(lh - 2)}" fill="${color}" opacity="0.85"/>`;
+  let s = lh > 3 ? `<rect x="${f(x + 2)}" y="${f(y - lh)}" width="${f(w - 4)}" height="${f(lh - 2)}" fill="${color}" opacity="0.85"/>` : '';
   s += path(`M${f(x - 4)} ${f(y - h)} L${f(x)} ${f(y - h + 5)} L${f(x)} ${f(y)} L${f(x + w)} ${f(y)} L${f(x + w)} ${f(y - h)}`, { fill: GLASS });
   if (grad) for (let k = 1; k <= 3; k++) s += path(`M${f(x + w - 9)} ${f(y - (h * k) / 4)} h6`, { 'stroke-width': 1.4 });
   return s;
@@ -144,6 +145,10 @@ const ILLUSTRATIONS = {
   react: (L) => bench() + beaker(40, 160, 60, 72, { level: 0.6 }) + bubbles(46, 102, 46, 52, 9) + rect(60, 150, 18, 8, { fill: '#9aa0a8', stroke: 'none' })
     + rect(124, 30, 180, 34, { fill: '#f6f4ee' }) + text(214, 52, 'Zn + 2 HCl → ZnCl₂ + H₂', { 'font-family': 'IBM Plex Mono, monospace', 'font-size': 12 })
     + arrow(110, 70, 140, 66) + rect(150, 92, 150, 50, { fill: '#fff4d6', stroke: '#e2ad2f' }) + text(225, 112, L('whyNot'), { 'font-size': 11 }) + text(225, 130, L('whyNotEx'), { 'font-size': 9.5, 'font-weight': 400 }),
+  book: (L) => rect(30, 30, 100, 130, { fill: '#8a3f1c', rx: 6 }) + rect(42, 44, 76, 34, { fill: '#f6e7c1' }) + text(80, 66, L('bookCover'), { 'font-size': 12 })
+    + path('M66 96 v14 l-12 24 h52 l-12 -24 v-14', { stroke: '#f6e7c1', 'stroke-width': 3 }) + key(146, 70, 'B')
+    + rect(190, 40, 116, 110, { fill: '#fdfaf2', rx: 8 }) + text(248, 58, L('recipe'), { 'font-size': 11 })
+    + [0, 1, 2, 3].map((k) => (k < 2 ? path(`M200 ${76 + k * 18} l4 5 l8 -9`, { stroke: OK, 'stroke-width': 2.4 }) : circle(206, 76 + k * 18, 3, { 'stroke-width': 1.6 })) + path(`M218 ${76 + k * 18} h76`, { 'stroke-width': 1.6, stroke: k < 2 ? '#9aa5b1' : INK })).join(''),
   notebook: (L) => rect(60, 26, 110, 140, { fill: '#1f5f4a', rx: 6 }) + rect(74, 46, 82, 40, { fill: '#f1ede2' }) + text(115, 70, L('cover'), { 'font-size': 11 })
     + path('M80 110 h70 M80 124 h70 M80 138 h70', { stroke: '#e8efe9', 'stroke-width': 1.6 }) + mouse(196, 60, 'l') + key(240, 70, 'N'),
   safety: (L) => bench() + ghs('GHS05', 50, 60, 52) + ghs('GHS02', 106, 60, 52) + ghs('GHS06', 162, 60, 52)
@@ -183,11 +188,17 @@ const ILLUSTRATIONS = {
     + text(240, 80, L('limewater'), { 'font-size': 11 }) + text(240, 98, L('limewaterResult'), { 'font-size': 11 }),
 };
 
+/** Elementi di disegno e colori, per le vignette del libro «Come si fa» (book-figures.js): stesso stile del tutorial. */
+export const DRAW = { f, path, rect, circle, text, g, beaker, flask, arrow, turn, flame, key, mouse, bubbles, ghs, display, bench, bin, INK, GLASS, WATER, OK, HOT };
+
+/** Illustrazioni del tutorial, anche per le pagine del libro (stesse firme: (parole) → SVG interno). */
+export const TUTORIAL_DRAWINGS = ILLUSTRATIONS;
+
 /** Pagine del tutorial, nell'ordine: id (testi tut_<id>_title e tut_<id>_steps) e illustrazione. */
-export const TUTORIAL = ['notebook', 'move', 'hold', 'pour', 'weigh', 'water', 'heat', 'measure', 'pipette', 'burette', 'filter', 'hot', 'distill', 'electro', 'gas', 'react', 'safety'];
+export const TUTORIAL = ['notebook', 'book', 'move', 'hold', 'pour', 'weigh', 'water', 'heat', 'measure', 'pipette', 'burette', 'filter', 'hot', 'distill', 'electro', 'gas', 'react', 'safety'];
 
 /** Parole scritte nelle illustrazioni (testi tutw_<nome> in game-strings.js). */
-export const ILLUSTRATION_WORDS = ['shift', 'mass', 'ph', 'temp', 'volume', 'voltage', 'hotTemp', 'space', 'place', 'tare', 'spoon', 'water', 'wash', 'whyNot', 'whyNotEx', 'cover', 'binHeavy', 'binAcid', 'binGlass', 'tongs', 'flow', 'precipitate', 'filtrate', 'limewater', 'limewaterResult'];
+export const ILLUSTRATION_WORDS = ['shift', 'mass', 'ph', 'temp', 'volume', 'voltage', 'hotTemp', 'space', 'place', 'tare', 'spoon', 'water', 'wash', 'whyNot', 'whyNotEx', 'cover', 'binHeavy', 'binAcid', 'binGlass', 'tongs', 'flow', 'precipitate', 'filtrate', 'limewater', 'limewaterResult', 'bookCover', 'recipe'];
 
 const escText = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 

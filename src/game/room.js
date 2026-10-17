@@ -20,6 +20,7 @@ export const LAYOUT = {
   strips: { x: 0.95, z: -0.78 },
   lamp: { x: 0.42, z: -0.8 }, // base in fondo al bancone A, il paralume sporge verso il giocatore
   notebook: { x: -1.12, z: -0.17 }, // quaderno di laboratorio sul bancone A, davanti a sinistra
+  book: { x: -1.47, z: -0.2 }, // libro «Come si fa» sul bancone A, a sinistra del quaderno (un altro è sulla cattedra)
   probes: { x: -0.8, z: -0.15 }, // termometro, pH-metro e pipetta, sdraiati davanti alla piastra
   burette: { x: 1.06, z: -0.46 }, // sostegno con la buretta, a sinistra del Bunsen
   tongs: { x: 1.24, z: -0.76 }, // pinza per il crogiolo, accanto al Bunsen
@@ -397,6 +398,68 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   };
   fixtures.push(notebook);
 
+  // ------------------------------------------------------------ libro «Come si fa»: sul bancone A e sulla cattedra
+  const bookCanvas = document.createElement('canvas');
+  bookCanvas.width = 256;
+  bookCanvas.height = 340;
+  const bookTex = new THREE.CanvasTexture(bookCanvas);
+  bookTex.colorSpace = THREE.SRGBColorSpace;
+  bookTex.anisotropy = 8;
+  const bookCover = std({ color: 0x8a3f1c, roughness: 0.55 });
+  const bookTop = new THREE.MeshStandardMaterial({ map: bookTex, roughness: 0.55 });
+  const bookPages = std({ color: 0xf3efe4, roughness: 0.9 });
+  const makeBook = (id, x, y, z, rot) => {
+    const b = { kind: 'book', id, hit: [] };
+    const grp = new THREE.Group();
+    grp.position.set(x, y, z);
+    grp.rotation.y = rot;
+    group.add(grp);
+    // libro rilegato spesso: pagine, copertina con il titolo, dorso
+    b.hit.push(mesh(new THREE.BoxGeometry(0.17, 0.034, 0.24), bookPages, 0, 0.019, 0, { parent: grp }));
+    b.hit.push(mesh(new THREE.BoxGeometry(0.178, 0.004, 0.248), [bookCover, bookCover, bookTop, bookCover, bookCover, bookCover], 0, 0.038, 0, { parent: grp }));
+    b.hit.push(mesh(new THREE.BoxGeometry(0.178, 0.004, 0.248), bookCover, 0, 0.002, 0, { parent: grp }));
+    b.hit.push(mesh(new THREE.BoxGeometry(0.01, 0.04, 0.248), bookCover, -0.088, 0.02, 0, { parent: grp }));
+    physics.box(x, y + 0.02, z, 0.09, 0.02, 0.125, b, rot);
+    fixtures.push(b);
+  };
+  const bk = LAYOUT.book;
+  makeBook('book-bench', bk.x, BENCH_Y, bk.z, -0.12);
+  makeBook('book-desk', LAYOUT.desk.x - 0.45, DESK_Y, LAYOUT.desk.z + 0.1, 0.25);
+  /** Copertina del libro: titolo grande, sottotitolo e una beuta stilizzata (testi nella lingua dell'interfaccia). */
+  const setBookCover = (title, sub) => {
+    const g = bookCanvas.getContext('2d');
+    g.fillStyle = '#8a3f1c';
+    g.fillRect(0, 0, 256, 340);
+    g.strokeStyle = '#e9c46a';
+    g.lineWidth = 4;
+    g.strokeRect(14, 14, 228, 312);
+    g.fillStyle = '#f6e7c1';
+    g.textAlign = 'center';
+    g.font = '700 34px "IBM Plex Sans", sans-serif';
+    g.fillText(title, 128, 92);
+    g.font = '500 17px "IBM Plex Sans", sans-serif';
+    g.fillText(sub, 128, 126);
+    // beuta
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(112, 170);
+    g.lineTo(112, 205);
+    g.lineTo(82, 270);
+    g.lineTo(174, 270);
+    g.lineTo(144, 205);
+    g.lineTo(144, 170);
+    g.stroke();
+    g.fillStyle = '#e9c46a';
+    g.beginPath();
+    g.moveTo(96, 240);
+    g.lineTo(160, 240);
+    g.lineTo(172, 266);
+    g.lineTo(84, 266);
+    g.closePath();
+    g.fill();
+    bookTex.needsUpdate = true;
+  };
+
   // cartine indicatrici
   const st = LAYOUT.strips;
   const strips = { kind: 'strips', id: 'strips', hit: [] };
@@ -633,7 +696,7 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     apparatus.update(dt);
   };
 
-  return { group, fixtures, zones, update, setBoard, setBalance, setLegend, setNotebookCover, bins, props, apparatus, lights: { sun, hemi, ceiling, ceilingB } };
+  return { group, fixtures, zones, update, setBoard, setBalance, setLegend, setNotebookCover, setBookCover, bins, props, apparatus, lights: { sun, hemi, ceiling, ceilingB } };
 }
 
 function fitLine(g, text, x, y, w) {

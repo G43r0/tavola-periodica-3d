@@ -1,6 +1,6 @@
 # Gioco base — piano
 
-Data: 2026-10-14 · Stato: **in corso — G1, G2, G3 e G4 completate** · Parte dal prototipo del simulatore
+Data: 2026-10-14 · Stato: **in corso — G1, G2, G3, G4 e G5 completate** · Parte dal prototipo del simulatore
 ([design](2026-10-13-simulatore-laboratorio-design.md), branch `ccr-9fd85180-nfjaik`, fase 9)
 
 ## Da dove partiamo
@@ -216,7 +216,7 @@ Ogni fase è giocabile da sola, con test e screenshot nei tre preset prima di pa
 | **G2** ✅ | Barattoli e bottiglie nuovi (vetro chiaro, ambrato, plastica); tappi colorati; etichette GHS; scaffale ordinato | G1 |
 | **G3** ✅ | Reazioni al centro: effetti osservabili, equazione nella finestrella, quaderno, condizioni nuove, scaffale ampliato con test di copertura, vista molecolare | G2 |
 | **G4** ✅ | Strumenti nuovi (buretta, pipetta, filtrazione, crogiolo, termometro, pH-metro, elettrolisi, distillazione) | G3 |
-| **G5** | Libro «Come si fa»: lettore e riquadro, strumenti, tecniche, sicurezza, pagine dei 118 elementi, ricette generate con le vignette SVG, «Prepara sul banco», «Segui la ricetta», test che esegue ogni ricetta | G4 |
+| **G5** ✅ | Libro «Come si fa»: lettore e riquadro, strumenti, tecniche, sicurezza, pagine dei 118 elementi, ricette generate con le vignette SVG, «Prepara sul banco», «Segui la ricetta», test che esegue ogni ricetta | G4 |
 | **G6** | Carriera: capitoli 0–4 (~25 esercitazioni) scritti come dati, pagine del libro sbloccate, relazione, negozio, reputazione, salvataggi versionati | G5 |
 | **G7** | Carriera: capitoli 5–9, verifiche, pagella, sfide a tempo, richieste extra | G6 |
 | **G8** | Rifinitura: dettagli della stanza, effetti, audio (se lo vogliamo), prestazioni, inglese e «Spiegamelo come se avessi 6 anni», modalità Spiega, README e CHANGELOG | G7 |
@@ -340,6 +340,41 @@ Verificato con gli screenshot della stessa inquadratura (prima persona, bancone,
   illustrate in SVG (`src/game/tutorial.js`); camminata 3,6 m/s e corsa 6,2 m/s (+20 %).
 - Rimandati: provette e portaprovette, propipetta, beuta da vuoto, triangolo, accenditore piezoelettrico, raccolta dei
   gas su acqua; arriveranno con le esercitazioni che li usano (G6).
+
+### G5 — fatto
+
+- **Ricette generate** (`src/game/book.js`, puro e testato): per ogni reazione del simulatore gli ingredienti nelle forme
+  che il magazzino dà davvero (`storeIndex`: solido, liquido, soluzione 0,1 o 1 M, i gas delle bombole, l'aria; si
+  preferiscono i reagenti dello scaffale e dell'armadio), le dosi da una dose di riferimento di 0,01 mol per coefficiente
+  con un eccesso del 20 % (acidi e basi alla pari), limitate a 60 mL di soluzione, 6 g di solido e 20 mL di liquido
+  puro, arrotondate a 0,05 g e a 1 mL (0,1 mL con la pipetta) e poi ribilanciate; il recipiente; il livello della piastra
+  scelto con la temperatura a cui si ferma il recipiente (`plateEquilibrium`, con le sue perdite) o il Bunsen con la
+  fiamma; catalizzatori e reagenti ausiliari; i passi da modelli per tipo (cappa, pesa, misura, catalizzatore, agita,
+  piastra, Bunsen, fiamma, lampada, alimentatore, bombola, aspetta, osserva, filtra, pinza, smaltisci) con il controllo
+  che li spunta nel gioco; difficoltà da 1 a 3 provette; pittogrammi dei reagenti; cappa per i gas tossici.
+- **Veridicità**: `runRecipe` esegue ogni ricetta con il motore dei contenitori (una combustione è il fuoco nel
+  recipiente, come nel gioco) e la considera riuscita quando ha consumato almeno il 5 % del reagente limitante;
+  `scripts/book.mjs` scrive le 668 riuscite (su 806 costruite) in `src/game/data/book-verified.js` con i secondi di gioco
+  e il rifiuto finale, e un test controlla che il file corrisponda al motore. Le altre 425 reazioni non si fanno nel
+  laboratorio: gas che non ci sono (F₂, CO, H₂S…), forni oltre i 900 °C, sali fusi, esplosivi; quelle costruite ma non
+  riuscite sono soprattutto reazioni tra solidi in cui l'aria arriva prima (il ferro con lo zolfo si ossida).
+- **Pagine scritte a mano** (`src/game/data/book-pages.js`): 24 strumenti, 15 tecniche (con gli esempi numerici di
+  diluizione e titolazione), 5 di sicurezza, in italiano, inglese e versione semplice, con la frase su come si fa nel
+  gioco controllata sul codice; vignette in `src/game/book-figures.js` (le primitive del tutorial).
+- **Elementi**: `src/game/data/element-production.js`, una voce per elemento con la via principale (miniera e industria,
+  aria liquida, elettrolisi, sottoprodotto, reattore, acceleratore, decadimento) e due o tre frasi in italiano e in
+  inglese (fonti CRC Handbook, Greenwood ed Earnshaw, rapporti IUPAC/IUPAP per 101–118); la pagina mostra le ricette che
+  liberano l'elemento e le altre reazioni del catalogo con il motivo.
+- **Nel gioco**: libro sul bancone A e sulla cattedra, tasto `B`, pulsante nella pausa, collegamento dal quaderno;
+  lettore con indice, ricerca per nome, formula ed elemento, filtro «solo con lo scaffale»; «Prepara sul banco» (solo nel
+  Laboratorio libero: nella Carriera il banco lo prepara l'insegnante) e «Segui la ricetta» con il riquadro in basso a
+  sinistra; pagina del tutorial e voce Spiega.
+- **Richieste in corso d'opera**: i solidi non si comportano più come liquidi (angolo di riposo nel recipiente, getto di
+  grani, mucchietto conico su bancone e pavimento).
+- **Correzioni**: il calore delle reazioni passa anche al recipiente; il catalogo del magazzino mostra i metalli in pezzi
+  (leggeva `el.Z` invece di `el.z`); `LAB_MAX_T` sale a 1173 K (crogiolo nella fiamma del Bunsen).
+- Rimandati: le pagine sbloccate dai capitoli e il libro nelle verifiche (G6, con la Carriera); i collegamenti alla
+  scheda dell'elemento nella tavola; le molecole in piccolo accanto all'equazione.
 
 ## Verifiche
 

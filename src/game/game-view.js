@@ -12,10 +12,11 @@ import { ORDERS } from './orders.js';
 import { SHELF, CABINET } from './reagents.js';
 import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
 import { isClick } from './controls.js';
-import { S } from '../sandbox/substances.js';
 import { GAME_STRINGS } from './game-strings.js';
 import { loadNotebook, notebookPages, percent } from './notebook.js';
 import { TUTORIAL, illustration } from './tutorial.js';
+import { storeIndex } from './book.js';
+import { createBookView } from './book-view.js';
 
 const t = createT(GAME_STRINGS);
 const SAVE_KEY = 'tp3d.game';
@@ -65,6 +66,7 @@ const TEMPLATE = () => `
     <div class="gm-tilt" hidden><span></span></div>
     <div class="gm-charge" hidden aria-hidden="true"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9155"/><circle class="gm-charge__fg" cx="18" cy="18" r="15.9155" pathLength="100"/></svg></div>
     <div class="gm-reactions"></div>
+    <aside class="gm-recipe" hidden aria-live="polite"></aside>
   </div>
   <div class="gm-overlay gm-loading" hidden><div class="gm-spinner"></div><p>${t('loading')}</p></div>
   <div class="gm-overlay gm-menu" hidden></div>
@@ -108,6 +110,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   let nbTab = 'tutorial'; // scheda del quaderno: tutorial o reazioni scoperte
   let tutPage = 0; // pagina del tutorial
   let labAbove = false; // il laboratorio molecolare è aperto sopra il simulatore
+  let bookView = null; // lettore del libro «Come si fa» (book-view.js)
   const pressed = new Set(); // tasti premuti (id della legenda): la riga corrispondente si illumina
   const pops = { looked: null, held: null }; // finestrelle accanto agli oggetti (elemento, misure)
 
@@ -130,6 +133,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     game = new LabGame(renderer, R, elements, { t, onEvent });
     game.setFov(fov);
     game.notebook = notebook;
+    bookView = createBookView({ game, t, kj, canOpenLab: () => Boolean(onOpenLab) });
     if (import.meta.env?.DEV) window.__game = game;
     layout();
     $('.gm-loading').hidden = true;
@@ -154,6 +158,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     else if (type === 'answers') showAnswers(data);
     else if (type === 'catalog') showCatalog();
     else if (type === 'notebook') showNotebook('play');
+    else if (type === 'book') showBook();
+    else if (type === 'follow') renderFollow();
     else if (type === 'careerEnd') showCareerEnd(data);
     else if (type === 'reaction') {
       reactionNote(data);
@@ -357,17 +363,11 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   }
 
   function showCatalog() {
-    const lib = game.chem.subs.library.entries
-      .map((e) => {
-        const sid = game.chem.subs.libraryId.get(e.id);
-        const s = game.chem.sub(sid);
-        if (!s || s.flags & S.AQUEOUS) return null;
-        const st = s.kind === 'element' ? (s.mp > 295 ? 'solid' : s.bp > 295 ? 'liquid' : 'gas') : s.state25;
-        return { key: e.id, sid, name: s.name, formula: s.formula || s.symbol, st, soluble: game.chem.solubility(sid, 295) > 0.5 };
-      })
-      .filter((x) => x && x.st !== 'gas');
-    const metals = game.chem.subs.elements.filter((el) => el.Z < 84 && game.chem.sub(el.Z).mp > 295 && !['P', 'As', 'Se'].includes(el.symbol)).map((el) => ({ key: el.symbol, sid: el.Z, name: game.chem.sub(el.Z).name, formula: el.symbol, st: 'solid', soluble: false }));
-    const all = [...lib, ...metals];
+    // le stesse forme che usano le ricette del libro (book.js): sostanze della libreria e metalli in pezzi
+    const all = [...storeIndex(game.chem)].map(([sid, e]) => {
+      const s = game.chem.sub(sid);
+      return { key: e.key, sid, name: s.name, formula: s.formula || s.symbol, st: e.st, soluble: e.soluble };
+    });
     const glass = ['beaker100', 'beaker250', 'flask250', 'cylinder100', 'crucible', 'dish', 'spatula', 'loop'];
     showDialog(`
       <h3>${t('catalogTitle')}</h3>
@@ -428,6 +428,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       <div class="gm-stack">
         <button type="button" class="gm-primary" data-act="play">${t('resume')}</button>
         <button type="button" class="btn-ghost" data-act="help">${icons.keyboard(16)}<span>${t('controls')}</span></button>
+        <button type="button" class="btn-ghost" data-act="book">${icons.book(16)}<span>${t('pauseBook')}</span> <kbd>B</kbd></button>
         ${game.free ? '' : `<button type="button" class="btn-ghost" data-act="restart-order">${t('restartOrder')}</button>`}
         <button type="button" class="btn-ghost" data-act="menu">${t('toMenu')}</button>
         <button type="button" class="btn-ghost" data-act="close">${t('backToTable')}</button>
@@ -504,6 +505,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
         ${tagsHtml(e.tags)}
         ${p.r.desc ? `<p class="gm-nb__desc">${esc(p.r.desc)}</p>` : ''}
         ${onOpenLab ? `<button type="button" class="gm-link" data-nb-lab="${esc(p.id)}">${t('nbOpenLab')}</button>` : ''}
+        ${game.book.byId.has(p.id) ? `<button type="button" class="gm-link" data-bk-open="recipe:${esc(p.id)}">${t('bookTitle')} →</button>` : ''}
       </li>`;
     };
     return `<p class="gm-nb__total">${t('nbTotal', { found: nb.found, doable: nb.doable, total: nb.total, p: percent(nb.found, nb.doable) })}</p>
@@ -515,6 +517,73 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       </div>`;
   }
   const equationOf = (rx, aq) => game.equationText(rx, aq);
+
+  // ---------------------------------------------------------------- libro «Come si fa»
+  /** Apre il libro (o una sua pagina: 'recipe:<id>', 'element:<z>'), come finestra sopra il gioco. */
+  function showBook(target = null) {
+    if (!bookView) return;
+    if (target) bookView.open(target);
+    showDialog(`<h3>${t('bookTitle')}</h3><div class="gm-bk__body"></div>
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="play">${t('done')}</button></div>`, 'gm-book');
+    $('.gm-book').dataset.help = 'ui.gameBook';
+    renderBook();
+  }
+
+  function renderBook() {
+    const body = $('.gm-bk__body');
+    if (!body) return;
+    body.innerHTML = bookView.html();
+    body.querySelector('.gm-bk__main')?.scrollTo?.(0, 0);
+  }
+
+  /** Clic dentro il libro: navigazione, «Prepara sul banco», «Segui la ricetta», laboratorio molecolare. */
+  function bookClick(b) {
+    if (bookView.click(b)) {
+      renderBook();
+      return true;
+    }
+    const d = b.dataset;
+    if (d.bkPrepare) {
+      const recipe = game.book.byId.get(d.bkPrepare);
+      const list = game.prepareRecipe(recipe);
+      game.followRecipe(recipe.id);
+      toast(t('bkPrepared', { list: list.join(', ') }), 'ok', 6000);
+      play();
+      return true;
+    }
+    if (d.bkFollow) {
+      if (game.follow?.recipe.id === d.bkFollow) game.stopFollow();
+      else game.followRecipe(d.bkFollow);
+      play();
+      return true;
+    }
+    if (d.bkLab && onOpenLab) {
+      labAbove = true;
+      onOpenLab(d.bkLab, () => {
+        labAbove = false;
+      });
+      return true;
+    }
+    return false;
+  }
+
+  /** Riquadro della ricetta seguita: i passi, spuntati quando il gioco li riconosce, con quello di adesso evidenziato. */
+  function renderFollow() {
+    const box = $('.gm-recipe');
+    const f = game?.follow;
+    if (!f) {
+      box.hidden = true;
+      return;
+    }
+    const r = f.recipe;
+    const now = f.done.findIndex((d) => !d);
+    box.innerHTML = `<header><b>${esc(t('bkPanelTitle'))}</b> <span>${esc(bookView.recipeTitle(r))}</span>
+        <button type="button" class="gm-recipe__x" data-act="stop-follow" title="${esc(t('bkStopFollow'))}">×</button></header>
+      <ol>${r.steps.map((step, i) => `<li class="${f.done[i] ? 'is-done' : i === now ? 'is-now' : ''}">${esc(bookView.stepText(r, step))}</li>`).join('')}</ol>
+      <footer>${esc(f.complete ? t('bkPanelDone') : t('bkPanelOpen'))}</footer>`;
+    box.hidden = false;
+    box.querySelector('.is-now')?.scrollIntoView?.({ block: 'nearest' });
+  }
 
   function showHelp() {
     const prev = state;
@@ -543,8 +612,12 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   root.addEventListener('click', (ev) => {
     const b = ev.target.closest('button');
     if (!b) return;
+    if (b.closest('.gm-book') && bookClick(b)) return;
     const act = b.dataset.act;
     if (act === 'close') close();
+    else if (act === 'book') showBook();
+    else if (act === 'stop-follow') game.stopFollow();
+    else if (b.dataset.bkOpen) showBook(b.dataset.bkOpen);
     else if (act === 'career') startCareer();
     else if (act === 'career-reset') {
       save.career = null;
@@ -597,12 +670,23 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     }
   });
   root.addEventListener('input', (ev) => {
+    if (ev.target.matches?.('[data-bk-search]')) {
+      bookView.state.query = ev.target.value;
+      const box = $('.gm-bk__results');
+      if (box) box.innerHTML = bookView.results();
+      return;
+    }
     if (ev.target.name !== 'gm-fov') return;
     fov = Number(ev.target.value);
     game?.setFov(fov);
     ev.target.nextElementSibling.textContent = `${fov}°`;
   });
   root.addEventListener('change', (ev) => {
+    if (ev.target.matches?.('[data-bk-shelf]')) {
+      bookView.state.shelfOnly = ev.target.checked;
+      renderBook();
+      return;
+    }
     if (ev.target.name === 'gm-fov') {
       save.fov = fov;
       storeSave(save);
@@ -667,6 +751,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     }
     else if (code === 'KeyH') showHelp();
     else if (code === 'KeyN') showNotebook();
+    else if (code === 'KeyB') showBook();
     else if (code === 'KeyF') {
       // fps per controllare le prestazioni
       fpsShow = !fpsShow;
