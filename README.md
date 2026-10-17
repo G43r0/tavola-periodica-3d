@@ -454,20 +454,25 @@ laboratorio, la reputazione e le sfide a tempo arriveranno nelle prossime versio
 - **Comandi come in *Cooking Simulator***: clic sinistro per prendere, usare gli elementi fissi e posare (dove lo si
   poserà compare la sagoma dell'oggetto, nel punto d'appoggio vero: verde se lì si può, rossa se il piano è inclinato o
   mobile, troppo lontano, a sbalzo o occupato; al clic l'oggetto ci scivola in meno di 0,3 s). Destro tenuto + mouse
-  ruota l'oggetto (per un recipiente anche il beccuccio da cui si versa); un clic destro annulla la rotazione o rimette
-  l'oggetto dove lo si era preso. Il tasto centrale tenuto carica il lancio (da 1,5 a 8 m/s in un secondo, con un anello
+  in su e in giù inclina l'oggetto, senza girarlo (un recipiente versa finché si tiene il tasto); attorno alla verticale
+  lo ruotano `A` e `D`. Un clic destro annulla la rotazione o rimette l'oggetto dove lo si era preso. Il tasto centrale tenuto carica il lancio (da 1,5 a 8 m/s in un secondo, con un anello
   attorno al mirino). `Maiusc` tenuto con un oggetto in mano apre la manipolazione precisa: lo sguardo e i passi si
-  fermano, il mouse sposta l'oggetto (fino a 35 cm), sinistro + mouse lo alza o lo abbassa, destro + mouse lo ruota (un
-  recipiente si inclina e versa goccia a goccia), il tasto centrale lo lascia lì fermo. `Spazio` corre, `Ctrl`
+  fermano, il mouse sposta l'oggetto (fino a 35 cm), sinistro + mouse lo alza o lo abbassa, destro + mouse lo inclina (un
+  recipiente versa goccia a goccia), il tasto centrale lo lascia lì fermo. `Spazio` corre, `Ctrl`
   accovaccia. Un clic sul lavandino con un recipiente in mano lo porta sotto il rubinetto: l'acqua scorre finché si tiene
   premuto il sinistro (la rotella regola il getto da 5 a 50 mL/s), il clic destro smette. `E` pulisce e usa gli
   strumenti (al lavandino lava il recipiente, che si svuota nello scarico).
-- **Versare**: tenendo premuto il tasto sinistro e muovendo il mouse si inclina il recipiente; lasciando il tasto torna
-  dritto e smette di versare, e di lato si corregge la mira. Il livello del liquido resta orizzontale (quantile di ~300
+- **Versare**: si tiene premuto il tasto sinistro (un clic, invece, posa). Guardando un altro recipiente, il lavandino o
+  un bidone, la bocca si porta sopra l'apertura e il recipiente si inclina da solo finché esce un filo (≈ 1-2 mL/s), e
+  continua a inclinarsi mentre si svuota per non fermarsi: il gioco regola l'inclinazione sul carico d'acqua sopra il
+  bordo, così un becher pieno, un barattolo di polvere quasi vuoto e una provetta versano tutti allo stesso modo. Il
+  mouse in su versa più forte, in giù più piano; altrove (o spostando lo sguardo dal bersaglio) si ferma appena prima del
+  bordo, così non si fanno pozze per sbaglio. Lasciando il tasto torna dritto e smette di versare; in prima persona di
+  lato si corregge la mira, nella vista del bancone l'oggetto resta fermo sopra il bersaglio. A mano si inclina con il
+  destro tenuto + mouse. Il livello del liquido resta orizzontale (quantile di ~300
   punti campionati nel volume interno) e il liquido esce dal punto più basso del bordo con la portata di uno stramazzo
   (Q ≈ 1,77 · b · h^1,5, fino a 150 mL/s per un becher): sotto 0,5 mm di carico resta attaccato al bordo, poi esce
-  goccia a goccia, e vicino al bordo il mouse inclina più finemente. Guardando un altro recipiente, la bocca si porta
-  sopra la sua apertura. Un anello mostra dove cadrà il getto già prima della prima goccia: verde in un recipiente, nel
+  goccia a goccia, e inclinando a mano vicino al bordo il mouse è più fine. Un anello mostra dove cadrà il getto già prima della prima goccia: verde in un recipiente, nel
   lavandino o nei rifiuti, rosso se farà una pozza. Il getto è un filo continuo che si assottiglia cadendo e si ferma
   sugli ostacoli (il bordo di un altro becher); il liquido arriva quando il getto tocca il bersaglio.
 - **Strumenti**: becher da 100 e 250 mL, beuta, cilindro graduato (tacche da 1 mL), bottiglie di reagenti con etichetta e

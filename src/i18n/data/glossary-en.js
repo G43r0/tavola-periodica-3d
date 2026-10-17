@@ -623,7 +623,7 @@ export const GLOSSARY_EN = {
     t: 'Laboratory simulator',
     w: 'simulator|laboratory simulator|lab game',
     d: 'A first-person game in the school chemistry lab, inspired by cooking simulators: pick up beakers and bottles, weigh on the balance, pour by tilting the vessel, heat on the hot plate or the Bunsen burner and hand in your preparation at the teacher\'s desk. Exercises are graded with stars and money; glass breaks, liquids spill, toxic gases belong under the fume hood and waste in the right container. The chemistry is the real one of the library (554 substances and the catalogue reactions), in a realistic or simplified version.',
-    k: [['W A S D', 'walk'], ['A / D', 'with an object in hand: rotate it'], ['Click', 'pick up / put down'], ['Hold left + mouse', 'pour'], ['E', 'use'], ['Hold middle button', 'throw'], ['Tab', 'bench view'], ['N', 'notebook'], ['Esc', 'pause']],
+    k: [['W A S D', 'walk'], ['A / D', 'with an object in hand: rotate it'], ['Click', 'pick up / put down'], ['Hold left', 'pour (mouse ↑ more, ↓ less)'], ['Hold right + mouse', 'tilt'], ['E', 'use'], ['Hold middle button', 'throw'], ['Tab', 'bench view'], ['N', 'notebook'], ['Esc', 'pause']],
     s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook'],
   },
   'ui.gameNotebook': {

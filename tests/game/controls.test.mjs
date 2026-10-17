@@ -1,7 +1,7 @@
 // Test della legenda dei comandi (in basso a destra): righe giuste per ogni situazione. npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { legendRows, MAX_ROWS, relaxTilt, tiltGain, throwSpeed, isClick } from '../../src/game/controls.js';
+import { legendRows, MAX_ROWS, POUR_HOLD_MS, relaxTilt, tiltGain, throwSpeed, isClick } from '../../src/game/controls.js';
 
 const keys = (rows) => rows.map((r) => r.key);
 const beaker = { kind: 'beaker250', container: true };
@@ -37,9 +37,9 @@ test('legenda: elementi fissi con lo stato giusto (piastra, rubinetto, rifiuti)'
 
 test('legenda: con un recipiente in mano, i comandi di Cooking Simulator', () => {
   const rows = legendRows({ mode: 'walk', held: beaker, target: null, canPlace: true, canPutBack: true });
-  assert.deepEqual(keys(rows), ['lgPlace', 'lgPour', 'lgSwirl', 'lgRotateKeys', 'lgPutBack', 'lgThrow', 'lgPrecise', 'lgDistance', 'lgHelp']);
-  assert.deepEqual(rows.map((r) => r.keys), [['lmb'], ['lmb', 'mouse'], ['e'], ['ad'], ['rmb'], ['mmb'], ['shift'], ['wheel'], ['h']],
-    'clic posa, sinistro + mouse versa, A e D ruotano, clic destro rimette a posto, tasto centrale lancia');
+  assert.deepEqual(keys(rows), ['lgPlace', 'lgPour', 'lgSwirl', 'lgTilt', 'lgRotateKeys', 'lgPutBack', 'lgThrow', 'lgPrecise', 'lgDistance', 'lgHelp']);
+  assert.deepEqual(rows.map((r) => r.keys), [['lmb'], ['lmb'], ['e'], ['rmb', 'mouse'], ['ad'], ['rmb'], ['mmb'], ['shift'], ['wheel'], ['h']],
+    'clic posa, sinistro tenuto versa, destro + mouse inclina, A e D ruotano, clic destro rimette a posto, tasto centrale lancia');
   // con un oggetto in mano A e D ruotano: nella vista del bancone non cambiano postazione, in prima persona niente passi di lato
   const benchHeld = legendRows({ mode: 'bench', held: beaker, target: null });
   assert.ok(!keys(benchHeld).includes('lgStation'));
@@ -55,6 +55,11 @@ test('legenda: con un recipiente in mano, i comandi di Cooking Simulator', () =>
   const into = legendRows({ mode: 'walk', held: beaker, target: vessel, canPlace: false });
   assert.equal(into[1].key, 'lgPourInto');
   assert.equal(into[1].params.name, 'Becher 100 mL');
+  // anche sopra il lavandino e un bidone tenendo premuto si versa subito
+  assert.equal(legendRows({ mode: 'walk', held: beaker, target: { type: 'fixture', kind: 'sink' } })[1].key, 'lgPourSink');
+  assert.deepEqual(legendRows({ mode: 'walk', held: beaker, target: { type: 'fixture', kind: 'bin', binName: 'vetro' } })[1].params, { bin: 'vetro' });
+  // uno strumento: destro + mouse lo inclina (non lo gira: lo ruotano A e D)
+  assert.deepEqual(legendRows({ mode: 'walk', held: { kind: 'spatula', container: false }, target: null }).find((r) => r.key === 'lgTilt').keys, ['rmb', 'mouse']);
   const sink = legendRows({ mode: 'walk', held: beaker, target: { type: 'fixture', kind: 'sink' } });
   assert.deepEqual(sink[0], { keys: ['lmb'], key: 'lgFill', params: null, off: false }, 'clic sul lavandino: riempi');
   assert.deepEqual(sink.find((r) => r.key === 'lgWash').keys, ['e'], 'E pulisce');
@@ -64,17 +69,23 @@ test('legenda: con un recipiente in mano, i comandi di Cooking Simulator', () =>
   assert.ok(!keys(bin).includes('lgPrecise'), 'la modalità precisa è solo in prima persona');
 });
 
-test('legenda: mentre si versa resta la riga dell\'inclinazione, con il sinistro', () => {
-  const rows = legendRows({ mode: 'walk', held: beaker, target: vessel, pouring: true });
+test('legenda: mentre si versa resta la riga del getto (sinistro) o dell\'inclinazione (destro)', () => {
+  const rows = legendRows({ mode: 'walk', held: beaker, target: vessel, pouring: true, pourAuto: true });
   assert.equal(rows[0].key, 'lgPouringInto');
   assert.deepEqual(rows[0].keys, ['lmb', 'mouse']);
   assert.ok(!keys(rows).includes('lgPlace'));
+  const hand = legendRows({ mode: 'bench', held: beaker, target: vessel, pouring: true, pourAuto: false });
+  assert.deepEqual(hand[0], { keys: ['rmb', 'mouse'], key: 'lgTilting', params: null, off: false });
+  // nella precisione il destro inclina, ma la legenda resta quella della precisione
+  const fine = legendRows({ mode: 'walk', held: beaker, target: vessel, pouring: true, precise: true });
+  assert.equal(fine[0].key, 'lgPreciseMove');
+  assert.ok(POUR_HOLD_MS >= 150 && POUR_HOLD_MS <= 300, 'un clic normale non versa');
 });
 
 test('legenda: modalità precisa (Maiusc tenuto) e riempimento al lavandino', () => {
   const fine = legendRows({ mode: 'walk', held: beaker, target: null, precise: true });
-  assert.deepEqual(keys(fine), ['lgPreciseMove', 'lgPreciseHeight', 'lgPreciseRotatePour', 'lgPreciseLeave', 'lgPreciseExit', 'lgHelp'], 'fermi: niente «cammina»');
-  assert.deepEqual(fine.slice(0, 4).map((r) => r.keys), [['mouse'], ['lmb', 'mouse'], ['rmb', 'mouse'], ['mmb']], 'sinistro alza, destro ruota, centrale lascia');
+  assert.deepEqual(keys(fine), ['lgPreciseMove', 'lgPreciseHeight', 'lgPreciseTiltPour', 'lgPreciseLeave', 'lgPreciseExit', 'lgHelp'], 'fermi: niente «cammina»');
+  assert.deepEqual(fine.slice(0, 4).map((r) => r.keys), [['mouse'], ['lmb', 'mouse'], ['rmb', 'mouse'], ['mmb']], 'sinistro alza, destro inclina, centrale lascia');
   const tool = legendRows({ mode: 'walk', held: { kind: 'spatula', container: false }, target: vessel, precise: true });
   assert.ok(keys(tool).includes('lgSpatulaTake'), 'con uno strumento resta la sua azione');
   const fill = legendRows({ mode: 'walk', held: beaker, target: { type: 'fixture', kind: 'sink' }, filling: true, tapFlow: 25 });

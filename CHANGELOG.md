@@ -160,6 +160,12 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 - **Simulatore: i solidi non si comportano più come liquidi**: nel recipiente la superficie segue il recipiente fino
   all'angolo di riposo (35°) e poi scivola; versati cadono in grani e su bancone e pavimento fanno un mucchietto conico
   invece di una pozza.
+- **Simulatore: versare è facile, come in *Cooking Simulator***. Si tiene premuto il sinistro: sopra un recipiente, il
+  lavandino o un bidone la bocca va sull'apertura e il recipiente si inclina da solo finché esce un filo, e continua a
+  inclinarsi mentre si svuota; il mouse in su versa più forte, in giù più piano. Altrove (o spostando lo sguardo dal
+  bersaglio) si ferma appena prima del bordo, senza pozze per sbaglio; nella vista del bancone l'oggetto resta fermo
+  sopra il bersaglio mentre si versa. Il destro tenuto + mouse inclina soltanto (non gira più l'oggetto: lo ruotano `A`
+  e `D`), anche per gli strumenti; la rotella con il destro non ruota più a scatti.
 - **Corretto**: il calore delle reazioni scalda o raffredda anche il recipiente (prima solo il contenuto: il carbonato di
   calcio che si decompone nel crogiolo scendeva a 1 K, alcune reazioni salivano a migliaia di gradi); il magazzino del
   Laboratorio libero mostra i metalli in pezzi (zinco, ferro, rame…), che per un errore non comparivano; il crogiolo nella fiamma del Bunsen arriva

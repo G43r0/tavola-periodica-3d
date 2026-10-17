@@ -34,12 +34,18 @@ const RESIDUE_ML = 0.2;
 const TAP_FLOW = 25; // mL/s, portata iniziale del rubinetto (la rotella la cambia da 5 a 50)
 const PLACE_REACH = 0.6; // m: si posa con precisione solo vicino all'oggetto in mano
 const PLACE_LIFT = 0.002; // m sopra il piano: poi la gravità lo appoggia
-const ROT_SPEED = 0.005; // rad per pixel con R premuto
-const ROT_STEP = Math.PI / 12; // scatto della rotella con R premuto (15°)
+const ROT_SPEED = 0.005; // rad per pixel: destro + mouse inclina uno strumento
 const ROT_KEYS = 2.4; // rad/s: rotazione dell'oggetto in mano con A e D (un giro in 2,6 s)
 const PRECISE_STEP = 0.0015; // m per pixel nella manipolazione precisa
 const PRECISE_RANGE = 0.35; // m attorno al punto di partenza
 const PUT_BACK_REACH = 1.2; // m: il clic destro rimette a posto l'oggetto solo vicino al punto da cui lo si è preso
+// versamento con il sinistro tenuto: il recipiente si inclina da solo finché il carico sul bordo (pourHead) è quello voluto
+const POUR_START = 0.0015; // m: sopra un recipiente, il lavandino o un bidone esce subito un filo (≈ 1-2 mL/s)
+const POUR_BRIM = -0.003; // m: altrimenti si ferma appena prima del bordo (niente pozze per sbaglio)
+const POUR_GOAL = [-0.02, 0.012]; // m: carico voluto, da raddrizzato (mouse in giù) a getto pieno (mouse in su)
+const POUR_GOAL_STEP = 0.00004; // m per pixel: 100 pixel in su ≈ 4 mm di carico in più
+const RMB_TILT = 1.5; // destro + mouse su un recipiente: 0,0045 × 1,5 rad per pixel (90° in circa 230 pixel)
+const POUR_EMPTY_TILT = 2; // rad: vuoto (o quasi), si inclina fin qui e non oltre
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _q = new THREE.Quaternion();
@@ -156,7 +162,9 @@ export class LabGame {
     this.holdDist = 0.5;
     this.lift = 0.16;
     this.tilt = 0;
-    this.pouring = false;
+    this.pouring = false; // si tiene il tasto con cui si versa: l'inclinazione non torna a 0
+    this.pourAuto = false; // versamento con il sinistro: l'inclinazione la regola il gioco (autoTilt)
+    this.pourBoost = 0; // quanto carico in più (o in meno) si è chiesto con il mouse durante il versamento (m)
     this.swirlT = 0;
     this.spraying = false;
     this.spot = null; // dove si poserebbe l'oggetto in mano: { pos, quat, valid }
@@ -164,8 +172,8 @@ export class LabGame {
     this.ghostMats = { ok: ghostMaterial(0x5fd38d), bad: ghostMaterial(0xe0524a) };
     this.placing = null; // posa morbida: { item, pos, quat, t }, l'oggetto scivola al suo posto
     this.charge = null; // istante in cui si è cominciato a caricare il lancio (Q tenuto)
-    this.rotating = false; // destro tenuto: il mouse ruota l'oggetto in mano invece di girare lo sguardo
-    this.rotPour = false; // nella precisione il destro inclina anche il recipiente (versamento goccia a goccia)
+    this.rotating = false; // destro tenuto: il mouse inclina l'oggetto in mano invece di girare lo sguardo
+    this.rotPour = false; // ...e, se è un recipiente, versa (l'inclinazione resta finché si tiene il tasto)
     this.precise = null; // manipolazione precisa (Maiusc tenuto): { anchor, off }
     this.filling = false; // clic sul lavandino con un recipiente: è sotto il rubinetto, l'acqua scorre tenendo il sinistro
     this.tapWasOn = false;
@@ -806,6 +814,7 @@ export class LabGame {
   letGo() {
     this.held = null;
     this.pouring = false;
+    this.pourAuto = false;
     this.spraying = false;
     this.charge = null;
     this.spot = null;
@@ -887,12 +896,15 @@ export class LabGame {
     if (this.held) this.release(throwSpeed(s));
   }
 
-  /** Destro premuto con un oggetto in mano: il mouse lo ruota (nella precisione un recipiente si inclina e versa). */
+  /** Destro premuto con un oggetto in mano: il mouse lo inclina (un recipiente versa, a mano, finché si tiene il tasto). */
   startRotate() {
     if (!this.held) return;
     this.rotating = true;
-    this.rotPour = Boolean(this.precise && this.held.def.container);
-    if (this.rotPour) this.pouring = true;
+    this.rotPour = Boolean(this.held.def.container);
+    if (this.rotPour) {
+      this.pouring = true;
+      this.pourAuto = false;
+    }
   }
 
   endRotate() {
@@ -902,21 +914,14 @@ export class LabGame {
   }
 
   /**
-   * Destro + mouse: ruota l'oggetto in mano attorno alla verticale; in su e in giù inclina gli strumenti e, nella
-   * manipolazione precisa, i recipienti (è così che si versa goccia a goccia).
+   * Destro + mouse: solo in su e in giù, inclina l'oggetto in mano (un recipiente verso la bocca, ed è così che si versa
+   * a mano, goccia a goccia nella manipolazione precisa). Non lo gira: attorno alla verticale lo ruotano A e D.
    */
-  rotateBy(dx, dy) {
+  tiltHeld(dy) {
     const item = this.held;
     if (!item) return;
-    item.rotYaw = wrapAngle((item.rotYaw ?? 0) - dx * ROT_SPEED);
-    if (!item.def.container) item.rotPitch = clamp((item.rotPitch ?? 0) - dy * ROT_SPEED, -1.2, 1.2);
-    else if (this.rotPour) this.tiltBy(-dy);
-  }
-
-  /** Destro + rotella: ruota a scatti di 15°. */
-  rotateStep(dir) {
-    const item = this.held;
-    if (item) item.rotYaw = wrapAngle(Math.round((item.rotYaw ?? 0) / ROT_STEP) * ROT_STEP + dir * ROT_STEP);
+    if (item.def.container) this.tiltBy(-dy * RMB_TILT);
+    else item.rotPitch = clamp((item.rotPitch ?? 0) - dy * ROT_SPEED, -1.2, 1.2);
   }
 
   /** Annulla la rotazione: l'oggetto torna dritto. */
@@ -928,8 +933,8 @@ export class LabGame {
 
   /**
    * Maiusc tenuto con un oggetto in mano (in prima persona): manipolazione precisa. Lo sguardo e i passi si fermano, il
-   * mouse sposta l'oggetto attorno al punto in cui era, sinistro + mouse lo alza o lo abbassa, destro + mouse lo ruota,
-   * il tasto centrale lo lascia lì.
+   * mouse sposta l'oggetto attorno al punto in cui era, sinistro + mouse lo alza o lo abbassa, destro + mouse lo inclina
+   * (un recipiente versa goccia a goccia), il tasto centrale lo lascia lì.
    */
   setPrecise(on) {
     if (on && this.held && !this.precise && this.player.mode === 'walk' && !this.filling) {
@@ -990,8 +995,50 @@ export class LabGame {
     this.fx.sink.tap = this.tapWasOn;
   }
 
+  /**
+   * Sinistro tenuto con un recipiente: si versa. Il recipiente si inclina da solo fin dove esce un filo (sopra un altro
+   * recipiente, il lavandino o un bidone) o fino al bordo (altrove: spostando lo sguardo dal bersaglio il getto si
+   * ferma), e mentre si svuota continua a inclinarsi per non fermarsi; il mouse in su versa più forte, in giù più piano
+   * (pourMore).
+   */
   setPour(on) {
     this.pouring = on && Boolean(this.held);
+    this.pourAuto = this.pouring && Boolean(this.held.def.container) && !this.filling;
+    this.pourBoost = 0;
+  }
+
+  /** Mouse durante il versamento con il sinistro: in su (dy < 0) più getto, in giù meno (fino a raddrizzarlo). */
+  pourMore(dy) {
+    if (this.pourAuto) this.pourBoost = clamp(this.pourBoost - dy * POUR_GOAL_STEP, POUR_GOAL[0] - POUR_START, POUR_GOAL[1] - POUR_BRIM);
+  }
+
+  /** Carico sul bordo voluto ora: un filo sopra un bersaglio, il bordo altrove, più quanto chiesto con il mouse. */
+  pourGoal() {
+    return clamp((this.pourTarget() ? POUR_START : POUR_BRIM) + this.pourBoost, POUR_GOAL[0], POUR_GOAL[1]);
+  }
+
+  /** Si guarda dove si può versare: un altro recipiente, il lavandino o un bidone dei rifiuti. */
+  pourTarget() {
+    const h = this.hover;
+    if (h?.type === 'item') return Boolean(h.item.def.container && h.item !== this.held);
+    return h?.type === 'fixture' && (h.fixture.kind === 'sink' || h.fixture.kind === 'bin');
+  }
+
+  /**
+   * Inclinazione automatica del versamento con il sinistro: porta il carico sul bordo verso pourGoal() in circa un quarto
+   * di secondo (la velocità si divide per il raggio della bocca: una provetta va piano quanto un becher). Senza carico
+   * (vuoto, o quasi) si inclina fino a POUR_EMPTY_TILT.
+   */
+  autoTilt(dt) {
+    const item = this.held;
+    if (!this.pourAuto || !item?.def.container || this.filling) return;
+    const h = item.pourHead;
+    if (h === undefined) {
+      if (this.tilt < POUR_EMPTY_TILT) this.tilt = Math.min(POUR_EMPTY_TILT, this.tilt + 1.5 * dt);
+      return;
+    }
+    const rate = clamp((this.pourGoal() - h) / (item.def.rimR * 0.25), -3, 3);
+    this.tilt = clamp(this.tilt + rate * dt, 0, 2.6);
   }
 
   /** Inclina l'oggetto in mano (mouse con il sinistro tenuto); vicino al bordo, dove inizia il versamento, più finemente. */
@@ -1005,7 +1052,6 @@ export class LabGame {
   }
 
   wheel(delta) {
-    if (this.held && this.rotating) return this.rotateStep(delta < 0 ? 1 : -1);
     if (this.filling) {
       this.tapFlow = clamp(this.tapFlow + (delta < 0 ? 5 : -5), 5, 50);
       return;
@@ -2380,6 +2426,7 @@ export class LabGame {
     if (this.swirlT > 0) this.swirlT -= dt;
     // lasciato il tasto, il contenitore torna dritto da solo (e smette di versare)
     if (this.held) this.tilt = relaxTilt(this.tilt, dt, this.pouring);
+    this.autoTilt(dt);
     // con un oggetto in mano A e D lo ruotano attorno alla verticale (e non si fa un passo di lato)
     this.player.noStrafe = Boolean(this.held);
     if (this.held && !blocked) {
@@ -2529,6 +2576,7 @@ export class LabGame {
       target,
       canPlace: Boolean(this.spot?.valid),
       pouring: this.pouring,
+      pourAuto: this.pourAuto,
       precise: Boolean(this.precise),
       filling: this.filling,
       tapFlow: this.tapFlow,

@@ -625,7 +625,7 @@ export const GLOSSARY_IT = {
     t: 'Simulatore di laboratorio',
     w: 'simulatore|simulatore di laboratorio|gioco del laboratorio',
     d: 'Un gioco in prima persona nel laboratorio di chimica della scuola, ispirato ai simulatori di cucina: prendi becher e bottiglie, pesa sulla bilancia, versa inclinando il recipiente, scalda sulla piastra o sul becco Bunsen e consegna il preparato alla cattedra. Le esercitazioni sono valutate con stelle e soldi; il vetro si rompe, i liquidi si versano, i gas tossici vanno sotto la cappa e i rifiuti nel contenitore giusto. La chimica è quella vera della libreria (554 sostanze e le reazioni del catalogo), in versione realistica o semplificata.',
-    k: [['W A S D', 'cammina'], ['A / D', 'con un oggetto in mano: ruotalo'], ['Clic', 'prendi / posa'], ['Sinistro tenuto + mouse', 'versa'], ['E', 'usa'], ['Tasto centrale tenuto', 'lancia'], ['Tab', 'vista del bancone'], ['N', 'quaderno'], ['Esc', 'pausa']],
+    k: [['W A S D', 'cammina'], ['A / D', 'con un oggetto in mano: ruotalo'], ['Clic', 'prendi / posa'], ['Sinistro tenuto', 'versa (mouse ↑ più, ↓ meno)'], ['Destro tenuto + mouse', 'inclina'], ['E', 'usa'], ['Tasto centrale tenuto', 'lancia'], ['Tab', 'vista del bancone'], ['N', 'quaderno'], ['Esc', 'pausa']],
     s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook'],
   },
   'ui.gameNotebook': {

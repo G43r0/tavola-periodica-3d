@@ -11,7 +11,7 @@ import { LabGame, FOV } from './game.js';
 import { ORDERS } from './orders.js';
 import { SHELF, CABINET } from './reagents.js';
 import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
-import { isClick } from './controls.js';
+import { isClick, POUR_HOLD_MS } from './controls.js';
 import { GAME_STRINGS } from './game-strings.js';
 import { loadNotebook, notebookPages, percent } from './notebook.js';
 import { TUTORIAL, illustration } from './tutorial.js';
@@ -96,10 +96,10 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   let lastT = 0;
   let hudAcc = 0;
   let state = 'menu'; // menu | play | dialog | pause
-  // tasti del mouse premuti: per distinguere un clic da un trascinamento (come in Cooking Simulator il sinistro posa con
-  // un clic e versa trascinando, il destro annulla o rimette a posto con un clic e ruota trascinando)
-  let lmb = null; // { moved, done, pour }
-  let rmb = null; // { moved, dx, dy }
+  // tasti del mouse premuti: per distinguere un clic da un tasto tenuto (come in Cooking Simulator il sinistro posa con
+  // un clic e versa tenuto, il destro annulla o rimette a posto con un clic e inclina trascinando)
+  let lmb = null; // { moved, done, pour, t }
+  let rmb = null; // { moved, dy }
   let save = loadSave();
   let chemMode = save.chemMode ?? 'real';
   let showInfo = true;
@@ -789,8 +789,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     return null;
   }
 
-  // mouse come in Cooking Simulator: sinistro prende, usa e posa (trascinando con un recipiente versa; nella precisione
-  // alza), destro ruota trascinando (un clic annulla la rotazione o rimette a posto), tasto centrale lancia
+  // mouse come in Cooking Simulator: sinistro prende, usa e posa (tenuto con un recipiente versa; nella precisione
+  // alza), destro inclina trascinando (un clic annulla la rotazione o rimette a posto), tasto centrale lancia
   stage.addEventListener('mousedown', (ev) => {
     if (state !== 'play') return;
     if (game.player.mode === 'walk' && !locked()) {
@@ -799,7 +799,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     }
     if (ev.button === 0) {
       pressed.add('lmb');
-      lmb = { moved: 0, done: false, pour: false };
+      lmb = { moved: 0, done: false, pour: false, t: performance.now() };
       if (game.filling) {
         game.setWater(true);
         lmb.done = true;
@@ -814,7 +814,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       game.middleDown();
     } else if (ev.button === 2) {
       pressed.add('rmb');
-      rmb = { moved: 0, dx: 0, dy: 0 };
+      rmb = { moved: 0, dy: 0 };
       game.startRotate();
     }
   });
@@ -847,44 +847,47 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     const dx = jump ? 0 : ev.movementX;
     const dy = jump ? 0 : ev.movementY;
     const walk = game.player.mode === 'walk';
-    // destro tenuto con un oggetto in mano: il mouse lo ruota (lo sguardo e, nella vista del bancone, il punto di presa
-    // restano fermi). La rotazione parte oltre i 4 pixel, così un clic non gira l'oggetto prima di annullare
+    // destro tenuto con un oggetto in mano: il mouse, in su e in giù, lo inclina e basta (lo sguardo e, nella vista del
+    // bancone, il punto di presa restano fermi). Parte oltre i 4 pixel, così un clic non lo inclina prima di annullare
     if (rmb && game.held) {
       rmb.moved += Math.abs(dx) + Math.abs(dy);
-      rmb.dx += dx;
       rmb.dy += dy;
       if (!isClick(rmb.moved)) {
-        game.rotateBy(rmb.dx, rmb.dy);
-        rmb.dx = 0;
+        game.tiltHeld(rmb.dy);
         rmb.dy = 0;
       }
+      return;
+    }
+    if (lmb && game.held && !game.filling) lmb.moved += Math.abs(dx) + Math.abs(dy);
+    // sinistro tenuto con un recipiente: si versa (si inclina da solo); il mouse in su versa di più, in giù di meno. Di
+    // lato, in prima persona, lo sguardo gira a metà velocità per correggere la mira; nella vista del bancone il punto di
+    // presa resta fermo, così il recipiente non scappa da quello in cui si versa
+    if (lmb && canPour() && (lmb.pour || !isClick(lmb.moved))) {
+      if (!lmb.pour) startPour();
+      game.pourMore(dy * (walk ? 1 : 1.4));
+      if (walk && locked()) game.player.look(dx * 0.5, 0);
       return;
     }
     const r = stage.getBoundingClientRect();
     game.setMouse(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
     if (jump) return;
-    if (lmb && game.held && !game.filling) {
-      lmb.moved += Math.abs(dx) + Math.abs(dy);
-      // nella manipolazione precisa sinistro + mouse alza e abbassa l'oggetto
-      if (game.precise) {
-        game.preciseLift(dy);
-        return;
-      }
-      // con un recipiente, sinistro tenuto + mouse: in su inclina (versa), in giù raddrizza; di lato si continua a
-      // girare lo sguardo, a metà velocità, per correggere la mira
-      if (game.held.def.container && !lmb.done && !isClick(lmb.moved)) {
-        if (!lmb.pour) {
-          lmb.pour = true;
-          game.setPour(true);
-        }
-        game.tiltBy(-dy * (walk ? 1 : 1.4));
-        if (walk && locked()) game.player.look(dx * 0.5, 0);
-        return;
-      }
+    // nella manipolazione precisa sinistro + mouse alza e abbassa l'oggetto
+    if (lmb && game.held && game.precise && !game.filling) {
+      game.preciseLift(dy);
+      return;
     }
     if (game.precise) game.preciseMove(dx, dy);
     else if (walk && locked()) game.player.look(dx, dy);
   });
+  /** Con il sinistro si versa: un recipiente in mano, fuori dalla manipolazione precisa e dal rubinetto. */
+  function canPour() {
+    return Boolean(game?.held?.def.container) && !game.precise && !game.filling && !lmb?.done;
+  }
+  function startPour() {
+    lmb.pour = true;
+    game.setPour(true);
+  }
+
   stage.addEventListener('wheel', (ev) => {
     if (state !== 'play') return;
     ev.preventDefault();
@@ -1048,6 +1051,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     const dt = Math.min(0.05, lastT ? (now - lastT) / 1000 : 0.016);
     lastT = now;
     if (!game) return;
+    // sinistro tenuto fermo con un recipiente in mano: dopo un attimo comincia a versare (un clic, invece, lo posa)
+    if (state === 'play' && lmb && !lmb.pour && canPour() && isClick(lmb.moved) && now - lmb.t > POUR_HOLD_MS) startPour();
     if (state === 'play' || state === 'dialog') game.update(state === 'play' ? dt : 0, { blocked: state !== 'play' });
     game.render();
     if (state !== 'menu') {

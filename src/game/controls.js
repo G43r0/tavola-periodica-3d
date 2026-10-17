@@ -5,13 +5,17 @@
 
 /**
  * Tasti che compaiono nella legenda (etichette nei testi: key_<id>). Lo schema è quello di Cooking Simulator: clic
- * sinistro prende, posa e usa (tenuto con il mouse versa), destro tenuto ruota (un clic annulla o rimette a posto),
- * tasto centrale lancia, Maiusc tenuto per la precisione, E per pulire e usare gli strumenti.
+ * sinistro prende, posa e usa (tenuto con un recipiente versa), destro tenuto + mouse inclina (un clic annulla la
+ * rotazione o rimette a posto), A e D ruotano, tasto centrale lancia, Maiusc tenuto per la precisione, E per pulire e
+ * usare gli strumenti.
  */
 export const KEY_IDS = ['lmb', 'rmb', 'mmb', 'mouse', 'mousex', 'wheel', 'e', 'shift', 'tab', 'h', 'wasd', 'ad'];
 
 /** Righe al massimo (le ultime sono quelle di base: movimento, visuale, aiuto). */
-export const MAX_ROWS = 9;
+export const MAX_ROWS = 10;
+
+/** Millisecondi di sinistro tenuto fermo, con un recipiente in mano, dopo cui si comincia a versare (prima è un clic). */
+export const POUR_HOLD_MS = 200;
 
 const row = (keys, key, params = null, off = false) => ({ keys, key, params, off });
 
@@ -108,10 +112,11 @@ function toolRows(held, target) {
  * @param {{mode: 'walk'|'bench', held: null|{kind: string, container: boolean, loaded?: boolean},
  *          target: null|{type: 'item'|'fixture'|'puddle', kind?: string, name?: string, container?: boolean,
  *                         on?: boolean, level?: number, binName?: string, stain?: boolean, heap?: boolean},
- *          canPlace?: boolean, pouring?: boolean, precise?: boolean, filling?: boolean, tapFlow?: number,
+ *          canPlace?: boolean, pouring?: boolean, pourAuto?: boolean, precise?: boolean, filling?: boolean, tapFlow?: number,
  *          rotated?: boolean, canPutBack?: boolean, tongs?: boolean}} s
  *   target.rig: apparecchio fisso (buretta, imbuto, pallone) con target.level = posizione del rubinetto; target.hot:
- *   scotta (senza la pinza non si prende); held.probing: lo strumento in mano è immerso in un recipiente
+ *   scotta (senza la pinza non si prende); held.probing: lo strumento in mano è immerso in un recipiente; pourAuto: si
+ *   versa con il sinistro (il recipiente si inclina da solo), altrimenti pouring vuol dire che lo si inclina con il destro
  * @returns {{keys: string[], key: string, params: object|null, off: boolean}[]}
  */
 export function legendRows(s) {
@@ -125,27 +130,33 @@ export function legendRows(s) {
       out.push(row(['lmb'], 'lgFillHold'));
       out.push(row(['wheel'], 'lgTapFlow', { ml: s.tapFlow ?? 0 }));
       out.push(row(['rmb'], 'lgFillStop'));
-    } else if (held.container && s.pouring) {
-      // mentre si versa contano solo l'inclinazione e dove va il liquido
-      out.push(row(['lmb', 'mouse'], into ? 'lgPouringInto' : 'lgPouring', { name: target?.name ?? '' }));
+    } else if (held.container && s.pouring && !s.precise) {
+      // mentre si versa contano solo il getto (o l'inclinazione, con il destro) e dove va il liquido
+      if (s.pourAuto) out.push(row(['lmb', 'mouse'], into ? 'lgPouringInto' : 'lgPouring', { name: target?.name ?? '' }));
+      else out.push(row(['rmb', 'mouse'], 'lgTilting'));
     } else if (s.precise) {
       // manipolazione precisa (Maiusc tenuto): la camera è ferma, il mouse sposta l'oggetto
       out.push(row(['mouse'], 'lgPreciseMove'));
       out.push(row(['lmb', 'mouse'], 'lgPreciseHeight'));
-      out.push(row(['rmb', 'mouse'], held.container ? 'lgPreciseRotatePour' : 'lgRotate'));
+      out.push(row(['rmb', 'mouse'], held.container ? 'lgPreciseTiltPour' : 'lgTilt'));
       out.push(row(['mmb'], 'lgPreciseLeave'));
       if (!held.container) out.push(...toolRows(held, target).slice(0, 1));
       out.push(row(['shift'], 'lgPreciseExit'));
     } else {
       out.push(row(['lmb'], held.container && f?.kind === 'sink' ? 'lgFill' : s.canPlace ? 'lgPlace' : 'lgDrop'));
       if (held.container) {
-        out.push(row(['lmb', 'mouse'], into ? 'lgPourInto' : 'lgPour', { name: into ? target.name : '' }));
+        // tenuto: versa (sopra un recipiente, il lavandino o un bidone esce subito; altrove si ferma al bordo)
+        if (into) out.push(row(['lmb'], 'lgPourInto', { name: target.name }));
+        else if (f?.kind === 'sink') out.push(row(['lmb'], 'lgPourSink'));
+        else if (f?.kind === 'bin') out.push(row(['lmb'], 'lgPourBin', { bin: f.binName ?? '' }));
+        else out.push(row(['lmb'], 'lgPour'));
         if (f?.kind === 'sink') out.push(row(['e'], 'lgWash'));
         else if (f?.kind === 'bin') out.push(row(['e'], 'lgEmpty', { bin: f.binName ?? '' }));
         else if (f && fixtureRow(f, 'e')) out.push(fixtureRow(f, 'e'));
         else if (target?.rig && rigRows(target, 'e').length) out.push(rigRows(target, 'e')[0]);
         else out.push(row(['e'], 'lgSwirl'));
       } else out.push(...toolRows(held, target));
+      out.push(row(['rmb', 'mouse'], 'lgTilt'));
       out.push(row(['ad'], 'lgRotateKeys'));
       out.push(s.rotated ? row(['rmb'], 'lgCancelRotation') : row(['rmb'], 'lgPutBack', null, !s.canPutBack));
       out.push(row(['mmb'], 'lgThrow'));
@@ -203,7 +214,7 @@ export function throwSpeed(seconds) {
 
 /**
  * Un clic (non un trascinamento): il mouse si è mosso meno di 4 pixel. Con un recipiente in mano il clic sinistro posa,
- * il trascinamento versa; il clic destro annulla la rotazione o rimette a posto, il trascinamento ruota.
+ * tenerlo premuto (o trascinare) versa; il clic destro annulla la rotazione o rimette a posto, il trascinamento inclina.
  */
 export function isClick(movedPx) {
   return movedPx < 4;
