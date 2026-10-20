@@ -6,17 +6,25 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { gfx } from '../gfx/preset.js';
-import { locale } from '../i18n/index.js';
+import { locale, pick } from '../i18n/index.js';
 import { Physics } from './physics.js';
 import { buildRoom, ROOM, LAYOUT, BENCH_Y, DESK_Y, STATIONS } from './room.js';
-import { DEFS, createItem, syncItem, disposeItem, placeItem, itemMaterials, itemMassGrams } from './items.js';
-import { liquidLevel, pourRate, ballisticLanding } from './liquid.js';
-import { Drops, Puffs, Stream, createPuddle, puddleRadius, puddleState, stainAlphaMap } from './effects.js';
+import { DEFS, createItem, syncItem, disposeItem, placeItem, itemMaterials, itemMassGrams, updateContactShadow, grainTexture } from './items.js';
+import { liquidLevel, pourRate, ballisticLanding, reposeNormal, heapSize } from './liquid.js';
+import { Drops, Motes, Puffs, Stream, createPuddle, createHeap, puddleRadius, puddleState, stainAlphaMap } from './effects.js';
 import { Player } from './player.js';
 import { createLabChemistry, Mixture, wasteClass, binAccepts, AMBIENT } from './mixture.js';
-import { SHELF, PRICES, UNIVERSAL_SCALE, FLAME_SALTS } from './reagents.js';
-import { ORDERS, grade } from './orders.js';
+import { S } from '../sandbox/substances.js';
+import { SHELF, CABINET, OIL, PRICES, UNIVERSAL_SCALE, FLAME_SALTS, AQUEOUS_NAMES } from './reagents.js';
+import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
+import { reactionSignals, signalTags, equation, whyNot } from './signals.js';
+import { emptyNotebook, recordReaction } from './notebook.js';
+import { EXERCISE_BY_ID, pickSamples, sampleValue, contentMixture, evaluateExercise, stepsDone, answerCount, answerOptions, reportQuestions, gradeExercise, bookUnlocks, chapterExercises } from './career.js';
 import { legendRows, relaxTilt, tiltGain, throwSpeed } from './controls.js';
+import { Apparatus, PERMANENT_TOOLS } from './apparatus.js';
+import { nextLevel } from './apparatus-logic.js';
+import { bookRecipes, elementPages, reagentOf } from './book.js';
+import BOOK_VERIFIED from './data/book-verified.js';
 
 const WATER = 123;
 const REACH = 2.3;
@@ -26,16 +34,29 @@ const RESIDUE_ML = 0.2;
 const TAP_FLOW = 25; // mL/s, portata iniziale del rubinetto (la rotella la cambia da 5 a 50)
 const PLACE_REACH = 0.6; // m: si posa con precisione solo vicino all'oggetto in mano
 const PLACE_LIFT = 0.002; // m sopra il piano: poi la gravità lo appoggia
-const ROT_SPEED = 0.005; // rad per pixel con R premuto
-const ROT_STEP = Math.PI / 12; // scatto della rotella con R premuto (15°)
+const ROT_SPEED = 0.005; // rad per pixel: destro + mouse inclina uno strumento
+const ROT_KEYS = 2.4; // rad/s: rotazione dell'oggetto in mano con A e D (un giro in 2,6 s)
 const PRECISE_STEP = 0.0015; // m per pixel nella manipolazione precisa
 const PRECISE_RANGE = 0.35; // m attorno al punto di partenza
 const PUT_BACK_REACH = 1.2; // m: il clic destro rimette a posto l'oggetto solo vicino al punto da cui lo si è preso
+// versamento con il sinistro tenuto: il recipiente si inclina da solo finché il carico sul bordo (pourHead) è quello voluto
+const POUR_START = 0.0015; // m: sopra un recipiente, il lavandino o un bidone esce subito un filo (≈ 1-2 mL/s)
+const POUR_BRIM = -0.003; // m: altrimenti si ferma appena prima del bordo (niente pozze per sbaglio)
+const POUR_GOAL = [-0.02, 0.012]; // m: carico voluto, da raddrizzato (mouse in giù) a getto pieno (mouse in su)
+const POUR_GOAL_STEP = 0.00004; // m per pixel: 100 pixel in su ≈ 4 mm di carico in più
+const RMB_TILT = 1.5; // destro + mouse su un recipiente: 0,0045 × 1,5 rad per pixel (90° in circa 230 pixel)
+const POUR_EMPTY_TILT = 2; // rad: vuoto (o quasi), si inclina fin qui e non oltre
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
 const _q3 = new THREE.Quaternion();
+const _sp = new THREE.Vector3();
+const _ss = new THREE.Vector3();
+const _sv = new THREE.Vector3();
+const _sq = new THREE.Quaternion();
+/** Campo visivo verticale della camera (gradi): valore iniziale e limiti del cursore nelle impostazioni. */
+export const FOV = { min: 55, max: 100, default: 70 };
 const UP = new THREE.Vector3(0, 1, 0);
 const X = new THREE.Vector3(1, 0, 0);
 const Z = new THREE.Vector3(0, 0, 1);
@@ -50,7 +71,9 @@ const SLOTS = {
 
 const rgbCss = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
 /** Punta degli strumenti nelle coordinate dell'oggetto (asse x in avanti). */
-const TOOL_TIPS = { loop: [0.102, 0.004, 0], spatula: [0.075, 0.003, 0], strip: [0.03, 0.001, 0] };
+const TOOL_TIPS = { loop: [0.102, 0.004, 0], spatula: [0.075, 0.003, 0], strip: [0.03, 0.001, 0], thermometer: [0.095, 0.004, 0], phmeter: [0.094, 0.012, 0], pipette: [0.166, 0.013, 0] };
+/** Inclinazione degli strumenti da immergere dentro un recipiente: quasi in verticale, la punta in basso. */
+const PROBE_PITCH = -1.42;
 
 /** Materiale del contorno: trasparente al centro, colorato verso i bordi visti di taglio (effetto Fresnel). */
 const outlineMats = new Map();
@@ -97,8 +120,8 @@ export class LabGame {
     this.G = gfx();
     this.renderer = renderer;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xdfe6ee);
-    this.camera = new THREE.PerspectiveCamera(70, 16 / 9, 0.02, 40);
+    this.scene.background = new THREE.Color(0x1d2126);
+    this.camera = new THREE.PerspectiveCamera(FOV.default, 16 / 9, 0.02, 40);
     this.envMap = null;
     if (this.G.env || this.G.post) {
       const pmrem = new THREE.PMREMGenerator(renderer);
@@ -118,6 +141,10 @@ export class LabGame {
     this.fires = [];
     this.clouds = [];
     this.drops = new Drops(this.scene);
+    this.grains = new Drops(this.scene, 900, { grain: true });
+    this.motes = new Motes(this.scene); // bolle e fiocchi di precipitato nei contenitori
+    this.sigCache = new Map(); // segnali osservabili di ogni reazione (in acqua o no)
+    this.notebook = emptyNotebook(); // il quaderno vero lo passa game-view.js dal salvataggio
     this.streams = new Map(); // contenitore che versa → getto continuo
     this.inFlight = []; // liquido nel getto: arriva al bersaglio dopo il tempo di volo
     this.aim = null; // dove cadrebbe il getto del contenitore in mano (anello verde o rosso)
@@ -135,7 +162,9 @@ export class LabGame {
     this.holdDist = 0.5;
     this.lift = 0.16;
     this.tilt = 0;
-    this.pouring = false;
+    this.pouring = false; // si tiene il tasto con cui si versa: l'inclinazione non torna a 0
+    this.pourAuto = false; // versamento con il sinistro: l'inclinazione la regola il gioco (autoTilt)
+    this.pourBoost = 0; // quanto carico in più (o in meno) si è chiesto con il mouse durante il versamento (m)
     this.swirlT = 0;
     this.spraying = false;
     this.spot = null; // dove si poserebbe l'oggetto in mano: { pos, quat, valid }
@@ -143,8 +172,8 @@ export class LabGame {
     this.ghostMats = { ok: ghostMaterial(0x5fd38d), bad: ghostMaterial(0xe0524a) };
     this.placing = null; // posa morbida: { item, pos, quat, t }, l'oggetto scivola al suo posto
     this.charge = null; // istante in cui si è cominciato a caricare il lancio (Q tenuto)
-    this.rotating = false; // destro tenuto: il mouse ruota l'oggetto in mano invece di girare lo sguardo
-    this.rotPour = false; // nella precisione il destro inclina anche il recipiente (versamento goccia a goccia)
+    this.rotating = false; // destro tenuto: il mouse inclina l'oggetto in mano invece di girare lo sguardo
+    this.rotPour = false; // ...e, se è un recipiente, versa (l'inclinazione resta finché si tiene il tasto)
     this.precise = null; // manipolazione precisa (Maiusc tenuto): { anchor, off }
     this.filling = false; // clic sul lavandino con un recipiente: è sotto il rubinetto, l'acqua scorre tenendo il sinistro
     this.tapWasOn = false;
@@ -169,15 +198,25 @@ export class LabGame {
     this.physics.onImpact = (owner, force, other, speed) => this.impact(owner, force, other, speed);
     this.player.onTeleport = (from, to) => this.teleported(from, to);
     this.room.setBoard([t('boardWelcome'), t('boardWelcome2')]);
+    // una voce per colore (sali e altri inorganici hanno lo stesso tappo bianco)
+    const shown = FAMILY_ORDER.filter((f, i) => FAMILY_ORDER.findIndex((g) => FAMILIES[g] === FAMILIES[f]) === i);
+    this.room.setLegend(t('capLegendTitle'), shown.map((f) => ({ color: FAMILIES[f], label: t(`legend_${f}`) })));
+    this.room.setNotebookCover(t('notebookTitle'), t('notebookCover'));
+    this.room.setBookCover(t('bookTitle'), t('bookCover'));
+    this.follow = null; // ricetta del libro che si sta seguendo (riquadro con i passi)
     // estintore appeso al muro
     this.extinguisher = this.spawn('extinguisher', { pos: new THREE.Vector3(LAYOUT.extinguisher.x, 0.37, LAYOUT.extinguisher.z) });
     this.extinguisher.home = this.extinguisher.mesh.position.clone();
+    // buretta, imbuto, distillazione, alimentatore, bombole, pinza, termometro, pH-metro e pipetta (fase G4)
+    this.tongs = false; // pinza in mano: serve per prendere ciò che scotta
+    this.probing = null; // recipiente in cui è immerso lo strumento in mano (termometro, pH-metro, pipetta)
+    this.apparatus = new Apparatus(this);
   }
 
   // ------------------------------------------------------------------ oggetti
 
-  spawn(kind, { pos, quat, mixture = null, label = null, name = null, data = {} }) {
-    const item = createItem(this.env, kind, { pos, quat, mixture, label, name });
+  spawn(kind, { pos, quat, mixture = null, label = null, name = null, cap = null, data = {} }) {
+    const item = createItem(this.env, kind, { pos, quat, mixture, label, name, cap });
     item.data = { ...data };
     item.peakT = mixture?.T ?? AMBIENT;
     this.items.push(item);
@@ -193,6 +232,14 @@ export class LabGame {
     disposeItem(item, this.env);
   }
 
+  /**
+   * Rotazione con cui un oggetto con etichetta guarda il giocatore. L'etichetta è sul lato +z dell'oggetto (in mano
+   * guarda chi lo tiene): il bancone A si usa dal lato sud (+z), così com'è; scaffale e bancone B dal lato nord, girati.
+   */
+  facing(group) {
+    return group === 'bench' ? null : new THREE.Quaternion().setFromAxisAngle(UP, Math.PI);
+  }
+
   /** Primo posto libero di un gruppo (bancone, scaffale…). */
   freeSlot(group) {
     for (const [x, y, z] of SLOTS[group]) {
@@ -206,31 +253,44 @@ export class LabGame {
     return new THREE.Vector3(x + (Math.random() - 0.5) * 0.05, y + 0.25, z);
   }
 
-  /** Crea un reagente dello scaffale (soluzione, solido, indicatore) con la sua etichetta. */
-  spawnReagent(key, group = 'shelf', override = null) {
-    const r = SHELF[key] ?? override;
+  /**
+   * Crea un reagente dello scaffale (soluzione, solido, indicatore) nel suo contenitore, con il tappo del colore della
+   * famiglia e l'etichetta con i pericoli (stock.js).
+   */
+  spawnReagent(key, group = 'shelf', override = null, at = null) {
+    const r = SHELF[key] ?? CABINET[key] ?? override;
     const { chem, t } = this;
+    const look = reagentLook(chem, r);
     let mix;
     let label;
-    let kind = r.kind;
     if (r.water) {
       mix = Mixture.liquid(chem, 'water', 400);
       label = { title: t('distilledWater'), formula: 'H₂O', sub: t('washbottleSub'), color: '#e8f4ff' };
     } else if (r.indicator) {
       mix = Mixture.of(chem, [['water', 25 / 18.015], [r.indicator, 0.25 / 318.3]]);
-      label = { title: chem.name(r.indicator), formula: '1 %', sub: t('indicatorSub'), hazard: 'flammable', color: '#fff6e8' };
+      label = { title: chem.name(r.indicator), formula: '1 %', sub: t('indicatorSub'), color: '#fff6e8' };
     } else if (r.solute) {
       mix = Mixture.solution(chem, r.solute, r.molar, 450);
-      label = { title: chem.name(chem.id(r.solute)), formula: chem.formula(chem.id(r.solute)), sub: `${this.fmt(r.molar, r.molar < 1 ? 2 : 1)} M · 500 mL`, color: '#ffffff' };
+      label = { title: r.name ? pick(r.name) : chem.name(chem.id(r.solute)), formula: chem.formula(chem.id(r.solute)), sub: `${this.fmt(r.molar, r.molar < 1 ? 2 : 1)} M · 500 mL`, color: '#ffffff' };
     } else if (r.liquid) {
       mix = Mixture.liquid(chem, r.liquid, 450);
-      label = { title: chem.name(chem.id(r.liquid)), formula: chem.formula(chem.id(r.liquid)), sub: '500 mL', color: '#ffffff' };
+      label = { title: r.name ? pick(r.name) : chem.name(chem.id(r.liquid)), formula: chem.formula(chem.id(r.liquid)), sub: '500 mL', color: '#ffffff' };
+    } else if (look.kind === 'jarOil') {
+      // metallo alcalino a pezzetti sotto olio di paraffina: la spatola prende solo il metallo
+      mix = Mixture.solid(chem, r.solid, r.grams ?? 25);
+      mix.add(Mixture.liquid(chem, OIL.key, 90));
+      mix.mix = 0;
+      label = { title: chem.name(chem.id(r.solid)), formula: chem.formula(chem.id(r.solid)), sub: `${r.grams ?? 25} g · ${t('underOil')}`, color: '#ffffff' };
     } else {
       mix = Mixture.solid(chem, r.solid, r.grams ?? 120);
-      label = { title: chem.name(chem.id(r.solid)), formula: chem.formula(chem.id(r.solid)), sub: `${r.grams ?? 120} g`, color: '#ffffff' };
+      label = { title: r.name ? pick(r.name) : chem.name(chem.id(r.solid)), formula: chem.formula(chem.id(r.solid)), sub: `${r.grams ?? 120} g`, color: '#ffffff' };
     }
-    label.hazard ??= this.hazardOf(mix);
-    const item = this.spawn(kind, { pos: this.freeSlot(group), mixture: mix, label, name: label.title, data: { reagent: key ?? 'custom', price: r.solid ? PRICES.solidPerGram : r.water ? PRICES.waterPerMl : PRICES.solutionPerMl } });
+    Object.assign(label, { band: look.cap, bandText: t(`fam_${look.family}`), ghs: look.ghs, signal: look.signal ? t(`signal_${look.signal}`) : '' });
+    const item = this.spawn(look.kind, {
+      pos: at ?? this.freeSlot(group), quat: this.facing(group), mixture: mix, label, name: label.title, cap: look.cap,
+      data: { reagent: key ?? 'custom', price: r.solid ? PRICES.solidPerGram : r.water ? PRICES.waterPerMl : PRICES.solutionPerMl, family: look.family, ghs: look.ghs, curated: look.curated },
+    });
+    if (look.kind === 'jarOil') item.data.alias = { [chem.id(OIL.key)]: OIL.name };
     return item;
   }
 
@@ -246,7 +306,7 @@ export class LabGame {
 
   /** Contenitore di vetreria vuoto. */
   spawnGlass(kind, group = 'benchB') {
-    return this.spawn(kind, { pos: this.freeSlot(group), mixture: new Mixture(this.chem), name: this.t(`item_${kind}`) });
+    return this.spawn(kind, { pos: this.freeSlot(group), quat: this.facing(group), mixture: new Mixture(this.chem), name: this.t(`item_${kind}`) });
   }
 
   spawnTool(kind, group = 'bench', pos = null) {
@@ -263,8 +323,15 @@ export class LabGame {
 
   /** Svuota la stanza (tranne l'estintore) per una nuova partita. */
   clearRoom() {
-    for (const it of [...this.items]) if (it !== this.extinguisher) this.removeItem(it);
-    for (const p of this.puddles) p.mesh.removeFromParent();
+    if (this.follow) {
+      this.follow = null;
+      this.emit('follow');
+    }
+    for (const it of [...this.items]) if (it !== this.extinguisher && !it.permanent) this.removeItem(it);
+    for (const p of this.puddles) {
+      p.mesh.removeFromParent();
+      p.heapMesh?.removeFromParent();
+    }
     this.puddles = [];
     this.fires = [];
     this.clouds = [];
@@ -280,7 +347,10 @@ export class LabGame {
     Object.assign(this.fx.hotplate, { level: 0 });
     Object.assign(this.fx.sink, { tap: false });
     Object.assign(this.fx.hood, { on: false });
+    Object.assign(this.fx.lamp, { on: false });
+    this.motes.clear();
     placeItem(this.extinguisher, this.extinguisher.home);
+    this.apparatus?.reset();
     this.clearProps();
   }
 
@@ -327,82 +397,138 @@ export class LabGame {
     this.mode = 'free';
     this.free = true;
     this.chemMode = chemMode;
+    this.setCareer(null);
     this.clearRoom();
     this.order = null;
-    for (const k of ['beaker100', 'beaker100', 'beaker250', 'beaker250', 'flask250', 'cylinder100']) this.spawnGlass(k, 'bench');
+    for (const k of ['beaker100', 'beaker100', 'beaker250', 'beaker250', 'flask250', 'cylinder100', 'crucible', 'dish']) this.spawnGlass(k, 'bench');
     this.spawnTool('spatula');
     this.spawnTool('loop', 'benchB');
-    for (const k of ['water', 'hcl1', 'naoh1', 'php', 'nacl', 'cuso4', 'zn', 'nahco3', 'vinegar', 'ethanol']) this.spawnReagent(k);
+    // sullo scaffale in ordine di famiglia (acidi, basi, sali… acqua), come i colori della legenda
+    const free = ['water', 'hcl1', 'naoh1', 'php', 'nacl', 'cuso4', 'zn', 'na', 'nahco3', 'vinegar', 'ethanol'];
+    // da sinistra a destra per chi guarda lo scaffale (verso sud, quindi da x grande a x piccola)
+    const rank = (k) => FAMILY_ORDER.indexOf(reagentLook(this.chem, SHELF[k]).family);
+    const slots = [...SLOTS.shelf].sort((a, b) => b[0] - a[0]);
+    const first = Math.floor((slots.length - free.length) / 2);
+    free.sort((a, b) => rank(a) - rank(b)).forEach((k, i) => {
+      const [x, y, z] = slots[first + i];
+      this.spawnReagent(k, 'shelf', null, new THREE.Vector3(x, y + 0.003, z));
+    });
     this.room.setBoard([this.t('freeTitle'), this.t('freeBoard1'), this.t('freeBoard2'), this.t('freeBoard3')]);
     this.player.teleport(0.15, 0.4, 0);
   }
 
-  startCareer(chemMode, index = 0, money = 0) {
+  /**
+   * Comincia un'esercitazione della Carriera (career.js; i dati sono in data/career-exercises.js). career: la Carriera
+   * del profilo (soldi, cose comprate, risultati: servono al negozio e al libro). fresh: la stanza si svuota (si parte
+   * dal menu o dalla mappa); altrimenti gli oggetti dell'esercitazione di prima restano sul banco e vanno puliti.
+   */
+  startCareer(chemMode, id, career, { fresh = true } = {}) {
     this.mode = 'career';
     this.free = false;
     this.chemMode = chemMode;
-    this.money = money;
-    this.clearRoom();
-    this.player.teleport(0.15, 0.4, 0);
-    this.startOrder(index);
+    this.setCareer(career);
+    if (fresh || !this.order) {
+      this.clearRoom();
+      this.player.teleport(0.15, 0.4, 0);
+    }
+    this.startExercise(id);
   }
 
-  /** Prepara il banco per l'esercitazione `index` (gli oggetti delle precedenti restano: vanno puliti!). */
-  startOrder(index) {
-    const def = ORDERS[index];
-    if (!def) return;
-    const unknowns = [];
-    const setup = def.setup(this.chemMode);
-    for (const s of setup) {
+  /** La Carriera del profilo: soldi, migliorie comprate nel negozio, pagine del libro aperte. */
+  setCareer(career) {
+    this.career = career ?? null;
+    this.money = career?.money ?? 0;
+    this.upgrades = new Set(this.free ? [] : career?.owned ?? []);
+    this.bookLocks = this.free || !career ? null : bookUnlocks(career);
+  }
+
+  /** Una miglioria del negozio è attiva (solo nella Carriera). */
+  has(upgrade) {
+    return !this.free && Boolean(this.upgrades?.has(upgrade));
+  }
+
+  /** Prepara il banco per un'esercitazione (gli oggetti delle precedenti restano: vanno puliti!). */
+  startExercise(id) {
+    const ex = EXERCISE_BY_ID.get(id);
+    if (!ex) return;
+    const { chem } = this;
+    const samples = pickSamples(ex).map((x) => ({ ...x, value: sampleValue(chem, ex, x) }));
+    this.order = {
+      id, ex, def: ex, start: this.time, unknowns: samples, answers: null, costs: 0, fines: 0, incidents: 0, wrongBins: 0,
+      broken: 0, delivered: false, product: null, pending: null, flameSeen: new Set(), ev: {}, gas: {}, rx: new Set(),
+      phRead: new Set(), done: [], dirty: new Set(), dirtyStart: 0, fireTime: null,
+    };
+    const o = this.order;
+    for (const s of ex.setup) {
+      const group = s.at === 'bench' ? 'bench' : 'benchB';
       if (s.reagent) {
-        this.spawnReagent(s.reagent, s.at === 'bench' ? 'bench' : 'shelf');
+        // un reagente che è già sullo scaffale (dall'esercitazione prima) non si raddoppia
+        if (!this.items.some((it) => it.data.reagent === s.reagent)) this.spawnReagent(s.reagent, s.at === 'bench' ? 'bench' : 'shelf');
+        continue;
+      }
+      if (s.puddle) {
+        const at = this.freeSlot('bench');
+        this.spill(contentMixture(chem, s.puddle), new THREE.Vector3(at.x, BENCH_Y + 0.001, at.z), null);
         continue;
       }
       if (DEFS[s.kind].tool) {
-        this.spawnTool(s.kind, s.at === 'bench' ? 'bench' : 'benchB');
+        // spatola e ansa: una basta; le cartine e la carta si consumano
+        if (['spatula', 'loop'].includes(s.kind) && this.items.some((it) => it.kind === s.kind)) continue;
+        this.spawnTool(s.kind, group);
         continue;
       }
-      const group = s.at === 'bench' ? 'bench' : 'benchB';
-      let mixture = new Mixture(this.chem);
+      let mixture = s.content ? contentMixture(chem, s.content) : new Mixture(chem);
       let label = null;
-      if (s.content?.solution) {
-        const [solute, M, ml] = s.content.solution;
-        mixture = Mixture.solution(this.chem, solute, M, ml);
-      } else if (s.content?.solid) {
-        mixture = Mixture.solid(this.chem, ...s.content.solid);
-      }
       if (s.sample !== undefined) {
-        label = { title: this.t('sampleName', { s: 'ABC'[s.sample] }), formula: '?', sub: this.t('unknownSub'), color: '#fff8d8' };
-        unknowns[s.sample] = s.unknown;
+        mixture = contentMixture(chem, samples[s.sample].content);
+        label = { title: this.t('sampleName', { s: 'ABCDE'[s.sample] }), formula: '?', sub: this.t('unknownSub'), color: '#fff8d8' };
       }
-      const reuse = !s.content && this.items.find((it) => it.kind === s.kind && it.mixture?.isEmpty() && !it.data.claimed && !it.data.reagent);
+      const reuse = !s.content && s.sample === undefined && this.items.find((it) => it.kind === s.kind && it.mixture?.isEmpty() && !it.dirty && !it.data.claimed && !it.data.reagent);
       if (reuse) {
         reuse.data.claimed = true;
         continue;
       }
-      const item = this.spawn(s.kind, { pos: this.freeSlot(group), mixture, label, name: label?.title ?? (s.labelKey ? this.t(s.labelKey) : this.t(`item_${s.kind}`)), data: { sample: s.sample } });
+      const item = this.spawn(s.kind, { pos: this.freeSlot(group), quat: label ? this.facing(group) : null, mixture, label, name: label?.title ?? (s.label ? this.t(s.label) : this.t(`item_${s.kind}`)), data: { sample: s.sample } });
       item.data.claimed = true;
+      if (s.dirty) {
+        item.dirty = true;
+        o.dirty.add(item);
+      }
+      if (s.fire) {
+        const top = new THREE.Vector3(0, item.def.height ?? 0.02, 0).add(item.mesh.position);
+        this.startFire({ item, sid: chem.id(s.content.liquid[0]), pos: top, scripted: true });
+      }
+    }
+    // vetreria di scorta (negozio): un becher da 100 e uno da 250 mL in più, se non ce ne sono di liberi
+    if (this.has('glassKit')) {
+      for (const k of ['beaker100', 'beaker250']) if (!this.items.some((it) => it.kind === k && it.mixture?.isEmpty() && !it.dirty && !it.data.claimed)) this.spawnGlass(k, 'bench').data.claimed = true;
     }
     for (const it of this.items) delete it.data.claimed;
-    this.order = {
-      index, def, start: this.time, unknowns, answers: null, costs: 0, fines: 0, incidents: 0, wrongBins: 0, broken: 0,
-      delivered: false, flameSeen: new Set(), log: [],
-    };
-    const steps = this.t(`${def.id}Board`);
-    this.room.setBoard([this.t('orderN', { n: index + 1, title: this.t(`${def.id}Title`) }), ...(Array.isArray(steps) ? steps : [steps])]);
-    this.emit('order', { index, def });
+    o.dirtyStart = o.dirty.size;
+    const steps = ex.steps.map((st) => this.t(st.key, this.stepParams(ex)));
+    this.room.setBoard([this.t('exBoardTitle', { ch: ex.chapter, title: this.t(`${ex.id}Title`) }), ...steps]);
+    this.emit('order', { ex });
   }
 
-  /** Stato del banco per i passi dell'esercitazione. */
+  /** Stato del banco per i passi e la valutazione (career.js, check ed evaluateExercise). */
   snapshot() {
-    const containers = this.items.filter((it) => it.def.container && it.mixture && !it.data.reagent).map((it) => ({ kind: it.kind, mix: it.mixture, peakT: it.peakT, item: it }));
+    const o = this.order;
+    const containers = this.items.filter((it) => it.def.container && it.mixture && !it.data.reagent).map((it) => ({ kind: it.kind, stock: Boolean(it.def.stock), mix: it.mixture, peakT: it.peakT, sample: it.data.sample, item: it }));
+    const tray = this.onTray().filter((it) => it.def.container && it.mixture && !it.data.reagent);
+    let dirtyLeft = 0;
+    for (const it of o?.dirty ?? []) if (this.items.includes(it) && (it.dirty || (it.mixture && !it.mixture.isEmpty()))) dirtyLeft++;
     return {
-      containers,
-      best: (key, fn) => containers.reduce((b, c) => Math.max(b, fn(c.mix)), 0),
-      delivered: Boolean(this.order?.delivered),
-      bunsenOn: this.fx.bunsen.on,
-      flameSeen: this.order?.flameSeen ?? new Set(),
+      mode: this.chemMode, ctx: this.chem, containers, product: o?.product ?? null, delivered: Boolean(o?.delivered),
+      answers: o?.answers ?? null, unknowns: o?.unknowns ?? [], ev: o?.ev ?? {}, gas: o?.gas ?? {}, rx: o?.rx ?? new Set(),
+      flame: o?.flameSeen ?? new Set(), bunsen: this.fx.bunsen.on, fires: this.fires.length, mess: this.mess(),
+      dirtyStart: o?.dirtyStart ?? 0, dirtyLeft, held: this.held?.kind ?? '', tray: tray.length, phRead: o?.phRead ?? new Set(),
+      fireTime: o?.fireTime ?? Infinity,
     };
+  }
+
+  /** Conta un evento dell'esercitazione in corso (tara, lavaggio, smaltimento, fuoco spento…). */
+  note(name, n = 1) {
+    if (this.order && !this.free) this.order.ev[name] = (this.order.ev[name] ?? 0) + n;
   }
 
   /** Oggetti sul vassoio della cattedra. */
@@ -413,25 +539,34 @@ export class LabGame {
 
   /** Disordine: pozze, vetri rotti, carta e cartine abbandonate, fuochi, gas, preparati vecchi non smaltiti. */
   mess() {
-    let n = this.puddles.filter((p) => p.stain || p.mix.liquidVolume + p.mix.solidVolume > 1).length;
+    let n = this.puddles.filter((p) => p.stain || p.heap || p.mix.liquidVolume + p.mix.solidVolume > 1).length;
     for (const it of this.items) {
       if (it === this.held) continue;
       if (it.kind === 'shards') n++;
-      else if ((it.kind === 'towel' && !it.mixture?.isEmpty()) || (it.kind === 'strip' && it.data.used)) n++;
-      else if (it.data.deliveredOrder !== undefined && it.data.deliveredOrder !== this.order?.index && it.mixture && it.mixture.liquidVolume + it.mixture.solidVolume > RESIDUE_ML * 2) n++;
+      else if (((it.kind === 'towel' || it.kind === 'filterPaper') && !it.mixture?.isEmpty()) || (it.kind === 'strip' && it.data.used)) n++;
+      else if (it.data.deliveredOrder !== undefined && it.data.deliveredOrder !== this.order?.id && it.mixture && it.mixture.liquidVolume + it.mixture.solidVolume > RESIDUE_ML * 2) n++;
     }
     return n + this.fires.length + this.clouds.filter((c) => !c.vented).length;
   }
 
-  /** Campanello: consegna il preparato (o apre le risposte del saggio alla fiamma). */
+  /** Campanello: consegna il preparato, chiude un'esercitazione senza preparato o apre le risposte. */
   ringBell() {
     if (this.free || !this.order) {
       this.toast(this.t('bellFree'));
       return;
     }
-    const { def } = this.order;
-    if (def.answers) {
-      this.emit('answers', { count: this.order.unknowns.length, metals: [...new Set(Object.values(FLAME_SALTS))] });
+    const o = this.order;
+    if (o.delivered) {
+      this.toast(this.t('alreadyDelivered'));
+      return;
+    }
+    const mode = o.ex.deliver ?? 'tray';
+    if (mode === 'answers') {
+      this.emit('answers', { ex: o.ex, count: answerCount(o.ex, o.unknowns), options: answerOptions(o.ex) });
+      return;
+    }
+    if (mode === 'bell') {
+      this.finishOrder({ product: null });
       return;
     }
     const tray = this.onTray().filter((it) => it.def.container && it.mixture && !it.mixture.isEmpty() && !it.data.reagent);
@@ -443,35 +578,46 @@ export class LabGame {
     this.finishOrder({ product });
   }
 
-  /** Risposte del saggio alla fiamma (dall'interfaccia). */
+  /** Risposte (campioni incogniti, misure) dall'interfaccia. */
   submitAnswers(answers) {
-    if (!this.order) return;
+    if (!this.order || this.order.delivered) return;
     this.order.answers = answers;
     this.finishOrder({ product: null });
   }
 
+  /**
+   * Consegna: valuta subito (career.js) e chiede la relazione di laboratorio; il voto arriva con finishReport, che
+   * aggiunge le stelle della relazione.
+   */
   finishOrder({ product }) {
     const o = this.order;
     o.delivered = true;
-    const ev = o.def.evaluate({ mode: this.chemMode, product, answers: o.answers ?? {}, unknowns: o.unknowns, ctx: this.chem });
-    const elapsed = this.time - o.start;
-    const mess = this.mess();
-    const costs = Math.round((o.costs + o.fines) * 100) / 100;
-    const g = grade({ quality: ev.quality, elapsed, par: o.def.par, mess, incidents: o.incidents, wrongBins: o.wrongBins, pay: o.def.pay, costs });
-    this.money = Math.round((this.money + g.net) * 100) / 100;
-    if (product) product.data.deliveredOrder = o.index;
-    const result = { index: o.index, def: o.def, ...g, quality: ev.quality, lines: ev.lines, elapsed, mess, costs, reagents: o.costs, fines: o.fines, incidents: o.incidents, money: this.money, last: o.index === ORDERS.length - 1 };
-    this.emit('result', result);
-    return result;
+    o.product = product?.mixture ?? null;
+    const ev = evaluateExercise(o.ex, this.snapshot(), this.chemMode);
+    if (product) product.data.deliveredOrder = o.id;
+    o.pending = { quality: ev.quality, lines: ev.lines, elapsed: this.time - o.start, mess: this.mess(), costs: Math.round((o.costs + o.fines) * 100) / 100 };
+    o.questions = reportQuestions(o.ex);
+    if (o.questions.length) this.emit('report', { ex: o.ex, questions: o.questions });
+    else this.finishReport([]);
   }
 
-  nextOrder() {
-    const next = (this.order?.index ?? -1) + 1;
-    if (next >= ORDERS.length) {
-      this.emit('careerEnd', { money: this.money });
-      return;
-    }
-    this.startOrder(next);
+  /** Relazione consegnata (o saltata): stelle, paga e resoconto. answers: indice scelto per ogni domanda. */
+  finishReport(answers = []) {
+    const o = this.order;
+    const p = o?.pending;
+    if (!p) return null;
+    const questions = o.questions ?? [];
+    const right = questions.filter((q, i) => answers[i] === q.right).length;
+    const g = gradeExercise(o.ex, { quality: p.quality, elapsed: p.elapsed, mess: p.mess, incidents: o.incidents, wrongBins: o.wrongBins, costs: p.costs, reportRight: right, reportTotal: questions.length });
+    this.money = Math.round((this.money + g.net) * 100) / 100;
+    o.pending = null;
+    const result = {
+      id: o.id, ex: o.ex, def: o.ex, ...g, quality: p.quality, lines: p.lines, elapsed: p.elapsed, mess: p.mess, costs: p.costs,
+      reagents: o.costs, fines: o.fines, incidents: o.incidents, money: this.money,
+      report: { right, total: questions.length, answers, questions },
+    };
+    this.emit('result', result);
+    return result;
   }
 
   // ------------------------------------------------------------------ messaggi e incidenti
@@ -481,6 +627,7 @@ export class LabGame {
   }
 
   fine(kind, text) {
+    this.note(kind);
     if (this.order && !this.free) {
       this.order.fines += PRICES.fines[kind] ?? 0;
       if (['fire', 'toxic', 'explosion', 'splash', 'sinkHazard'].includes(kind)) this.order.incidents++;
@@ -525,8 +672,12 @@ export class LabGame {
       }
     }
     for (const p of this.puddles) {
-      targets.push(p.mesh);
-      owner.set(p.mesh, { type: 'puddle', puddle: p });
+      // il raggio colpisce anche le mesh nascoste: la pozza o l'alone solo se si vedono, il mucchietto se c'è
+      for (const m of [p.mesh, p.heapMesh]) {
+        if (!m?.visible) continue;
+        targets.push(m);
+        owner.set(m, { type: 'puddle', puddle: p });
+      }
     }
     const hits = ray.intersectObjects(targets, false);
     const hit = hits[0];
@@ -552,9 +703,10 @@ export class LabGame {
     if (this.outlined) for (const m of this.outlined.hits ?? this.outlined.hit) if (m.userData.outline) m.userData.outline.visible = false;
     this.outlined = target;
     if (!target) return;
-    const fixture = h.type === 'fixture';
+    // gli apparecchi fissi (buretta, imbuto, pallone) si usano come gli elementi fissi: contorno ambra
+    const fixture = h.type === 'fixture' || Boolean(h.item?.rig);
     for (const m of target.hits ?? target.hit) {
-      if (!m.geometry || m.material?.blending === THREE.AdditiveBlending) continue;
+      if (!m.geometry || m.material?.blending === THREE.AdditiveBlending || m.userData.pick) continue;
       if (!m.userData.outline) {
         if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
         const r = Math.max(0.01, m.geometry.boundingSphere.radius);
@@ -596,6 +748,8 @@ export class LabGame {
     if (!item) {
       const f = this.hover?.type === 'fixture' ? this.hover.fixture : null;
       if (f?.kind === 'hotplate' && f.level) this.setPlate(f.level - 1);
+      else if (f && ['mantle', 'power', 'gas'].includes(f.kind)) this.apparatus.useFixture(f, -1);
+      else if (this.hover?.item?.rig) this.apparatus.use(this.hover.item, -1);
       return;
     }
     if (item.rotYaw || item.rotPitch) return this.resetRotation();
@@ -623,6 +777,12 @@ export class LabGame {
 
   grab(item) {
     if (item.data.inBin) return;
+    // la vetreria montata non si prende: un clic la usa (rubinetto della buretta, carta dell'imbuto)
+    if (item.rig) return this.apparatus.use(item, 1);
+    if (this.apparatus.isHot(item) && !this.tongs) {
+      this.toast(this.t('tooHot', { temp: this.fmt(item.mixture.T - 273.15, 0) }), 'warn');
+      return;
+    }
     if (this.placing?.item === item) this.placing = null;
     // da dove lo si prende, per rimetterlo a posto con il clic destro: solo se era dritto, fermo e appoggiato
     const p = item.mesh.position;
@@ -691,7 +851,7 @@ export class LabGame {
     item.mesh.updateMatrixWorld();
     const inv = item.mesh.matrixWorld.clone().invert();
     for (const m of item.hits) {
-      if (!m.geometry || !m.visible || m.material?.blending === THREE.AdditiveBlending) continue;
+      if (!m.geometry || !m.visible || m.material?.blending === THREE.AdditiveBlending || m.userData.pick) continue;
       const c = new THREE.Mesh(m.geometry, this.ghostMats.ok);
       c.matrixAutoUpdate = false;
       c.matrix.multiplyMatrices(inv, m.matrixWorld);
@@ -722,6 +882,7 @@ export class LabGame {
   letGo() {
     this.held = null;
     this.pouring = false;
+    this.pourAuto = false;
     this.spraying = false;
     this.charge = null;
     this.spot = null;
@@ -803,12 +964,15 @@ export class LabGame {
     if (this.held) this.release(throwSpeed(s));
   }
 
-  /** Destro premuto con un oggetto in mano: il mouse lo ruota (nella precisione un recipiente si inclina e versa). */
+  /** Destro premuto con un oggetto in mano: il mouse lo inclina (un recipiente versa, a mano, finché si tiene il tasto). */
   startRotate() {
     if (!this.held) return;
     this.rotating = true;
-    this.rotPour = Boolean(this.precise && this.held.def.container);
-    if (this.rotPour) this.pouring = true;
+    this.rotPour = Boolean(this.held.def.container);
+    if (this.rotPour) {
+      this.pouring = true;
+      this.pourAuto = false;
+    }
   }
 
   endRotate() {
@@ -818,21 +982,14 @@ export class LabGame {
   }
 
   /**
-   * Destro + mouse: ruota l'oggetto in mano attorno alla verticale; in su e in giù inclina gli strumenti e, nella
-   * manipolazione precisa, i recipienti (è così che si versa goccia a goccia).
+   * Destro + mouse: solo in su e in giù, inclina l'oggetto in mano (un recipiente verso la bocca, ed è così che si versa
+   * a mano, goccia a goccia nella manipolazione precisa). Non lo gira: attorno alla verticale lo ruotano A e D.
    */
-  rotateBy(dx, dy) {
+  tiltHeld(dy) {
     const item = this.held;
     if (!item) return;
-    item.rotYaw = wrapAngle((item.rotYaw ?? 0) - dx * ROT_SPEED);
-    if (!item.def.container) item.rotPitch = clamp((item.rotPitch ?? 0) - dy * ROT_SPEED, -1.2, 1.2);
-    else if (this.rotPour) this.tiltBy(-dy);
-  }
-
-  /** Destro + rotella: ruota a scatti di 15°. */
-  rotateStep(dir) {
-    const item = this.held;
-    if (item) item.rotYaw = wrapAngle(Math.round((item.rotYaw ?? 0) / ROT_STEP) * ROT_STEP + dir * ROT_STEP);
+    if (item.def.container) this.tiltBy(-dy * RMB_TILT);
+    else item.rotPitch = clamp((item.rotPitch ?? 0) - dy * ROT_SPEED, -1.2, 1.2);
   }
 
   /** Annulla la rotazione: l'oggetto torna dritto. */
@@ -844,8 +1001,8 @@ export class LabGame {
 
   /**
    * Maiusc tenuto con un oggetto in mano (in prima persona): manipolazione precisa. Lo sguardo e i passi si fermano, il
-   * mouse sposta l'oggetto attorno al punto in cui era, sinistro + mouse lo alza o lo abbassa, destro + mouse lo ruota,
-   * il tasto centrale lo lascia lì.
+   * mouse sposta l'oggetto attorno al punto in cui era, sinistro + mouse lo alza o lo abbassa, destro + mouse lo inclina
+   * (un recipiente versa goccia a goccia), il tasto centrale lo lascia lì.
    */
   setPrecise(on) {
     if (on && this.held && !this.precise && this.player.mode === 'walk' && !this.filling) {
@@ -906,8 +1063,50 @@ export class LabGame {
     this.fx.sink.tap = this.tapWasOn;
   }
 
+  /**
+   * Sinistro tenuto con un recipiente: si versa. Il recipiente si inclina da solo fin dove esce un filo (sopra un altro
+   * recipiente, il lavandino o un bidone) o fino al bordo (altrove: spostando lo sguardo dal bersaglio il getto si
+   * ferma), e mentre si svuota continua a inclinarsi per non fermarsi; il mouse in su versa più forte, in giù più piano
+   * (pourMore).
+   */
   setPour(on) {
     this.pouring = on && Boolean(this.held);
+    this.pourAuto = this.pouring && Boolean(this.held.def.container) && !this.filling;
+    this.pourBoost = 0;
+  }
+
+  /** Mouse durante il versamento con il sinistro: in su (dy < 0) più getto, in giù meno (fino a raddrizzarlo). */
+  pourMore(dy) {
+    if (this.pourAuto) this.pourBoost = clamp(this.pourBoost - dy * POUR_GOAL_STEP, POUR_GOAL[0] - POUR_START, POUR_GOAL[1] - POUR_BRIM);
+  }
+
+  /** Carico sul bordo voluto ora: un filo sopra un bersaglio, il bordo altrove, più quanto chiesto con il mouse. */
+  pourGoal() {
+    return clamp((this.pourTarget() ? POUR_START : POUR_BRIM) + this.pourBoost, POUR_GOAL[0], POUR_GOAL[1]);
+  }
+
+  /** Si guarda dove si può versare: un altro recipiente, il lavandino o un bidone dei rifiuti. */
+  pourTarget() {
+    const h = this.hover;
+    if (h?.type === 'item') return Boolean(h.item.def.container && h.item !== this.held);
+    return h?.type === 'fixture' && (h.fixture.kind === 'sink' || h.fixture.kind === 'bin');
+  }
+
+  /**
+   * Inclinazione automatica del versamento con il sinistro: porta il carico sul bordo verso pourGoal() in circa un quarto
+   * di secondo (la velocità si divide per il raggio della bocca: una provetta va piano quanto un becher). Senza carico
+   * (vuoto, o quasi) si inclina fino a POUR_EMPTY_TILT.
+   */
+  autoTilt(dt) {
+    const item = this.held;
+    if (!this.pourAuto || !item?.def.container || this.filling) return;
+    const h = item.pourHead;
+    if (h === undefined) {
+      if (this.tilt < POUR_EMPTY_TILT) this.tilt = Math.min(POUR_EMPTY_TILT, this.tilt + 1.5 * dt);
+      return;
+    }
+    const rate = clamp((this.pourGoal() - h) / (item.def.rimR * 0.25), -3, 3);
+    this.tilt = clamp(this.tilt + rate * dt, 0, 2.6);
   }
 
   /** Inclina l'oggetto in mano (mouse con il sinistro tenuto); vicino al bordo, dove inizia il versamento, più finemente. */
@@ -921,7 +1120,6 @@ export class LabGame {
   }
 
   wheel(delta) {
-    if (this.held && this.rotating) return this.rotateStep(delta < 0 ? 1 : -1);
     if (this.filling) {
       this.tapFlow = clamp(this.tapFlow + (delta < 0 ? 5 : -5), 5, 50);
       return;
@@ -933,6 +1131,10 @@ export class LabGame {
     const h = this.hover;
     if (!this.held && h?.type === 'fixture' && h.fixture.kind === 'hotplate') {
       this.setPlate(h.fixture.level + (delta < 0 ? 1 : -1));
+      return;
+    }
+    if (!this.held && h?.type === 'fixture' && h.fixture.kind === 'mantle') {
+      this.apparatus.setMantle(h.fixture.level + (delta < 0 ? 1 : -1));
       return;
     }
     if (this.player.mode === 'walk') this.holdDist = Math.max(0.3, Math.min(0.9, this.holdDist - delta * 0.0006));
@@ -979,7 +1181,10 @@ export class LabGame {
     if (held?.kind === 'spatula') return this.useSpatula(held, target, fine);
     if (held?.kind === 'loop') return this.useLoop(held, target);
     if (held?.kind === 'strip') return this.useStrip(held, target);
+    if (held?.def.probe && this.apparatus.useTool(held, target, fixture, fine)) return;
     if (held?.kind === 'towel' && h?.type === 'puddle') return this.wipe(held, h.puddle);
+    // E su un apparecchio fisso (anche con un recipiente in mano): rubinetto della buretta, carta dell'imbuto
+    if (target?.rig) return this.apparatus.use(target, fine ? -1 : 1);
     if (held?.def.container && fixture) {
       // E pulisce, come la spugna di Cooking Simulator: il contenuto va nello scarico (riempire è il clic)
       if (fixture.kind === 'sink') return this.wash(held);
@@ -987,7 +1192,9 @@ export class LabGame {
     }
     if (fixture) return this.useFixture(fixture, fine);
     if (held?.def.container) {
+      // agitando, anche la polvere si livella
       this.swirlT = 1.2;
+      held.solidUp?.set(0, 1, 0);
       return;
     }
     if (target && !held) this.grab(target);
@@ -997,7 +1204,7 @@ export class LabGame {
     const { t } = this;
     switch (f.kind) {
       case 'hotplate':
-        this.setPlate(f.level + (fine ? -1 : 1) > 5 ? 0 : f.level + (fine ? -1 : 1));
+        this.setPlate(nextLevel(f.level, fine ? -1 : 1));
         break;
       case 'bunsen':
         f.on = !f.on;
@@ -1008,11 +1215,22 @@ export class LabGame {
         break;
       case 'balance':
         f.tare = this.balanceReading(true);
+        this.note('tare');
         this.toast(t('tared'));
         break;
       case 'hood':
         f.on = !f.on;
         this.toast(f.on ? t('hoodOn') : t('hoodOff'));
+        break;
+      case 'lamp':
+        f.on = !f.on;
+        this.toast(f.on ? t('lampOn') : t('lampOff'));
+        break;
+      case 'notebook':
+        this.emit('notebook');
+        break;
+      case 'book':
+        this.emit('book');
         break;
       case 'shower':
         this.fx.shower.t = 4;
@@ -1022,6 +1240,7 @@ export class LabGame {
         break;
       case 'store':
         if (this.free) this.emit('catalog');
+        else if (this.has('cabinetKey')) this.emit('catalog', { cabinet: true });
         else this.toast(t('storeCareer'));
         break;
       case 'towels':
@@ -1031,6 +1250,7 @@ export class LabGame {
         if (!this.held) this.grab(this.spawnTool('strip', null, this.handPoint()));
         break;
       default:
+        this.apparatus.useFixture(f, fine ? -1 : 1);
         break;
     }
   }
@@ -1042,6 +1262,7 @@ export class LabGame {
   }
 
   useSpatula(sp, target, pinch) {
+    if (target) target.data.usedAt = this.time;
     const { t, chem } = this;
     if (!target?.def.container || !target.mixture) {
       this.toast(t('spatulaHint'));
@@ -1065,11 +1286,12 @@ export class LabGame {
     let solidG = 0;
     for (const [sid, mol] of mix.n) if (typeof sid === 'number' && sid !== WATER && mix.phaseOf(sid) === 1) solidG += (mol - (mix.d.get(sid) ?? 0)) * chem.molar(sid);
     if (solidG <= 0) return;
-    if (mix.liquidVolume > 1) {
+    // dal barattolo sotto olio si pesca il pezzetto di metallo (nella realtà con la pinza, poi asciugato sulla carta)
+    if (mix.liquidVolume > 1 && !target.def.oil) {
       this.toast(t('spatulaWet'));
       return;
     }
-    sp.load = mix.takeFraction(Math.min(1, grams / solidG), { solidOnly: true });
+    sp.load = mix.takeFraction(Math.min(1, grams / solidG), { solidOnly: true, keepLiquid: true });
     if (target.data.reagent) this.addCost(sp.load.mass * PRICES.solidPerGram);
     sp.heap.visible = true;
     const c = sp.load.appearance().solid;
@@ -1078,6 +1300,7 @@ export class LabGame {
   }
 
   useLoop(loop, target) {
+    if (target) target.data.usedAt = this.time;
     const { t, chem } = this;
     if (!target?.def.container || !target.mixture || target.mixture.isEmpty()) {
       this.toast(t('loopHint'));
@@ -1106,6 +1329,7 @@ export class LabGame {
   }
 
   useStrip(strip, target) {
+    if (target) target.data.usedAt = this.time;
     const { t } = this;
     if (!target?.def.container || !target.mixture) return;
     const ph = target.mixture.pH();
@@ -1115,6 +1339,7 @@ export class LabGame {
     }
     strip.data.used = true;
     strip.data.ph = ph;
+    this.order?.phRead.add(target.id);
     const c = UNIVERSAL_SCALE[Math.max(0, Math.min(14, Math.round(ph)))];
     strip.pad.material.color.set(c);
     this.emit('strip', { ph, color: c });
@@ -1134,18 +1359,22 @@ export class LabGame {
     const c = towel.mixture.appearance().liquid;
     towel.paper.material.color.setRGB(0.6 + c[0] / 640, 0.6 + c[1] / 640, 0.6 + c[2] / 640);
     this.updatePuddle(puddle);
+    this.note('wiped');
     this.toast(this.t('wiped'));
   }
 
   /** Lava un contenitore al lavandino: il contenuto va nello scarico (se si può), il vetro torna pulito. */
   wash(item) {
     if (item.mixture && !item.mixture.isEmpty()) {
+      // il velo rimasto dopo aver svuotato il recipiente nei rifiuti è un risciacquo: va nello scarico senza multa
+      const rinse = item.mixture.liquidVolume <= RESIDUE_ML * 1.5 && item.mixture.solidVolume < 0.05;
       const content = item.mixture.takeFraction(1);
       content.add(item.mixture.takeFraction(1, { solidOnly: true }));
-      this.disposeWaste(content, 'sink', item, true);
+      if (!rinse) this.disposeWaste(content, 'sink', item, true);
       item.mixture.clear();
     }
     item.dirty = false;
+    this.note('washed');
     this.toast(this.t('washed', { name: this.itemName(item) }));
   }
 
@@ -1165,6 +1394,7 @@ export class LabGame {
    */
   disposeWaste(mix, bin, source = null, once = false) {
     if (!mix || mix.isEmpty()) return;
+    if (this.follow?.rxSeen) this.follow.wasted = true;
     const cls = wasteClass(mix);
     const key = `${source?.id ?? 0}:${bin}`;
     const last = this.lastDisposal.get(key);
@@ -1173,10 +1403,14 @@ export class LabGame {
     const binName = this.t(`bin_${bin}`);
     if (bin === 'sink') {
       if (cls !== 'sink') this.fine('sinkHazard', this.t('sinkHazard', { what: this.t(`waste_${cls}`) }));
+      else this.note('disposed:sink');
       return;
     }
     if (!binAccepts(bin, cls)) this.fine('wrongBin', this.t('wrongBin', { bin: binName, right: this.t(`bin_${cls === 'solid' ? 'solid' : cls}`) }));
-    else if (once) this.toast(this.t('disposedOk', { bin: binName }), 'ok');
+    else {
+      this.note(`disposed:${bin}`);
+      if (once) this.toast(this.t('disposedOk', { bin: binName }), 'ok');
+    }
   }
 
   // ------------------------------------------------------------------ controllo dell'oggetto in mano (a ogni passo fisico)
@@ -1201,7 +1435,8 @@ export class LabGame {
       out.setFromAxisAngle(UP, yaw);
     } else {
       out.setFromAxisAngle(UP, yaw + Math.PI / 2);
-      const pitch = this.player.mode === 'walk' ? this.player.pitch * 0.8 : -0.5;
+      // termometro, pH-metro e pipetta dentro un recipiente: quasi verticali, con la punta in basso
+      const pitch = item.def.probe && this.probing ? PROBE_PITCH : this.player.mode === 'walk' ? this.player.pitch * 0.8 : -0.5;
       out.multiply(_q2.setFromAxisAngle(Z, pitch - this.tilt + (item.rotPitch ?? 0)));
     }
     return out;
@@ -1265,6 +1500,15 @@ export class LabGame {
     const item = this.held;
     const tip = TOOL_TIPS[item.kind];
     const h = this.hover;
+    // strumenti da immergere: la punta vicino al fondo del recipiente (la pipetta piena appena sotto il bordo)
+    const v = item.def.probe ? this.probing : null;
+    if (tip && v) {
+      const offset = _v2.set(...tip).applyQuaternion(quat);
+      const prof = v.def.profile;
+      const top = prof[prof.length - 1][1];
+      const y = item.kind === 'pipette' && item.load ? top - 0.015 : prof[0][1] + Math.min(0.012, top * 0.3);
+      return out.set(0, y, 0).applyMatrix4(v.mesh.matrixWorld).sub(offset);
+    }
     if (!tip || !h?.point || h.distance > this.holdDist + 0.6) return out;
     const offset = _v2.set(...tip).applyQuaternion(quat);
     // guardando il becco Bunsen con l'ansa, la punta va nel cuore della fiamma
@@ -1377,6 +1621,11 @@ export class LabGame {
 
   startSplash() {
     if (this.splash) return;
+    // occhiali e camice (negozio): gli schizzi non arrivano agli occhi né alla pelle
+    if (this.has('goggles')) {
+      this.toast(this.t('gogglesSaved'), 'ok');
+      return;
+    }
     this.splash = { t: 15 };
     this.emit('alert', { kind: 'splash' });
   }
@@ -1474,6 +1723,21 @@ export class LabGame {
     return { p: lip.addScaledVector(out, 0.003), out, speed };
   }
 
+  /**
+   * Normale (nel mondo) della superficie del solido in un recipiente. Un solido non si livella come un liquido: la sua
+   * superficie si inclina con il recipiente finché non è più ripida dell'angolo di riposo, poi scivola. La normale si
+   * tiene nelle coordinate del recipiente (item.solidUp), così un cumulo scivolato resta inclinato quando il recipiente
+   * torna dritto; agitandolo (E) si livella.
+   */
+  solidNormal(item) {
+    item.mesh.matrixWorld.decompose(_sp, _sq, _ss);
+    item.solidUp ??= new THREE.Vector3(0, 1, 0);
+    const w = _sv.copy(item.solidUp).applyQuaternion(_sq);
+    const n = reposeNormal([w.x, w.y, w.z]);
+    item.solidUp.set(n[0], n[1], n[2]).applyQuaternion(_sq.invert()).normalize();
+    return n;
+  }
+
   /** Versa dal contenitore se il liquido (o la polvere) supera il punto più basso del bordo. */
   pourFrom(item, dt) {
     const mix = item.mixture;
@@ -1486,10 +1750,11 @@ export class LabGame {
     const liquid = lv > RESIDUE_ML;
     const vol = liquid ? lv + sv * 0.3 : sv;
     if (vol <= (liquid ? RESIDUE_ML : 0.02)) return;
-    const info = liquidLevel(def.samples, def.rim, item.mesh.matrixWorld, Math.min(1.2, vol / def.capacity));
+    // un solido non si livella: esce quando la sua superficie, inclinata al massimo dell'angolo di riposo, supera il bordo
+    const normal = liquid ? undefined : this.solidNormal(item);
+    const info = liquidLevel(def.samples, def.rim, item.mesh.matrixWorld, Math.min(1.2, vol / def.capacity), normal);
     item.levelInfo = info;
-    let h = info.level - info.rimY;
-    if (!liquid) h -= 0.004; // la polvere scorre solo oltre l'angolo di riposo
+    const h = info.level - info.rimY;
     item.pourHead = Math.min(h, 0.05);
     const q = pourRate({ h, R: def.rimR, flow: def.flow ?? 1, powder: !liquid, overfull: info.level === Infinity });
     if (q <= 0) return;
@@ -1528,10 +1793,20 @@ export class LabGame {
       }
       return;
     }
-    // poche gocce (contagocce, polvere, filo sottile)
+    if (!liquid) {
+      // un solido cade in grani opachi che non si allungano, un po' sparpagliati
+      const n = Math.min(10, 2 + Math.floor(q * dt * 8));
+      for (let i = 0; i < n; i++) {
+        const r = 0.0005 + Math.random() * 0.0007;
+        const j = () => (Math.random() - 0.5) * 0.004;
+        this.grains.emit(p.x + j(), p.y + j() * 0.5, p.z + j(), out.x * speed + j() * 8, -0.02 - Math.random() * 0.06, out.z * speed + j() * 8, r, col, 1.2, dest.y);
+      }
+      return;
+    }
+    // poche gocce (contagocce, filo sottile)
     const n = def.drops ? 1 : Math.min(5, 1 + Math.floor(q * dt * 2));
     for (let i = 0; i < n; i++) {
-      const r = def.drops ? 0.0022 : Math.min(0.004, (liquid ? 0.0012 : 0.0008) + Math.sqrt(q) * 0.00028);
+      const r = def.drops ? 0.0022 : Math.min(0.004, 0.0012 + Math.sqrt(q) * 0.00028);
       this.drops.emit(p.x + (Math.random() - 0.5) * 0.002, p.y, p.z + (Math.random() - 0.5) * 0.002, out.x * speed, -0.05, out.z * speed, r, col, 1.2, dest.y);
     }
   }
@@ -1586,6 +1861,8 @@ export class LabGame {
       this.puddles.push(pd);
       if (!this.free && mix.liquidVolume > 2) this.toast(this.t('spilled'), 'warn');
     }
+    // un solido asciutto non si spande: si ammucchia
+    if (mix.liquidVolume < 0.05 && mix.solidVolume > 0.002) pd.heap = true;
     pd.mix.add(mix);
     this.updatePuddle(pd);
   }
@@ -1600,15 +1877,30 @@ export class LabGame {
     const state = puddleState(lv, sv, pd.mix.mass - pd.mix.water);
     if (state === 'gone') {
       pd.mesh.removeFromParent();
+      pd.heapMesh?.removeFromParent();
       this.puddles = this.puddles.filter((q) => q !== pd);
       return;
     }
-    const wasStain = pd.stain;
-    pd.stain = state === 'stain';
-    if (!pd.stain) pd.maxR = Math.max(pd.maxR ?? 0, puddleRadius(lv + sv));
-    pd.r = pd.stain ? pd.maxR ?? puddleRadius(sv) : puddleRadius(lv + sv);
-    pd.mesh.scale.setScalar(pd.r);
     const a = pd.mix.appearance();
+    // il solido versato resta un mucchietto conico con l'angolo di riposo, finché non si scioglie
+    if (pd.heap && sv < 0.005) pd.heap = false;
+    const heap = pd.heap ? heapSize(sv) : null;
+    if (heap) {
+      pd.heapMesh ??= createHeap(this.scene, pd.pos.x, pd.pos.y, pd.pos.z, grainTexture());
+      pd.heapMesh.scale.set(heap.r, heap.h, heap.r);
+      pd.heapMesh.material.color.setRGB(a.solid[0] / 255, a.solid[1] / 255, a.solid[2] / 255);
+      pd.heapMesh.material.roughness = a.solidKind === 'crystals' ? 0.35 : 0.95;
+    }
+    if (pd.heapMesh) pd.heapMesh.visible = Boolean(heap);
+    const wet = state === 'wet';
+    const wasStain = pd.stain;
+    pd.stain = state === 'stain' && !heap;
+    const spread = lv + (heap ? 0 : sv);
+    if (wet) pd.maxR = Math.max(pd.maxR ?? 0, puddleRadius(spread));
+    const discR = pd.stain ? pd.maxR ?? puddleRadius(sv) : puddleRadius(spread);
+    pd.mesh.visible = wet || pd.stain;
+    pd.mesh.scale.setScalar(discR);
+    pd.r = Math.max(pd.mesh.visible ? discR : 0, heap ? heap.r : 0);
     const c = pd.stain ? a.solid : a.turbid > 0.3 ? a.turbidColor : a.liquid;
     const mat = pd.mesh.material;
     mat.color.setRGB(c[0] / 255, c[1] / 255, c[2] / 255);
@@ -1622,7 +1914,7 @@ export class LabGame {
 
   // ------------------------------------------------------------------ aspetto del contenuto
 
-  updateContents(item) {
+  updateContents(item, dt = 0) {
     const def = item.def;
     const mix = item.mixture;
     if (!def.container || !mix) return;
@@ -1630,30 +1922,47 @@ export class LabGame {
     const sv = mix.solidVolume;
     const m = item.mesh.matrixWorld;
     if (sv > 0.01) {
-      const s = liquidLevel(def.samples, def.rim, m, Math.min(1, sv / def.capacity));
+      // il solido appena arrivato in un recipiente vuoto ha la superficie piana; poi segue il recipiente (angolo di riposo)
+      if (!item.solidMesh.visible) item.solidUp?.set(0, 1, 0);
+      const n = this.solidNormal(item);
+      const s = liquidLevel(def.samples, def.rim, m, Math.min(1, sv / def.capacity), n);
+      const u = item.solidMesh.material.userData.uniforms;
       item.solidMesh.visible = true;
-      item.solidMesh.material.userData.uniforms.uLevel.value = s.level === Infinity ? 1e3 : s.level;
+      u.uLevel.value = s.level === Infinity ? 1e3 : s.level;
+      u.uNormal.value.set(n[0], n[1], n[2]);
     } else item.solidMesh.visible = false;
     if (lv > 0.05) {
       const l = liquidLevel(def.samples, def.rim, m, Math.min(1, (lv + sv * 0.35) / def.capacity));
       item.liquidMesh.visible = true;
       item.liquidMesh.material.userData.uniforms.uLevel.value = l.level === Infinity ? 1e3 : l.level;
     } else item.liquidMesh.visible = false;
-    if (item.lookStale !== false || !item.look) {
+    const lm = item.liquidMesh.material;
+    const sm = item.solidMesh.material;
+    const first = !item.look;
+    if (item.lookStale !== false || first) {
       const a = mix.appearance();
       item.look = a;
       item.lookStale = false;
       const lc = a.turbid > 0.05 ? a.liquid.map((x, i) => x + (a.turbidColor[i] - x) * a.turbid) : a.liquid;
-      const lm = item.liquidMesh.material;
-      lm.color.setRGB(lc[0] / 255, lc[1] / 255, lc[2] / 255);
-      lm.opacity = Math.min(0.95, a.alpha + a.turbid * 0.55);
-      lm.userData.uniforms.uSurface.value.setRGB(Math.min(1, lc[0] / 255 + 0.12), Math.min(1, lc[1] / 255 + 0.12), Math.min(1, lc[2] / 255 + 0.12));
-      lm.userData.uniforms.uSurfaceAlpha.value = Math.min(0.97, lm.opacity + 0.25);
-      const sm = item.solidMesh.material;
-      sm.color.setRGB(a.solid[0] / 255, a.solid[1] / 255, a.solid[2] / 255);
+      item.lookTo ??= { liquid: new THREE.Color(), solid: new THREE.Color(), opacity: 0 };
+      item.lookTo.liquid.setRGB(lc[0] / 255, lc[1] / 255, lc[2] / 255);
+      item.lookTo.solid.setRGB(a.solid[0] / 255, a.solid[1] / 255, a.solid[2] / 255);
+      item.lookTo.opacity = Math.min(0.95, a.alpha + a.turbid * 0.55);
       sm.roughness = a.solidKind === 'crystals' ? 0.25 : 0.9;
-      sm.userData.uniforms.uSurface.value.setRGB(Math.min(1, a.solid[0] / 255 + 0.08), Math.min(1, a.solid[1] / 255 + 0.08), Math.min(1, a.solid[2] / 255 + 0.08));
     }
+    // i colori seguono il contenuto in pochi decimi di secondo: il cambio di colore di una reazione si vede avvenire
+    const to = item.lookTo;
+    const k = first ? 1 : 1 - Math.exp(-dt * 3.5);
+    lm.color.lerp(to.liquid, k);
+    lm.opacity += (to.opacity - lm.opacity) * k;
+    sm.color.lerp(to.solid, k);
+    const lc = lm.color;
+    lm.userData.uniforms.uSurface.value.setRGB(Math.min(1, lc.r + 0.12), Math.min(1, lc.g + 0.12), Math.min(1, lc.b + 0.12));
+    lm.userData.uniforms.uSurfaceAlpha.value = Math.min(0.97, lm.opacity + 0.25);
+    const sc = sm.color;
+    sm.userData.uniforms.uSurface.value.setRGB(Math.min(1, sc.r + 0.08), Math.min(1, sc.g + 0.08), Math.min(1, sc.b + 0.08));
+    // porcellana rovente: rosso scuro da 500 °C, arancio verso gli 850 °C
+    if (item.porcelainMat) item.porcelainMat.emissiveIntensity = mix.isEmpty() ? 0 : clamp((mix.T - 770) / 400, 0, 1) * 1.6;
   }
 
   // ------------------------------------------------------------------ calore e chimica
@@ -1662,7 +1971,7 @@ export class LabGame {
   thermalEnv(item) {
     const def = item.def;
     const p = item.mesh.position;
-    const env = { heatW: 0, lossWK: 0.3 + def.area * 0.03, Tenv: AMBIENT, containerC: def.heatC, area: def.area, stir: 0, open: true, flame: false };
+    const env = { heatW: 0, lossWK: 0.3 + def.area * 0.03, Tenv: AMBIENT, containerC: def.heatC, area: def.area, stir: 0, open: true, flame: false, light: false };
     _v.set(0, 1, 0).applyQuaternion(item.mesh.quaternion);
     const upright = _v.y > 0.85;
     const T = item.mixture.T;
@@ -1683,6 +1992,11 @@ export class LabGame {
         env.flame = true;
       }
     }
+    // l'olio copre il metallo alcalino: niente aria (né umidità) finché resta nel suo barattolo
+    if (def.oil) env.open = false;
+    // sotto la lampada accesa: le reazioni fotochimiche
+    const lz = this.fx.lamp.zone;
+    if (this.fx.lamp.on && Math.hypot(p.x - lz.x, p.z - lz.z) < lz.r && p.y > lz.y0 && p.y < lz.y1) env.light = true;
     const sb = this.fx.sink.basin;
     if (p.x > sb.x0 && p.x < sb.x1 && p.z > sb.z0 && p.z < sb.z1 && p.y < sb.top) {
       env.Tenv = 288;
@@ -1699,36 +2013,46 @@ export class LabGame {
       env.stir = Math.max(env.stir, Math.min(1, Math.hypot(w.x, w.y, w.z) / 10 + Math.hypot(v.x, v.y, v.z) / 3));
       if (this.swirlT > 0) env.stir = 1;
     }
-    return env;
+    return this.apparatus.env(item, env);
   }
 
   /** Dentro la cappa accesa? */
   inHood(p) {
     const z = this.fx.hood.zone;
-    return this.fx.hood.on && p.x > z.x0 && p.x < z.x1 && p.z > z.z0 && p.z < z.z1 && p.y > z.y0 - 0.05 && p.y < z.y1;
+    // la cappa più potente (negozio) aspira anche un po' fuori dal piano
+    const m = this.has('hoodPro') ? 0.2 : 0;
+    return this.fx.hood.on && p.x > z.x0 - m && p.x < z.x1 + m && p.z > z.z0 - m && p.z < z.z1 + m && p.y > z.y0 - 0.05 && p.y < z.y1 + m;
   }
 
   chemistry(dt) {
     const { chem } = this;
+    this.apparatus.beginChem();
     for (const item of this.items) {
       const mix = item.mixture;
       if (!mix || mix.isEmpty() || !item.def.container) continue;
       const env = this.thermalEnv(item);
       const before = mix.T;
       const ev = mix.tick(dt, env);
+      this.apparatus.afterTick(item, ev, dt);
       item.lookStale = true;
       item.peakT = Math.max(item.peakT ?? AMBIENT, mix.T);
       const p = item.mesh.position;
       const top = _v.set(0, item.def.height, 0).applyMatrix4(item.mesh.matrixWorld).clone();
       // vapore sopra i liquidi caldi
       if (mix.T > 345 && mix.water > 0.5 && Math.random() < (mix.T - 345) / 40) this.puffs.emit(top.x, top.y, top.z, (Math.random() - 0.5) * 0.05, 0.25, (Math.random() - 0.5) * 0.05, { size: 0.02, grow: 4, rgb: [245, 248, 252], alpha: 0.35, life: 1.6 });
+      item.mixture.peakT = item.peakT;
       for (const [sid, mol] of ev.gases) {
         if (mol <= 1e-7) continue;
         if (sid === WATER) continue;
+        if (this.order) this.order.gas[sid] = (this.order.gas[sid] ?? 0) + mol;
         if (chem.toxic.has(sid)) this.toxicGas(sid, mol, top);
-        else if (Math.random() < Math.min(1, mol * 2000)) this.puffs.emit(top.x, top.y - 0.01, top.z, (Math.random() - 0.5) * 0.02, 0.12, (Math.random() - 0.5) * 0.02, { size: 0.008, grow: 2, rgb: [250, 250, 250], alpha: 0.5, life: 0.8 });
+        else if (Math.random() < Math.min(1, mol * 2000)) {
+          const c = chem.sub(sid)?.colors?.[3];
+          const rgb = c && c[3] > 0.3 ? c.slice(0, 3) : [250, 250, 250];
+          this.puffs.emit(top.x, top.y - 0.01, top.z, (Math.random() - 0.5) * 0.02, 0.12, (Math.random() - 0.5) * 0.02, { size: 0.008, grow: 2, rgb, alpha: 0.5, life: 0.8 });
+        }
       }
-      for (const id of ev.reactions) this.noteReaction(id);
+      if (ev.extent.size) this.observeReactions(item, ev, mix, dt);
       if (ev.ignite && !this.fires.some((f) => f.item === item)) this.startFire({ item, sid: ev.ignite, pos: top });
       if (ev.explode > 0.05) this.explode(p.clone(), Math.min(3, ev.explode), item);
       if (ev.heatK > 30 && before < 360 && mix.T > 365) this.toast(this.t('violent'), 'warn');
@@ -1762,14 +2086,205 @@ export class LabGame {
     }
   }
 
-  noteReaction(id) {
+  /** Equazione di una reazione con gli stati fisici (in acqua o no). */
+  equationText(rx, aq) {
+    return equation(this.chem, rx, { aqueous: aq });
+  }
+
+  /** Segnali osservabili di una reazione (in acqua o no), calcolati una volta sola. */
+  signals(rx, aq) {
+    const key = `${rx.id}:${aq ? 1 : 0}`;
+    if (!this.sigCache.has(key)) this.sigCache.set(key, reactionSignals(this.chem, rx, { aqueous: aq }));
+    return this.sigCache.get(key);
+  }
+
+  /** Reazioni avvenute in un contenitore in questo passo: registro per la finestrella, effetti e quaderno. */
+  observeReactions(item, ev, mix, dt) {
+    const aq = mix.water > 0.5;
+    item.rxLog ??= [];
+    for (const [id, ext] of ev.extent) {
+      const rx = this.chem.rxById.get(id);
+      if (!rx) continue;
+      const sig = this.signals(rx, aq);
+      const log = item.rxLog.find((x) => x.id === id);
+      if (log) {
+        log.t = this.time;
+        log.aq = aq;
+      } else {
+        item.rxLog.unshift({ id, t: this.time, aq });
+        if (item.rxLog.length > 3) item.rxLog.length = 3;
+      }
+      this.reactionFx(item, sig, ext / dt, dt);
+      this.alkaliFlame(item, rx);
+      this.noteReaction(id, sig, aq);
+    }
+  }
+
+  /**
+   * Bolle del gas che sale dal fondo e fiocchi del precipitato che scendono, più fitti quanto più è veloce la reazione
+   * (`rate`: moli di reazione al secondo). Solo nel liquido di un contenitore dritto.
+   */
+  reactionFx(item, sig, rate, dt) {
+    if (!item.liquidMesh?.visible || item.mixture.liquidVolume < 1) return;
+    if (_v.set(0, 1, 0).applyQuaternion(item.mesh.quaternion).y < 0.8) return;
+    const def = item.def;
+    const base = item.mesh.position;
+    const floor = base.y + def.profile[0][1];
+    const top = Math.min(item.liquidMesh.material.userData.uniforms.uLevel.value, base.y + def.height) - 0.001;
+    if (top - floor < 0.004) return;
+    const r = def.profile[0][0] * 0.75;
+    const at = () => {
+      const a = Math.random() * Math.PI * 2;
+      const d = Math.sqrt(Math.random()) * r;
+      return [base.x + Math.cos(a) * d, base.z + Math.sin(a) * d];
+    };
+    item.fxAcc ??= { gas: 0, flake: 0 };
+    if (sig.gases.length) {
+      item.fxAcc.gas += Math.min(80, Math.max(3, 60000 * rate)) * dt;
+      for (; item.fxAcc.gas >= 1; item.fxAcc.gas--) {
+        const [x, z] = at();
+        this.motes.emit(x, floor + 0.002, z, 0.03 + Math.random() * 0.03, 0.0007 + Math.random() * 0.0011, [236, 243, 250], top, floor - 1, 3);
+      }
+    }
+    const solids = sig.solids.filter((x) => !x.metal);
+    if (solids.length) {
+      item.fxAcc.flake += Math.min(60, Math.max(4, 40000 * rate)) * dt;
+      for (; item.fxAcc.flake >= 1; item.fxAcc.flake--) {
+        const [x, z] = at();
+        const c = solids[Math.floor(Math.random() * solids.length)].rgb;
+        this.motes.emit(x, floor + (top - floor) * (0.3 + Math.random() * 0.7), z, -(0.008 + Math.random() * 0.012), 0.0006 + Math.random() * 0.0008, c, top + 1, floor + 0.001, 2.5);
+      }
+    }
+  }
+
+  /**
+   * Potassio, rubidio e cesio nell'acqua: il calore accende l'idrogeno e sulla superficie si vede la fiammella del
+   * colore del metallo (lilla per il potassio). Solo l'effetto: il metallo è già il combustibile della reazione.
+   */
+  alkaliFlame(item, rx) {
+    if (!rx.reactants.some((r) => r.sid === WATER)) return;
+    const metal = rx.reactants.find((r) => ['K', 'Rb', 'Cs'].includes(this.chem.sub(r.sid)?.symbol));
+    if (!metal || Math.random() > 0.5 || !item.liquidMesh?.visible) return;
+    const p = item.mesh.position;
+    const y = Math.min(item.liquidMesh.material.userData.uniforms.uLevel.value, p.y + item.def.height);
+    const c = this.chem.sub(metal.sid).flameColor ?? [200, 120, 255];
+    const r = item.def.profile[0][0] * 0.5;
+    this.flames.emit(p.x + (Math.random() - 0.5) * r, y + 0.004, p.z + (Math.random() - 0.5) * r, 0, 0.25, 0, { size: 0.012, grow: 1.8, rgb: c, alpha: 0.85, life: 0.3 });
+  }
+
+  // ------------------------------------------------------------------ libro «Come si fa»
+
+  /** Le ricette del libro (solo quelle che il motore esegue davvero) e le pagine degli elementi, costruite una volta. */
+  get book() {
+    if (!this.bookCache) {
+      this.bookCache = bookRecipes(this.chem, BOOK_VERIFIED);
+      this.bookCache.elements = elementPages(this.chem, this.bookCache);
+    }
+    return this.bookCache;
+  }
+
+  /**
+   * «Prepara sul banco» (Laboratorio libero): mette sul bancone B il recipiente della ricetta, gli strumenti (cilindro,
+   * spatola) e i reagenti, quelli dello scaffale come sono e gli altri dal magazzino nella forma della ricetta.
+   * @returns {string[]} nomi di ciò che è stato messo sul banco
+   */
+  prepareRecipe(recipe) {
+    const out = [];
+    this.spawnGlass(recipe.vessel, 'benchB');
+    out.push(this.t(`item_${recipe.vessel}`));
+    if (recipe.ingredients.some((x) => x.form === 'solution' || (x.form === 'liquid' && x.sid !== WATER))) {
+      this.spawnGlass('cylinder100', 'benchB');
+      out.push(this.t('item_cylinder100'));
+    }
+    if (recipe.ingredients.some((x) => x.form === 'solid')) {
+      this.spawnTool('spatula', 'benchB');
+      out.push(this.t('item_spatula'));
+    }
+    for (const x of recipe.ingredients) {
+      if (x.role === 'air' || x.role === 'gas' || x.sid === WATER) continue;
+      const item = x.shelf ? this.spawnReagent(x.shelf, 'benchB') : this.spawnReagent(null, 'benchB', reagentOf(x));
+      out.push(item.name);
+    }
+    if (recipe.ingredients.some((x) => x.sid === WATER)) {
+      this.spawnReagent('water', 'benchB');
+      out.push(this.t('distilledWater'));
+    }
+    return out;
+  }
+
+  /** Comincia a seguire una ricetta: i passi si spuntano da soli quando il gioco li riconosce. */
+  followRecipe(id) {
+    const recipe = this.book.byId.get(id);
+    this.follow = recipe ? { recipe, done: recipe.steps.map(() => false), top: -1, rxSeen: false, wasted: false, warned: new Set(), complete: false, t: 0 } : null;
+    this.emit('follow');
+  }
+
+  stopFollow() {
+    this.follow = null;
+    this.emit('follow');
+  }
+
+  /**
+   * Spunta i passi della ricetta seguita (ogni 0,25 s): un ingrediente è nel recipiente, la temperatura è arrivata, la
+   * reazione è avvenuta, la cappa è accesa, il contenuto è finito nei rifiuti. Un passo fatto spunta anche quelli
+   * prima (chi va avanti li ha fatti); avvisa se un ingrediente è più del doppio della dose.
+   */
+  updateFollow() {
+    const f = this.follow;
+    if (!f || f.complete || this.time - f.t < 0.25) return;
+    f.t = this.time;
+    const r = f.recipe;
+    const vessels = this.items.filter((it) => it.def.container && it.mixture && !it.data.reagent && !it.rig && !it.mixture.isEmpty());
+    const has = (sid, mol) => vessels.some((it) => (it.mixture.n.get(sid) ?? 0) >= mol);
+    const keys = new Set(r.ingredients.filter((x) => x.role === 'reactant').map((x) => x.sid));
+    const observe = r.steps.findIndex((x) => x.kind === 'observe');
+    r.steps.forEach((step, i) => {
+      if (f.done[i]) return;
+      const c = step.check;
+      let ok = false;
+      if (c.type === 'has') ok = has(c.sid, c.mol);
+      else if (c.type === 'temp') ok = vessels.some((it) => [...keys].some((sid) => (it.mixture.n.get(sid) ?? 0) > 0) && it.mixture.T >= c.T - 10);
+      else if (c.type === 'rx') ok = f.rxSeen;
+      else if (c.type === 'hood') ok = this.fx.hood.on;
+      else if (c.type === 'waste') ok = f.wasted;
+      if (f.rxSeen && i <= observe) ok = true;
+      f.done[i] = ok;
+    });
+    let top = -1;
+    f.done.forEach((d, i) => {
+      if (d) top = i;
+    });
+    for (let i = 0; i < top; i++) f.done[i] = true;
+    if (top > f.top) {
+      f.top = top;
+      this.emit('follow');
+    }
+    for (const x of r.ingredients) {
+      if (x.role !== 'reactant' || !x.mol || f.warned.has(x.sid)) continue;
+      if (has(x.sid, x.mol * 2.2)) {
+        f.warned.add(x.sid);
+        this.toast(this.t('bkDoseWarn', { name: this.chem.name(x.sid) }), 'warn');
+      }
+    }
+    if (f.done.every(Boolean)) {
+      f.complete = true;
+      this.toast(this.t('bkPanelDone'), 'ok');
+      this.emit('follow');
+    }
+  }
+
+  /** Prima volta che si osserva una reazione in questa partita: avviso con l'equazione e voce nel quaderno. */
+  noteReaction(id, sig, aq) {
+    if (this.follow?.recipe.id === id) this.follow.rxSeen = true;
+    this.order?.rx.add(id);
     this.seenRx ??= new Set();
     if (this.seenRx.has(id)) return;
     this.seenRx.add(id);
-    const rx = this.chem.rxs.find((r) => r.id === id);
+    const rx = this.chem.rxById.get(id);
     if (!rx) return;
-    const side = (arr) => arr.map((x) => `${x.c > 1 ? `${x.c} ` : ''}${this.chem.formula(x.sid)}`).join(' + ');
-    this.emit('reaction', { equation: `${side(rx.reactants)} → ${side(rx.products)}` });
+    const tags = signalTags(sig);
+    const isNew = recordReaction(this.notebook, id, { mode: this.mode, aq, tags });
+    this.emit('reaction', { id, equation: equation(this.chem, rx, { aqueous: aq }), dH: sig.dH, tags, isNew });
   }
 
   toxicGas(sid, mol, pos) {
@@ -1789,12 +2304,17 @@ export class LabGame {
     }
   }
 
-  startFire({ item = null, puddle = null, sid = 0, pos }) {
+  /** Un fuoco. scripted: acceso dall'esercitazione (la prova di evacuazione), senza multa e più lungo. */
+  startFire({ item = null, puddle = null, sid = 0, pos, scripted = false }) {
     if (this.fires.length > 12) return;
     // appena spento con l'estintore (o con la doccia) non si riaccende subito: la CO₂ copre la zona
     const owner = item ?? puddle;
     if (owner && (owner.noFire ?? 0) > this.time) return;
-    this.fires.push({ item, puddle, sid, pos: pos.clone(), fuel: item?.kind === 'towel' ? 8 : 30, hit: 0, age: 0 });
+    this.fires.push({ item, puddle, sid, pos: pos.clone(), fuel: scripted ? 150 : item?.kind === 'towel' ? 8 : 30, hit: 0, age: 0, scripted });
+    if (scripted) {
+      this.alarm = 6;
+      return;
+    }
     // una sola multa per un fuoco che si riaccende
     if (this.time - (this.lastFireFine ?? -99) > 10) {
       this.lastFireFine = this.time;
@@ -1850,6 +2370,8 @@ export class LabGame {
       let burning = true;
       if (f.item?.mixture && f.sid) burning = f.item.mixture.burn(dt, f.sid) > 0 || f.item.kind === 'towel';
       else if (f.puddle) burning = f.puddle.mix.burn(dt, f.sid, 0.01) > 0;
+      const comb = burning && f.sid ? this.chem.comb.get(f.sid) : null;
+      if (comb) this.noteReaction(comb.id, this.signals(comb, false), false);
       f.fuel -= dt;
       if (f.item?.kind === 'towel' && f.fuel <= 0) this.removeItem(f.item);
       // si propaga a carta e pozze infiammabili vicine
@@ -1864,7 +2386,11 @@ export class LabGame {
         this.fires = this.fires.filter((q) => q !== f);
         const owner = f.item ?? f.puddle;
         if (owner) owner.noFire = this.time + 8;
-        if (f.hit > 0.8) this.toast(this.t('fireOut'), 'ok');
+        if (f.hit > 0.8) {
+          this.toast(this.t('fireOut'), 'ok');
+          this.note('fireOut');
+          if (this.order && this.order.fireTime === null) this.order.fireTime = this.time - this.order.start;
+        }
         if (f.puddle) this.updatePuddle(f.puddle);
       }
     }
@@ -1882,9 +2408,11 @@ export class LabGame {
       c.age += dt;
       const color = this.chem.sub(c.sid)?.colors?.[3];
       const rgb = color && color[3] > 0.3 ? color.slice(0, 3) : [200, 205, 190];
-      if (Math.random() < 0.6) {
+      // la nuvola si vede quanto è densa: le tracce (la luce sul cloruro d'argento) sono appena un velo
+      const dense = Math.min(1, c.mol / 1e-4);
+      if (Math.random() < 0.6 && dense > 0.03) {
         const v = c.vented ? [0.4, 0.5, 0] : [(Math.random() - 0.5) * 0.15, 0.08, (Math.random() - 0.5) * 0.15];
-        this.puffs.emit(c.pos.x, c.pos.y, c.pos.z, v[0], v[1], v[2], { size: 0.05, grow: 6, rgb, alpha: c.vented ? 0.2 : 0.35, life: 3 });
+        this.puffs.emit(c.pos.x, c.pos.y, c.pos.z, v[0], v[1], v[2], { size: 0.05, grow: 6, rgb, alpha: (c.vented ? 0.2 : 0.35) * dense, life: 3 });
       }
       c.mol *= Math.exp(-dt / (c.vented ? 1.5 : 9));
       if (c.age > 3 && c.mol < 2e-5) this.clouds = this.clouds.filter((q) => q !== c);
@@ -1935,7 +2463,7 @@ export class LabGame {
 
   checkBins() {
     for (const it of [...this.items]) {
-      if (it === this.held) continue;
+      if (it === this.held || it.rig) continue;
       const p = it.mesh.position;
       if (p.y < -1 || Math.abs(p.x) > 6 || Math.abs(p.z) > 5) {
         placeItem(it, this.freeSlot('benchB'));
@@ -1953,14 +2481,15 @@ export class LabGame {
 
   binItem(it, bin) {
     const kind = bin.bin;
-    if (['spatula', 'loop', 'extinguisher'].includes(it.kind)) {
-      placeItem(it, it.kind === 'extinguisher' ? it.home : this.freeSlot('bench'));
+    if (['spatula', 'loop', 'extinguisher', ...PERMANENT_TOOLS].includes(it.kind)) {
+      if (it.permanent) this.apparatus.goHome(it);
+      else placeItem(it, it.kind === 'extinguisher' ? it.home : this.freeSlot('bench'));
       this.toast(this.t('notWaste'), 'warn');
       return;
     }
     let right;
     if (it.kind === 'shards') right = 'glass';
-    else if (it.kind === 'towel' || it.kind === 'strip') {
+    else if (it.kind === 'towel' || it.kind === 'strip' || it.kind === 'filterPaper') {
       const cls = it.mixture ? wasteClass(it.mixture) : null;
       right = cls === 'heavy' ? 'heavy' : cls === 'organic' ? 'organic' : 'solid';
     } else if (it.def.container) {
@@ -1977,6 +2506,11 @@ export class LabGame {
   // ------------------------------------------------------------------ bilancia
 
   /** Lettura della bilancia (g): oggetti appoggiati sul piatto, meno la tara. */
+  /** Decimali della bilancia: due, tre con la bilancia di precisione del negozio. */
+  balanceDigits() {
+    return this.has('balancePro') ? 3 : 2;
+  }
+
   balanceReading(raw = false) {
     const pan = this.fx.balance.pan;
     let g = 0;
@@ -1995,13 +2529,33 @@ export class LabGame {
     if (this.swirlT > 0) this.swirlT -= dt;
     // lasciato il tasto, il contenitore torna dritto da solo (e smette di versare)
     if (this.held) this.tilt = relaxTilt(this.tilt, dt, this.pouring);
+    this.autoTilt(dt);
+    // con un oggetto in mano A e D lo ruotano attorno alla verticale (e non si fa un passo di lato)
+    this.player.noStrafe = Boolean(this.held);
+    if (this.held && !blocked) {
+      const k = this.player.keys;
+      const dir = (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0) - (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0);
+      if (dir) this.held.rotYaw = wrapAngle((this.held.rotYaw ?? 0) + dir * ROT_KEYS * dt);
+    }
     this.player.update(dt, blocked);
+    // strumento da immergere in mano, guardando un recipiente: ci entra (termometro, pH-metro, pipetta)
+    const hv = this.hover;
+    // a portata: in prima persona come gli altri strumenti, nella vista del bancone vicino all'oggetto in mano
+    const reach = (it) => (this.player.mode === 'walk' ? hv.distance < this.holdDist + 0.6 : it.mesh.position.distanceTo(this.held.mesh.position) < 0.8);
+    this.probing = this.held?.def.probe && hv?.type === 'item' && hv.item.def.container && hv.item.mixture && reach(hv.item) ? hv.item : null;
     for (const b of this.pendingBreaks) this.breakItem(b);
     this.pendingBreaks.clear();
     this.physics.step(dt, this.items.map((i) => i.body));
     for (const it of this.items) syncItem(it);
+    // tappi: tolti mentre si usa il reagente (in mano o appena preso con spatola, ansa o cartina), poi rimessi
+    for (const it of this.items) if (it.cap) it.cap.visible = it !== this.held && this.time - (it.data.usedAt ?? -9) > 2.5;
+    // con le ombre vere (Professionale) l'ombra di contatto resta leggera
+    for (const it of this.items) updateContactShadow(it, this.physics, this.G.shadows ? 0.3 : 0.55);
     for (const p of this.room.props) if (!p.body.isSleeping()) this.syncProp(p);
     for (const it of this.items) if (it.def.container && it.mixture) this.pourFrom(it, dt);
+    this.apparatus.update(dt);
+    // pH-metro immerso con una lettura: il campione conta come misurato
+    if (this.order && this.held?.kind === 'phmeter' && this.probing && this.held.data.reading !== null) this.order.phRead.add(this.probing.id);
     for (const [it, st] of this.streams) if (st.shown !== this.time) st.hide();
     this.deliverStreams();
     // acqua del rubinetto nei contenitori sotto il getto
@@ -2019,9 +2573,10 @@ export class LabGame {
       this.chemAcc -= CHEM_DT;
       this.chemistry(CHEM_DT);
     }
-    for (const it of this.items) this.updateContents(it);
+    for (const it of this.items) this.updateContents(it, dt);
     this.updateHazards(dt);
     this.checkBins();
+    this.updateFollow();
     this.updateHover();
     this.updateAim();
     this.updateOutline();
@@ -2034,9 +2589,11 @@ export class LabGame {
         this.updatePuddle(pd);
       }
     }
-    this.room.setBalance(`${this.fmt(Math.max(-999, this.balanceReading()), 2)} g`);
+    this.room.setBalance(`${this.fmt(Math.max(-999, this.balanceReading()), this.balanceDigits())} g`);
     this.room.update(dt, this.time);
     this.drops.update(dt);
+    this.grains.update(dt);
+    this.motes.update(dt);
     const hz = this.fx.hood;
     this.puffs.update(dt, hz.on ? (x, y, z) => (x > hz.zone.x0 - 0.3 && z > hz.zone.z0 && z < hz.zone.z1 ? [1.2, 1.6, 0] : null) : null);
     this.flames.update(dt);
@@ -2048,6 +2605,12 @@ export class LabGame {
 
   resize(w, h) {
     this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+  }
+
+  /** Campo visivo verticale (gradi), dalle impostazioni: vale per la camminata e per la vista del bancone. */
+  setFov(deg) {
+    this.camera.fov = clamp(Math.round(deg) || FOV.default, FOV.min, FOV.max);
     this.camera.updateProjectionMatrix();
   }
 
@@ -2069,22 +2632,33 @@ export class LabGame {
     if (h.type === 'puddle') {
       const mix = h.puddle.mix;
       const look = mix.appearance();
+      if (h.puddle.heap && mix.liquidVolume < 0.05) return { name: t('lookHeap'), rows: [], notes: [t('lookHeapNote')], volume: `${this.fmt(mix.mass, mix.mass < 10 ? 2 : 1)} g`, color: rgbCss(look.solid) };
       if (h.puddle.stain) return { name: t('lookStain'), rows: [], notes: [t('lookStainNote')], color: rgbCss(look.solid) };
       return { name: t('lookPuddle'), rows: [], notes: [t('lookPuddleNote')], volume: `≈ ${this.fmt(Math.max(1, Math.round(mix.liquidVolume)), 0)} mL`, color: rgbCss(look.liquid) };
     }
     const f = h.fixture;
-    const out = { name: t(`fx_${f.kind}`, { bin: f.bin ? t(`bin_${f.bin}`) : '' }), rows: [], notes: [], fixture: true };
+    const out = { name: t(`fx_${f.kind}`, { bin: f.bin ? t(`bin_${f.bin}`) : '', gas: f.formula ?? '' }), rows: [], notes: [], fixture: true };
+    const extra = this.apparatus.fixtureState(f);
+    if (extra) {
+      out.notes.push(extra.note);
+      out.hot = Boolean(extra.hot);
+      out.on = Boolean(extra.on);
+      return out;
+    }
     const state = {
       hotplate: () => (f.level ? t('stPlate', { n: f.level, temp: Math.round(22 + f.level * 60) }) : t('stOffF')),
       bunsen: () => t(f.on ? 'stOn' : 'stOff'),
       hood: () => t(f.on ? 'stOnF' : 'stOffF'),
+      lamp: () => t(f.on ? 'stLampOn' : 'stOffF'),
+      notebook: () => t('stNotebook', { n: Object.keys(this.notebook.rx).length }),
+      book: () => t('stBook', { n: this.book.recipes.length }),
       sink: () => t(f.tap ? 'stTapOn' : 'stTapOff'),
-      balance: () => `${this.fmt(Math.max(-999, this.balanceReading()), 2)} g`,
+      balance: () => `${this.fmt(Math.max(-999, this.balanceReading()), this.balanceDigits())} g`,
       bin: () => t(`binNote_${f.bin}`),
     }[f.kind];
     if (state) out.notes.push(state());
     if (f.kind === 'hotplate' && f.level) out.hot = true;
-    if ((f.kind === 'bunsen' || f.kind === 'hood') && f.on) out.on = true;
+    if ((f.kind === 'bunsen' || f.kind === 'hood' || f.kind === 'lamp') && f.on) out.on = true;
     return out;
   }
 
@@ -2093,18 +2667,21 @@ export class LabGame {
     const h = this.hover;
     const held = this.held;
     let target = null;
-    if (h?.type === 'item') target = { type: 'item', kind: h.item.kind, name: this.itemName(h.item), container: Boolean(h.item.def.container) };
-    else if (h?.type === 'puddle') target = { type: 'puddle', stain: Boolean(h.puddle.stain) };
+    if (h?.type === 'item') target = { type: 'item', kind: h.item.kind, name: this.itemName(h.item), container: Boolean(h.item.def.container), rig: h.item.rig ?? null, level: h.item.rig === 'burette' ? this.apparatus.stopcock : 0, hot: !this.tongs && this.apparatus.isHot(h.item) };
+    else if (h?.type === 'puddle') target = { type: 'puddle', stain: Boolean(h.puddle.stain), heap: Boolean(h.puddle.heap) && h.puddle.mix.liquidVolume < 0.05 };
     else if (h?.type === 'fixture') {
       const f = h.fixture;
-      target = { type: 'fixture', kind: f.kind, on: Boolean(f.kind === 'sink' ? f.tap : f.on), level: f.level ?? 0, binName: f.bin ? this.t(`bin_${f.bin}`) : '' };
+      const on = f.kind === 'sink' ? f.tap : f.kind === 'tongs' ? f.taken : f.kind === 'gas' ? f.open : f.kind === 'power' ? f.volts > 0 : f.on;
+      target = { type: 'fixture', kind: f.kind, on: Boolean(on), level: f.kind === 'power' ? f.volts : f.level ?? 0, binName: f.bin ? this.t(`bin_${f.bin}`) : '', gas: f.formula ?? '' };
     }
     return legendRows({
       mode: this.player.mode,
-      held: held ? { kind: held.kind, container: Boolean(held.def.container), loaded: Boolean(held.load && !held.load.isEmpty()) } : null,
+      held: held ? { kind: held.kind, container: Boolean(held.def.container), loaded: Boolean(held.load && !held.load.isEmpty()), probing: Boolean(this.probing) } : null,
+      tongs: this.tongs,
       target,
       canPlace: Boolean(this.spot?.valid),
       pouring: this.pouring,
+      pourAuto: this.pourAuto,
       precise: Boolean(this.precise),
       filling: this.filling,
       tapFlow: this.tapFlow,
@@ -2113,9 +2690,53 @@ export class LabGame {
     });
   }
 
+  /**
+   * «Perché non reagisce?» per un contenitore: la spiegazione più utile (signals.js, whyNot), con l'equazione della
+   * reazione a cui si riferisce. Solo quelle tra due o più delle sostanze presenti, o quelle di una sola sostanza su cui
+   * si può fare qualcosa (scaldare, il catalizzatore, la luce); ricalcolata al massimo due volte al secondo.
+   * @returns {{text: string, eq: string|null} | null}
+   */
+  whyHint(item) {
+    const c = item.whyCache;
+    if (c && this.time - c.t < 0.5) return c.hint;
+    const { t, chem } = this;
+    const mix = item.mixture;
+    const env = this.thermalEnv(item);
+    const aq = mix.water > 0.5;
+    const list = whyNot(mix, env);
+    // l'elettrolisi di una sola sostanza (NaCl, l'acqua) si suggerisce solo sotto gli elettrodi
+    const w = list.find((x) => x.uses >= 2 || ['catalyst', 'light', 'water', 'undissolved', 'conduct'].includes(x.why) || (x.why === 'electrolysis' && item.inCell) || (x.why === 'heat' && (!aq || x.T <= 373.15)));
+    let hint = null;
+    if (w) {
+      const nm = (sid) => `${chem.name(sid)} (${chem.formula(sid)})`;
+      const V = (E) => `${E > 0 ? '+' : '−'}${this.fmt(Math.abs(E), 2)} V`;
+      const params = {
+        temp: w.T ? this.fmt(w.T - 273.15, 0) : '',
+        name: w.sid ? nm(w.sid) : '',
+        names: (w.sids ?? []).map(nm).join(', '),
+        metal: w.sid ? nm(w.sid) : '',
+        other: w.other ? nm(w.other) : '',
+        E: w.E !== undefined ? V(w.E) : '',
+        E2: w.E2 !== undefined ? V(w.E2) : '',
+      };
+      hint = { text: t(`why_${w.why}`, params), eq: w.rx ? equation(chem, w.rx, { aqueous: aq }) : null };
+    }
+    item.whyCache = { t: this.time, hint };
+    return hint;
+  }
+
   /** Scheda di un contenitore per l'interfaccia (cosa contiene, nella modalità di chimica scelta). */
   describe(item) {
     if (!item) return null;
+    const tool = this.apparatus.describeTool(item);
+    if (tool) return tool;
+    const out = this.describeVessel(item);
+    if (item.rig) return this.apparatus.describeRig(item, out);
+    if (this.apparatus.isHot(item)) out.notes.unshift(this.t(this.tongs ? 'hotTongs' : 'hotNote'));
+    return out;
+  }
+
+  describeVessel(item) {
     const { t, chemMode } = this;
     const out = { name: this.itemName(item), rows: [], notes: [] };
     if (item.kind === 'spatula') {
@@ -2155,7 +2776,10 @@ export class LabGame {
       let value = state;
       if (chemMode === 'simple') value = `${this.fmt(c.grams, c.grams < 0.1 ? 3 : 2)} g · ${state}`;
       else if (item.data.reagent && / M\b/.test(item.label?.sub ?? '')) value = item.label.sub.split(' · ')[0];
-      out.rows.push({ label: `${c.name}`, formula: c.formula, value });
+      // l'olio dei metalli alcalini è una miscela (senza formula); HCl sciolto è l'acido cloridrico
+      const oil = item.data.alias?.[c.sid];
+      const aq = c.state === 'aq' && AQUEOUS_NAMES[this.chem.sub(c.sid)?.key];
+      out.rows.push({ label: oil ? pick(oil) : aq ? pick(aq) : c.name, formula: oil ? '' : c.formula, value });
     }
     // volume: lettura sulla graduazione (realistica) o valore esatto (semplificata)
     if (lv > 0.05) {
@@ -2170,11 +2794,22 @@ export class LabGame {
       if (mix.water > 0.5) out.notes.push(t('simpleWater', { ml: this.fmt(mix.water, 0) }));
     }
     const look = item.look;
-    if (look?.solidKind === 'precipitate') out.notes.push(t('notePrecipitate'));
+    // un pezzo di metallo sul fondo (zinco nell'acido, rame che si deposita) non è un precipitato
+    const metalOnly = comps.filter((c) => c.state === 'solid').every((c) => this.chem.sub(c.sid)?.kind === 'element' && this.chem.P.flags[c.sid] & S.METAL);
+    if (look?.solidKind === 'precipitate') out.notes.push(t(metalOnly ? 'noteMetal' : 'notePrecipitate'));
     if (look?.solidKind === 'crystals' && mix.water > 0.05) out.notes.push(t('noteCrystals'));
     if (mix.solidVolume > 0.02 && mix.water > 0.5 && look?.solidKind !== 'precipitate' && look?.solidKind !== 'crystals') out.notes.push(t('noteUndissolved'));
     if (item.dirty && !item.data.reagent) out.notes.push(t('dirtyNote'));
     out.color = look ? rgbCss(look.turbid > 0.3 ? look.turbidColor : look.liquid) : null;
+    // le reazioni appena avvenute (equazione con gli stati fisici, ΔH°, cosa si vede) e, se non succede niente,
+    // perché: un aiuto nel Laboratorio libero e nella chimica semplificata
+    const recent = (item.rxLog ?? []).filter((x) => this.time - x.t < 20 && this.chem.rxById.has(x.id)).slice(0, 2);
+    out.reactions = recent.map((x) => {
+      const rx = this.chem.rxById.get(x.id);
+      const sig = this.signals(rx, x.aq);
+      return { id: x.id, eq: equation(this.chem, rx, { aqueous: x.aq }), dH: sig.dH, tags: signalTags(sig), live: this.time - x.t < 1.5 };
+    });
+    if (!item.def.stock && !recent.some((x) => this.time - x.t < 4) && (this.free || chemMode === 'simple')) out.why = this.whyHint(item);
     return out;
   }
 
@@ -2187,14 +2822,15 @@ export class LabGame {
     const o = this.order;
     let steps = [];
     if (o) {
-      const snap = this.snapshot();
-      steps = o.def.steps(this.chemMode).map((s) => ({ text: this.t(s.key, this.stepParams(o.def)), done: s.done(snap) }));
+      // i passi fatti restano spuntati (career.js, stepsDone)
+      o.done = stepsDone(o.ex, this.snapshot(), this.chemMode, o.done);
+      steps = o.ex.steps.map((st, i) => ({ text: this.t(st.key, this.stepParams(o.ex)), done: o.done[i] }));
     }
     return {
       legend: this.legend(),
       held: this.heldInfo(),
       looked: this.lookedInfo(),
-      order: o ? { n: o.index + 1, title: this.t(`${o.def.id}Title`), brief: this.t(`${o.def.id}Brief${this.chemMode === 'simple' ? 'Simple' : ''}`), steps, elapsed: this.time - o.start, par: o.def.par, costs: o.costs + o.fines } : null,
+      order: o ? { chapter: o.ex.chapter, n: chapterExercises(o.ex.chapter).indexOf(o.ex) + 1, title: this.t(`${o.ex.id}Title`), brief: this.briefText(o.ex), steps, elapsed: this.time - o.start, par: o.ex.par, costs: o.costs + o.fines } : null,
       money: this.money,
       free: this.free,
       mode: this.player.mode,
@@ -2238,6 +2874,12 @@ export class LabGame {
     if (h?.type === 'item' && h.item !== this.held) looked = top(h.item);
     else if (h?.type === 'fixture' || h?.type === 'puddle') looked = h.point.clone();
     return { held: this.held ? top(this.held) : null, looked, camera: this.camera };
+  }
+
+  /** Consegna dell'insegnante, nella versione della chimica semplificata se c'è. */
+  briefText(ex) {
+    const key = `${ex.id}BriefSimple`;
+    return this.chemMode === 'simple' && this.t(key) !== key ? this.t(key) : this.t(`${ex.id}Brief`);
   }
 
   stepParams(def) {

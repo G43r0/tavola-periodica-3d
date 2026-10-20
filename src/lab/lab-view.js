@@ -2125,8 +2125,16 @@ export function createLab(elements, { onClose }) {
 
   // ---------------------------------------------------------------- apertura / chiusura
   let lastFocus = null;
-  function open(z) {
+  let closeHook = null;
+  /**
+   * @param {number} [z] elemento da mettere sul banco
+   * @param {{reaction?: string, above?: boolean, onClose?: Function}} [opts] reaction: scheda da aprire; above: sopra il
+   *   simulatore di laboratorio (dal suo quaderno); onClose: chiamata quando si chiude
+   */
+  function open(z, opts = {}) {
     lastFocus = document.activeElement;
+    root.classList.toggle('is-above', Boolean(opts.above));
+    closeHook = opts.onClose ?? null;
     root.hidden = false;
     root.classList.remove('is-leaving');
     root.classList.add('is-entering');
@@ -2136,6 +2144,7 @@ export function createLab(elements, { onClose }) {
     engine.start();
     refresh();
     if (z) addAtom(z);
+    if (opts.reaction && reactionById.has(opts.reaction)) openReaction(opts.reaction);
     requestAnimationFrame(() => $('.lab-back').focus({ preventScroll: true }));
   }
 
@@ -2148,6 +2157,8 @@ export function createLab(elements, { onClose }) {
       engine.stop();
       lastFocus?.focus?.({ preventScroll: true });
       onClose?.();
+      closeHook?.();
+      closeHook = null;
     }, 240);
   }
 

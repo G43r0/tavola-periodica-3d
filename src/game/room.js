@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { seg } from '../gfx/preset.js';
 import { CATEGORY } from '../data/categories.js';
+import { buildApparatus } from './apparatus-room.js';
 
 export const ROOM = { W: 10, D: 8, H: 3.2 };
 export const BENCH_Y = 0.92;
@@ -17,6 +18,17 @@ export const LAYOUT = {
   hotplate: { x: -0.72, z: -0.55 },
   bunsen: { x: 1.38, z: -0.55 },
   strips: { x: 0.95, z: -0.78 },
+  lamp: { x: 0.42, z: -0.8 }, // base in fondo al bancone A, il paralume sporge verso il giocatore
+  notebook: { x: -1.12, z: -0.17 }, // quaderno di laboratorio sul bancone A, davanti a sinistra
+  book: { x: -1.47, z: -0.2 }, // libro «Come si fa» sul bancone A, a sinistra del quaderno (un altro è sulla cattedra)
+  probes: { x: -0.8, z: -0.15 }, // termometro, pH-metro e pipetta, sdraiati davanti alla piastra
+  burette: { x: 1.06, z: -0.46 }, // sostegno con la buretta, a sinistra del Bunsen
+  tongs: { x: 1.24, z: -0.76 }, // pinza per il crogiolo, accanto al Bunsen
+  filter: { x: -4.5, z: -1.25 }, // bancone del lavandino: sostegno con l'imbuto e la carta da filtro
+  icebath: { x: -4.55, z: 0.36 },
+  still: { x: -4.55, z: 1.2 }, // distillazione: mantello e pallone, il refrigerante scende verso sud
+  power: { x: 4.84, z: -2.3 }, // cappa: alimentatore, gli elettrodi pendono 36 cm verso il giocatore
+  gasRack: { x: 4.9, z0: -1.14, step: -0.095, outX: 4.5, outZ: -1.33 }, // cappa: bombole (da sud a nord) e uscita del gas
   sink: { x: -4.62, z: -0.3, w: 0.42, d: 0.5, depth: 0.24 },
   counterW: { x: -4.65, z: 0, w: 0.7, d: 5 },
   towels: { x: -4.96, z: 0.55 },
@@ -42,6 +54,7 @@ export const STATIONS = [
   { key: 'bench', cam: [0.15, 1.72, 0.62], look: [0.15, BENCH_Y, -0.48], stand: [0.15, 0.35] },
   { key: 'shelf', cam: [0, 1.9, 0.62], look: [0, 1.05, 1.62], stand: [0, 0.75] },
   { key: 'sink', cam: [-3.55, 1.72, -0.3], look: [-4.6, BENCH_Y - 0.05, -0.3], stand: [-3.7, -0.3] },
+  { key: 'still', cam: [-3.6, 1.7, 1.45], look: [-4.6, BENCH_Y + 0.05, 1.45], stand: [-3.7, 1.45] },
   { key: 'hood', cam: [3.45, 1.78, -1.8], look: [4.6, BENCH_Y + 0.05, -1.8], stand: [3.6, -1.8] },
   { key: 'desk', cam: [0.5, 1.6, -1.9], look: [0.5, DESK_Y, -2.75], stand: [0.5, -2.0] },
   { key: 'bins', cam: [-3.3, 1.75, 2.55], look: [-3.3, 0.55, 3.65], stand: [-3.3, 2.6] },
@@ -85,38 +98,41 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
 
   const M = {
     floor: std({ map: canvasTexture(256, 256, (g, w, h) => {
-      g.fillStyle = '#b9b4a8';
+      g.fillStyle = '#6e6862';
       g.fillRect(0, 0, w, h);
       noise(g, w, h, 0.08, 4000);
-      g.strokeStyle = 'rgba(70,64,56,0.35)';
+      g.strokeStyle = 'rgba(30,27,24,0.45)';
       g.lineWidth = 2;
       g.strokeRect(1, 1, w - 2, h - 2);
     }, [25, 20]), roughness: 0.6 }),
     wall: std({ map: canvasTexture(128, 128, (g, w, h) => {
-      g.fillStyle = '#dfe6dc';
+      g.fillStyle = '#93a39a';
       g.fillRect(0, 0, w, h);
       noise(g, w, h, 0.03, 800);
     }, [8, 3]), roughness: 0.92 }),
-    wainscot: std({ color: 0x8fa79a, roughness: 0.6 }),
-    ceiling: std({ color: 0xf2f2ee, roughness: 0.95 }),
-    top: std({ color: 0x15171b, roughness: 0.35, metalness: 0.05, envMapIntensity: 0.7 }),
+    wainscot: std({ color: 0x4d5f56, roughness: 0.6 }),
+    ceiling: std({ color: 0xb9bbb6, roughness: 0.95 }),
+    // piano in resina nera; senza riflessi dell'ambiente (Semplice) un po' più chiaro, se no sembra un buco
+    top: std({ color: envMap ? 0x15171b : 0x24282e, roughness: 0.35, metalness: 0.05, envMapIntensity: 0.7 }),
     cabinet: std({ map: canvasTexture(256, 128, (g, w, h) => {
-      g.fillStyle = '#e9e6dd';
+      g.fillStyle = '#56606b';
       g.fillRect(0, 0, w, h);
-      g.strokeStyle = 'rgba(80,80,80,0.5)';
+      g.strokeStyle = 'rgba(20,24,28,0.6)';
       g.lineWidth = 3;
       for (let x = 0; x < w; x += 64) g.strokeRect(x + 3, 6, 58, h - 12);
-      g.fillStyle = '#8a8f96';
+      g.fillStyle = '#c3c8ce';
       for (let x = 0; x < w; x += 64) g.fillRect(x + 28, 14, 8, 3);
     }, [1, 1]), roughness: 0.85 }),
     steel: std({ color: 0xc4c9cf, metalness: 0.85, roughness: 0.3, envMapIntensity: 1 }),
     darkSteel: std({ color: 0x5a6068, metalness: 0.7, roughness: 0.4, envMapIntensity: 1 }),
-    wood: std({ color: 0x9a6a3c, roughness: 0.65 }),
+    wood: std({ color: 0x7a5233, roughness: 0.65 }),
     black: std({ color: 0x202226, roughness: 0.5 }),
-    white: std({ color: 0xf4f4f2, roughness: 0.5 }),
+    white: std({ color: 0xc9ccd0, roughness: 0.5 }),
+    // strumenti (bilancia, piastra): grigio chiaro, così sul bancone nero si vedono ma non abbagliano
+    instrument: std({ color: 0xaeb4bb, roughness: 0.45 }),
     glassPane: new THREE.MeshStandardMaterial({ color: 0xcfe6ff, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.18, depthWrite: false, envMap }),
-    sky: new THREE.MeshBasicMaterial({ color: 0xcfe7ff }),
-    light: new THREE.MeshBasicMaterial({ color: 0xfafcff }),
+    sky: new THREE.MeshBasicMaterial({ color: 0xa9c6e2 }),
+    light: new THREE.MeshBasicMaterial({ color: 0xf2f5fa }),
     red: std({ color: 0xc8161d, roughness: 0.4 }),
     green: std({ color: 0x2f9a4c, roughness: 0.5 }),
     yellow: std({ color: 0xf2c014, roughness: 0.5 }),
@@ -182,7 +198,41 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   const sb = LAYOUT.benchB;
   solid(sb.w - 0.2, 0.025, 0.32, M.wood, sb.x, 1.27, sb.z + 0.18, { kind: 'surface' });
   for (const dx of [-1.6, 0, 1.6]) solid(0.03, 0.35, 0.3, M.wood, sb.x + dx, BENCH_Y + 0.17, sb.z + 0.18);
-  solid(sb.w - 0.2, 0.3, 0.02, M.wood, sb.x, 1.42, sb.z + 0.34);
+  solid(sb.w - 0.2, 0.34, 0.02, M.wood, sb.x, 1.44, sb.z + 0.34);
+  // legenda dei colori dei tappi, sul pannello dietro i reagenti (sopra le bottiglie più alte)
+  const legendCanvas = document.createElement('canvas');
+  legendCanvas.width = 2048;
+  legendCanvas.height = 64;
+  const legendTex = new THREE.CanvasTexture(legendCanvas);
+  legendTex.colorSpace = THREE.SRGBColorSpace;
+  legendTex.anisotropy = 8;
+  const legend = mesh(new THREE.PlaneGeometry(2.6, 0.08), new THREE.MeshStandardMaterial({ map: legendTex, roughness: 0.8 }), sb.x, 1.55, sb.z + 0.328, { cast: false });
+  legend.rotation.y = Math.PI;
+  /** @param {string} title @param {{color: string, label: string}[]} entries */
+  const setLegend = (title, entries) => {
+    const g = legendCanvas.getContext('2d');
+    g.fillStyle = '#f1efe8';
+    g.fillRect(0, 0, 2048, 64);
+    g.fillStyle = '#1d2733';
+    g.font = '700 30px "IBM Plex Sans", sans-serif';
+    g.textBaseline = 'middle';
+    g.fillText(title, 24, 33);
+    let x = 48 + g.measureText(title).width;
+    g.font = '500 30px "IBM Plex Sans", sans-serif';
+    for (const e of entries) {
+      g.beginPath();
+      g.arc(x + 16, 32, 15, 0, Math.PI * 2);
+      g.fillStyle = e.color;
+      g.fill();
+      g.lineWidth = 2.5;
+      g.strokeStyle = '#3b4756';
+      g.stroke();
+      g.fillStyle = '#1d2733';
+      g.fillText(e.label, x + 40, 33);
+      x += 72 + g.measureText(e.label).width;
+    }
+    legendTex.needsUpdate = true;
+  };
 
   // sgabelli: arredi mobili, il giocatore li spinge camminandoci contro (il gioco copia la fisica sulla mesh)
   const props = [];
@@ -200,7 +250,7 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   // ------------------------------------------------------------ bilancia
   const bl = LAYOUT.balance;
   const balance = { kind: 'balance', id: 'balance', hit: [], tare: 0, pan: { x: bl.x, y: BENCH_Y + 0.075, z: bl.z - 0.02, r: 0.075 } };
-  balance.hit.push(solid(0.22, 0.07, 0.28, M.white, bl.x, BENCH_Y + 0.035, bl.z, balance));
+  balance.hit.push(solid(0.22, 0.07, 0.28, M.instrument, bl.x, BENCH_Y + 0.035, bl.z, balance));
   const pan = mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.008, seg(28, 14)), M.steel, bl.x, BENCH_Y + 0.071, bl.z - 0.02);
   physics.cylinder(bl.x, BENCH_Y + 0.071, bl.z - 0.02, 0.004, 0.075, balance);
   balance.hit.push(pan);
@@ -230,7 +280,7 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   // ------------------------------------------------------------ piastra riscaldante con agitatore
   const hp = LAYOUT.hotplate;
   const hotplate = { kind: 'hotplate', id: 'hotplate', hit: [], level: 0, T: 295, plate: { x: hp.x, y: BENCH_Y + 0.085, z: hp.z - 0.02, r: 0.1 } };
-  hotplate.hit.push(solid(0.22, 0.08, 0.3, M.white, hp.x, BENCH_Y + 0.04, hp.z, hotplate));
+  hotplate.hit.push(solid(0.22, 0.08, 0.3, M.instrument, hp.x, BENCH_Y + 0.04, hp.z, hotplate));
   const plateMat = new THREE.MeshStandardMaterial({ color: 0x9aa0a8, roughness: 0.4, emissive: 0xff2200, emissiveIntensity: 0 });
   const plate = mesh(new THREE.BoxGeometry(0.19, 0.008, 0.19), plateMat, hp.x, BENCH_Y + 0.084, hp.z - 0.02);
   physics.box(hp.x, BENCH_Y + 0.084, hp.z - 0.02, 0.095, 0.004, 0.095, hotplate);
@@ -274,6 +324,141 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   bunsen.flameOuter = flameOuter;
   fo.visible = fi.visible = false;
   fixtures.push(bunsen);
+
+  // ------------------------------------------------------------ lampada a luce forte (reazioni fotochimiche)
+  // braccio che porta il paralume sopra il bancone: sotto la luce si decompongono, piano, il cloruro d'argento,
+  // l'acido nitrico, il permanganato (per questo stanno nel vetro ambrato)
+  const lp = LAYOUT.lamp;
+  const shadeZ = lp.z + 0.22;
+  const shadeY = BENCH_Y + 0.36;
+  const lamp = { kind: 'lamp', id: 'lamp', hit: [], on: false, zone: { x: lp.x, z: shadeZ, r: 0.13, y0: BENCH_Y - 0.02, y1: shadeY - 0.04 } };
+  lamp.hit.push(mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.02, seg(20, 10)), M.darkSteel, lp.x, BENCH_Y + 0.01, lp.z));
+  lamp.hit.push(mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.38, 8), M.steel, lp.x, BENCH_Y + 0.2, lp.z));
+  lamp.hit.push(mesh(new THREE.BoxGeometry(0.012, 0.012, 0.24), M.steel, lp.x, BENCH_Y + 0.39, lp.z + 0.11));
+  const shadeMat = std({ color: 0x2f6fd1, roughness: 0.45, side: THREE.DoubleSide });
+  lamp.hit.push(mesh(new THREE.ConeGeometry(0.06, 0.07, seg(24, 12), 1, true), shadeMat, lp.x, shadeY + 0.01, shadeZ));
+  const bulbMat = new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.3, emissive: 0xfff2d8, emissiveIntensity: 0 });
+  mesh(new THREE.SphereGeometry(0.02, 14, 10), bulbMat, lp.x, shadeY - 0.012, shadeZ, { cast: false });
+  const lampLight = new THREE.SpotLight(0xfff4e2, 0, 1.4, 0.62, 0.6, 1.5);
+  lampLight.position.set(lp.x, shadeY - 0.02, shadeZ);
+  lampLight.target.position.set(lp.x, BENCH_Y, shadeZ);
+  scene.add(lampLight, lampLight.target);
+  lamp.light = lampLight;
+  lamp.bulbMat = bulbMat;
+  fixtures.push(lamp);
+
+  // ------------------------------------------------------------ quaderno di laboratorio (si apre con un clic)
+  const nbk = LAYOUT.notebook;
+  const notebook = { kind: 'notebook', id: 'notebook', hit: [] };
+  const coverCanvas = document.createElement('canvas');
+  coverCanvas.width = 256;
+  coverCanvas.height = 360;
+  const coverTex = new THREE.CanvasTexture(coverCanvas);
+  coverTex.colorSpace = THREE.SRGBColorSpace;
+  coverTex.anisotropy = 8;
+  const nbGroup = new THREE.Group();
+  nbGroup.position.set(nbk.x, BENCH_Y, nbk.z);
+  nbGroup.rotation.y = 0.18;
+  group.add(nbGroup);
+  // pagine (bordo bianco) e copertina rigida con il titolo; una penna accanto
+  notebook.hit.push(mesh(new THREE.BoxGeometry(0.205, 0.016, 0.29), std({ color: 0xf1ede2, roughness: 0.9 }), 0, 0.009, 0, { parent: nbGroup }));
+  const coverMat = std({ color: 0x1f5f4a, roughness: 0.6 });
+  const coverTop = new THREE.MeshStandardMaterial({ map: coverTex, roughness: 0.6 });
+  notebook.hit.push(mesh(new THREE.BoxGeometry(0.212, 0.003, 0.297), [coverMat, coverMat, coverTop, coverMat, coverMat, coverMat], 0, 0.0185, 0, { parent: nbGroup }));
+  notebook.hit.push(mesh(new THREE.BoxGeometry(0.012, 0.019, 0.297), coverMat, -0.1, 0.0095, 0, { parent: nbGroup }));
+  const pen = mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.14, 10), std({ color: 0x23395d, roughness: 0.4 }), 0.13, 0.004, 0.02, { parent: nbGroup });
+  pen.rotation.x = Math.PI / 2;
+  physics.box(nbk.x, BENCH_Y + 0.01, nbk.z, 0.106, 0.01, 0.15, notebook, 0.18);
+  /** Copertina: titolo e riga sotto (il gioco scrive i testi nella lingua dell'interfaccia). */
+  const setNotebookCover = (title, sub) => {
+    const g = coverCanvas.getContext('2d');
+    g.fillStyle = '#1f5f4a';
+    g.fillRect(0, 0, 256, 360);
+    g.fillStyle = '#f1ede2';
+    g.fillRect(28, 60, 200, 120);
+    g.fillStyle = '#1d2733';
+    g.textAlign = 'center';
+    g.font = '700 26px "IBM Plex Sans", sans-serif';
+    const words = String(title).split(' ');
+    const mid = Math.ceil(words.length / 2);
+    g.fillText(words.slice(0, mid).join(' '), 128, 108);
+    g.fillText(words.slice(mid).join(' '), 128, 142);
+    g.font = '500 18px "IBM Plex Sans", sans-serif';
+    g.fillStyle = '#e8efe9';
+    g.fillText(sub, 128, 230);
+    g.strokeStyle = '#e8efe9';
+    g.lineWidth = 2;
+    for (let y = 270; y < 340; y += 18) {
+      g.beginPath();
+      g.moveTo(40, y);
+      g.lineTo(216, y);
+      g.stroke();
+    }
+    coverTex.needsUpdate = true;
+  };
+  fixtures.push(notebook);
+
+  // ------------------------------------------------------------ libro «Come si fa»: sul bancone A e sulla cattedra
+  const bookCanvas = document.createElement('canvas');
+  bookCanvas.width = 256;
+  bookCanvas.height = 340;
+  const bookTex = new THREE.CanvasTexture(bookCanvas);
+  bookTex.colorSpace = THREE.SRGBColorSpace;
+  bookTex.anisotropy = 8;
+  const bookCover = std({ color: 0x8a3f1c, roughness: 0.55 });
+  const bookTop = new THREE.MeshStandardMaterial({ map: bookTex, roughness: 0.55 });
+  const bookPages = std({ color: 0xf3efe4, roughness: 0.9 });
+  const makeBook = (id, x, y, z, rot) => {
+    const b = { kind: 'book', id, hit: [] };
+    const grp = new THREE.Group();
+    grp.position.set(x, y, z);
+    grp.rotation.y = rot;
+    group.add(grp);
+    // libro rilegato spesso: pagine, copertina con il titolo, dorso
+    b.hit.push(mesh(new THREE.BoxGeometry(0.17, 0.034, 0.24), bookPages, 0, 0.019, 0, { parent: grp }));
+    b.hit.push(mesh(new THREE.BoxGeometry(0.178, 0.004, 0.248), [bookCover, bookCover, bookTop, bookCover, bookCover, bookCover], 0, 0.038, 0, { parent: grp }));
+    b.hit.push(mesh(new THREE.BoxGeometry(0.178, 0.004, 0.248), bookCover, 0, 0.002, 0, { parent: grp }));
+    b.hit.push(mesh(new THREE.BoxGeometry(0.01, 0.04, 0.248), bookCover, -0.088, 0.02, 0, { parent: grp }));
+    physics.box(x, y + 0.02, z, 0.09, 0.02, 0.125, b, rot);
+    fixtures.push(b);
+  };
+  const bk = LAYOUT.book;
+  makeBook('book-bench', bk.x, BENCH_Y, bk.z, -0.12);
+  makeBook('book-desk', LAYOUT.desk.x - 0.45, DESK_Y, LAYOUT.desk.z + 0.1, 0.25);
+  /** Copertina del libro: titolo grande, sottotitolo e una beuta stilizzata (testi nella lingua dell'interfaccia). */
+  const setBookCover = (title, sub) => {
+    const g = bookCanvas.getContext('2d');
+    g.fillStyle = '#8a3f1c';
+    g.fillRect(0, 0, 256, 340);
+    g.strokeStyle = '#e9c46a';
+    g.lineWidth = 4;
+    g.strokeRect(14, 14, 228, 312);
+    g.fillStyle = '#f6e7c1';
+    g.textAlign = 'center';
+    g.font = '700 34px "IBM Plex Sans", sans-serif';
+    g.fillText(title, 128, 92);
+    g.font = '500 17px "IBM Plex Sans", sans-serif';
+    g.fillText(sub, 128, 126);
+    // beuta
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(112, 170);
+    g.lineTo(112, 205);
+    g.lineTo(82, 270);
+    g.lineTo(174, 270);
+    g.lineTo(144, 205);
+    g.lineTo(144, 170);
+    g.stroke();
+    g.fillStyle = '#e9c46a';
+    g.beginPath();
+    g.moveTo(96, 240);
+    g.lineTo(160, 240);
+    g.lineTo(172, 266);
+    g.lineTo(84, 266);
+    g.closePath();
+    g.fill();
+    bookTex.needsUpdate = true;
+  };
 
   // cartine indicatrici
   const st = LAYOUT.strips;
@@ -331,7 +516,8 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   const hd = LAYOUT.hood;
   const hood = { kind: 'hood', id: 'hood', hit: [], on: false, zone: { x0: hd.x - hd.w / 2 - 0.05, x1: W / 2, y0: BENCH_Y, y1: 2.2, z0: hd.z - hd.d / 2, z1: hd.z + hd.d / 2 } };
   solid(hd.w, BENCH_Y - 0.04, hd.d, M.cabinet, hd.x, (BENCH_Y - 0.04) / 2, hd.z, { kind: 'surface' });
-  solid(hd.w + 0.02, 0.04, hd.d, M.white, hd.x, BENCH_Y - 0.02, hd.z, { kind: 'surface' }, { cast: false });
+  // piano di lavoro nero come i banconi: la vetreria vi si stacca
+  solid(hd.w + 0.02, 0.04, hd.d, M.top, hd.x, BENCH_Y - 0.02, hd.z, { kind: 'surface' }, { cast: false });
   solid(hd.w, 1.4, 0.04, M.white, hd.x, BENCH_Y + 0.7, hd.z - hd.d / 2);
   solid(hd.w, 1.4, 0.04, M.white, hd.x, BENCH_Y + 0.7, hd.z + hd.d / 2);
   solid(hd.w, 0.06, hd.d, M.white, hd.x, BENCH_Y + 1.4, hd.z);
@@ -353,7 +539,7 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   // ------------------------------------------------------------ magazzino (armadio dei reagenti con lo schermo)
   const so = LAYOUT.store;
   const store = { kind: 'store', id: 'store', hit: [] };
-  store.hit.push(solid(0.6, 2.0, 1.0, std({ color: 0xb8c4cf, roughness: 0.5 }), so.x + 0.05, 1.0, so.z, store));
+  store.hit.push(solid(0.6, 2.0, 1.0, std({ color: 0x6d7c8a, roughness: 0.5 }), so.x + 0.05, 1.0, so.z, store));
   const screen = box(0.01, 0.3, 0.42, new THREE.MeshBasicMaterial({ map: canvasTexture(256, 192, (g, w, h) => {
     g.fillStyle = '#0d2236';
     g.fillRect(0, 0, w, h);
@@ -452,9 +638,12 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   solid(0.16, 0.02, 0.16, M.darkSteel, ex.x, 0.35, ex.z);
 
   // ------------------------------------------------------------ luci
-  const hemi = new THREE.HemisphereLight(0xf4f8ff, 0x8a8478, 0.9);
+  // Poche luci e moderate: la luce della finestra (con le ombre), le plafoniere sopra i due banconi e un'emisferica
+  // bassa che schiarisce le ombre. Con più luce le pareti e il vetro diventano bianchi e gli oggetti si confondono.
+  // senza i riflessi dell'ambiente (preset Semplice) l'emisferica fa anche da luce ambiente
+  const hemi = new THREE.HemisphereLight(0xe6eef8, 0x3b352e, envMap ? 0.5 : 1.3);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xfff4e2, 1.6);
+  const sun = new THREE.DirectionalLight(0xfff1dc, 1.2);
   sun.position.set(-1.5, 5.5, 7);
   sun.target.position.set(0, 0.6, -0.5);
   scene.add(sun, sun.target);
@@ -471,13 +660,18 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.02;
   }
-  const ceiling = new THREE.PointLight(0xffffff, 6, 9, 1.6);
-  ceiling.position.set(0, 2.9, 0);
-  scene.add(ceiling);
+  const ceiling = new THREE.PointLight(0xfff8ee, 4.5, 7, 1.6);
+  ceiling.position.set(0, 2.9, LAYOUT.benchA.z);
+  const ceilingB = new THREE.PointLight(0xfff8ee, 3, 7, 1.6);
+  ceilingB.position.set(0, 2.9, LAYOUT.benchB.z);
+  scene.add(ceiling, ceilingB);
   const flameLight = new THREE.PointLight(0x6a8cff, 0, 1.2, 2);
   flameLight.position.set(bu.x, BENCH_Y + 0.25, bu.z);
   scene.add(flameLight);
   bunsen.light = flameLight;
+
+  // ------------------------------------------------------------ apparecchi della fase G4 (apparatus-room.js)
+  const apparatus = buildApparatus({ group, scene, physics, fixtures, mesh, box, solid, std, M, BENCH_Y, LAYOUT, canvasTexture });
 
   const zones = { hood: hood.zone, tray: tray.zone, basin: sinkFix.basin, bins, balancePan: balance.pan, plate: hotplate.plate, gauze: bunsen.gauze, flame: bunsen.flame };
 
@@ -489,6 +683,8 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
       if (bunsen.on) m.scale.set(b * (1 + Math.sin(t * 31 + k) * 0.05), b * (1 + Math.sin(t * 23 + k * 2) * 0.08), b * (1 + Math.cos(t * 29) * 0.05));
     }
     flameLight.intensity = bunsen.on ? 0.6 + Math.sin(t * 40) * 0.08 : 0;
+    lamp.light.intensity = lamp.on ? 7 : 0;
+    lamp.bulbMat.emissiveIntensity = lamp.on ? 2.2 : 0;
     gauzeMat.emissiveIntensity += ((bunsen.on ? 0.55 : 0) - gauzeMat.emissiveIntensity) * Math.min(1, dt * 0.6);
     hotplate.T += ((295 + hotplate.level * 60 - hotplate.T) * Math.min(1, dt * 0.5));
     plateMat.emissiveIntensity = Math.max(0, (hotplate.T - 420) / 600);
@@ -497,9 +693,10 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     sinkFix.stream.visible = sinkFix.tap;
     hood.lightMat.color.set(hood.on ? 0xf4f8ff : 0x3a3f46);
     hood.led.color.set(hood.on ? 0x30ff60 : 0x3a1010);
+    apparatus.update(dt);
   };
 
-  return { group, fixtures, zones, update, setBoard, setBalance, bins, props, lights: { sun, hemi, ceiling } };
+  return { group, fixtures, zones, update, setBoard, setBalance, setLegend, setNotebookCover, setBookCover, bins, props, apparatus, lights: { sun, hemi, ceiling, ceilingB } };
 }
 
 function fitLine(g, text, x, y, w) {
@@ -555,7 +752,7 @@ function posterTexture(elements) {
       g.font = '700 20px "IBM Plex Sans", sans-serif';
       g.fillText(el.symbol, x + 6, y + 30);
       g.font = '500 11px "IBM Plex Sans", sans-serif';
-      g.fillText(String(el.Z), x + 5, y + 13);
+      g.fillText(String(el.z), x + 5, y + 13);
     }
   });
 }

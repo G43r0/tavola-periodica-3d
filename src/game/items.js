@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { seg } from '../gfx/preset.js';
 import { interiorSamples, rimPoints, profileVolume, interiorGeometry, liquidMaterial } from './liquid.js';
+import { GHS } from './ghs.js';
 
 /** Profilo interno [raggio, altezza] in metri (dal fondo interno al bordo). */
 const cyl = (r, y0, y1) => [[r, y0], [r, y1]];
@@ -10,7 +11,9 @@ const cyl = (r, y0, y1) => [[r, y0], [r, y1]];
 /**
  * Definizioni. container: ha un contenuto; profile: volume interno; outer: raggio esterno e altezza; grad: tacche
  * (mL tra due tacche, mL della prima scritta); flow: portata relativa del versamento (collo stretto < 1);
- * drops: versa a gocce; mass in kg; breakable: si rompe negli urti forti.
+ * drops: versa a gocce; mass in kg; breakable: si rompe negli urti forti; stock: contenitore di un reagente del
+ * magazzino (con tappo ed etichetta); brown: vetro ambrato; plastic / opacity: plastica (HDPE) e quanto lascia vedere;
+ * oil: il contenuto sta sotto olio (metalli alcalini), al riparo dall'aria.
  */
 export const DEFS = {
   beaker100: { container: true, glass: true, profile: cyl(0.024, 0.003, 0.07), outer: [0.0255, 0.07], grad: [10, 20, 100], mass: 0.06, breakable: true, spout: true },
@@ -23,26 +26,82 @@ export const DEFS = {
     container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0142, 0.25], foot: [0.038, 0.012], grad: [1, 10, 100], spout: true,
     profile: cyl(0.0128, 0.012, 0.25),
   },
+  // bottiglie dei reagenti: vetro ambrato (ciò che la luce decompone), vetro chiaro, plastica per le basi forti e HF
   bottle: {
-    container: true, glass: true, mass: 0.28, breakable: true, outer: [0.04, 0.18], label: true, flow: 0.45, brown: true,
+    container: true, glass: true, mass: 0.28, breakable: true, outer: [0.04, 0.18], label: true, flow: 0.45, brown: true, stock: true,
     profile: [[0.038, 0.005], [0.038, 0.128], [0.03, 0.142], [0.0125, 0.152], [0.0115, 0.18]],
   },
+  bottleClear: {
+    container: true, glass: true, mass: 0.28, breakable: true, outer: [0.04, 0.18], label: true, flow: 0.45, stock: true,
+    profile: [[0.038, 0.005], [0.038, 0.128], [0.03, 0.142], [0.0125, 0.152], [0.0115, 0.18]],
+  },
+  bottlePE: {
+    container: true, glass: false, mass: 0.05, breakable: false, outer: [0.04, 0.18], label: true, flow: 0.45, plastic: '#e6ecef', opacity: 0.7, stock: true,
+    profile: [[0.038, 0.003], [0.038, 0.13], [0.031, 0.145], [0.0135, 0.153], [0.0125, 0.18]],
+  },
   washbottle: {
-    container: true, glass: false, mass: 0.05, breakable: false, outer: [0.038, 0.15], label: true, flow: 0.28, plastic: '#eef4f8', nozzle: true,
+    container: true, glass: false, mass: 0.05, breakable: false, outer: [0.038, 0.15], label: true, flow: 0.28, plastic: '#eef4f8', nozzle: true, stock: true,
     profile: [[0.036, 0.003], [0.036, 0.13], [0.012, 0.145], [0.006, 0.15]],
   },
   dropper: {
-    container: true, glass: true, mass: 0.04, breakable: true, outer: [0.017, 0.085], label: true, drops: true, brown: true,
+    container: true, glass: true, mass: 0.04, breakable: true, outer: [0.017, 0.085], label: true, drops: true, brown: true, stock: true,
     profile: [[0.015, 0.003], [0.015, 0.058], [0.006, 0.068], [0.004, 0.085]],
   },
-  jar: { container: true, glass: false, mass: 0.04, breakable: false, outer: [0.036, 0.085], label: true, flow: 1.2, plastic: '#f4f6f8', profile: cyl(0.034, 0.004, 0.085), wide: true },
+  // barattoli a bocca larga per i solidi: plastica (HDPE, per gli idrossidi), vetro chiaro, vetro ambrato
+  jar: { container: true, glass: false, mass: 0.04, breakable: false, outer: [0.036, 0.085], label: true, flow: 1.2, plastic: '#eef1f2', opacity: 0.62, profile: cyl(0.034, 0.004, 0.085), wide: true, stock: true },
+  jarGlass: {
+    container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0376, 0.088], label: true, flow: 1.2, wide: true, stock: true,
+    profile: [[0.036, 0.005], [0.036, 0.07], [0.031, 0.078], [0.031, 0.088]],
+  },
+  jarAmber: {
+    container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0376, 0.088], label: true, flow: 1.2, wide: true, stock: true, brown: true,
+    profile: [[0.036, 0.005], [0.036, 0.07], [0.031, 0.078], [0.031, 0.088]],
+  },
+  // barattolo di vetro con l'olio di paraffina per i metalli alcalini (Na, K, Li)
+  jarOil: {
+    container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0376, 0.088], label: true, flow: 1.2, wide: true, stock: true, oil: true,
+    profile: [[0.036, 0.005], [0.036, 0.07], [0.031, 0.078], [0.031, 0.088]],
+  },
+  // porcellana: crogiolo (sopporta il calore forte del Bunsen) e capsula per evaporare; opachi, il contenuto si vede
+  // dall'alto
+  crucible: { container: true, porcelain: true, mass: 0.022, breakable: true, wide: true, outer: [0.021, 0.04], flow: 1.1, profile: [[0.0115, 0.004], [0.0185, 0.04]] },
+  dish: {
+    container: true, porcelain: true, mass: 0.06, breakable: true, wide: true, spout: true, outer: [0.0445, 0.027], flow: 1.2,
+    profile: [[0.012, 0.003], [0.028, 0.012], [0.038, 0.021], [0.042, 0.027]],
+  },
+  // apparecchi fissi (rig): non si prendono, si usano con un clic. Buretta da 50 mL (0 in alto, l'origine è la punta
+  // sotto il rubinetto), imbuto con la carta da filtro (l'origine è la punta del gambo), pallone da distillazione
+  burette: {
+    container: true, glass: true, rig: 'burette', mass: 0.12, outer: [0.0075, 0.65], wallFrom: 0.04, flow: 0.3,
+    profile: [[0.0055, 0.075], [0.0055, 0.61], [0.008, 0.625], [0.014, 0.65]],
+  },
+  funnel: { container: true, glass: true, rig: 'funnel', mass: 0.05, outer: [0.0376, 0.122], wallFrom: 0.066, wide: true, profile: [[0.0035, 0.068], [0.036, 0.122]] },
+  rbflask: {
+    container: true, glass: true, rig: 'still', mass: 0.1, outer: [0.0406, 0.135], flow: 0.6,
+    profile: [[0.0088, 0.006], [0.0223, 0.012], [0.0322, 0.022], [0.0377, 0.034], [0.039, 0.044], [0.0376, 0.056], [0.0307, 0.068], [0.0223, 0.076], [0.015, 0.08], [0.012, 0.083], [0.012, 0.135]],
+  },
   spatula: { tool: true, mass: 0.03, size: [0.19, 0.004, 0.012] },
+  // strumenti da immergere (probe): sottili, in mano entrano nei recipienti senza urtarli
+  thermometer: { tool: true, probe: true, mass: 0.015, size: [0.2, 0.008, 0.008] },
+  phmeter: { tool: true, probe: true, mass: 0.06, size: [0.18, 0.024, 0.024] },
+  pipette: { tool: true, probe: true, mass: 0.025, size: [0.33, 0.026, 0.026], pipette: 10 },
+  filterPaper: { tool: true, mass: 0.001, size: [0.07, 0.006, 0.07] },
   loop: { tool: true, mass: 0.02, size: [0.21, 0.008, 0.008] },
   towel: { tool: true, mass: 0.004, size: [0.07, 0.018, 0.06], absorbs: 40 },
   strip: { tool: true, mass: 0.001, size: [0.075, 0.002, 0.007] },
   extinguisher: { tool: true, mass: 4, size: [0.075, 0.5, 0.075] },
   shards: { tool: true, mass: 0.05, size: [0.07, 0.01, 0.07] },
 };
+
+// barattoli e bottiglie dei reagenti un po' più grandi del vero (+15 % e +10 %): sullo scaffale si riconoscono e si
+// prendono meglio, e l'etichetta si legge da più lontano
+const enlarge = (def, k) => {
+  def.profile = def.profile.map(([r, y]) => [r * k, y * k]);
+  def.outer = def.outer.map((x) => x * k);
+  def.mass *= k * k;
+};
+for (const kind of ['jar', 'jarGlass', 'jarAmber', 'jarOil']) enlarge(DEFS[kind], 1.15);
+for (const kind of ['bottle', 'bottleClear', 'bottlePE']) enlarge(DEFS[kind], 1.1);
 
 for (const def of Object.values(DEFS)) {
   if (!def.container) continue;
@@ -52,7 +111,7 @@ for (const def of Object.values(DEFS)) {
   def.rimR = def.profile[def.profile.length - 1][0];
   def.height = def.outer[1];
   def.area = Math.PI * (def.rimR * 100) ** 2; // cm²
-  def.heatC = def.mass * 1000 * (def.glass ? 0.84 : 1.6); // J/K
+  def.heatC = def.mass * 1000 * (def.glass ? 0.84 : def.porcelain ? 0.85 : 1.6); // J/K
 }
 
 // ------------------------------------------------------------------ materiali condivisi
@@ -60,12 +119,13 @@ for (const def of Object.values(DEFS)) {
 let MATS = null;
 export function itemMaterials(G, envMap) {
   if (MATS) return MATS;
-  const glass = G.physical
-    ? new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0, roughness: 0.04, transmission: 1, thickness: 0.003, ior: 1.47, transparent: true, opacity: 1, envMapIntensity: 1.2, side: THREE.DoubleSide, depthWrite: false })
-    : new THREE.MeshStandardMaterial({ color: 0xe8f4ff, metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.2, envMapIntensity: 1.4, side: THREE.DoubleSide, depthWrite: false });
-  const brown = G.physical
+  // vetro sodico-calcico: un filo di verde-azzurro; trasparente al centro, più chiaro e opaco sui bordi (glassEdges)
+  const glass = glassEdges(G.physical
+    ? new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0, roughness: 0.04, transmission: 1, thickness: 0.003, ior: 1.47, attenuationColor: new THREE.Color(0xcfeee6), attenuationDistance: 0.05, transparent: true, opacity: 1, envMapIntensity: 1.2, side: THREE.DoubleSide, depthWrite: false })
+    : new THREE.MeshStandardMaterial({ color: 0xe2f2f0, metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.07, envMapIntensity: 1.4, side: THREE.DoubleSide, depthWrite: false }), G.physical ? { edge: 0, light: 0.28 } : {});
+  const brown = glassEdges(G.physical
     ? new THREE.MeshPhysicalMaterial({ color: 0x8a4a1a, metalness: 0, roughness: 0.08, transmission: 0.7, thickness: 0.004, ior: 1.5, transparent: true, side: THREE.DoubleSide, depthWrite: false })
-    : new THREE.MeshStandardMaterial({ color: 0x6a3510, metalness: 0.1, roughness: 0.1, transparent: true, opacity: 0.62, side: THREE.DoubleSide, depthWrite: false });
+    : new THREE.MeshStandardMaterial({ color: 0x6a3510, metalness: 0.1, roughness: 0.1, transparent: true, opacity: 0.62, side: THREE.DoubleSide, depthWrite: false }), { edge: 0.3, light: 0.16 });
   MATS = {
     glass,
     brown,
@@ -75,22 +135,104 @@ export function itemMaterials(G, envMap) {
     red: new THREE.MeshStandardMaterial({ color: 0xc8161d, roughness: 0.35, metalness: 0.2 }),
     black: new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: 0.6 }),
     cap: new THREE.MeshStandardMaterial({ color: 0x23395d, roughness: 0.5 }),
-    plastic: (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.45, transparent: true, opacity: 0.82, side: THREE.DoubleSide, depthWrite: false }),
+    plastic: (c, opacity = 0.82) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.45, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false }),
     nichrome: new THREE.MeshStandardMaterial({ color: 0x9a9286, metalness: 0.8, roughness: 0.4 }),
+    probeGlass: new THREE.MeshStandardMaterial({ color: 0xdcecf2, roughness: 0.08, metalness: 0.05, transparent: true, opacity: 0.45, depthWrite: false }),
+    rubber: new THREE.MeshStandardMaterial({ color: 0xc23a2a, roughness: 0.55 }),
+    darkPlastic: new THREE.MeshStandardMaterial({ color: 0x3a414b, roughness: 0.45 }),
   };
   if (envMap) for (const m of Object.values(MATS)) if (m.isMaterial) m.envMap = envMap;
   return MATS;
+}
+
+/**
+ * Bordi del vetro (effetto Fresnel): dove la parete si vede di taglio il vetro riflette di più, quindi è più chiaro e
+ * meno trasparente; al centro resta limpido. Così la vetreria si riconosce sia sul bancone nero sia davanti a un muro.
+ * edge: opacità aggiunta sui bordi (nel vetro con trasmissione non serve); light: luce aggiunta sui bordi.
+ */
+function glassEdges(mat, { edge = 0.55, light = 0.32 } = {}) {
+  const uniforms = { uEdge: { value: edge }, uEdgeLight: { value: light } };
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uEdge;\nuniform float uEdgeLight;')
+      .replace(
+        '#include <opaque_fragment>',
+        'float edgeK = pow(1.0 - saturate(abs(dot(normal, normalize(vViewPosition)))), 2.5);\noutgoingLight += vec3(uEdgeLight * edgeK);\ndiffuseColor.a = saturate(diffuseColor.a + uEdge * edgeK);\n#include <opaque_fragment>',
+      );
+  };
+  mat.customProgramCacheKey = () => `glass-edges-${mat.type}`;
+  return mat;
+}
+
+/** Texture dell'ombra di contatto: un disco nero che sfuma ai bordi. */
+let BLOB_TEX = null;
+function blobTexture() {
+  if (BLOB_TEX) return BLOB_TEX;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(0,0,0,1)');
+  grad.addColorStop(0.45, 'rgba(0,0,0,0.75)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  BLOB_TEX = new THREE.CanvasTexture(c);
+  return BLOB_TEX;
+}
+const blobGeo = new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2);
+
+/**
+ * Ombra di contatto sotto l'oggetto: appoggia gli oggetti sul piano anche senza le ombre vere (preset Semplice e
+ * Medio) e, mentre si tiene in mano un oggetto, mostra sopra quale punto si trova. Si allarga e sbiadisce con l'altezza.
+ */
+function contactShadow(item, env) {
+  const { def } = item;
+  // recipienti: un disco; strumenti: un'ellisse lunga e larga come loro, che gira con l'oggetto
+  const r = def.container ? (def.foot ? Math.max(def.foot[0], def.outer[0]) : def.outer[0]) : 0;
+  const blob = new THREE.Mesh(blobGeo, new THREE.MeshBasicMaterial({ map: blobTexture(), transparent: true, depthWrite: false, opacity: 0, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  blob.renderOrder = 0;
+  blob.visible = false;
+  item.blob = blob;
+  item.blobR = def.container ? [r * 1.35, r * 1.35] : [def.size[0] * 0.62, def.size[2] * 0.62 + 0.006];
+  env.scene.add(blob);
+}
+
+const _q = new THREE.Quaternion();
+const _yaw = new THREE.Euler();
+/** Aggiorna l'ombra di contatto: raggio verso il basso fino al primo piano fisso (banconi, strumenti, pavimento). */
+export function updateContactShadow(item, physics, strength) {
+  const b = item.blob;
+  if (!b || (item.blobSet && item.body.isSleeping())) return;
+  item.blobSet = true;
+  const t = item.body.translation();
+  const hit = physics.ray({ x: t.x, y: t.y + 0.02, z: t.z }, { x: 0, y: -1, z: 0 }, 1.5, { solidOnly: true });
+  const h = hit ? Math.max(0, t.y - hit.point.y) : 1;
+  const k = hit && hit.normal.y > 0.7 ? 1 - Math.min(1, h / 0.3) : 0;
+  b.visible = k > 0.02;
+  if (!b.visible) return;
+  b.position.set(t.x, hit.point.y + 0.001, t.z);
+  const grow = 1 + h * 3;
+  b.scale.set(item.blobR[0] * grow, 1, item.blobR[1] * grow);
+  if (!item.def.container) {
+    const r = item.body.rotation();
+    b.rotation.y = _yaw.setFromQuaternion(_q.set(r.x, r.y, r.z, r.w), 'YXZ').y;
+  }
+  b.material.opacity = strength * k * k;
 }
 
 // ------------------------------------------------------------------ geometrie
 
 /** Parete di vetro: profilo esterno e interno uniti al bordo, chiusa sul fondo. */
 function vesselGeometry(def) {
-  const t = def.glass ? 0.0016 : 0.002;
+  const t = def.glass ? 0.0016 : def.porcelain ? 0.0025 : 0.002;
   const inner = def.profile;
-  const pts = [new THREE.Vector2(0, 0)];
-  const outer = inner.map(([r, y], i) => [r + t, i === 0 ? 0 : y]);
-  outer[0][1] = 0;
+  // wallFrom: la parete esterna comincia più in alto (sotto c'è il rubinetto della buretta o il gambo dell'imbuto)
+  const y0 = def.wallFrom ?? 0;
+  const pts = [new THREE.Vector2(0, y0)];
+  const outer = inner.map(([r, y], i) => [r + t, i === 0 ? y0 : y]);
+  outer[0][1] = y0;
   for (const [r, y] of outer) pts.push(new THREE.Vector2(r, y));
   for (let k = inner.length - 1; k >= 0; k--) pts.push(new THREE.Vector2(inner[k][0], inner[k][1]));
   pts.push(new THREE.Vector2(0, inner[0][1]));
@@ -132,29 +274,58 @@ function gradTexture(def) {
   return tex;
 }
 
-/** Etichetta di un reagente: nome, formula, concentrazione e pittogramma di pericolo. */
-export function labelTexture({ title, formula = '', sub = '', hazard = null, color = '#ffffff' }) {
+/**
+ * Etichetta di un reagente: fascia del colore della famiglia (con il nome della famiglia), nome, formula,
+ * concentrazione, avvertenza («Pericolo» / «Attenzione») e fino a tre pittogrammi GHS.
+ * Il testo è sempre scuro su fondo chiaro pieno: si legge anche sul vetro e sotto luci diverse.
+ */
+export function labelTexture({ title, formula = '', sub = '', band = '#1d2733', bandText = '', ghs = [], signal = '', color = '#ffffff' }) {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 256;
   const g = canvas.getContext('2d');
   g.fillStyle = color;
   g.fillRect(0, 0, 512, 256);
-  g.fillStyle = '#1d2733';
-  g.fillRect(0, 0, 512, 14);
+  g.fillStyle = band;
+  g.fillRect(0, 0, 512, 42);
+  if (bandText) {
+    g.fillStyle = luminance(band) > 0.6 ? '#1d2733' : '#ffffff';
+    g.font = '700 26px "IBM Plex Sans", sans-serif';
+    g.fillText(bandText.toUpperCase(), 22, 31);
+  }
+  const pics = ghs.slice(0, 3);
+  const textW = pics.length ? 318 : 468;
   g.fillStyle = '#10161e';
-  g.font = '700 50px "IBM Plex Sans", sans-serif';
-  fitText(g, title, 24, 84, hazard ? 360 : 464);
-  g.font = '500 44px "IBM Plex Mono", monospace';
-  fitText(g, formula, 24, 148, hazard ? 360 : 464);
+  shrinkText(g, title, 22, 94, textW, '700 {}px "IBM Plex Sans", sans-serif', 44, 30);
+  shrinkText(g, formula, 22, 152, textW, '600 {}px "IBM Plex Mono", monospace', 46, 32);
   g.fillStyle = '#3b4756';
-  g.font = '500 32px "IBM Plex Sans", sans-serif';
-  fitText(g, sub, 24, 208, 464);
-  if (hazard) drawHazard(g, 440, 120, 56, hazard);
+  g.font = '500 28px "IBM Plex Sans", sans-serif';
+  fitText(g, sub, 22, 198, textW);
+  if (signal) {
+    g.fillStyle = '#b3001b';
+    g.font = '700 28px "IBM Plex Sans", sans-serif';
+    fitText(g, signal.toUpperCase(), 22, 240, textW);
+  }
+  // pittogrammi: uno grande, due affiancati, tre a triangolo
+  const spots = [[[420, 146, 116]], [[372, 146, 92], [460, 146, 92]], [[372, 104, 82], [460, 104, 82], [416, 190, 82]]][pics.length - 1] ?? [];
+  pics.forEach((id, i) => drawGhs(g, id, ...spots[i]));
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   return tex;
+}
+
+function luminance(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+}
+
+/** Scrive il testo rimpicciolendo il carattere (da `size` fino a `min` px) prima di troncarlo con «…». */
+function shrinkText(g, text, x, y, w, font, size, min) {
+  let px = size;
+  g.font = font.replace('{}', px);
+  while (px > min && g.measureText(String(text)).width > w) g.font = font.replace('{}', --px);
+  fitText(g, text, x, y, w);
 }
 
 function fitText(g, text, x, y, w) {
@@ -163,22 +334,65 @@ function fitText(g, text, x, y, w) {
   g.fillText(s, x, y);
 }
 
-/** Pittogramma GHS semplificato: rombo rosso con un simbolo. */
-function drawHazard(g, cx, cy, r, kind) {
+/** Pittogramma GHS: rombo bianco bordato di rosso con il simbolo nero (ghs.js), largo `size` px. */
+export function drawGhs(g, id, cx, cy, size) {
+  const def = GHS[id];
+  if (!def) return;
+  const h = size / 2;
   g.save();
-  g.translate(cx, cy);
-  g.rotate(Math.PI / 4);
-  g.fillStyle = '#fff';
-  g.strokeStyle = '#d4141c';
-  g.lineWidth = 9;
-  g.fillRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4);
-  g.strokeRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4);
+  g.beginPath();
+  g.moveTo(cx, cy - h);
+  g.lineTo(cx + h, cy);
+  g.lineTo(cx, cy + h);
+  g.lineTo(cx - h, cy);
+  g.closePath();
+  g.fillStyle = '#ffffff';
+  g.fill();
+  g.lineWidth = size * 0.075;
+  g.strokeStyle = '#e30613';
+  g.lineJoin = 'miter';
+  g.stroke();
+  // il simbolo occupa il quadrato inscritto nel rombo
+  const k = (size * 0.74) / 100;
+  g.translate(cx - 50 * k, cy - 50 * k);
+  g.scale(k, k);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  for (const p of def.parts) {
+    const color = p.white ? '#ffffff' : '#111111';
+    if (p.fill) {
+      g.fillStyle = color;
+      g.fill(new Path2D(p.fill));
+    }
+    if (p.stroke) {
+      g.strokeStyle = color;
+      g.lineWidth = p.stroke;
+      g.stroke(new Path2D(p.d));
+    }
+  }
   g.restore();
-  g.fillStyle = '#111';
-  g.font = '700 46px "IBM Plex Sans", sans-serif';
-  g.textAlign = 'center';
-  g.fillText({ corrosive: '⚗', toxic: '☠', flammable: '🔥', irritant: '!', environment: '♣' }[kind] ?? '!', cx, cy + 16);
-  g.textAlign = 'left';
+}
+
+/** Grana dei solidi (polveri e cristalli): una trama chiara che moltiplica il colore del contenuto. Condivisa. */
+let GRAIN = null;
+export function grainTexture() {
+  if (GRAIN) return GRAIN;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#e6e6e6';
+  g.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 2200; i++) {
+    const v = 150 + Math.floor(Math.random() * 105);
+    g.fillStyle = `rgb(${v},${v},${v})`;
+    g.fillRect(Math.random() * 128, Math.random() * 128, 1 + Math.random() * 2, 1 + Math.random() * 2);
+  }
+  GRAIN = new THREE.CanvasTexture(c);
+  GRAIN.wrapS = GRAIN.wrapT = THREE.RepeatWrapping;
+  GRAIN.repeat.set(6, 3);
+  GRAIN.colorSpace = THREE.SRGBColorSpace;
+  GRAIN.userData.shared = true;
+  return GRAIN;
 }
 
 // ------------------------------------------------------------------ creazione
@@ -189,7 +403,8 @@ let nextId = 1;
  * Crea un oggetto del gioco.
  * @param {{scene: THREE.Scene, physics: import('./physics.js').Physics, G: object, mats: object}} env
  * @param {string} kind chiave di DEFS
- * @param {{pos: THREE.Vector3, quat?: THREE.Quaternion, mixture?: object, label?: object, name?: string}} opts
+ * @param {{pos: THREE.Vector3, quat?: THREE.Quaternion, mixture?: object, label?: object, name?: string, cap?: string}} opts
+ *   cap: colore del tappo (reagenti del magazzino)
  */
 export function createItem(env, kind, opts) {
   const def = DEFS[kind];
@@ -207,11 +422,24 @@ export function createItem(env, kind, opts) {
   };
 
   if (def.container) {
-    const glassMat = def.plastic ? mats.plastic(def.plastic) : def.brown ? mats.brown : mats.glass;
+    // porcellana: un materiale per oggetto, perché il crogiolo diventa rosso quando è rovente
+    const glassMat = def.porcelain
+      ? new THREE.MeshStandardMaterial({ color: 0xf2f0ea, roughness: 0.32, emissive: 0xff3a00, emissiveIntensity: 0 })
+      : def.plastic ? mats.plastic(def.plastic, def.opacity) : def.brown ? mats.brown : mats.glass;
     const vessel = shadow(new THREE.Mesh(vesselGeometry(def), glassMat));
-    vessel.renderOrder = 3;
+    vessel.renderOrder = def.porcelain ? 0 : 3;
     group.add(vessel);
     item.hits.push(vessel);
+    if (def.porcelain) item.porcelainMat = glassMat;
+    if (def.glass) {
+      // labbro: il bordo superiore della vetreria è più spesso e cattura la luce, così se ne vede la bocca
+      const top = def.profile[def.profile.length - 1];
+      const lip = new THREE.Mesh(new THREE.TorusGeometry(top[0] + 0.0008, 0.0014, 6, seg(32, 18)), glassMat);
+      lip.rotation.x = Math.PI / 2;
+      lip.position.y = top[1];
+      lip.renderOrder = 3;
+      group.add(lip);
+    }
     // contenuto: solido (opaco) e liquido (trasparente), tagliati al loro livello
     const geo = interiorGeometry(def.profile, seg(28, 14));
     item.solidMesh = new THREE.Mesh(geo, liquidMaterial({ physical: false }));
@@ -219,6 +447,7 @@ export function createItem(env, kind, opts) {
     item.solidMesh.material.opacity = 1;
     item.solidMesh.material.depthWrite = true;
     item.solidMesh.material.roughness = 0.9;
+    item.solidMesh.material.map = grainTexture();
     item.solidMesh.material.userData.uniforms.uSurfaceAlpha.value = 1;
     item.solidMesh.renderOrder = 1;
     item.liquidMesh = new THREE.Mesh(geo, liquidMaterial({ physical: G.physical }));
@@ -231,23 +460,36 @@ export function createItem(env, kind, opts) {
       group.add(foot);
       item.hits.push(foot);
     }
+    // graduazione ed etichetta sul lato +z: in mano guardano chi tiene l'oggetto (il beccuccio, da cui si versa, è sul
+    // lato opposto, come si fa davvero: l'etichetta verso il palmo, così le gocce non la rovinano)
     if (def.grad) {
       const top = def.profile[def.profile.length - 1][1];
       const r = def.outer[0] + 0.0004;
       const gmesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(r, r, top, seg(24, 12), 1, true, Math.PI * 0.55, Math.PI * 0.5),
+        new THREE.CylinderGeometry(r, r, top, seg(24, 12), 1, true, -Math.PI * 0.45, Math.PI * 0.5),
         new THREE.MeshBasicMaterial({ map: gradTexture(def), transparent: true, depthWrite: false, side: THREE.DoubleSide }),
       );
       gmesh.position.y = top / 2;
       gmesh.renderOrder = 4;
       group.add(gmesh);
     }
+    if (kind === 'burette') buildBurette(item, env, shadow);
+    if (kind === 'funnel') {
+      // gambo dell'imbuto e cono di carta da filtro (si toglie con il precipitato e torna nuovo)
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0028, 0.068, 10, 1, true), glassMat);
+      stem.position.y = 0.034;
+      stem.renderOrder = 3;
+      group.add(stem);
+      item.paper = new THREE.Mesh(new THREE.CylinderGeometry(0.0335, 0.0035, 0.05, seg(20, 12), 1, true), new THREE.MeshStandardMaterial({ color: 0xf4f2ea, roughness: 0.95, side: THREE.DoubleSide }));
+      item.paper.position.y = 0.068 + 0.025 + 0.002;
+      group.add(item.paper);
+    }
     if (def.label && opts.label) {
       const top = def.profile[def.profile.length - 1][1];
       const h = Math.min(0.06, top * 0.42);
       const r = def.outer[0] + 0.0012;
       const lmesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(r, r, kind === 'dropper' ? 0.03 : h, seg(24, 12), 1, true, Math.PI * 0.3, Math.PI * 0.9),
+        new THREE.CylinderGeometry(r, r, kind === 'dropper' ? 0.03 : h, seg(24, 12), 1, true, -Math.PI * 0.45, Math.PI * 0.9),
         new THREE.MeshStandardMaterial({ map: labelTexture(opts.label), roughness: 0.7, side: THREE.FrontSide }),
       );
       lmesh.position.y = kind === 'dropper' ? 0.03 : top * 0.42;
@@ -256,11 +498,24 @@ export function createItem(env, kind, opts) {
       item.hits.push(lmesh);
     }
     if (kind === 'dropper') {
-      // tettarella di gomma e pipetta
+      // tettarella di gomma e pipetta, con la ghiera a vite del colore della famiglia
       const bulb = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.007, 0.03, 12), mats.black));
       bulb.position.y = 0.1;
       group.add(bulb);
       item.hits.push(bulb);
+      if (opts.cap) {
+        const collar = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0078, 0.012, seg(16, 10)), new THREE.MeshStandardMaterial({ color: opts.cap, roughness: 0.45 })));
+        collar.position.y = 0.08;
+        group.add(collar);
+      }
+    } else if (opts.cap && def.stock && !def.nozzle) {
+      // tappo a vite del colore della famiglia: si toglie mentre si usa il reagente (vedi capOpen in game.js)
+      const [r, y] = def.profile[def.profile.length - 1];
+      const h = def.wide ? 0.014 : 0.02;
+      const cap = shadow(new THREE.Mesh(new THREE.CylinderGeometry(r + 0.0028, r + 0.003, h, seg(24, 12)), new THREE.MeshStandardMaterial({ color: opts.cap, roughness: 0.42 })));
+      cap.position.y = y - h * 0.35 + h / 2;
+      group.add(cap);
+      item.cap = cap;
     }
     if (def.nozzle) {
       const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.012, 16), mats.plastic('#d8e4ee'));
@@ -284,6 +539,7 @@ export function createItem(env, kind, opts) {
   item.mesh.position.copy(opts.pos);
   if (opts.quat) item.mesh.quaternion.copy(opts.quat);
   scene.add(group);
+  contactShadow(item, env);
   return item;
 }
 
@@ -291,10 +547,105 @@ export function createItem(env, kind, opts) {
 function hullPoints(def) {
   const t = 0.0016;
   const pts = [];
-  const prof = [[def.profile[0][0] + t, 0], ...def.profile.slice(1).map(([r, y]) => [r + t, y])];
+  const prof = [[def.profile[0][0] + t, def.wallFrom ?? 0], ...def.profile.slice(1).map(([r, y]) => [r + t, y])];
   for (const [r, y] of prof) for (let k = 0; k < 8; k++) pts.push(Math.cos((k / 8) * Math.PI * 2) * r, y, Math.sin((k / 8) * Math.PI * 2) * r);
   return new Float32Array(pts);
 }
+
+/**
+ * Buretta: graduazione da 0 (in alto) a 50 mL, rubinetto di PTFE con la levetta (item.stopcock: si gira aprendolo) e
+ * la punta sotto. L'origine è la punta.
+ */
+function buildBurette(item, env, shadow) {
+  const { def, mesh: group } = item;
+  const { mats } = env;
+  const r = def.profile[0][0] + 0.0016;
+  // sotto la parete: il tratto fino al rubinetto, il rubinetto, la punta
+  const tube = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.012, 10, 1, true), mats.glass);
+  tube.position.y = 0.034;
+  tube.renderOrder = 3;
+  const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.0012, 0.024, 10, 1, true), mats.glass);
+  tip.position.y = 0.012;
+  tip.renderOrder = 3;
+  const body = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.016, 12), mats.glass));
+  body.position.y = 0.029;
+  const key = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.03, 10), new THREE.MeshStandardMaterial({ color: 0xf0f0ee, roughness: 0.5 })));
+  key.rotation.z = Math.PI / 2;
+  key.position.y = 0.029;
+  // levetta: di traverso = chiuso, in verticale = aperto (la gira il gioco)
+  const handle = new THREE.Group();
+  handle.position.set(0.017, 0.029, 0);
+  const paddle = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.026, 0.008), new THREE.MeshStandardMaterial({ color: 0x2f6fd1, roughness: 0.45 })));
+  handle.add(paddle);
+  handle.rotation.x = Math.PI / 2;
+  group.add(tube, tip, body, key, handle);
+  item.stopcock = handle;
+  item.hits.push(body, key, paddle);
+  // graduazione: tacche ogni millilitro, numeri ogni 5, lo zero in alto (la lettura cresce scendendo)
+  const y0 = def.profile[0][1];
+  const area = Math.PI * def.profile[0][0] ** 2;
+  const yAt = (ml) => y0 + ((50 - ml) * 1e-6) / area;
+  const top = yAt(0) + 0.006;
+  const bottom = yAt(50) - 0.004;
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 2048;
+  const g = canvas.getContext('2d');
+  const toPx = (y) => canvas.height * (1 - (y - bottom) / (top - bottom));
+  g.strokeStyle = 'rgba(255,255,255,0.95)';
+  g.fillStyle = 'rgba(255,255,255,0.95)';
+  g.font = '600 30px "IBM Plex Sans", sans-serif';
+  g.lineWidth = 3;
+  for (let ml = 0; ml <= 50; ml += 0.5) {
+    const y = toPx(yAt(ml));
+    const major = ml % 5 === 0;
+    const whole = ml % 1 === 0;
+    g.beginPath();
+    g.moveTo(6, y);
+    g.lineTo(major ? 60 : whole ? 40 : 24, y);
+    g.stroke();
+    if (major) g.fillText(String(ml), 66, y + 10);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  const gr = def.outer[0] + 0.0003;
+  const gmesh = new THREE.Mesh(new THREE.CylinderGeometry(gr, gr, top - bottom, 16, 1, true, -Math.PI * 0.45, Math.PI * 0.6), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+  gmesh.position.y = (top + bottom) / 2;
+  gmesh.renderOrder = 4;
+  group.add(gmesh);
+}
+
+/** Testo sul display di uno strumento (pH-metro, termometro della testa): cifre verdi su fondo scuro. */
+export function lcdTexture(w = 160, h = 48) {
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  let last = null;
+  const set = (text) => {
+    if (text === last) return;
+    last = text;
+    const g = canvas.getContext('2d');
+    g.fillStyle = '#0e1a12';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#7dff9a';
+    g.font = `600 ${Math.round(h * 0.62)}px "IBM Plex Mono", monospace`;
+    // il testo lungo si stringe per entrare nel display
+    const tw = g.measureText(text).width;
+    if (tw > w - 14) g.font = `600 ${Math.floor(h * 0.62 * ((w - 14) / tw))}px "IBM Plex Mono", monospace`;
+    g.textAlign = 'right';
+    g.textBaseline = 'middle';
+    g.fillText(text, w - 8, h / 2 + 2);
+    tex.needsUpdate = true;
+  };
+  set('');
+  return { tex, set };
+}
+
+/** Materiale delle sagome invisibili per il puntatore (si colpiscono con il raggio, non si disegnano). */
+const PICK_MAT = new THREE.MeshBasicMaterial({ visible: false });
 
 function buildTool(item, env, opts) {
   const { def, kind, mesh: group } = item;
@@ -339,6 +690,58 @@ function buildTool(item, env, opts) {
     const horn = add(new THREE.CylinderGeometry(0.035, 0.012, 0.14, 12), mats.black, 0, 0.47, 0.09);
     horn.rotation.x = Math.PI / 2;
     shapes = [{ type: 'cylinder', hh: 0.25, r: 0.075, y: 0.25 }];
+  } else if (kind === 'thermometer') {
+    // termometro a liquido: canna di vetro, colonnina rossa (si allunga con la temperatura) e bulbo in punta (+x)
+    add(new THREE.CylinderGeometry(0.0034, 0.0034, 0.19, 10), mats.probeGlass, -0.005, 0.004, 0).rotation.z = Math.PI / 2;
+    add(new THREE.SphereGeometry(0.0038, 12, 8), mats.rubber, 0.092, 0.004, 0);
+    item.column = new THREE.Mesh(new THREE.CylinderGeometry(0.0011, 0.0011, 1, 6), mats.rubber);
+    item.column.rotation.z = Math.PI / 2;
+    item.column.position.set(0.05, 0.004, 0);
+    item.column.scale.y = 0.06;
+    group.add(item.column);
+    const cap = add(new THREE.CylinderGeometry(0.0036, 0.0036, 0.012, 10), mats.darkPlastic, -0.098, 0.004, 0);
+    cap.rotation.z = Math.PI / 2;
+  } else if (kind === 'phmeter') {
+    // pH-metro tascabile: corpo con il display (item.lcd), elettrodo di vetro in punta (+x)
+    const h = sy / 2;
+    add(new THREE.CylinderGeometry(0.011, 0.011, 0.12, seg(16, 10)), mats.darkPlastic, -0.03, h, 0).rotation.z = Math.PI / 2;
+    add(new THREE.CylinderGeometry(0.0085, 0.006, 0.012, seg(16, 10)), mats.black, 0.036, h, 0).rotation.z = Math.PI / 2;
+    add(new THREE.CylinderGeometry(0.0042, 0.0042, 0.05, 10), mats.probeGlass, 0.066, h, 0).rotation.z = Math.PI / 2;
+    add(new THREE.SphereGeometry(0.0046, 10, 8), mats.probeGlass, 0.09, h, 0);
+    item.lcd = lcdTexture(160, 56);
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.017), new THREE.MeshBasicMaterial({ map: item.lcd.tex, toneMapped: false }));
+    screen.rotation.x = -Math.PI / 2;
+    screen.position.set(-0.035, h + 0.0112, 0);
+    group.add(screen);
+    shapes = [{ type: 'box', hx: sx / 2, hy: 0.011, hz: 0.011, y: h }];
+  } else if (kind === 'pipette') {
+    // pipetta graduata da 10 mL con la propipetta rossa: la colonna di liquido (item.column) sale con il carico
+    const h = 0.013;
+    add(new THREE.CylinderGeometry(0.0035, 0.0035, 0.27, 10, 1, true), mats.probeGlass, 0.015, h, 0).rotation.z = Math.PI / 2;
+    add(new THREE.CylinderGeometry(0.0035, 0.0009, 0.016, 10, 1, true), mats.probeGlass, 0.158, h, 0).rotation.z = Math.PI / 2;
+    const bulb = add(new THREE.SphereGeometry(0.013, 14, 10), mats.rubber, -0.135, h, 0);
+    bulb.scale.set(1.35, 1, 1);
+    for (let k = 0; k <= 10; k++) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.0036, 0.00035, 4, 12), mats.paper);
+      ring.rotation.y = Math.PI / 2;
+      ring.position.set(0.148 - k * 0.02, h, 0);
+      group.add(ring);
+    }
+    item.column = new THREE.Mesh(new THREE.CylinderGeometry(0.0027, 0.0027, 1, 8), new THREE.MeshStandardMaterial({ color: 0xcfe6ff, roughness: 0.1, transparent: true, opacity: 0.75, depthWrite: false }));
+    item.column.rotation.z = Math.PI / 2;
+    item.column.visible = false;
+    group.add(item.column);
+    shapes = [{ type: 'box', hx: sx / 2, hy: 0.008, hz: 0.008, y: h }];
+  } else if (kind === 'filterPaper') {
+    // carta da filtro tolta dall'imbuto: un disco piegato con sopra il solido raccolto
+    const paper = add(new THREE.CylinderGeometry(0.034, 0.03, 0.002, seg(20, 12)), mats.paper, 0, 0.001, 0);
+    paper.scale.set(1, 1, 0.8);
+    item.heap = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }));
+    item.heap.scale.set(1, 0.25, 0.8);
+    item.heap.position.y = 0.002;
+    group.add(item.heap);
+    item.hits.push(item.heap);
+    shapes = [{ type: 'box', hx: 0.033, hy: 0.003, hz: 0.027, y: 0.003 }];
   } else if (kind === 'shards') {
     const geo = new THREE.TetrahedronGeometry(0.018, 0);
     for (let k = 0; k < 8; k++) {
@@ -349,8 +752,17 @@ function buildTool(item, env, opts) {
     }
     shapes = [{ type: 'box', hx: 0.035, hy: 0.006, hz: 0.035, y: 0.006 }];
   }
+  // strumenti sottili (spatola, ansa, cartina, termometro, pipetta…): una sagoma invisibile più grossa per il puntatore,
+  // altrimenti nella vista del bancone sarebbero larghi due pixel
+  if (['spatula', 'loop', 'strip', 'thermometer', 'phmeter', 'pipette'].includes(kind)) {
+    const pick = new THREE.Mesh(new THREE.BoxGeometry(sx, Math.max(sy, 0.03), Math.max(sz, 0.035)), PICK_MAT);
+    pick.position.y = sy / 2;
+    pick.userData.pick = true;
+    group.add(pick);
+    item.hits.push(pick);
+  }
   item.shapes = shapes; // forma del corpo: serve anche per l'ingombro quando lo si posa
-  item.body = physics.dynamic({ pos: opts.pos, quat: opts.quat, shapes, mass: def.mass, owner: item, friction: 0.9, events: kind === 'extinguisher' });
+  item.body = physics.dynamic({ pos: opts.pos, quat: opts.quat, shapes, mass: def.mass, owner: item, friction: 0.9, events: kind === 'extinguisher', ghost: Boolean(def.probe) });
 }
 
 /** Dopo createItem per gli strumenti la posizione va impostata sul corpo. */
@@ -374,10 +786,12 @@ export function syncItem(item) {
 export function disposeItem(item, env) {
   env.physics.remove(item.body);
   item.mesh.removeFromParent();
+  item.blob?.removeFromParent();
+  item.blob?.material.dispose();
   item.mesh.traverse((o) => {
     o.geometry?.dispose?.();
     if (o.material && o.material !== env.mats.glass && o.material !== env.mats.brown && !Object.values(env.mats).includes(o.material)) {
-      o.material.map?.dispose?.();
+      if (!o.material.map?.userData.shared) o.material.map?.dispose?.();
       o.material.dispose?.();
     }
   });

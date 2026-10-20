@@ -11,8 +11,8 @@ semplici), e la **modalità Spiega** (`F1`) apre una scheda su qualsiasi parola 
 Tre **preset grafici** (Semplice, Medio, Professionale) adattano la grafica al computer; il Professionale mostra anche
 l'**aspetto reale** di ogni elemento (colori e materiali veri) in un campione 3D.
 Il **simulatore di laboratorio** è un gioco in prima persona nel laboratorio di chimica della scuola, nello stile di
-*Cooking Simulator*: si prendono becher e bottiglie, si pesa, si versa inclinando, si scalda e si consegna il preparato
-all'insegnante, con la fisica vera degli oggetti e la chimica delle 554 sostanze e delle reazioni del catalogo.
+*Cooking Simulator*: si prendono becher e bottiglie, si pesa, si versa inclinando, si scalda, si titola con la buretta,
+si filtra, si distilla, si fa l'elettrolisi e si consegna il preparato all'insegnante, con la fisica vera degli oggetti e la chimica delle 554 sostanze e delle reazioni del catalogo.
 Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 
 | Fase | Contenuto | Stato |
@@ -432,16 +432,36 @@ dall'insegnante, le prepara al bancone e le consegna alla cattedra. Modelli e gr
 fisica è quella di [Rapier](https://rapier.rs) (WebAssembly incluso nell'app, caricato solo alla prima apertura).
 Design e decisioni: `docs/superpowers/specs/2026-10-13-simulatore-laboratorio-design.md`.
 
-**Stato: prototipo giocabile** per provare comandi e fisica. Negozio e ampliamenti del laboratorio, reputazione,
-tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione arriveranno nelle prossime versioni.
+**Stato: prototipo giocabile.** La Carriera ha i capitoli da 0 a 4 completi (27 esercitazioni in tutto, con le due dei
+capitoli 5 e 7); verifiche di fine capitolo, pagella, sfide a tempo e i capitoli 5–9 arriveranno nella fase G7 del
+[piano del gioco base](docs/superpowers/specs/2026-10-14-gioco-base-piano.md).
 
-- **Modalità**: *Carriera* (5 esercitazioni valutate con stelle e soldi, progressi salvati) e *Laboratorio libero*
-  (tutti gli strumenti e un magazzino con le 554 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
+- **Modalità**: *Carriera* (un anno di scuola in capitoli, vedi sotto) e *Laboratorio libero* (tutti gli strumenti e un
+  magazzino con le 554 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
+- **Carriera**: dieci capitoli, ognuno con 4–6 esercitazioni. 0 · comandi e sicurezza (portare l'acqua alla cattedra,
+  misurare 50 mL, pesare 2,00 g, pulire il bancone, spegnere un fuoco con l'estintore); 1 · misure e soluzioni
+  (soluzione di NaCl, diluizione, densità di un liquido misterioso, soluzione satura, sciroppo al 10 %); 2 · acidi e basi
+  (acido, neutro o basico, diluire un acido, neutralizzare con il pH-metro, titolazione, l'aceto del supermercato);
+  3 · precipitazioni e analisi (pioggia d'oro, cloruro d'argento, filtrazione del solfato di bario, riconoscere
+  alogenuri e cationi); 4 · gas (idrogeno dallo zinco, vulcano di bicarbonato, ossigeno con un catalizzatore, acqua di
+  calce e CO₂, ammoniaca sotto la cappa); 5 e 7 · cristalli di solfato di rame e saggio alla fiamma. Le esercitazioni
+  sono **dati** (`src/game/data/career-exercises.js`): cosa c'è sul banco, i campioni incogniti, i passi con la
+  condizione che li spunta, gli obiettivi con le tolleranze della chimica realistica e semplificata, le domande della
+  relazione, le pagine del libro e una soluzione; `career.js` li legge e un test esegue la soluzione di ognuna con il
+  motore dei contenitori. Dopo la consegna la **relazione di laboratorio** fa 2–3 domande sul perché (le risposte giuste
+  danno fino a una stella in più); con 2 stelle l'esercitazione è superata. La **reputazione** con l'insegnante (0–100,
+  dalle stelle migliori e dalle relazioni, meno gli incidenti) apre i capitoli insieme a quello prima. Il **negozio**
+  vende occhiali e camice (niente doccia per gli schizzi), vetreria di scorta, termometro digitale, bilancia di
+  precisione (0,001 g), cappa più potente e la chiave dell'armadio (il magazzino della scuola anche nella Carriera). Il
+  libro «Come si fa» apre le sue pagine con i capitoli e l'insegnante indica quelle che servono. **Profili** (fino a 8),
+  ognuno con la sua Carriera e il suo quaderno; i **salvataggi** hanno una versione e passano da soli dalla vecchia alla
+  nuova (`src/game/save.js`); nell'app Electron sono anche in un file nella cartella dei dati dell'utente.
 - **Chimica** scelta all'inizio: *realistica* (si legge la bilancia, la graduazione e le etichette; la spatola prende
   quantità variabili; tolleranze strette) o *semplificata* (un cucchiaino = 1 g, quantità e pH sempre visibili,
   tolleranze larghe).
-- **Due visuali**: prima persona (`W A S D` e mouse) e vista dall'alto del bancone (`Tab`; `A`/`D` cambia postazione:
-  bancone, scaffale, lavandino, cappa, cattedra, rifiuti; l'oggetto in mano viaggia con il giocatore).
+- **Due visuali**: prima persona (`W A S D` e mouse, 3,6 m/s camminando e 6,2 correndo) e vista dall'alto del bancone
+  (`Tab`; `A`/`D` cambia postazione: bancone, scaffale, lavandino, distillazione, cappa, cattedra, rifiuti; l'oggetto in
+  mano viaggia con il giocatore). Con un oggetto in mano `A` e `D` lo ruotano (in prima persona, invece dei passi di lato). Il campo visivo (da 55° a 100°) si regola nel menu e nella pausa.
 - **Interfaccia come in *Cooking Simulator***: in basso a destra una legenda piccola (icona del tasto e azione) mostra
   sempre i comandi del momento, cambia con l'oggetto in mano e con ciò che si guarda, attenua le azioni che lì non
   funzionano e illumina il tasto premuto (`L` la nasconde). Le informazioni importanti sono in finestrelle accanto agli
@@ -453,27 +473,108 @@ tutorial completo, sfide a tempo, buretta, pipetta, filtrazione e distillazione 
 - **Comandi come in *Cooking Simulator***: clic sinistro per prendere, usare gli elementi fissi e posare (dove lo si
   poserà compare la sagoma dell'oggetto, nel punto d'appoggio vero: verde se lì si può, rossa se il piano è inclinato o
   mobile, troppo lontano, a sbalzo o occupato; al clic l'oggetto ci scivola in meno di 0,3 s). Destro tenuto + mouse
-  ruota l'oggetto (per un recipiente anche il beccuccio da cui si versa); un clic destro annulla la rotazione o rimette
-  l'oggetto dove lo si era preso. Il tasto centrale tenuto carica il lancio (da 1,5 a 8 m/s in un secondo, con un anello
+  in su e in giù inclina l'oggetto, senza girarlo (un recipiente versa finché si tiene il tasto); attorno alla verticale
+  lo ruotano `A` e `D`. Un clic destro annulla la rotazione o rimette l'oggetto dove lo si era preso. Il tasto centrale tenuto carica il lancio (da 1,5 a 8 m/s in un secondo, con un anello
   attorno al mirino). `Maiusc` tenuto con un oggetto in mano apre la manipolazione precisa: lo sguardo e i passi si
-  fermano, il mouse sposta l'oggetto (fino a 35 cm), sinistro + mouse lo alza o lo abbassa, destro + mouse lo ruota (un
-  recipiente si inclina e versa goccia a goccia), il tasto centrale lo lascia lì fermo. `Spazio` corre, `Ctrl`
+  fermano, il mouse sposta l'oggetto (fino a 35 cm), sinistro + mouse lo alza o lo abbassa, destro + mouse lo inclina (un
+  recipiente versa goccia a goccia), il tasto centrale lo lascia lì fermo. `Spazio` corre, `Ctrl`
   accovaccia. Un clic sul lavandino con un recipiente in mano lo porta sotto il rubinetto: l'acqua scorre finché si tiene
   premuto il sinistro (la rotella regola il getto da 5 a 50 mL/s), il clic destro smette. `E` pulisce e usa gli
   strumenti (al lavandino lava il recipiente, che si svuota nello scarico).
-- **Versare**: tenendo premuto il tasto sinistro e muovendo il mouse si inclina il recipiente; lasciando il tasto torna
-  dritto e smette di versare, e di lato si corregge la mira. Il livello del liquido resta orizzontale (quantile di ~300
+- **Versare**: si tiene premuto il tasto sinistro (un clic, invece, posa). Guardando un altro recipiente, il lavandino o
+  un bidone, la bocca si porta sopra l'apertura e il recipiente si inclina da solo finché esce un filo (≈ 1-2 mL/s), e
+  continua a inclinarsi mentre si svuota per non fermarsi: il gioco regola l'inclinazione sul carico d'acqua sopra il
+  bordo, così un becher pieno, un barattolo di polvere quasi vuoto e una provetta versano tutti allo stesso modo. Il
+  mouse in su versa più forte, in giù più piano; altrove (o spostando lo sguardo dal bersaglio) si ferma appena prima del
+  bordo, così non si fanno pozze per sbaglio. Lasciando il tasto torna dritto e smette di versare; in prima persona di
+  lato si corregge la mira, nella vista del bancone l'oggetto resta fermo sopra il bersaglio. A mano si inclina con il
+  destro tenuto + mouse. Il livello del liquido resta orizzontale (quantile di ~300
   punti campionati nel volume interno) e il liquido esce dal punto più basso del bordo con la portata di uno stramazzo
   (Q ≈ 1,77 · b · h^1,5, fino a 150 mL/s per un becher): sotto 0,5 mm di carico resta attaccato al bordo, poi esce
-  goccia a goccia, e vicino al bordo il mouse inclina più finemente. Guardando un altro recipiente, la bocca si porta
-  sopra la sua apertura. Un anello mostra dove cadrà il getto già prima della prima goccia: verde in un recipiente, nel
+  goccia a goccia, e inclinando a mano vicino al bordo il mouse è più fine. Un anello mostra dove cadrà il getto già prima della prima goccia: verde in un recipiente, nel
   lavandino o nei rifiuti, rosso se farà una pozza. Il getto è un filo continuo che si assottiglia cadendo e si ferma
   sugli ostacoli (il bordo di un altro becher); il liquido arriva quando il getto tocca il bersaglio.
 - **Strumenti**: becher da 100 e 250 mL, beuta, cilindro graduato (tacche da 1 mL), bottiglie di reagenti con etichetta e
   pittogrammi, spruzzetta di acqua distillata, contagocce di fenolftaleina, barattoli, spatola (un cucchiaino o un pizzico),
-  bilancia con tara, piastra riscaldante con agitatore (5 livelli), becco Bunsen con treppiede e reticella, ansa di
-  nichel-cromo per il saggio alla fiamma, cartine indicatrici universali, carta assorbente, lavandino con rubinetto,
+  bilancia con tara, piastra riscaldante con agitatore (5 livelli), becco Bunsen con treppiede e reticella, lampada a luce
+  forte per le reazioni fotochimiche, crogiolo e capsula di porcellana, ansa di nichel-cromo per il saggio alla fiamma, cartine indicatrici universali, carta assorbente, lavandino con rubinetto,
   cappa aspirante, doccia di emergenza, estintore a CO₂, contenitori dei rifiuti, vassoio delle consegne e campanello.
+- **Reagenti**: ogni reagente è nel suo contenitore, scelto dai dati (`src/game/stock.js`): barattoli di vetro, di vetro
+  ambrato per ciò che la luce decompone e di plastica per gli idrossidi; bottiglie di vetro, ambrate e flaconi di plastica
+  per le basi forti e l'acido fluoridrico. Il tappo ha il colore della famiglia, spiegato dalla legenda sullo scaffale
+  (rosso acidi, blu basi, bianco sali e inorganici, giallo ossidanti, grigio metalli, verde organici, viola indicatori,
+  azzurro acqua), e si toglie mentre si usa il reagente. L'etichetta riporta nome, formula, concentrazione, avvertenza
+  («Pericolo» / «Attenzione») e i pittogrammi GHS: quelli delle schede di sicurezza per i reagenti dello scaffale, dedotti
+  dai dati (indicativi) per le altre sostanze del magazzino. Barattoli e bottiglie sono un po' più grandi del vero (+15 % e
+  +10 %), per riconoscerli e prenderli meglio. Sodio, potassio e litio stanno sotto olio di paraffina (la spatola prende
+  il pezzetto di metallo e lascia l'olio). Nel magazzino del Laboratorio libero, oltre alle 554 sostanze, c'è l'**armadio
+  della scuola**: 47 reagenti d'uso (acidi e basi 1 M, sali 0,1 M, candeggina, acqua ossigenata 3 %, metalli, ossidi,
+  carbonati…) divisi per famiglia con il colore del tappo. Con lo scaffale, l'armadio, l'alimentatore e le bombole si
+  possono fare 504 reazioni del catalogo (317 con il solo scaffale; `node scripts/coverage.mjs` dà la tabella per gruppo,
+  un test ne fissa il minimo).
+- **Strumenti di misura e apparecchi**: il **termometro** e il **pH-metro** si immergono nel recipiente guardato e si
+  leggono nella finestrella (il termometro sale piano, il pH-metro si stabilizza in un attimo). La **pipetta graduata**
+  preleva fino a 10 mL (`E`) e li rilascia tutti o un millilitro alla volta (`Maiusc+E`); si lava al lavandino. La
+  **buretta** da 50 mL sul sostegno, con lo zero in alto e la scala a 0,05 mL, si riempie versandoci dentro dall'alto;
+  il rubinetto ha quattro posizioni (chiuso, goccia a goccia, a filo, aperto; clic destro per chiudere). L'**imbuto con
+  la carta da filtro** fa passare il liquido con i soluti nel recipiente sotto e trattiene il precipitato: la carta si
+  toglie con un clic e si butta. Alla postazione di distillazione il **pallone sul mantello riscaldante** (5 livelli),
+  con testa, termometro e refrigerante, fa gocciolare nel recipiente all'uscita i vapori che condensano (acqua, etanolo,
+  acetone; i gas come la CO₂ escono): da acqua ed etanolo distilla prima l'etanolo a 78 °C. Nel **bagno di ghiaccio** un
+  recipiente si raffredda verso 0 °C. Sotto la cappa l'**alimentatore** (0, 2, 4, 6, 9, 12 V) con due elettrodi di
+  grafite fa l'**elettrolisi** del recipiente posato sotto: la corrente passa solo se la soluzione contiene un elettrolita
+  (l'acqua distillata non conduce, e la finestrella lo dice) e cresce con la tensione; i prodotti seguono la legge di
+  Faraday (Na₂SO₄: idrogeno e ossigeno, HCl: idrogeno e cloro, salamoia: soda e ipoclorito). Cinque **bombole** (O₂, H₂,
+  CO₂, Cl₂, NH₃) con il volantino fanno gorgogliare il gas nel recipiente all'uscita, dove si scioglie o reagisce (la CO₂
+  intorbida l'acqua di calce, il cloro sposta il bromo, l'idrogeno riduce l'ossido di rame caldo); il cloro e l'ammoniaca che
+  escono senza un recipiente sotto fanno scattare l'allarme se la cappa è spenta. Sopra i 60 °C un recipiente **scotta**: si prende con la **pinza**, che si
+  prende dal suo supporto accanto alla buretta.
+- **Libro «Come si fa»** (sul bancone A e sulla cattedra, oppure `B`, o dalla pausa): le pagine degli strumenti (24),
+  delle tecniche (15: pesare con la tara, leggere il menisco, diluire, filtrare, titolare, distillare…) e della sicurezza
+  (i nove pittogrammi, le sostanze da non mescolare, gli incidenti, i rifiuti), ognuna con la sua vignetta; i 118
+  elementi, con come si ottengono davvero (miniera e industria, aria liquida, elettrolisi, sottoprodotto, reattore o
+  acceleratore, dalle fonti CRC Handbook e Greenwood ed Earnshaw), le ricette del libro che li liberano e le altre
+  reazioni del catalogo che li liberano con il motivo per cui il laboratorio non le fa (un forno oltre i 900 °C, un sale
+  fuso, un gas che il laboratorio non ha…); le **ricette** di 668 reazioni del catalogo, generate dai dati
+  (`src/game/book.js`): ingredienti nelle forme che il magazzino dà davvero (solido, liquido, soluzione 0,1 o 1 M, gas
+  delle bombole, aria), con le dosi calcolate dalle masse molari per una dose da scuola e un leggero eccesso, lette sulla
+  bilancia (0,05 g) e sul cilindro (1 mL); il recipiente; la piastra al livello giusto (calcolato con le perdite di
+  calore del recipiente) o il Bunsen; i passi numerati con una vignetta ciascuno, colorata con i colori veri dei
+  reagenti; cosa si osserva, i pittogrammi dei reagenti, la cappa per i gas tossici e il contenitore dei rifiuti; dove il
+  gioco semplifica. Ogni ricetta è eseguita dal motore dei contenitori (`node scripts/book.mjs`, controllato dai test):
+  il libro non promette nulla che il gioco non faccia. Ricerca per nome, formula o elemento e filtro «solo con lo
+  scaffale». Nel Laboratorio libero **«Prepara sul banco»** mette sul bancone B recipiente, strumenti e reagenti;
+  **«Segui la ricetta»** apre un riquadro in basso a sinistra con i passi, che si spuntano da soli quando il gioco li
+  riconosce (ingrediente nel recipiente, temperatura raggiunta, reazione avvenuta, cappa accesa, rifiuto smaltito), con un
+  avviso se una dose è più del doppio.
+- **Solidi che non si comportano come liquidi**: nel recipiente la superficie di una polvere o di un sale si inclina con
+  il recipiente fino all'angolo di riposo (35°) e poi scivola, e resta inclinata quando lo si raddrizza (si livella
+  agitando); versato, il solido esce solo quando il cumulo arriva al bordo e cade in grani; su bancone e pavimento fa un
+  mucchietto conico, che si raccoglie con la carta.
+- **Reazioni al centro**: ogni reazione si vede. Il gas sale in bolle dal fondo (Zn + HCl, bicarbonato e aceto), i gas
+  colorati escono del loro colore (NO₂ bruno, Cl₂ giallo-verde), il precipitato scende in fiocchi del suo colore, il
+  colore della soluzione cambia in pochi decimi di secondo, il potassio nell'acqua fa la fiammella lilla. La finestrella
+  del contenitore mostra le reazioni appena avvenute con l'equazione bilanciata e gli stati fisici («Zn(s) + 2 HCl(aq) →
+  ZnCl₂(aq) + H₂(g)»), il ΔH° e che cosa si osserva; se non succede niente, nel Laboratorio libero e nella chimica
+  semplificata spiega **perché**: manca il calore (con la temperatura), la fiamma, il catalizzatore (H₂O₂ vuole MnO₂),
+  la luce, l'acqua o un reagente (KMnO₄ e Fe²⁺ vogliono l'acido solforico), oppure il metallo è meno attivo (il rame non
+  sposta l'idrogeno dall'HCl: E° = +0,34 V), serve la corrente dell'alimentatore, la soluzione non conduce, o la reazione
+  chiede una scarica, raggi UV o vapore. La temperatura accelera le
+  reazioni lente (fattore di Arrhenius, circa il doppio ogni 10 °C). Le entalpie di formazione di 176 sostanze comuni
+  (tabelle NBS e CRC) danno il ΔH° a 1045 reazioni del catalogo invece di 599, anche nel laboratorio molecolare e nella
+  sandbox.
+- **Quaderno di laboratorio**: è un oggetto sul bancone, davanti a sinistra (un clic lo apre; anche `N`, la pausa e il
+  menu). Ha due schede. Il **tutorial** ha 18 pagine illustrate, dai comandi alle tecniche: il libro, muoversi, prendere e girare,
+  versare, pesare, acqua e lavaggio, scaldare, pH e temperatura, pipetta, buretta, filtrare, crogiolo e pinza,
+  distillare, elettrolisi, gas dalle bombole, reazioni, sicurezza e rifiuti. Nelle **reazioni scoperte** ogni reazione
+  osservata la prima volta resta scritta, tra una partita e l'altra, con l'equazione, il ΔH°, che cosa si è visto e
+  quando; le 1349 pagine sono divise nei 14 gruppi del catalogo con la percentuale scoperta tra le 1231 che il simulatore
+  sa fare, e quelle che non sa fare dicono perché. Ogni pagina si apre nel laboratorio molecolare e, se c'è, nella
+  ricetta del libro.
+- **Etichette verso di sé**: un barattolo o una bottiglia preso in mano mostra sempre l'etichetta a chi lo tiene.
+- **Grafica**: aula in toni medi (pareti verde salvia, mobili grigio ardesia, banconi neri) e luce moderata, perché la
+  vetreria e i reagenti si stacchino dallo sfondo; vetro limpido al centro e più chiaro sui bordi, con il labbro della
+  bocca; ombra di contatto sotto ogni oggetto; tone mapping neutro, che conserva i colori veri delle soluzioni.
 - **Chimica dei contenitori** (`src/game/mixture.js`, testata): moli per sostanza e quanto è sciolto, temperatura,
   volume, massa, pH dal bilancio delle cariche (acidi e basi forti e deboli), colore (ioni dei metalli di transizione,
   indicatori, precipitati in sospensione), solubilità con la temperatura (CRC Handbook) e cristallizzazione anche come
@@ -545,19 +646,35 @@ src/
     data/reactions-catalogo.js le 1349 reazioni del catalogo (ordine, gruppi, condizioni)
     data/molecules.js libreria di molecole, ioni e composti ionici (con ΔHf°)
     data/molecules-reazioni.js sostanze aggiunte per il catalogo delle reazioni (ioni monoatomici, complessi, silice…)
+    data/formation-enthalpies.js ΔHf° tabulati (NBS, CRC, NIST) delle sostanze del catalogo che ne erano senza
     data/reactions.js libreria delle reazioni
   game/               simulatore di laboratorio (il gioco)
     game-view.js      interfaccia: menu, HUD (legenda, finestrelle accanto agli oggetti), finestre, comandi; carica Rapier
     controls.js       legenda dei comandi in basso a destra (funzione pura), inclinazione, lancio a carica, clic o trascinamento
-    game.js           il gioco: oggetti, presa e versamento, strumenti, calore, incidenti, rifiuti, esercitazioni
+    game.js           il gioco: oggetti, presa e versamento, strumenti, calore, incidenti, rifiuti, esercitazioni della Carriera
+    apparatus.js      buretta, imbuto, distillazione, alimentatore, bombole, pinza, termometro, pH-metro e pipetta nel gioco
+    apparatus-room.js i loro supporti nell'aula: sostegni, mantello con refrigerante, alimentatore, bombole, bagno di ghiaccio
+    apparatus-logic.js regole pure degli strumenti: rubinetto, tensioni, letture, refrigerante
+    tutorial.js       le pagine del tutorial del quaderno con le illustrazioni SVG
+    book.js           libro «Come si fa»: magazzino, ricette generate dalle reazioni (dosi, passi, controlli), esecuzione nel motore
+    book-view.js      lettore del libro: indice, pagine, ricette, elementi, ricerca
+    book-figures.js   vignette SVG dei passi delle ricette e delle pagine scritte a mano
+    data/             esercitazioni della Carriera, pagine scritte a mano del libro, come si ottengono gli elementi, ricette verificate (generato)
     mixture.js        chimica dei contenitori: fasi, pH, colore, solubilità, cristallizzazione, reazioni, calore
-    reagents.js       solubilità, acidi e basi, idrati, gas tossici, metalli pesanti, reagenti dello scaffale, prezzi
-    orders.js         le esercitazioni: preparazione del banco, passi, valutazione, stelle e soldi
+    reagents.js       solubilità, acidi e basi, idrati, gas tossici, metalli pesanti, potenziali standard, reagenti dello scaffale e dell'armadio, prezzi
+    stock.js          contenitore, famiglia (colore del tappo) e pericoli dell'etichetta di ogni reagente
+    ghs.js            i nove pittogrammi GHS in tracciati SVG
+    signals.js        segnali osservabili delle reazioni, equazione con gli stati fisici, «perché non reagisce?»
+    notebook.js       quaderno di laboratorio: reazioni scoperte, salvataggio, pagine per gruppo
+    coverage.js       reazioni realizzabili con un insieme di reagenti e le condizioni del laboratorio
+    career.js         la Carriera: capitoli, misure e condizioni dichiarative, valutazione, relazione, reputazione, negozio
+    orders.js         punteggio, stelle e paga delle esercitazioni
+    save.js           salvataggi con la versione, migrazione e profili
     physics.js        Rapier: mondo a passo fisso, corpi, urti (rottura del vetro), raggi, controllore del personaggio
     room.js           l'aula di chimica: banconi, lavandino, cappa, cattedra, lavagna, rifiuti, doccia, luci
     items.js          vetreria e strumenti: profili reali, collisori, graduazioni, etichette
     liquid.js         livello del liquido a qualunque inclinazione, versamento, shader del liquido
-    effects.js        gocce, vapore, fumo, gas, fiamme, pozze
+    effects.js        gocce, bolle e fiocchi di precipitato, vapore, fumo, gas, fiamme, pozze
     player.js         camminata in prima persona e camera della vista del bancone
     game-strings.js   testi del simulatore nelle tre lingue
   sandbox/            sandbox degli elementi
@@ -575,11 +692,13 @@ tests/lab/            test del motore chimico (npm test)
 tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo, strumenti)
 tests/i18n/           test delle lingue e del glossario della modalità Spiega
 tests/gfx/            test dei preset grafici e dell'aspetto reale degli elementi
-tests/game/           test del simulatore (chimica dei contenitori, fisica, liquidi e getto, legenda, esercitazioni e valutazione)
+tests/game/           test del simulatore (chimica dei contenitori, segnali delle reazioni, quaderno e tutorial, libro e ricette, copertura, reagenti, strumenti, fisica, liquidi, solidi e getto, legenda, Carriera e salvataggi)
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json
   build-binding.mjs   genera binding-energies.json (X-ray Data Booklet)
+  coverage.mjs        tabella delle reazioni del simulatore realizzabili con scaffale, armadio e magazzino, per gruppo
+  book.mjs            esegue ogni ricetta del libro «Come si fa» e scrive src/game/data/book-verified.js
   make-icon.mjs       genera build/icon.png (icona dell'app)
 data-sources/         dati di origine (PubChem + dati curati in italiano)
 build/icon.png        icona usata da electron-builder
@@ -625,6 +744,9 @@ build/icon.png        icona usata da electron-builder
 | destro tenuto + mouse / clic destro | (simulatore) ruota l'oggetto / annulla la rotazione o rimetti a posto (sulla piastra: abbassa) |
 | tasto centrale (tenuto) / rotella | (simulatore) carica e lancia / distanza o altezza dell'oggetto |
 | `Maiusc` (tenuto) | (simulatore) con un oggetto in mano: manipolazione precisa (mouse sposta, sinistro + mouse alza, destro + mouse ruota, centrale lascia) |
-| `E` / `Maiusc+E` | (simulatore) pulisci e usa gli strumenti: spatola, ansa, carta, cartina, estintore (un pizzico con la spatola); con un recipiente agita, al lavandino lava, sui rifiuti svuota |
+| `E` / `Maiusc+E` | (simulatore) pulisci e usa gli strumenti: spatola, ansa, carta, cartina, estintore, termometro, pH-metro, pipetta (un pizzico con la spatola, un millilitro con la pipetta); con un recipiente agita, al lavandino lava, sui rifiuti svuota |
+| `A` `D` | (simulatore) con un oggetto in mano: ruotalo |
 | `Tab` / `A` `D` | (simulatore) vista del bancone / postazione precedente o successiva |
 | `I` / `L` / `H` / `Esc` | (simulatore) finestrelle accanto agli oggetti / legenda dei comandi / tutti i comandi / pausa |
+| `N` | (simulatore) quaderno di laboratorio: il tutorial e le reazioni scoperte (anche con un clic sul quaderno del bancone) |
+| `B` | (simulatore) libro «Come si fa»: strumenti, tecniche, sicurezza, elementi, ricette (anche con un clic sul libro) |

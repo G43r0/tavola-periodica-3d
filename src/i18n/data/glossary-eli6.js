@@ -316,6 +316,49 @@ export const GLOSSARY_ELI6 = {
   'ui.game': {
     d: 'Un videogioco in cui entri nel laboratorio di chimica della scuola e fai gli esperimenti come un vero chimico: prendi i bicchieri di vetro, pesi, versi, scaldi e porti il risultato alla maestra. Se fai cadere un bicchiere si rompe, e la spazzatura va nel bidone giusto!',
   },
+  'ui.gameStock': {
+    d: 'Nel laboratorio il colore del tappo ti dice che cosa c\'è dentro: rosso gli acidi, blu le basi, bianco i sali, giallo le cose che fanno bruciare di più, grigio i metalli, verde le sostanze della vita e del petrolio, viola gli indicatori, azzurro l\'acqua. Le bottiglie scure proteggono dalla luce le sostanze che la luce rovina.',
+  },
+  'ui.gameNotebook': {
+    t: 'Il quaderno delle scoperte',
+    d: 'Ogni volta che fai succedere una reazione nuova, il gioco la scrive nel quaderno: che cosa hai mescolato, che cosa è venuto fuori e che cosa hai visto, come le bollicine o una polverina colorata. Più reazioni scopri, più il quaderno si riempie, come un album di figurine! Il quaderno è sul bancone e dentro ci sono anche le istruzioni con i disegni, per imparare a usare ogni attrezzo.',
+  },
+  'ui.gameCareer': {
+    t: 'L\'anno di scuola nel laboratorio',
+    d: 'Nella Carriera fai un esperimento dopo l\'altro, come a scuola: la maestra ti dice cosa fare e tu prendi le stelline. Dopo ogni esperimento rispondi a due domande: se rispondi giusto prendi una stellina in più! Con i soldi compri cose utili, come gli occhiali o una bilancia più precisa. Più sei bravo e attento, più la maestra si fida di te e ti apre nuovi capitoli.',
+  },
+  'ui.gameBook': {
+    t: 'Il libro degli esperimenti',
+    d: 'È come un libro di ricette di cucina, ma per la chimica: ti dice quanta polverina mettere, quanto liquido versare, se scaldare e che cosa vedrai succedere, passo per passo e con i disegni. Tutti gli esperimenti del libro funzionano davvero nel gioco!',
+  },
+  'ui.gameInstruments': {
+    t: 'Gli attrezzi del chimico',
+    d: 'Nel laboratorio ci sono attrezzi speciali: un tubo lungo con un rubinetto che fa scendere il liquido una goccia alla volta, una cannuccia di vetro che misura i millilitri, un termometro e un misuratore che dice se un liquido è acido. C\'è un imbuto con la carta che trattiene la polverina, un pallone che fa bollire i liquidi e li raccoglie di nuovo freddi, una scatola con i fili che fa passare la corrente nell\'acqua e le bombole piene di gas. Le cose bollenti si prendono con la pinza, mai con le mani!',
+  },
+  'term.titration': {
+    t: 'Contare le gocce',
+    d: 'Vuoi sapere quanto è forte un acido? Ci aggiungi una goccia alla volta di una base di cui conosci la forza, finché un colorante magico cambia colore, per esempio diventa rosa. Contando quante gocce ci sono volute, sai quanto era forte l\'acido.',
+  },
+  'term.filtration': {
+    t: 'Filtrare',
+    d: 'È come il colino della pasta, ma con la carta: il liquido passa e la polverina resta sopra. Lo zucchero o il sale sciolti però passano con l\'acqua, perché sono diventati piccolissimi.',
+  },
+  'term.distillation': {
+    t: 'Distillare',
+    d: 'Fai bollire un miscuglio di liquidi: quello che bolle prima diventa vapore, sale in un tubo freddo, torna liquido e gocciola in un altro bicchiere. Così separi l\'alcol dall\'acqua, o fai l\'acqua purissima lasciando il sale nel pallone.',
+  },
+  'term.electrolysis': {
+    t: 'Rompere con la corrente',
+    d: 'Metti due bastoncini collegati a una pila nell\'acqua salata: la corrente spacca l\'acqua e da un bastoncino escono bollicine di idrogeno, dall\'altro di ossigeno. Nell\'acqua pura invece la corrente non passa: ci vuole un po\' di sale!',
+  },
+  'term.activitySeries': {
+    t: 'Metalli svelti e metalli pigri',
+    d: 'Alcuni metalli reagiscono subito, come il sodio e il potassio, altri sono «pigri», come il rame, l\'argento e l\'oro. Un metallo svelto riesce a prendere il posto di uno più pigro, ma non il contrario: per questo lo zinco nel liquido azzurro del rame si copre di rame rosso.',
+  },
+  'term.ghs': {
+    t: 'I disegni del pericolo',
+    d: 'Sono rombi bianchi con il bordo rosso e un disegno nero: la fiamma vuol dire che prende fuoco, il teschio che è velenoso, la mano rovinata che brucia la pelle, il pesce e l\'albero morti che fa male alla natura. Se c\'è scritto «Pericolo» bisogna stare molto attenti!',
+  },
   'ui.language': {
     d: 'Cambia la lingua: italiano, inglese o questa, che spiega le stesse cose con parole più semplici.',
   },

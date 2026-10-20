@@ -110,7 +110,7 @@ function open3D(z) {
 let lab = null;
 let labLoading = null;
 
-function openLab(z) {
+function openLab(z, opts) {
   labLoading ??= import('./lab/lab-view.js')
     .then((m) => {
       lab = m.createLab(elements, {});
@@ -121,7 +121,7 @@ function openLab(z) {
       labLoading = null;
       toast(t('errorLab'));
     });
-  labLoading.then((l) => l?.open(z));
+  labLoading.then((l) => (l ? l.open(z, opts) : opts?.onClose?.()));
 }
 
 // ------------------------------------------------------------ sandbox degli elementi (caricata su richiesta)
@@ -149,7 +149,8 @@ let gameLoading = null;
 function openGame() {
   gameLoading ??= import('./game/game-view.js')
     .then((m) => {
-      game = m.createGame(elements, {});
+      // dal quaderno del simulatore una reazione si apre nel laboratorio molecolare, sopra il gioco
+      game = m.createGame(elements, { onOpenLab: (reaction, onClose) => openLab(null, { reaction, above: true, onClose }) });
       return game;
     })
     .catch((err) => {

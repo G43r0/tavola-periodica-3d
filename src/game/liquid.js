@@ -5,6 +5,10 @@
 // con N punti distribuiti uniformemente. Se il contenitore è pieno per una frazione f, il livello del liquido è
 // l'altezza (nel mondo) sotto cui sta la frazione f dei punti: un quantile, che resta corretto comunque sia inclinato.
 // Il liquido che sta sopra il punto più basso del bordo esce da lì.
+//
+// I solidi (polveri, cristalli, pezzetti) non si livellano: la loro superficie segue il recipiente finché non è più
+// ripida dell'angolo di riposo, poi scivola (reposeNormal). Il livello si misura allora lungo la normale della
+// superficie invece che lungo la verticale; versati, cadono in grani e si ammucchiano in un cono (heapSize).
 import * as THREE from 'three';
 
 export const SAMPLES = 320;
@@ -119,22 +123,32 @@ function select(a, k, n) {
 
 const scratch = new Float32Array(SAMPLES * 4);
 
+const UP = [0, 1, 0];
+
 /**
  * Livello del liquido nel mondo e volume che sporge sopra il punto più basso del bordo.
  * @param {Float32Array} samples punti interni (locali)
  * @param {Float32Array} rim punti del bordo (locali)
  * @param {THREE.Matrix4} m matrice del contenitore nel mondo
  * @param {number} fraction frazione riempita (0–1)
+ * @param {ArrayLike<number>} [normal] normale della superficie nel mondo (versore): la verticale per i liquidi, quella
+ *   del cumulo per i solidi. Livello e bordo si misurano lungo questa direzione.
  * @returns {{level: number, rimY: number, rimIndex: number, over: number}} over = frazione del volume interno che sporge
  */
-export function liquidLevel(samples, rim, m, fraction) {
+export function liquidLevel(samples, rim, m, fraction, normal = UP) {
   const e = m.elements;
+  const [nx, ny, nz] = normal;
+  // componenti della proiezione sulla normale: n · (M p)
+  const ax = nx * e[0] + ny * e[1] + nz * e[2];
+  const ay = nx * e[4] + ny * e[5] + nz * e[6];
+  const az = nx * e[8] + ny * e[9] + nz * e[10];
+  const a0 = nx * e[12] + ny * e[13] + nz * e[14];
   const n = samples.length / 3;
-  for (let k = 0; k < n; k++) scratch[k] = e[1] * samples[k * 3] + e[5] * samples[k * 3 + 1] + e[9] * samples[k * 3 + 2] + e[13];
+  for (let k = 0; k < n; k++) scratch[k] = ax * samples[k * 3] + ay * samples[k * 3 + 1] + az * samples[k * 3 + 2] + a0;
   let rimY = Infinity;
   let rimIndex = 0;
   for (let k = 0; k < rim.length / 3; k++) {
-    const y = e[1] * rim[k * 3] + e[5] * rim[k * 3 + 1] + e[9] * rim[k * 3 + 2] + e[13];
+    const y = ax * rim[k * 3] + ay * rim[k * 3 + 1] + az * rim[k * 3 + 2] + a0;
     if (y < rimY) {
       rimY = y;
       rimIndex = k;
@@ -153,6 +167,40 @@ export function liquidLevel(samples, rim, m, fraction) {
   level = select(scratch.subarray(n, 2 * n), kq, n);
   for (let k = 0; k < n; k++) if (scratch[k] > rimY && scratch[k] <= level) over++;
   return { level, rimY, rimIndex, over: over / n };
+}
+
+// ------------------------------------------------------------------ solidi
+
+/** Angolo di riposo dei solidi del laboratorio (rad): polveri, sali cristallini e granuli stanno tra 30° e 40°. */
+export const REPOSE = (35 * Math.PI) / 180;
+
+/**
+ * Normale della superficie di un solido (versore nel mondo) dopo che il recipiente si è mosso: resta com'era finché
+ * non è inclinata più dell'angolo di riposo rispetto alla verticale, altrimenti scivola fino a quell'angolo
+ * (ruotando verso la verticale nel piano che contiene la verticale e la normale).
+ * @param {ArrayLike<number>} n normale attuale nel mondo (versore)
+ * @param {number} [angle] angolo di riposo
+ * @returns {number[]} nuova normale
+ */
+export function reposeNormal(n, angle = REPOSE) {
+  const [x, y, z] = n;
+  const flat = Math.hypot(x, z);
+  if (Math.atan2(flat, y) <= angle) return [x, y, z];
+  // capovolto del tutto (normale verso il basso, direzione orizzontale indefinita): si sceglie l'asse x
+  const dx = flat > 1e-6 ? x / flat : 1;
+  const dz = flat > 1e-6 ? z / flat : 0;
+  const s = Math.sin(angle);
+  return [dx * s, Math.cos(angle), dz * s];
+}
+
+/**
+ * Cumulo conico di un solido versato su un piano (raggio e altezza in m) con V mL: V = π r² h / 3 con h = r · tan θ,
+ * θ = angolo di riposo (1 mL fa un mucchietto di circa 1,1 cm di raggio e 0,8 cm di altezza).
+ */
+export function heapSize(ml, angle = REPOSE) {
+  const v = Math.max(0, ml) * 1e-6;
+  const r = Math.cbrt((3 * v) / (Math.PI * Math.tan(angle)));
+  return { r, h: r * Math.tan(angle) };
 }
 
 // ------------------------------------------------------------------ versamento
@@ -191,8 +239,8 @@ export function streamRadius(Q, v) {
 // ------------------------------------------------------------------ disegno
 
 /**
- * Materiale del liquido: scarta i frammenti sopra il livello (uniform uLevel, nel mondo) e colora le facce interne
- * come superficie (più chiara e opaca).
+ * Materiale del liquido: scarta i frammenti sopra il livello (uniform uLevel, misurato lungo uNormal: la verticale per
+ * i liquidi, la normale del cumulo per i solidi) e colora le facce interne come superficie (più chiara e opaca).
  */
 export function liquidMaterial({ physical = false } = {}) {
   const Base = physical ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
@@ -206,16 +254,18 @@ export function liquidMaterial({ physical = false } = {}) {
     depthWrite: false,
   });
   if (physical) mat.clearcoat = 0.4;
-  const uniforms = { uLevel: { value: 1e3 }, uSurface: { value: new THREE.Color(0xffffff) }, uSurfaceAlpha: { value: 0.6 } };
+  const uniforms = {
+    uLevel: { value: 1e3 }, uNormal: { value: new THREE.Vector3(0, 1, 0) }, uSurface: { value: new THREE.Color(0xffffff) }, uSurfaceAlpha: { value: 0.6 },
+  };
   mat.userData.uniforms = uniforms;
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying float vWorldY;')
-      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWorldY = (modelMatrix * vec4(transformed, 1.0)).y;');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWorldP;')
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWorldP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vWorldY;\nuniform float uLevel;\nuniform vec3 uSurface;\nuniform float uSurfaceAlpha;')
-      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vWorldY > uLevel) discard;')
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWorldP;\nuniform float uLevel;\nuniform vec3 uNormal;\nuniform vec3 uSurface;\nuniform float uSurfaceAlpha;')
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (dot(vWorldP, uNormal) > uLevel) discard;')
       .replace(
         '#include <dithering_fragment>',
         '#include <dithering_fragment>\nif (!gl_FrontFacing) { gl_FragColor = vec4(mix(gl_FragColor.rgb, uSurface, 0.55), max(gl_FragColor.a, uSurfaceAlpha)); }',
