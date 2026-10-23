@@ -48,6 +48,23 @@ test('salvataggi: la versione 2 si rilegge uguale e i campi sbagliati si corregg
   assert.equal(bad.settings.fov, undefined);
 });
 
+test('salvataggi: voti delle verifiche e medaglie delle sfide (G7) si conservano, i salvataggi di prima restano validi', () => {
+  const raw = { version: 2, active: 'p1', profiles: [{ id: 'p1', name: 'Ada', career: { money: 5, results: { exam1: { stars: 3, report: 1, tries: 2, mark: 8.5 }, nacl: { stars: 4, report: 2, tries: 1 }, exam2: { stars: 1, mark: 99 }, exam3: { stars: 1, mark: 'x' } }, challenges: { chNacl: { medal: 2, best: 190, tries: 3 }, chBad: { medal: 9, best: 'x' }, junk: null } } }] };
+  const p = activeProfile(migrate(raw, NOW));
+  assert.equal(p.career.results.exam1.mark, 8.5);
+  assert.equal(p.career.results.nacl.mark, undefined, 'senza voto resta senza voto');
+  assert.equal(p.career.results.exam2.mark, 10, 'il voto si limita a 4–10');
+  assert.equal(p.career.results.exam3.mark, undefined, 'un voto illeggibile si scarta');
+  assert.deepEqual(p.career.challenges.chNacl, { medal: 2, best: 190, tries: 3 });
+  assert.equal(p.career.challenges.chBad.medal, 3);
+  assert.equal(p.career.challenges.chBad.best, null);
+  assert.ok(!('junk' in p.career.challenges));
+  // un salvataggio della G6 (senza challenges né mark) si legge e dà una Carriera con le sfide vuote
+  const old = activeProfile(migrate({ version: 2, active: 'p1', profiles: [{ id: 'p1', name: 'Ada', career: { money: 1, results: { nacl: { stars: 3, report: 1, tries: 1 } } } }] }, NOW));
+  assert.deepEqual(old.career.challenges, {});
+  assert.deepEqual(migrate(JSON.parse(JSON.stringify(migrate(raw, NOW))), NOW), migrate(raw, NOW), 'si rilegge uguale');
+});
+
 test('salvataggi: profili (aggiungi, rinomina, scegli, elimina)', () => {
   let s = migrate(null, NOW);
   s = addProfile(s, 'Marie', NOW);

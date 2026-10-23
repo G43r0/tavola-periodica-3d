@@ -1,6 +1,6 @@
 # Gioco base — piano
 
-Data: 2026-10-14 · Stato: **in corso — G1, G2, G3, G4, G5 e G6 completate** · Parte dal prototipo del simulatore
+Data: 2026-10-14 · Stato: **in corso — da G1 a G7 completate, resta la G8** · Parte dal prototipo del simulatore
 ([design](2026-10-13-simulatore-laboratorio-design.md), branch `ccr-9fd85180-nfjaik`, fase 9)
 
 ## Da dove partiamo
@@ -218,7 +218,7 @@ Ogni fase è giocabile da sola, con test e screenshot nei tre preset prima di pa
 | **G4** ✅ | Strumenti nuovi (buretta, pipetta, filtrazione, crogiolo, termometro, pH-metro, elettrolisi, distillazione) | G3 |
 | **G5** ✅ | Libro «Come si fa»: lettore e riquadro, strumenti, tecniche, sicurezza, pagine dei 118 elementi, ricette generate con le vignette SVG, «Prepara sul banco», «Segui la ricetta», test che esegue ogni ricetta | G4 |
 | **G6** ✅ | Carriera: capitoli 0–4 (~25 esercitazioni) scritti come dati, pagine del libro sbloccate, relazione, negozio, reputazione, salvataggi versionati | G5 |
-| **G7** | Carriera: capitoli 5–9, verifiche, pagella, sfide a tempo, richieste extra | G6 |
+| **G7** ✅ | Carriera: capitoli 5–9, verifiche, pagella, sfide a tempo, richieste extra | G6 |
 | **G8** | Rifinitura: dettagli della stanza, effetti, audio (se lo vogliamo), prestazioni, inglese e «Spiegamelo come se avessi 6 anni», modalità Spiega, README e CHANGELOG | G7 |
 
 ### G1 — fatto
@@ -412,6 +412,47 @@ Verificato con gli screenshot della stessa inquadratura (prima persona, bancone,
 - **Correzione**: il velo che resta dopo aver svuotato un recipiente nei rifiuti si sciacqua al lavandino senza multa.
 - Rimandati alla G7: verifiche di fine capitolo con i campioni incogniti, pagella, sfide a tempo, richieste extra, i
   capitoli 5–9; il libro nelle verifiche (metodi sì, soluzione no).
+
+### G7 — fatto
+
+- **Capitoli 5–9** (`src/game/data/career-exercises-late.js`, stesso formato dei dati della G6): 5 · quanto scalda la
+  neutralizzazione (risposta numerica in kelvin) e dall'azzurro al bianco (CuSO₄·5H₂O nel crogiolo: l'anidro bianco, e il
+  motore decompone il solfato in ossido sopra i 650 °C, che dà la penalità); 6 · lo zinco sposta il rame, la serie di
+  attività con l'acido cloridrico, il permanganato che si scolora (5 Fe²⁺ per MnO₄⁻, con acido solforico) e l'elettrolisi
+  dell'acqua con il solfato di sodio (H₂ e O₂ in rapporto 2 : 1 dal gas uscito); 7 · prova antincendio con l'acetone e
+  con due fuochi (dati: due capsule con `fire`); 8 · saponificazione dell'acetato di etile con la soda, distillazione di
+  etanolo e acqua (il distillato nel becher sotto il refrigerante) e riconoscimento di liquidi dalla densità; 9 · tre
+  prove d'esame. Ogni reazione e ogni numero sono stati provati con il motore dei contenitori prima di scrivere i dati; un
+  test esegue la soluzione di ognuna nelle due chimiche. Quello che il catalogo non sa fare è rimasto fuori: nessun
+  calore di soluzione per i sali (il nitrato di ammonio dà un riscaldamento sbagliato, quindi «il sale che raffredda» non
+  c'è), nessuna pila Daniell, nessun combustibile da misurare.
+- **Verifiche e voto**: ogni capitolo da 1 a 8 finisce con una verifica (`exam: true`), l'esame del 9 ha tre prove.
+  Campioni a caso da un elenco, risposte senza suggerimenti nei passi e **nessuna ricetta nel libro** durante la prova
+  (`bookUnlocks(career, { exam: true })`: restano strumenti, tecniche e sicurezza). Il voto (`examMark`) va da 4 a 10 a
+  passi di mezzo punto: 60 % di qualità vale 6, il 100 % vale 10. Il migliore resta nel salvataggio (`results[id].mark`).
+- **Pagella** (`reportCard`): voti per capitolo, media di tutte le prove, giudizio (da «insufficiente» a «ottimo») e
+  verdetto: in corso, promosso (tutte le verifiche e media almeno 6) o da ripetere.
+- **Richieste extra** (`extra: { rep, giver }`): quattro lavori facoltativi (club di chimica, professoressa di scienze,
+  professore di fisica, gara tra le scuole), fuori dall'ordine dei capitoli; si aprono con un capitolo completato e la
+  reputazione richiesta.
+- **Sfide a tempo** (`CHALLENGES`): otto esercitazioni da rifare contro il cronometro, con il conto alla rovescia fino
+  all'oro nel riquadro del compito. Medaglia di bronzo, argento o oro per il tempo, solo con qualità almeno 80 % e nessun
+  incidente; premio di un quarto della paga per ogni medaglia in più di quelle già vinte e un punto di reputazione per
+  medaglia. Si salva la medaglia più alta e il tempo migliore (`career.challenges`).
+- **Salvataggi**: i campi nuovi (`mark`, `challenges`) sono facoltativi, quindi la versione resta la 2 e i salvataggi della
+  G6 si leggono senza migrazione.
+- **Motore delle soluzioni** (`runSolution`): azioni nuove `volt` (elettrolisi), `distill` (il vapore che condensa va nel
+  becher del distillato, come nel gioco) e `out` (gas usciti da uno strumento). Nuovo reagente dell'armadio, l'acetato di
+  etile.
+- **Interfaccia**: mappa con i voti nelle verifiche (riquadro tratteggiato), sezioni «Richieste extra» e «Sfide a tempo»,
+  pulsante «Pagella», finestra della consegna con la nota della verifica o della sfida, resoconto con il voto o con la
+  medaglia e il premio. Testi in italiano, inglese e «Spiegamelo come se avessi 6 anni»; voce «Carriera del simulatore»
+  della modalità Spiega aggiornata.
+- **Test**: 10 nuovi in `tests/game/` (dati dei capitoli, lavori sbagliati nelle esercitazioni nuove, voti, pagella,
+  richieste extra, sfide, libro nelle verifiche, salvataggi, testi). Corretto un test del glossario che su Windows non
+  trovava i file con uno spazio nel percorso.
+- Rimandato alla G8: audio, dettagli della stanza, la pila Daniell e le misure di calore delle combustioni (servono nuovi
+  dati nel motore).
 
 ## Verifiche
 

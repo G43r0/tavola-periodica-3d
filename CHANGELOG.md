@@ -170,6 +170,24 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   migrazione dalla versione di prima (`src/game/save.js`); nell'app Electron anche su file. Voce «Carriera del
   simulatore» nella modalità Spiega. Corretto: il velo rimasto dopo aver svuotato un recipiente nei rifiuti si
   sciacqua senza multa.
+- **Simulatore: capitoli 5–9, verifiche, pagella e sfide a tempo** (fase G7 del piano). Tutti e dieci i capitoli hanno le
+  loro esercitazioni (53 in tutto, scritte come dati in `src/game/data/career-exercises-late.js`): 5 · calore e cristalli
+  (quanto scalda la neutralizzazione, dall'azzurro al bianco con l'idrato del solfato di rame); 6 · ossidoriduzioni (lo
+  zinco sposta il rame, la serie di attività, il permanganato che si scolora, l'elettrolisi dell'acqua); 7 · fiamme
+  (prove antincendio con l'acetone e con due fuochi); 8 · chimica organica (saponificazione dell'acetato di etile,
+  distillazione di etanolo e acqua, liquidi incogniti dalla densità); 9 · l'esame di fine anno in tre prove (sali
+  incogniti, concentrazione di un acido da titolare, soluzione da preparare). Ogni capitolo da 1 a 8 finisce con una
+  **verifica** con campioni incogniti estratti a caso, **senza le ricette nel libro** (restano strumenti, tecniche e
+  sicurezza), che dà un **voto da 4 a 10** (60 % di qualità = 6); i voti vanno nella **pagella** con la media, il
+  giudizio dell'insegnante e il verdetto (promosso con tutte le verifiche e media almeno 6). Quattro **richieste extra**
+  facoltative (club di chimica, professoressa di scienze, professore di fisica, gara tra le scuole), che si aprono con un
+  capitolo completato e la reputazione richiesta, e otto **sfide a tempo** che rifanno un'esercitazione superata contro
+  il cronometro (conto alla rovescia fino all'oro; medaglie di bronzo, argento e oro con un premio in soldi e un punto di
+  reputazione ciascuna, solo con qualità almeno 80 % e nessun incidente). Nuovi nel motore delle soluzioni
+  (`runSolution`): elettrolisi (`volt`), distillazione (`distill`) e gas usciti da uno strumento (`out`); nuovo reagente
+  dell'armadio, l'acetato di etile. I salvataggi conservano il voto di ogni verifica e le medaglie (campi nuovi: i
+  salvataggi di prima restano validi). Testi in italiano, inglese e «Spiegamelo come se avessi 6 anni». Corretto un
+  test del glossario che su Windows con uno spazio nel percorso non trovava i file.
 - **Simulatore: versare è facile, come in *Cooking Simulator***. Si tiene premuto il sinistro: sopra un recipiente, il
   lavandino o un bidone la bocca va sull'apertura e il recipiente si inclina da solo finché esce un filo, e continua a
   inclinarsi mentre si svuota; il mouse in su versa più forte, in giù più piano. Altrove (o spostando lo sguardo dal

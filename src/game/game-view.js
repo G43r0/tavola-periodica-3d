@@ -8,7 +8,7 @@ import { esc, normalize } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
 import { loadPhysics } from './physics.js';
 import { LabGame, FOV } from './game.js';
-import { CHAPTERS, EXERCISES, EXERCISE_BY_ID, chapterExercises, chapterState, exerciseOpen, nextExercise, reputation, repTitle, recordResult, SHOP, canBuy, buy, passed, newCareer, bookUnlocks } from './career.js';
+import { CHAPTERS, EXERCISES, EXERCISE_BY_ID, EXTRAS, CHALLENGES, CHALLENGE_BY_ID, MEDALS, chapterExercises, chapterState, exerciseOpen, nextExercise, reputation, repTitle, recordResult, recordChallenge, challengeOpen, reportCard, SHOP, canBuy, buy, passed, newCareer, bookUnlocks } from './career.js';
 import { migrate, activeProfile, addProfile, renameProfile, deleteProfile, selectProfile, updateActive, newer } from './save.js';
 import { SHELF, CABINET } from './reagents.js';
 import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
@@ -371,14 +371,35 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       const exs = list.map((e) => {
         const res = c.results?.[e.id];
         const open = exerciseOpen(c, e.id);
-        return `<button type="button" class="gm-ex ${passed(c, e.id) ? 'is-passed' : ''}" data-ex="${e.id}" ${open ? '' : 'disabled'}>
-          <span>${esc(t(`${e.id}Title`))}</span><span class="gm-ex__stars">${res ? stars(res.stars) : open ? `<small>${t('exNew')}</small>` : ''}</span></button>`;
+        const mark = res?.mark !== undefined ? `<small class="gm-mark">${t('examMark')} ${fmtMark(res.mark)}</small>` : '';
+        return `<button type="button" class="gm-ex ${passed(c, e.id) ? 'is-passed' : ''} ${e.exam ? 'is-exam' : ''}" data-ex="${e.id}" ${open ? '' : 'disabled'}>
+          <span>${esc(t(`${e.id}Title`))}</span><span class="gm-ex__stars">${mark}${res ? stars(res.stars) : open ? `<small>${t('exNew')}</small>` : ''}</span></button>`;
       }).join('');
       return `<li class="gm-ch is-${stt}">
         <div class="gm-ch__head"><b>${t('chapterN', { n: ch.id })} · ${esc(t(`chapter${ch.id}Title`))}</b><small>${esc(note)}</small></div>
         <p class="gm-ch__text">${esc(t(`chapter${ch.id}Text`))}</p>
         ${exs ? `<div class="gm-ch__ex">${exs}</div>` : ''}</li>`;
     }).join('');
+    const extras = EXTRAS.map((e) => {
+      const res = c.results?.[e.id];
+      const open = exerciseOpen(c, e.id);
+      const note = open ? t('extraFrom', { who: t(`giver_${e.extra.giver}`) }) : t('extraLocked', { n: e.chapter, rep: e.extra.rep });
+      return `<button type="button" class="gm-ex gm-ex--extra ${passed(c, e.id) ? 'is-passed' : ''}" data-ex="${e.id}" ${open ? '' : 'disabled'}>
+        <span>${esc(t(`${e.id}Title`))}<small>${esc(note)}</small></span><span class="gm-ex__stars">${res ? stars(res.stars) : open ? `<small>${t('exNew')}</small>` : ''}</span></button>`;
+    }).join('');
+    const challenges = CHALLENGES.map((ch) => {
+      const open = challengeOpen(c, ch);
+      const r = c.challenges?.[ch.id];
+      const medal = r?.medal ?? 0;
+      const title = t(`${ch.ex}Title`);
+      const note = open
+        ? `${t('challengeLimits', { gold: fmtTime(ch.gold), silver: fmtTime(ch.silver), bronze: fmtTime(ch.bronze) })}${r?.best ? ` · ${t('challengeBest', { time: fmtTime(r.best) })}` : ''}`
+        : t('challengeLocked', { title });
+      return `<button type="button" class="gm-ex gm-ex--challenge" data-ch="${ch.id}" ${open ? '' : 'disabled'}>
+        <span>${esc(title)}<small>${esc(note)}</small></span>${medal ? `<span class="gm-medal gm-medal--${MEDALS[medal]}">${esc(t(`medal_${MEDALS[medal]}`))}</span>` : ''}</button>`;
+    }).join('');
+    const extraBlock = `<details class="gm-more"><summary>${t('extraTitle')}</summary><p class="gm-ch__text">${t('extraText')}</p><div class="gm-ch__ex">${extras}</div></details>
+      <details class="gm-more"><summary>${t('challengeTitle')}</summary><p class="gm-ch__text">${t('challengeText')}</p><div class="gm-ch__ex">${challenges}</div></details>`;
     showDialog(`
       <div class="gm-map__top">
         <div><p class="gm-eyebrow">${esc(profile().name)}</p><h3>${t('mapTitle')}</h3></div>
@@ -386,8 +407,10 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
         <div class="gm-map__money"><span>${t('moneyLabel')}</span><b>${fmtMoney(c.money ?? 0)}</b></div>
       </div>
       <ol class="gm-chapters">${chapters}</ol>
+      ${extraBlock}
       <div class="gm-actions">
         <button type="button" class="btn-ghost" data-act="menu">${t('toMenu')}</button>
+        <button type="button" class="btn-ghost" data-act="report-card">${t('reportCardBtn')}</button>
         <button type="button" class="btn-ghost" data-act="shop">${t('shopTitle')}</button>
         <button type="button" class="btn-ghost" data-act="map-book">${icons.book(14)}<span>${t('bookTitle')}</span></button>
         ${next ? `<button type="button" class="gm-primary" data-ex="${next.id}">${t('mapNext', { title: t(`${next.id}Title`) })}</button>` : ''}
@@ -396,9 +419,30 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   }
 
   /** Comincia un'esercitazione. fresh: la stanza si svuota (dalla mappa); dal resoconto, il banco resta com'è. */
-  function startExercise(id, fresh = true) {
+  function startExercise(id, fresh = true, challenge = null) {
     if (!exerciseOpen(career(), id)) return;
-    game.startCareer(chemMode, id, career(), { fresh });
+    if (challenge && !challengeOpen(career(), CHALLENGE_BY_ID.get(challenge))) return;
+    game.startCareer(chemMode, id, career(), { fresh, challenge });
+  }
+
+  /** Voto di una verifica: 8, 8,5. */
+  const fmtMark = (m) => (Number.isInteger(m) ? String(m) : m.toFixed(1).replace('.', locale().startsWith('it') ? ',' : '.'));
+
+  /** Pagella: i voti delle verifiche di ogni capitolo, la media e il giudizio dell'insegnante. */
+  function showReportCard() {
+    const card = reportCard(career());
+    const rows = card.rows.map((r) => `<tr>
+      <th>${t('rcChapter', { n: r.chapter })} · ${esc(t(`chapter${r.chapter}Title`))}</th>
+      <td>${r.marks.map((m) => (m.mark === null ? `<span class="gm-rc__todo">${t('rcNotTaken')}</span>` : `<b>${fmtMark(m.mark)}</b>`)).join(' · ')}</td></tr>`).join('');
+    showDialog(`
+      <p class="gm-eyebrow">${esc(profile().name)}</p>
+      <h3>${t('reportCardTitle')}</h3>
+      <p class="gm-small">${t('reportCardText')}</p>
+      <table class="gm-rc"><tbody>${rows}</tbody></table>
+      <p class="gm-rc__avg">${t('rcAverage')}: <b>${card.average === null ? '—' : fmtMark(Math.round(card.average * 10) / 10)}</b></p>
+      <p class="gm-rc__verdict is-${card.verdict}">${t(`rcVerdict_${card.verdict}`)}</p>
+      ${card.judgement ? `<p class="gm-small">${t(`judge_${card.judgement}`)}</p>` : ''}
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="map">${t('mapTitle')}</button></div>`, 'gm-rccard');
   }
 
   function startFree() {
@@ -428,12 +472,15 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     return (ex.book ?? []).map((p) => `<button type="button" class="gm-chip" data-bk-open="${esc(p)}">${icons.book(12)} ${esc(label(p))}</button>`).join('');
   }
 
-  function showOrderIntro({ ex }) {
+  function showOrderIntro({ ex, challenge }) {
     const list = chapterExercises(ex.chapter);
     const steps = ex.steps.map((st) => t(st.key, game.stepParams(ex)));
+    const where = ex.extra ? t('extraFrom', { who: t(`giver_${ex.extra.giver}`) }) : `${t('chapterN', { n: ex.chapter })} · ${t(`chapter${ex.chapter}Title`)} · ${list.indexOf(ex) + 1} / ${list.length}`;
     showDialog(`
-      <p class="gm-eyebrow">${t('chapterN', { n: ex.chapter })} · ${esc(t(`chapter${ex.chapter}Title`))} · ${list.indexOf(ex) + 1} / ${list.length}</p>
+      <p class="gm-eyebrow">${esc(where)}</p>
       <h3>${t(`${ex.id}Title`)}</h3>
+      ${challenge ? `<p class="gm-note">${t('challengeIntro', { gold: fmtTime(challenge.gold), silver: fmtTime(challenge.silver), bronze: fmtTime(challenge.bronze) })}</p>` : ''}
+      ${ex.exam ? `<p class="gm-note">${t('examIntro')}</p>` : ''}
       <p class="gm-teacher">${icons.book(16)} ${game.briefText(ex)}</p>
       <ol class="gm-steps gm-steps--numbered" aria-label="${t('boardLabel')}">${steps.map((x, i) => `<li>${i + 1}. ${esc(x)}</li>`).join('')}</ol>
       ${ex.book?.length ? `<p class="gm-bookrefs"><span>${t('introBook')}</span>${bookRefs(ex)}</p>` : ''}
@@ -459,7 +506,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   function showResult(r) {
     const before = career();
     const repBefore = reputation(before);
-    const next = recordResult(before, r.id, { stars: r.stars, report: r.report.right, money: r.money, incidents: r.incidents });
+    let next = recordResult(before, r.id, { stars: r.stars, report: r.report.right, money: r.money, incidents: r.incidents, quality: r.quality });
+    if (r.challenge) next = recordChallenge(next, r.challenge.id, { medal: r.challenge.medal, elapsed: r.challenge.elapsed });
     setCareer(next);
     const repAfter = reputation(next);
     const mark = (ok) => (ok === true ? 'ok' : ok === 'warn' ? 'warn' : 'bad');
@@ -470,10 +518,15 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     }).join('') : '';
     const following = nextExercise(next);
     const repDelta = repAfter - repBefore;
+    const ch = r.challenge;
+    const medalName = ch ? t(`medal_${MEDALS[ch.medal]}`) : '';
+    const where = r.ex.extra ? t('extraFrom', { who: t(`giver_${r.ex.extra.giver}`) }) : `${t('chapterN', { n: r.ex.chapter })} · ${t(`chapter${r.ex.chapter}Title`)}`;
     showDialog(`
-      <p class="gm-eyebrow">${t('chapterN', { n: r.ex.chapter })} · ${esc(t(`chapter${r.ex.chapter}Title`))}</p>
+      <p class="gm-eyebrow">${esc(where)}</p>
       <h3>${t(`${r.ex.id}Title`)}</h3>
       <div class="gm-stars" aria-label="${t('starsLabel', { n: r.stars })}">${stars(r.stars)}</div>
+      ${r.mark !== null ? `<p class="gm-markline">${t('examMarkLine', { mark: fmtMark(r.mark) })}${next.results[r.id].mark > r.mark ? ` <small>(${t('examBest', { mark: fmtMark(next.results[r.id].mark) })})</small>` : ''}</p>` : ''}
+      ${ch ? `<p class="gm-markline gm-medal--${MEDALS[ch.medal]}">${ch.medal ? t('challengeResult', { medal: medalName, time: fmtTime(ch.elapsed) }) : t('challengeNoMedal', { bronze: fmtTime(CHALLENGE_BY_ID.get(ch.id).bronze) })}${ch.bonus ? ` <small>${t('challengeBonus', { money: fmtMoney(ch.bonus) })}</small>` : ''}</p>` : ''}
       ${r.stars > r.base ? `<p class="gm-small">${t('reportBonus', { n: game.fmt(r.stars - r.base, 1) })}</p>` : ''}
       <ul class="gm-lines">${lines}</ul>
       ${rq ? `<h4 class="gm-sub">${t('reportTitle')}: ${r.report.right} / ${r.report.total}</h4><ul class="gm-lines">${rq}</ul>` : ''}
@@ -491,7 +544,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       ${r.stars < 2 ? `<p class="gm-small">${t('resultRetry')}</p>` : r.ex.deliver === 'answers' ? '' : `<p class="gm-small">${t('resultCleanup')}</p>`}
       <div class="gm-actions">
         <button type="button" class="btn-ghost" data-act="map">${t('mapTitle')}</button>
-        <button type="button" class="btn-ghost" data-ex-retry="${r.id}">${t('retry')}</button>
+        <button type="button" class="btn-ghost" data-ex-retry="${r.id}" ${ch ? `data-ex-challenge="${ch.id}"` : ''}>${t('retry')}</button>
         ${following ? `<button type="button" class="gm-primary" data-ex-next="${following.id}">${t('nextOrder')}</button>` : `<button type="button" class="gm-primary" data-act="keep-playing">${t('keepPlaying')}</button>`}
       </div>`, 'gm-result');
   }
@@ -856,8 +909,10 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       }
       showShop();
     } else if (act === 'map-book') showBook(null, 'map');
+    else if (b.dataset.ch) startExercise(CHALLENGE_BY_ID.get(b.dataset.ch)?.ex, true, b.dataset.ch);
+    else if (act === 'report-card') showReportCard();
     else if (b.dataset.ex) startExercise(b.dataset.ex, true);
-    else if (b.dataset.exRetry) startExercise(b.dataset.exRetry, false);
+    else if (b.dataset.exRetry) startExercise(b.dataset.exRetry, false, b.dataset.exChallenge || null);
     else if (b.dataset.exNext) startExercise(b.dataset.exNext, false);
     else if (act === 'report-submit' || act === 'report-skip') {
       const answers = [];
@@ -872,7 +927,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     else if (act === 'play' || act === 'keep-playing') play();
     else if (act === 'pause') showPause();
     else if (act === 'restart-order') {
-      if (game.order) startExercise(game.order.id, true);
+      if (game.order) startExercise(game.order.id, true, game.order.challenge?.id ?? null);
     } else if (act === 'submit-answers') {
       const form = $('.gm-answers');
       const answers = {};
@@ -1250,7 +1305,10 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     let orderHtml = '';
     if (h.order) {
       const late = h.order.elapsed > h.order.par;
-      orderHtml = `<header><span>${t('orderShort', { n: h.order.n, ch: h.order.chapter })}</span><b class="${late ? 'is-late' : ''}">${fmtSec(h.order.elapsed)}</b></header>
+      // sfida a tempo: il conto alla rovescia fino all'oro; poi il tempo che passa
+      const clock = h.order.challenge && !late ? t('challengeLeft', { time: fmtSec(h.order.par - h.order.elapsed) }) : fmtSec(h.order.elapsed);
+      const tag = h.order.challenge ? `${t('challengeShort')} · ` : h.order.exam ? `${t('examLabel')} · ` : '';
+      orderHtml = `<header><span>${tag}${t('orderShort', { n: h.order.n, ch: h.order.chapter })}</span><b class="${late ? 'is-late' : ''}">${clock}</b></header>
         <h4>${esc(h.order.title)}</h4>
         <ol>${h.order.steps.map((s) => `<li class="${s.done ? 'is-done' : ''}">${esc(s.text)}</li>`).join('')}</ol>`;
     } else if (h.free) orderHtml = `<h4>${t('freeTitle')}</h4><p>${t('freeHud')}</p>`;

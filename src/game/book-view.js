@@ -63,7 +63,7 @@ export function createBookView({ game, t, kj, canOpenLab }) {
   /** Pagina chiusa: si apre con il capitolo della Carriera che la usa. */
   const lockedPage = (title, key) => {
     const ch = locks()?.chapterOf.get(key);
-    return `<article class="gm-bk__page gm-bk__locked"><h4>${lockIcon} ${esc(title)}</h4><p>${esc(ch === undefined ? t('bkLockedLater') : t('bkLocked', { n: ch }))}</p></article>`;
+    return `<article class="gm-bk__page gm-bk__locked"><h4>${lockIcon} ${esc(title)}</h4><p>${esc(locks()?.exam ? t('bkExamNote') : ch === undefined ? t('bkLockedLater') : t('bkLocked', { n: ch }))}</p></article>`;
   };
   // nomi a metà frase in minuscolo («di zinco»), ma non le sigle («EDTA») né le formule
   const lc = (s) => (s && s.length > 1 && /\p{Lu}/u.test(s[0]) && /\p{Ll}/u.test(s[1]) ? s[0].toLocaleLowerCase() + s.slice(1) : s);
@@ -341,7 +341,7 @@ export function createBookView({ game, t, kj, canOpenLab }) {
     const countOpen = (c) => (locks() ? `${HAND[c].filter((p) => pageOpen(c, p)).length} / ${HAND[c].length}` : HAND[c].length);
     return `<div class="gm-bk__page gm-bk__home"><p>${esc(t('bkIntro'))}</p>
       <div class="gm-bk__cards">${card('tools', countOpen('tools'))}${card('techniques', countOpen('techniques'))}${card('safety', countOpen('safety'))}${card('elements', 118)}${card('recipes', locks() ? `${openRecipes().length} / ${game.book.recipes.length}` : game.book.recipes.length)}</div>
-      ${locks() ? `<p class="gm-bk__note">${esc(t('bkCareerNote'))}</p>` : ''}
+      ${locks() ? `<p class="gm-bk__note">${esc(t(locks().exam ? 'bkExamNote' : 'bkCareerNote'))}</p>` : ''}
       <p class="gm-bk__note">${esc(t('bkElemNuclear'))}</p></div>`;
   }
 

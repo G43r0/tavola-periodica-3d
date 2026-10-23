@@ -1,6 +1,9 @@
 // Testi del simulatore di laboratorio: italiano, inglese e «Spiegamelo come se avessi 6 anni».
 // Le chiavi ${id}Title / Brief / BriefSimple / Board sono quelle delle esercitazioni (orders.js).
 
+import { G7_EXERCISE_STRINGS } from './data/strings-g7-exercises.js';
+import { G7_UI_STRINGS } from './data/strings-g7-ui.js';
+
 const plural = (n, one, many) => (Number(n) === 1 ? one : many);
 
 export const GAME_STRINGS = {
@@ -2420,3 +2423,6 @@ export const GAME_STRINGS = {
     ammoniaBrief: '«L\'ammoniaca puzza ed è una base: fai le bolle nell\'acqua con la pozione magica sotto la cappa e diventa rosa!»',
   },
 };
+
+// G7: esercitazioni dei capitoli 5–9, verifiche, pagella, richieste extra e sfide (gli stessi nomi vincono su quelli di prima)
+for (const lang of Object.keys(GAME_STRINGS)) Object.assign(GAME_STRINGS[lang], G7_UI_STRINGS[lang], G7_EXERCISE_STRINGS[lang]);

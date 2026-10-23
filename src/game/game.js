@@ -19,7 +19,7 @@ import { SHELF, CABINET, OIL, PRICES, UNIVERSAL_SCALE, FLAME_SALTS, AQUEOUS_NAME
 import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
 import { reactionSignals, signalTags, equation, whyNot } from './signals.js';
 import { emptyNotebook, recordReaction } from './notebook.js';
-import { EXERCISE_BY_ID, pickSamples, sampleValue, contentMixture, evaluateExercise, stepsDone, answerCount, answerOptions, reportQuestions, gradeExercise, bookUnlocks, chapterExercises } from './career.js';
+import { EXERCISE_BY_ID, CHALLENGE_BY_ID, pickSamples, sampleValue, contentMixture, evaluateExercise, stepsDone, answerCount, answerOptions, reportQuestions, gradeExercise, bookUnlocks, chapterExercises, examMark, challengeMedal, challengeBonus } from './career.js';
 import { legendRows, relaxTilt, tiltGain, throwSpeed } from './controls.js';
 import { Apparatus, PERMANENT_TOOLS } from './apparatus.js';
 import { nextLevel } from './apparatus-logic.js';
@@ -421,8 +421,9 @@ export class LabGame {
    * Comincia un'esercitazione della Carriera (career.js; i dati sono in data/career-exercises.js). career: la Carriera
    * del profilo (soldi, cose comprate, risultati: servono al negozio e al libro). fresh: la stanza si svuota (si parte
    * dal menu o dalla mappa); altrimenti gli oggetti dell'esercitazione di prima restano sul banco e vanno puliti.
+   * challenge: id di una sfida a tempo (data/career-exercises-late.js, CHALLENGES) che si gioca su questa esercitazione.
    */
-  startCareer(chemMode, id, career, { fresh = true } = {}) {
+  startCareer(chemMode, id, career, { fresh = true, challenge = null } = {}) {
     this.mode = 'career';
     this.free = false;
     this.chemMode = chemMode;
@@ -431,7 +432,7 @@ export class LabGame {
       this.clearRoom();
       this.player.teleport(0.15, 0.4, 0);
     }
-    this.startExercise(id);
+    this.startExercise(id, challenge);
   }
 
   /** La Carriera del profilo: soldi, migliorie comprate nel negozio, pagine del libro aperte. */
@@ -448,13 +449,16 @@ export class LabGame {
   }
 
   /** Prepara il banco per un'esercitazione (gli oggetti delle precedenti restano: vanno puliti!). */
-  startExercise(id) {
+  startExercise(id, challengeId = null) {
     const ex = EXERCISE_BY_ID.get(id);
     if (!ex) return;
+    const challenge = challengeId && CHALLENGE_BY_ID.get(challengeId)?.ex === id ? CHALLENGE_BY_ID.get(challengeId) : null;
+    // in una verifica il libro mostra strumenti e tecniche, non le ricette
+    if (this.career && !this.free) this.bookLocks = bookUnlocks(this.career, { exam: Boolean(ex.exam) });
     const { chem } = this;
     const samples = pickSamples(ex).map((x) => ({ ...x, value: sampleValue(chem, ex, x) }));
     this.order = {
-      id, ex, def: ex, start: this.time, unknowns: samples, answers: null, costs: 0, fines: 0, incidents: 0, wrongBins: 0,
+      id, ex, def: ex, challenge, start: this.time, unknowns: samples, answers: null, costs: 0, fines: 0, incidents: 0, wrongBins: 0,
       broken: 0, delivered: false, product: null, pending: null, flameSeen: new Set(), ev: {}, gas: {}, rx: new Set(),
       phRead: new Set(), done: [], dirty: new Set(), dirtyStart: 0, fireTime: null,
     };
@@ -507,7 +511,7 @@ export class LabGame {
     o.dirtyStart = o.dirty.size;
     const steps = ex.steps.map((st) => this.t(st.key, this.stepParams(ex)));
     this.room.setBoard([this.t('exBoardTitle', { ch: ex.chapter, title: this.t(`${ex.id}Title`) }), ...steps]);
-    this.emit('order', { ex });
+    this.emit('order', { ex, challenge });
   }
 
   /** Stato del banco per i passi e la valutazione (career.js, check ed evaluateExercise). */
@@ -609,12 +613,19 @@ export class LabGame {
     const questions = o.questions ?? [];
     const right = questions.filter((q, i) => answers[i] === q.right).length;
     const g = gradeExercise(o.ex, { quality: p.quality, elapsed: p.elapsed, mess: p.mess, incidents: o.incidents, wrongBins: o.wrongBins, costs: p.costs, reportRight: right, reportTotal: questions.length });
-    this.money = Math.round((this.money + g.net) * 100) / 100;
+    // sfida a tempo: medaglia dal tempo e dalla qualità; il premio in soldi si aggiunge a quello dell'esercitazione
+    let challenge = null;
+    if (o.challenge) {
+      const medal = challengeMedal(o.challenge, { elapsed: p.elapsed, quality: p.quality, incidents: o.incidents });
+      challenge = { id: o.challenge.id, medal, elapsed: p.elapsed, bonus: challengeBonus(o.challenge, this.career, medal) };
+    }
+    this.money = Math.round((this.money + g.net + (challenge?.bonus ?? 0)) * 100) / 100;
     o.pending = null;
     const result = {
       id: o.id, ex: o.ex, def: o.ex, ...g, quality: p.quality, lines: p.lines, elapsed: p.elapsed, mess: p.mess, costs: p.costs,
       reagents: o.costs, fines: o.fines, incidents: o.incidents, money: this.money,
       report: { right, total: questions.length, answers, questions },
+      mark: o.ex.exam ? examMark(p.quality) : null, challenge,
     };
     this.emit('result', result);
     return result;
@@ -2830,7 +2841,7 @@ export class LabGame {
       legend: this.legend(),
       held: this.heldInfo(),
       looked: this.lookedInfo(),
-      order: o ? { chapter: o.ex.chapter, n: chapterExercises(o.ex.chapter).indexOf(o.ex) + 1, title: this.t(`${o.ex.id}Title`), brief: this.briefText(o.ex), steps, elapsed: this.time - o.start, par: o.ex.par, costs: o.costs + o.fines } : null,
+      order: o ? { chapter: o.ex.chapter, n: o.ex.extra ? '★' : chapterExercises(o.ex.chapter).indexOf(o.ex) + 1, title: this.t(`${o.ex.id}Title`), brief: this.briefText(o.ex), steps, elapsed: this.time - o.start, par: o.challenge ? o.challenge.gold : o.ex.par, challenge: Boolean(o.challenge), exam: Boolean(o.ex.exam), costs: o.costs + o.fines } : null,
       money: this.money,
       free: this.free,
       mode: this.player.mode,

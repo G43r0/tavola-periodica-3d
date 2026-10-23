@@ -325,7 +325,7 @@ export const GLOSSARY_ELI6 = {
   },
   'ui.gameCareer': {
     t: 'L\'anno di scuola nel laboratorio',
-    d: 'Nella Carriera fai un esperimento dopo l\'altro, come a scuola: la maestra ti dice cosa fare e tu prendi le stelline. Dopo ogni esperimento rispondi a due domande: se rispondi giusto prendi una stellina in più! Con i soldi compri cose utili, come gli occhiali o una bilancia più precisa. Più sei bravo e attento, più la maestra si fida di te e ti apre nuovi capitoli.',
+    d: 'Nella Carriera fai un esperimento dopo l\'altro, come a scuola: la maestra ti dice cosa fare e tu prendi le stelline. Dopo ogni esperimento rispondi a due domande: se rispondi giusto prendi una stellina in più! Con i soldi compri cose utili, come gli occhiali o una bilancia più precisa. Più sei bravo e attento, più la maestra si fida di te e ti apre nuovi capitoli. Alla fine di ogni capitolo c\'è una prova con un voto da 4 a 10: i voti vanno sulla pagella! Puoi anche rifare un esperimento di corsa per vincere una medaglia, e fare dei lavoretti in più per gli altri professori.',
   },
   'ui.gameBook': {
     t: 'Il libro degli esperimenti',

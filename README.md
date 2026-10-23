@@ -432,20 +432,26 @@ dall'insegnante, le prepara al bancone e le consegna alla cattedra. Modelli e gr
 fisica è quella di [Rapier](https://rapier.rs) (WebAssembly incluso nell'app, caricato solo alla prima apertura).
 Design e decisioni: `docs/superpowers/specs/2026-10-13-simulatore-laboratorio-design.md`.
 
-**Stato: prototipo giocabile.** La Carriera ha i capitoli da 0 a 4 completi (27 esercitazioni in tutto, con le due dei
-capitoli 5 e 7); verifiche di fine capitolo, pagella, sfide a tempo e i capitoli 5–9 arriveranno nella fase G7 del
+**Stato: gioco giocabile in sviluppo.** La Carriera ha tutti i capitoli, dal 0 al 9 (53 esercitazioni tra prove,
+verifiche, esame e richieste extra), con pagella e sfide a tempo; la rifinitura (fase G8) è l'ultima del
 [piano del gioco base](docs/superpowers/specs/2026-10-14-gioco-base-piano.md).
 
 - **Modalità**: *Carriera* (un anno di scuola in capitoli, vedi sotto) e *Laboratorio libero* (tutti gli strumenti e un
   magazzino con le 554 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
-- **Carriera**: dieci capitoli, ognuno con 4–6 esercitazioni. 0 · comandi e sicurezza (portare l'acqua alla cattedra,
+- **Carriera**: dieci capitoli, ognuno con 4–6 esercitazioni e, da 1 a 8, una verifica in fondo. 0 · comandi e sicurezza (portare l'acqua alla cattedra,
   misurare 50 mL, pesare 2,00 g, pulire il bancone, spegnere un fuoco con l'estintore); 1 · misure e soluzioni
   (soluzione di NaCl, diluizione, densità di un liquido misterioso, soluzione satura, sciroppo al 10 %); 2 · acidi e basi
   (acido, neutro o basico, diluire un acido, neutralizzare con il pH-metro, titolazione, l'aceto del supermercato);
   3 · precipitazioni e analisi (pioggia d'oro, cloruro d'argento, filtrazione del solfato di bario, riconoscere
   alogenuri e cationi); 4 · gas (idrogeno dallo zinco, vulcano di bicarbonato, ossigeno con un catalizzatore, acqua di
-  calce e CO₂, ammoniaca sotto la cappa); 5 e 7 · cristalli di solfato di rame e saggio alla fiamma. Le esercitazioni
-  sono **dati** (`src/game/data/career-exercises.js`): cosa c'è sul banco, i campioni incogniti, i passi con la
+  calce e CO₂, ammoniaca sotto la cappa); 5 · calore e cristalli (cristalli di solfato di rame, quanto scalda la
+  neutralizzazione, dall'azzurro al bianco); 6 · ossidoriduzioni (zinco che sposta il rame, serie di attività,
+  permanganato, elettrolisi dell'acqua); 7 · fiamme e combustioni (saggio alla fiamma, prove antincendio); 8 · chimica
+  organica (saponificazione, distillazione, liquidi incogniti dalla densità); 9 · l'esame di fine anno in tre prove.
+  Ogni verifica ha campioni incogniti estratti a caso, **non mostra le ricette nel libro** e dà un voto da 4 a 10 che
+  finisce nella **pagella** (media, giudizio, promozione con media almeno 6). **Richieste extra** facoltative e **sfide
+  a tempo** (medaglie di bronzo, argento e oro con un premio e un punto di reputazione) completano l'anno. Le
+  esercitazioni sono **dati** (`src/game/data/career-exercises.js` e `career-exercises-late.js`): cosa c'è sul banco, i campioni incogniti, i passi con la
   condizione che li spunta, gli obiettivi con le tolleranze della chimica realistica e semplificata, le domande della
   relazione, le pagine del libro e una soluzione; `career.js` li legge e un test esegue la soluzione di ognuna con il
   motore dei contenitori. Dopo la consegna la **relazione di laboratorio** fa 2–3 domande sul perché (le risposte giuste

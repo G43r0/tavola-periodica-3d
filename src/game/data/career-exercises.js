@@ -13,9 +13,13 @@
 // - solution: la soluzione per i test (career.js, runSolution).
 // Le tolleranze [pieno, zero]: errore (relativo se rel) fino al primo valore = punteggio pieno, dal secondo in su = 0.
 
+import { LATE_EXERCISES } from './career-exercises-late.js';
+
 const ML_PER_MOL = 24500; // mL di gas per mole a circa 25 °C e 1 atm, per mostrare i gas in millilitri
 
-export const EXERCISES = [
+export { CHALLENGES } from './career-exercises-late.js';
+
+const BASE_EXERCISES = [
   // ------------------------------------------------------------ capitolo 0: comandi e sicurezza
   {
     id: 'carry',
@@ -848,3 +852,6 @@ export const EXERCISES = [
     solution: [['answer', 'all', true]],
   },
 ];
+
+/** Tutte le esercitazioni, nell'ordine dei capitoli (dentro un capitolo vale l'ordine della lista: le verifiche sono in fondo). */
+export const EXERCISES = [...BASE_EXERCISES, ...LATE_EXERCISES];

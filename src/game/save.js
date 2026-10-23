@@ -2,7 +2,9 @@
 // scrive in localStorage e, nell'app Electron, anche in un file nella cartella dei dati dell'utente).
 //
 // Versione 2: { version, settings: { chemMode, legend, fov }, active, profiles: [{ id, name, created, career, notebook }] }
-//   career (career.js): { results: { [esercitazione]: { stars, report, tries } }, money, incidents, owned, last }.
+//   career (career.js): { results: { [esercitazione]: { stars, report, tries, mark? } }, challenges: { [sfida]: { medal,
+//   best, tries } }, money, incidents, owned, last }. mark e challenges sono arrivati con la G7: i salvataggi di prima
+//   non li hanno e restano validi.
 // Versione 1 (fino alla G5): { career: { index, money, stars[] }, chemMode, legend, fov, notebook }, con le cinque
 //   esercitazioni di allora in ordine.
 import { newCareer, chapterExercises, PASS_STARS } from './career.js';
@@ -62,6 +64,13 @@ function sanitizeCareer(c) {
   for (const [id, r] of Object.entries(c.results ?? {})) {
     if (!r || typeof r !== 'object') continue;
     out.results[id] = { stars: Math.max(0, Math.min(5, Number(r.stars) || 0)), report: Math.max(0, Number(r.report) || 0), tries: Math.max(0, Number(r.tries) || 0), ...(r.migrated ? { migrated: true } : {}) };
+    // voto di una verifica (4–10)
+    if (Number.isFinite(Number(r.mark)) && r.mark !== null) out.results[id].mark = Math.max(4, Math.min(10, Number(r.mark)));
+  }
+  // sfide a tempo: medaglia (0–3) e miglior tempo
+  for (const [id, r] of Object.entries(c.challenges ?? {})) {
+    if (!r || typeof r !== 'object') continue;
+    out.challenges[id] = { medal: Math.max(0, Math.min(3, Math.round(Number(r.medal) || 0))), best: Number.isFinite(Number(r.best)) && r.best !== null ? Number(r.best) : null, tries: Math.max(0, Number(r.tries) || 0) };
   }
   return out;
 }

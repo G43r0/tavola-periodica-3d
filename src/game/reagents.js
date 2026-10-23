@@ -227,6 +227,7 @@ export const CABINET = {
   sucrose: { solid: 'saccarosio' },
   // liquidi
   acetone: { liquid: 'acetone' },
+  etac: { liquid: 'acetato-di-etile', name: { it: 'Acetato di etile', en: 'Ethyl acetate' } },
   glycerol: { liquid: 'glicerolo' },
 };
 

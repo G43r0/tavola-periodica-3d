@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { GAME_STRINGS } from '../../src/game/game-strings.js';
-import { EXERCISES, CHAPTERS, SHOP, REP_TITLES, answerOptions } from '../../src/game/career.js';
+import { EXERCISES, CHAPTERS, SHOP, REP_TITLES, EXTRAS, CHALLENGES, MEDALS, answerOptions, judgement } from '../../src/game/career.js';
 import { DEFS } from '../../src/game/items.js';
 import { BINS } from '../../src/game/mixture.js';
 import { STATIONS } from '../../src/game/room.js';
@@ -41,6 +41,18 @@ test('testi del simulatore: chiavi composte (esercitazioni, oggetti, rifiuti, po
   for (const a of ['fire', 'toxic', 'alarm']) assert.ok(has(`alarm_${a}`));
   // posizioni del rubinetto della buretta (avviso, finestrella, legenda)
   for (let n = 0; n < 4; n++) for (const k of ['stopcock', 'stopcockSt', 'lgStopcock']) assert.ok(has(`${k}${n}`), `${k}${n}`);
+});
+
+test('testi del simulatore: verifiche, pagella, richieste extra e sfide a tempo (G7)', () => {
+  for (const g of new Set(EXTRAS.map((e) => e.extra.giver))) assert.ok(has(`giver_${g}`), `giver_${g}`);
+  for (const m of MEDALS) assert.ok(has(`medal_${m}`), `medal_${m}`);
+  for (const v of ['ongoing', 'promoted', 'repeat']) assert.ok(has(`rcVerdict_${v}`), `rcVerdict_${v}`);
+  for (const a of [5, 6.5, 7.5, 8.5, 9.5]) assert.ok(has(`judge_${judgement(a)}`), `judge_${judgement(a)}`);
+  for (const c of CHALLENGES) assert.ok(has(`${c.ex}Title`), c.id);
+  // le tre lingue: ogni consegna delle esercitazioni nuove c'è anche in «Spiegamelo come se avessi 6 anni»
+  for (const ex of EXERCISES.filter((e) => e.chapter >= 5 || e.exam || e.extra)) assert.ok(`${ex.id}Brief` in GAME_STRINGS.eli6 || `${ex.id}BriefSimple` in GAME_STRINGS.eli6, `eli6: ${ex.id}`);
+  // nessun testo della G7 resta «in arrivo»
+  for (const lang of ['it', 'en']) for (const k of ['chapter5Text', 'chapter7Text']) assert.ok(!/arrivo|coming soon/i.test(GAME_STRINGS[lang][k]), `${lang}.${k}`);
 });
 
 test('testi del simulatore: legenda dei comandi (azioni e tasti)', () => {

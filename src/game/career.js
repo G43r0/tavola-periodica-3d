@@ -6,16 +6,16 @@
 import { Mixture } from './mixture.js';
 import { SOLID } from '../sandbox/substances.js';
 import { SHELF, CABINET, SOLUBILITY, FLAME_SALTS } from './reagents.js';
-import { GAS_FLOW } from './apparatus-logic.js';
+import { GAS_FLOW, splitVapours } from './apparatus-logic.js';
 import { score, grade } from './orders.js';
-import { EXERCISES } from './data/career-exercises.js';
+import { EXERCISES, CHALLENGES } from './data/career-exercises.js';
 
-export { EXERCISES, score, grade };
+export { EXERCISES, CHALLENGES, score, grade };
 
 /**
  * Capitoli dell'anno. rep: reputazione minima per aprirlo (oltre ad aver superato il capitolo prima); groups: gruppi di
- * reazioni del catalogo le cui ricette del libro si sbloccano con il capitolo. I capitoli 5–9 si completano nella G7:
- * per ora 5 e 7 hanno l'esercitazione che c'era già (cristalli, saggio alla fiamma), gli altri sono «in arrivo».
+ * reazioni del catalogo le cui ricette del libro si sbloccano con il capitolo. Ogni capitolo da 1 a 8 finisce con una
+ * verifica (esercitazione con exam: true); il 9 è l'esame di fine anno, tre prove con il loro voto.
  */
 export const CHAPTERS = [
   { id: 0, rep: 0, groups: [] },
@@ -35,8 +35,14 @@ export const BASE_PAGES = ['safety:ghs', 'safety:ppe', 'safety:incompatible', 's
 
 export const EXERCISE_BY_ID = new Map(EXERCISES.map((e) => [e.id, e]));
 
-/** Esercitazioni di un capitolo, nell'ordine dei dati. */
-export const chapterExercises = (ch) => EXERCISES.filter((e) => e.chapter === ch);
+/** Esercitazioni di un capitolo, nell'ordine dei dati (le richieste extra sono a parte). */
+export const chapterExercises = (ch) => EXERCISES.filter((e) => e.chapter === ch && !e.extra);
+
+/** Richieste extra: esercitazioni facoltative che si aprono con un capitolo completato e la reputazione richiesta. */
+export const EXTRAS = EXERCISES.filter((e) => e.extra);
+
+/** Verifiche di fine capitolo (e le prove dell'esame finale): danno un voto da 4 a 10. */
+export const EXAMS = EXERCISES.filter((e) => e.exam);
 
 /** Stelle per superare un'esercitazione (e contare per aprire il capitolo dopo). */
 export const PASS_STARS = 2;
@@ -430,6 +436,7 @@ export function reportStars(right, total) {
 export function reputation(career) {
   let r = 0;
   for (const res of Object.values(career?.results ?? {})) r += 2 * (res.stars ?? 0) - 3 + (res.report ?? 0);
+  for (const c of Object.values(career?.challenges ?? {})) r += c.medal ?? 0;
   r -= 2 * (career?.incidents ?? 0);
   return Math.max(0, Math.min(100, Math.round(r)));
 }
@@ -463,6 +470,7 @@ export function chapterState(career, ch) {
 /** Un'esercitazione si gioca se il suo capitolo è aperto e quella prima nel capitolo è stata fatta (anche male). */
 export function exerciseOpen(career, id) {
   const ex = EXERCISE_BY_ID.get(id);
+  if (ex?.extra) return extraOpen(career, ex);
   if (!ex || chapterState(career, ex.chapter) !== 'open') return false;
   const list = chapterExercises(ex.chapter);
   const i = list.indexOf(ex);
@@ -471,15 +479,89 @@ export function exerciseOpen(career, id) {
 
 /** Prossima esercitazione da fare: la prima aperta non ancora superata, altrimenti null. */
 export function nextExercise(career) {
-  for (const ex of EXERCISES) if (exerciseOpen(career, ex.id) && !passed(career, ex.id)) return ex;
+  for (const ex of EXERCISES) if (!ex.extra && exerciseOpen(career, ex.id) && !passed(career, ex.id)) return ex;
   return null;
+}
+
+/** Una richiesta extra si apre con il capitolo (chapter) completato e la reputazione richiesta. */
+export function extraOpen(career, ex) {
+  return Boolean(ex?.extra) && chapterDone(career, ex.chapter) && reputation(career) >= ex.extra.rep;
+}
+
+// ------------------------------------------------------------------ verifiche e pagella
+
+/**
+ * Voto di una verifica (da 4 a 10, a passi di mezzo punto) dalla qualità del lavoro (0–1): 60 % di qualità è la
+ * sufficienza (6), il 100 % è 10, senza niente si prende 4.
+ */
+export function examMark(quality) {
+  const q = Math.max(0, Math.min(1, Number(quality) || 0));
+  const raw = q < 0.6 ? 4 + (q / 0.6) * 2 : 6 + ((q - 0.6) / 0.4) * 4;
+  return Math.round(raw * 2) / 2;
+}
+
+const mean = (list) => list.reduce((a, b) => a + b, 0) / list.length;
+
+/** Giudizio sulla media dei voti (id dei testi judge_<id>). */
+export function judgement(average) {
+  return average < 6 ? 'insufficient' : average < 7 ? 'sufficient' : average < 8 ? 'good' : average < 9 ? 'veryGood' : 'excellent';
+}
+
+/**
+ * Pagella: per ogni capitolo con verifiche il voto (la media delle sue prove, se più d'una), la media di tutte e il
+ * verdetto: 'ongoing' (mancano delle verifiche), 'promoted' (tutte fatte, media almeno 6) o 'repeat'.
+ */
+export function reportCard(career) {
+  const rows = [];
+  for (const ch of CHAPTERS) {
+    const exams = EXAMS.filter((e) => e.chapter === ch.id);
+    if (!exams.length) continue;
+    const marks = exams.map((e) => career?.results?.[e.id]?.mark).filter((m) => m !== undefined);
+    rows.push({ chapter: ch.id, total: exams.length, taken: marks.length, mark: marks.length ? mean(marks) : null, marks: exams.map((e) => ({ id: e.id, mark: career?.results?.[e.id]?.mark ?? null })) });
+  }
+  const taken = rows.flatMap((r) => r.marks.map((m) => m.mark).filter((m) => m !== null));
+  const average = taken.length ? mean(taken) : null;
+  const complete = rows.every((r) => r.taken === r.total);
+  const verdict = !complete ? 'ongoing' : average >= 6 ? 'promoted' : 'repeat';
+  return { rows, average, complete, verdict, judgement: average === null ? null : judgement(average) };
+}
+
+// ------------------------------------------------------------------ sfide a tempo
+
+export const CHALLENGE_BY_ID = new Map(CHALLENGES.map((c) => [c.id, c]));
+
+/** Medaglie: 0 nessuna, 1 bronzo, 2 argento, 3 oro. */
+export const MEDALS = ['none', 'bronze', 'silver', 'gold'];
+
+/** La sfida si gioca quando l'esercitazione è già stata superata. */
+export const challengeOpen = (career, ch) => passed(career, ch.ex);
+
+/** Medaglia di una sfida: serve una qualità di almeno 0,8 e nessun incidente; poi contano i secondi. */
+export function challengeMedal(ch, { elapsed, quality, incidents = 0 }) {
+  if (quality < 0.8 || incidents > 0) return 0;
+  return elapsed <= ch.gold ? 3 : elapsed <= ch.silver ? 2 : elapsed <= ch.bronze ? 1 : 0;
+}
+
+/** Premio in soldi di una sfida: un quarto della paga per ogni medaglia in più di quelle già vinte (niente premio due volte). */
+export function challengeBonus(ch, career, medal) {
+  const ex = EXERCISE_BY_ID.get(ch.ex);
+  const old = career?.challenges?.[ch.id]?.medal ?? 0;
+  return Math.max(0, Math.round(ex.pay * 0.25 * (medal - old) * 100) / 100);
+}
+
+/** Registra il risultato di una sfida (nuovo oggetto): tiene la medaglia più alta e il tempo migliore tra quelle valide. */
+export function recordChallenge(career, id, { medal, elapsed }) {
+  const old = career.challenges?.[id];
+  const best = medal > (old?.medal ?? 0) || (medal === (old?.medal ?? 0) && medal > 0 && elapsed < (old?.best ?? Infinity));
+  const next = best ? { medal, best: Math.round(elapsed) } : old ?? { medal: 0, best: null };
+  return { ...career, challenges: { ...(career.challenges ?? {}), [id]: { ...next, tries: (old?.tries ?? 0) + 1 } } };
 }
 
 /**
  * Pagine del libro aperte nella Carriera: la sicurezza, quelle delle esercitazioni dei capitoli aperti e i gruppi di
  * ricette dei capitoli completati (o aperti). Restituisce { pages: Set('tool:balance', …), groups: Set, chapterOf }.
  */
-export function bookUnlocks(career) {
+export function bookUnlocks(career, { exam = false } = {}) {
   const pages = new Set(BASE_PAGES);
   const groups = new Set();
   const chapterOf = new Map();
@@ -488,9 +570,10 @@ export function bookUnlocks(career) {
   for (const c of CHAPTERS) {
     if (chapterState(career, c.id) !== 'open' && !chapterDone(career, c.id)) continue;
     for (const ex of chapterExercises(c.id)) for (const p of ex.book ?? []) pages.add(p);
-    for (const g of c.groups) groups.add(g);
+    // in una verifica il libro mostra gli strumenti e le tecniche, non le ricette delle reazioni
+    if (!exam) for (const g of c.groups) groups.add(g);
   }
-  return { pages, groups, chapterOf };
+  return { pages, groups, chapterOf, exam };
 }
 
 // ------------------------------------------------------------------ negozio
@@ -531,11 +614,16 @@ export function recordResult(career, id, r) {
   const best = !old || r.stars > old.stars || (r.stars === old.stars && (r.report ?? 0) > (old.report ?? 0));
   const results = { ...(career.results ?? {}) };
   results[id] = best ? { stars: r.stars, report: Math.max(r.report ?? 0, old?.report ?? 0), tries: (old?.tries ?? 0) + 1 } : { ...old, report: Math.max(old.report ?? 0, r.report ?? 0), tries: (old.tries ?? 0) + 1 };
+  // verifica: il voto migliore (4–10) dalla qualità del lavoro
+  if (EXERCISE_BY_ID.get(id)?.exam && r.quality !== undefined) {
+    const mark = examMark(r.quality);
+    results[id].mark = Math.max(mark, old?.mark ?? 0);
+  } else if (old?.mark !== undefined) results[id].mark = old.mark;
   return { ...career, results, money: r.money, incidents: (career.incidents ?? 0) + (r.incidents ?? 0), last: id };
 }
 
 /** Carriera nuova. */
-export const newCareer = () => ({ results: {}, money: 0, incidents: 0, owned: [], last: null });
+export const newCareer = () => ({ results: {}, money: 0, incidents: 0, owned: [], last: null, challenges: {} });
 
 // ------------------------------------------------------------------ reagenti e soluzione scritta nei dati
 
@@ -576,7 +664,7 @@ const ENV = { lossWK: 0.5, containerC: 120, area: 30 };
  * Esegue la soluzione scritta nei dati (ex.solution) con il motore dei contenitori e restituisce lo stato finale da
  * valutare. Azioni: [A, 'add', contenuto] · [A, 'reagent', chiave, quantità] · [A, 'fill', mL] (acqua fino al volume) ·
  * [A, 'pour', B, mL] · [A, 'filter', B] · [A, 'heat', °C, s] · [A, 'cool', s] · [A, 'wait', s] · [A, 'gas', K, s] ·
- * ['ev', nome, n] · ['state', campo, valore] · ['answer', i | 'all', valore | true] · ['deliver', A | null].
+ * [A, 'volt', V, s] (elettrolisi) · [A, 'distill', B, °C, s] (il distillato va in B) · ['out', K, mol] · ['ev', nome, n] · ['state', campo, valore] · ['answer', i | 'all', valore | true] · ['deliver', A | null].
  */
 export function runSolution(ctx, ex, mode = 'real', rand = () => 0.42) {
   const mixes = new Map();
@@ -594,7 +682,14 @@ export function runSolution(ctx, ex, mode = 'real', rand = () => 0.42) {
       if (env.gas) m.addSpecies(ctx.id(env.gas), GAS_FLOW * 0.2);
       const ev = m.tick(0.2, e);
       m.peakT = Math.max(m.peakT ?? m.T, m.T);
-      for (const [sid, mol] of ev.gases) s.gas[sid] = (s.gas[sid] ?? 0) + mol;
+      let gases = ev.gases;
+      if (env.still) {
+        // pallone con il refrigerante: il vapore che condensa va nel distillato, il resto esce
+        const split = splitVapours(ctx, gases);
+        for (const [sid, mol] of split.liquid) env.still.addSpecies(sid, mol);
+        gases = split.gas;
+      }
+      for (const [sid, mol] of gases) s.gas[sid] = (s.gas[sid] ?? 0) + mol;
       for (const id of ev.reactions) s.rx.add(id);
     }
   };
@@ -606,6 +701,11 @@ export function runSolution(ctx, ex, mode = 'real', rand = () => 0.42) {
     }
     if (a === 'state') {
       s[op] = args[0];
+      continue;
+    }
+    if (a === 'out') {
+      // gas uscito da un recipiente (op = sostanza, args[0] = moli): per gli strumenti che la soluzione non simula
+      s.gas[ctx.id(op)] = (s.gas[ctx.id(op)] ?? 0) + args[0];
       continue;
     }
     if (a === 'answer') {
@@ -659,6 +759,12 @@ export function runSolution(ctx, ex, mode = 'real', rand = () => 0.42) {
         break;
       case 'gas':
         tick(m, args[1], { gas: args[0] });
+        break;
+      case 'volt':
+        tick(m, args[1], { volts: args[0] });
+        break;
+      case 'distill':
+        tick(m, args[2], { heatT: args[1] + 273.15, stir: 1, still: get(args[0]) });
         break;
       default:
         throw new Error(`azione sconosciuta: ${op}`);
