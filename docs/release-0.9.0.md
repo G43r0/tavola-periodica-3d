@@ -34,7 +34,7 @@ reagenti riconoscibili dal contenitore, dal colore del tappo e dalle etichette c
 - L'eseguibile non è firmato: Windows SmartScreen chiede conferma al primo avvio («Ulteriori informazioni → Esegui comunque»).
 
 ### Download
-- `Tavola Periodica 3D Setup 0.9.0.exe` — installer per Windows (x64)
+- `Tavola.Periodica.3D.Setup.0.9.0.exe` — installer per Windows (x64)
 - `TavolaPeriodica3D-portable-0.9.0.exe` — versione portabile, senza installazione
 
 Dal codice sorgente:
