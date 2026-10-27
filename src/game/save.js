@@ -1,7 +1,8 @@
 // Salvataggi del simulatore, con la versione e la migrazione. Modulo puro: riceve e restituisce oggetti (la vista li
 // scrive in localStorage e, nell'app Electron, anche in un file nella cartella dei dati dell'utente).
 //
-// Versione 2: { version, settings: { chemMode, legend, fov }, active, profiles: [{ id, name, created, career, notebook }] }
+// Versione 2: { version, settings: { chemMode, legend, fov, volume, muted, shake }, active, profiles: [{ id, name, created,
+//   career, notebook }] }. volume (0–1), muted e shake (scossa della camera) sono arrivati con la G8: facoltativi.
 //   career (career.js): { results: { [esercitazione]: { stars, report, tries, mark? } }, challenges: { [sfida]: { medal,
 //   best, tries } }, money, incidents, owned, last }. mark e challenges sono arrivati con la G7: i salvataggi di prima
 //   non li hanno e restano validi.
@@ -10,6 +11,8 @@
 import { newCareer, chapterExercises, PASS_STARS } from './career.js';
 
 export const SAVE_VERSION = 2;
+/** Volume dell'audio per chi non l'ha mai cambiato (0–1). */
+export const DEFAULT_VOLUME = 0.8;
 
 /** Le esercitazioni della versione 1, nell'ordine di allora (stars[i]). */
 const V1_ORDERS = ['nacl', 'titration', 'goldrain', 'crystals', 'flame'];
@@ -95,6 +98,9 @@ export function migrate(raw, now = new Date().toISOString(), name = defaultName)
     chemMode: settings.chemMode === 'simple' ? 'simple' : 'real',
     legend: settings.legend !== false,
     fov: Number.isFinite(Number(settings.fov)) ? Number(settings.fov) : undefined,
+    volume: settings.volume !== undefined && settings.volume !== null && Number.isFinite(Number(settings.volume)) ? Math.max(0, Math.min(1, Number(settings.volume))) : DEFAULT_VOLUME,
+    muted: settings.muted === true,
+    shake: settings.shake !== false,
   };
   save.profiles = save.profiles.filter((p) => p && typeof p === 'object').slice(0, MAX_PROFILES).map((p, i, all) => ({
     id: typeof p.id === 'string' && p.id ? p.id : newId(all.slice(0, i)),

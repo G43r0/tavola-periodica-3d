@@ -113,7 +113,7 @@ test('libro: i 118 elementi, come si ottengono davvero e quali ricette li libera
 });
 
 test('libro: pagine scritte a mano, con vignette e testi nelle tre lingue', () => {
-  assert.equal(TOOL_PAGES.length, 24);
+  assert.equal(TOOL_PAGES.length, 26); // dalla G8 anche pila Daniell e contatore del gas
   assert.equal(TECHNIQUE_PAGES.length, 15);
   assert.equal(SAFETY_PAGES.length, 5);
   for (const p of [...TOOL_PAGES, ...TECHNIQUE_PAGES, ...SAFETY_PAGES]) {

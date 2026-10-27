@@ -56,6 +56,10 @@ function fixtureRow(f, key = 'lmb') {
       return row([key], 'lgPowerUp', { v: nextVoltsLabel(f.level) });
     case 'gas':
       return row([key], f.on ? 'lgValveClose' : 'lgValveOpen', { gas: f.gas ?? '' });
+    case 'bridge':
+      return row([key], f.on ? 'lgBridgeOut' : 'lgBridgeIn');
+    case 'gasMeter':
+      return row([key], 'lgMeterReset');
     default:
       return null;
   }

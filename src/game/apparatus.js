@@ -1,15 +1,17 @@
 // Strumenti della fase G4 nel gioco: la vetreria fissa (buretta, imbuto con la carta da filtro, pallone da
 // distillazione), gli strumenti sempre sul bancone (termometro, pH-metro, pipetta), la pinza per il crogiolo, il
-// bagno di ghiaccio, il mantello riscaldante, l'alimentatore con gli elettrodi e le bombole dei gas.
+// bagno di ghiaccio, il mantello riscaldante, l'alimentatore con gli elettrodi e le bombole dei gas; dalla G8 la pila
+// Daniell (voltmetro e ponte salino) e il contatore del gas del Bunsen.
 // Le regole pure sono in apparatus-logic.js, le mesh della stanza in apparatus-room.js.
 import * as THREE from 'three';
 import { LAYOUT, BENCH_Y } from './room.js';
 import { placeItem } from './items.js';
-import { Mixture, AMBIENT } from './mixture.js';
+import { Mixture, AMBIENT, HEAT_SPEED } from './mixture.js';
 import { tongsMesh } from './apparatus-room.js';
 import { Stream } from './effects.js';
 import { WATER } from '../sandbox/substances.js';
-import { STOPCOCK, DROP_ML, PIPETTE_ML, GAS_FLOW, FILTER_FLOW, HOT_T, buretteReading, nextStopcock, nextVolts, nextLevel, relax, splitVapours, displayCurrent } from './apparatus-logic.js';
+import { STOPCOCK, DROP_ML, PIPETTE_ML, GAS_FLOW, FILTER_FLOW, HOT_T, buretteReading, nextStopcock, nextVolts, nextLevel, relax, splitVapours, displayCurrent, ION_CHARGE, cellReading, BUNSEN_GAS, meterLitres } from './apparatus-logic.js';
+import { REDUCTION_POTENTIALS } from './reagents.js';
 
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
@@ -29,6 +31,10 @@ export class Apparatus {
     this.power = room.power;
     this.icebath = room.icebath;
     this.gases = room.gases;
+    this.voltmeter = room.voltmeter;
+    this.bridge = room.bridge;
+    this.gasMeter = room.gasMeter;
+    this.cellRead = false; // la pila ha già dato una lettura in questa esercitazione (evento cellRead)
     this.stopcock = 0;
     this.dropAcc = { burette: 0, funnel: 0 };
     this.headT = AMBIENT; // temperatura della testa della colonna (termometro digitale)
@@ -84,6 +90,9 @@ export class Apparatus {
     this.power.volts = 0;
     this.power.current = 0;
     for (const f of this.gases) f.open = false;
+    this.bridge.place(false);
+    this.gasMeter.mol = 0;
+    this.cellRead = false;
     this.tongsFx.taken = false;
     this.g.tongs = false;
     for (const it of this.tools) this.goHome(it);
@@ -142,9 +151,69 @@ export class Apparatus {
       case 'icebath':
         g.toast(t('iceHint'));
         return true;
+      case 'bridge':
+        f.place(!f.in);
+        g.sfx('clink', f.group.position, { gain: 0.5 });
+        g.toast(t(f.in ? 'bridgeIn' : 'bridgeOut'));
+        if (f.in) g.note('bridge');
+        return true;
+      case 'voltmeter':
+        g.toast(t('voltmeterHint'));
+        return true;
+      case 'gasMeter':
+        f.mol = 0;
+        g.toast(t('meterReset'));
+        g.note('meterReset');
+        return true;
       default:
         return false;
     }
+  }
+
+  /**
+   * Semielemento nel posto della pila: il recipiente dritto che ci sta sopra, con almeno 10 mL di soluzione; il
+   * metallo è l'elemento solido con un potenziale noto, gli ioni sono quelli dei suoi sali sciolti (mol/L).
+   * @returns {null | {item: object, metal: string|null, E0: number, n: number, conc: number}}
+   */
+  halfCell(spot) {
+    const g = this.g;
+    const item = g.items.find((it) => it.def.container && it.mixture && !it.rig && it !== g.held && Math.hypot(it.mesh.position.x - spot.x, it.mesh.position.z - spot.z) < spot.r && Math.abs(it.mesh.position.y - spot.y) < 0.03 && _v.set(0, 1, 0).applyQuaternion(it.mesh.quaternion).y > 0.85);
+    if (!item) return null;
+    const m = item.mixture;
+    const litres = m.liquidVolume / 1000;
+    if (m.liquidVolume < 10) return { item, metal: null, E0: 0, n: 1, conc: 0 };
+    const { chem } = g;
+    let metal = null;
+    let z = 0;
+    for (const [sid, mol] of m.n) {
+      const s = typeof sid === 'number' ? chem.sub(sid) : null;
+      if (s?.kind !== 'element' || mol < 1e-4 || ION_CHARGE[s.symbol] === undefined || REDUCTION_POTENTIALS[s.symbol] === undefined) continue;
+      if ((m.n.get(sid) ?? 0) - (m.d.get(sid) ?? 0) <= 1e-4) continue;
+      metal = s.symbol;
+      z = sid;
+      break;
+    }
+    if (!metal) return { item, metal: null, E0: 0, n: 1, conc: 0 };
+    let ions = 0;
+    for (const [sid, d] of m.d) if (typeof sid === 'number' && sid !== z && d > 0) ions += d * (chem.counts(sid)[z] ?? 0);
+    return { item, metal, E0: REDUCTION_POTENTIALS[metal], n: ION_CHARGE[metal], conc: ions / litres };
+  }
+
+  /** Pila e contatore del gas, a ogni fotogramma: lettura del voltmetro, litri di metano bruciati dal Bunsen. */
+  updateCell(dt) {
+    const g = this.g;
+    const vm = this.voltmeter;
+    const [a, b] = vm.spots.map((s) => this.halfCell(s));
+    vm.halves = [a, b];
+    vm.reading = cellReading(a, b, this.bridge.in);
+    vm.lcd.set(vm.reading.why ? '0.00 V' : `${vm.reading.volts.toFixed(2)} V`);
+    if (!vm.reading.why && vm.reading.volts > 0.2 && !this.cellRead) {
+      this.cellRead = true;
+      g.note('cellRead');
+    }
+    // il contatore corre nel tempo del calore, accelerato come il resto (HEAT_SPEED): i conti con l'acqua tornano
+    if (g.fx.bunsen.on) this.gasMeter.mol += BUNSEN_GAS * HEAT_SPEED * dt;
+    this.gasMeter.lcd.set(`${meterLitres(this.gasMeter.mol).toFixed(2)} L`);
   }
 
   setMantle(level) {
@@ -153,6 +222,8 @@ export class Apparatus {
   }
 
   setVolts(v) {
+    // la scarica del primo contatto quando si accende
+    if (v && !this.power.volts) this.g.sfx('zap', { x: LAYOUT.power.x, y: BENCH_Y + 0.1, z: LAYOUT.power.z });
     this.power.volts = v;
     this.g.toast(v ? this.g.t('powerOn', { v }) : this.g.t('powerOff'));
   }
@@ -344,6 +415,7 @@ export class Apparatus {
     this.updateFunnel(dt);
     this.updateCondenser(dt);
     this.updateGases(dt);
+    this.updateCell(dt);
     this.power.current = displayCurrent(this.cellCurrent);
     this.power.lcd.set(this.power.volts ? `${this.power.volts.toFixed(1)} V  ${this.power.current.toFixed(2)} A` : '-- V');
     this.room.still.headLcd.set(`${(this.headT - 273.15).toFixed(1)} °C`);
@@ -570,6 +642,17 @@ export class Apparatus {
         return { note: t(f.open ? 'stValveOpen' : 'stValveClosed'), on: f.open };
       case 'icebath':
         return { note: t('stIce') };
+      case 'bridge':
+        return { note: t(f.in ? 'stBridgeIn' : 'stBridgeOut'), on: f.in };
+      case 'voltmeter': {
+        const r = f.reading;
+        if (r.why) return { note: t(`stVolt_${r.why}`) };
+        const plus = f.halves[r.plus === 'a' ? 0 : 1].metal;
+        const minus = f.halves[r.plus === 'a' ? 1 : 0].metal;
+        return { note: t('stVolt', { v: g.fmt(r.volts, 2), plus, minus }), on: true };
+      }
+      case 'gasMeter':
+        return { note: t('stMeter', { l: g.fmt(meterLitres(f.mol), 2) }), on: g.fx.bunsen.on };
       default:
         return null;
     }

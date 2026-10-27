@@ -624,7 +624,7 @@ export const GLOSSARY_EN = {
     w: 'simulator|laboratory simulator|lab game',
     d: 'A first-person game in the school chemistry lab, inspired by cooking simulators: pick up beakers and bottles, weigh on the balance, pour by tilting the vessel, heat on the hot plate or the Bunsen burner and hand in your preparation at the teacher\'s desk. Exercises are graded with stars and money; glass breaks, liquids spill, toxic gases belong under the fume hood and waste in the right container. The chemistry is the real one of the library (554 substances and the catalogue reactions), in a realistic or simplified version.',
     k: [['W A S D', 'walk'], ['A / D', 'with an object in hand: rotate it'], ['Click', 'pick up / put down'], ['Hold left', 'pour (mouse ↑ more, ↓ less)'], ['Hold right + mouse', 'tilt'], ['E', 'use'], ['Hold middle button', 'throw'], ['Tab', 'bench view'], ['N', 'notebook'], ['Esc', 'pause']],
-    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook', 'ui.gameCareer'],
+    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook', 'ui.gameCareer', 'ui.gameAudio'],
   },
   'ui.gameNotebook': {
     t: 'Lab notebook',
@@ -651,7 +651,7 @@ export const GLOSSARY_EN = {
     t: 'Lab instruments',
     w: 'lab instruments|burette|buret|pipette|graduated pipette|pH meter|thermometer|heating mantle|power supply|gas cylinder|gas cylinders|tongs|crucible|evaporating dish|ice bath',
     d: 'Besides beakers and flasks, the simulator has the instruments of a school lab. The 50 mL burette on its stand has zero at the top: its stopcock has four positions (closed, drop by drop, thin stream, open) and the scale tells how much you have delivered, to 0.05 mL, as in a titration. The graduated pipette draws up to 10 mL and releases it all at once or one millilitre at a time. The thermometer and the pH meter are dipped into the liquid: the thermometer rises slowly, the pH meter settles in a moment. The funnel with filter paper separates a precipitate from the liquid (filtration); the flask on the heating mantle, with its still head and condenser, separates liquids that boil at different temperatures (distillation). Under the fume hood the 0–12 V power supply passes current through solutions (electrolysis) and five cylinders bubble oxygen, hydrogen, carbon dioxide, chlorine and ammonia into the vessel at the outlet. Above 60 °C a vessel is too hot to touch and is picked up with the tongs; the porcelain crucible and evaporating dish stand the Bunsen flame up to red heat; the ice bath keeps a vessel at 0 °C. Every instrument has its page in the notebook tutorial.',
-    s: ['term.titration', 'term.filtration', 'term.distillation', 'term.electrolysis', 'ui.gameNotebook'],
+    s: ['term.titration', 'term.filtration', 'term.distillation', 'term.electrolysis', 'term.galvanicCell', 'ui.gameNotebook'],
   },
   'term.titration': {
     t: 'Titration',
@@ -682,6 +682,19 @@ export const GLOSSARY_EN = {
     w: 'activity series|electrochemical series|standard potential|reduction potential|E°',
     d: 'Metals ordered by how easily they give up electrons, from the standard reduction potential E° (in volts): lithium −3.04, potassium −2.93, sodium −2.71, magnesium −2.37, aluminium −1.66, zinc −0.76, iron −0.45, lead −0.13, hydrogen 0, copper +0.34, silver +0.80, gold +1.50. A metal displaces from their salts the metals with a higher potential (zinc in copper sulfate gets coated with copper, copper in zinc sulfate does not) and releases hydrogen from acids like HCl only if its potential is negative: that is why copper and silver do not react with hydrochloric acid, while oxidising acids such as nitric acid dissolve them.',
     s: ['term.reaction', 'ui.gameNotebook'],
+  },
+  'term.galvanicCell': {
+    t: 'Cell (galvanic cell)',
+    w: 'cell|cells|Daniell cell|galvanic cell|galvanic cells|salt bridge|voltmeter|Nernst equation',
+    d: 'A cell turns the energy of a redox reaction into an electric current by keeping the two reactants apart: in one vessel the metal that is oxidised (anode, − pole), in the other the one that is reduced (cathode, + pole), each in a solution of its own ions. Electrons flow through the external wire; the salt bridge, a tube filled with a gel containing a salt, closes the circuit by letting ions through, so the solutions stay neutral. In the Daniell cell zinc (E° = −0.76 V) gives electrons to copper (E° = +0.34 V): with 1 M solutions the voltage is 1.10 V. The Nernst equation tells how it changes with concentration: E = E° + (0.059 / n) · log c at 25 °C, that is about 0.03 V for every factor of 10 in the ion concentration of a metal with charge 2. In the simulator the cell is at the end of the sink counter: two circles for the beakers, the voltmeter and the salt bridge, which you put in or take out with a click.',
+    s: ['term.redox', 'term.activitySeries', 'term.electrolysis', 'ui.gameInstruments'],
+  },
+  'ui.gameAudio': {
+    t: 'Simulator sound and graphics',
+    w: 'simulator sounds|simulator audio|camera shake|adaptive quality',
+    d: 'You can hear the lab: the pouring stream, the tap, the hiss of the Bunsen burner, the bubbles of a reaction, boiling water, glass being put down or broken, fire, the alarm, the bell on the teacher\'s desk. Every sound comes from the spot in the room where it starts. They are recordings from Freesound.org in the public domain (CC0 licence); the volume is in the menu and in the pause screen, M turns the audio off and on. Explosions shake the camera for a moment (you can switch it off). If your computer cannot keep up, the game lowers the graphics quality by itself one step at a time (resolution, shadows, ambient occlusion in the Professional preset) to stay smooth.',
+    k: [['M', 'audio on / off']],
+    s: ['ui.game'],
   },
   'ui.gameStock': {
     t: 'Cap colour',

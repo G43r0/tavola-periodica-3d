@@ -970,6 +970,89 @@ export const TOOL_PAGES = [
       steps: ['Accendila prima di cominciare.', 'Tieni la testa fuori.'],
     },
   },
+  // fase G8: pila Daniell e contatore del gas
+  {
+    id: 'cell',
+    fig: 'cell',
+    it: {
+      title: 'Pila Daniell: voltmetro e ponte salino',
+      use: 'Una pila trasforma l\'energia di una reazione redox in elettricità. Nella pila Daniell lo zinco cede elettroni (si ossida) e il rame li prende (si riduce): tenendo separati i due metalli, gli elettroni passano nel filo e il voltmetro misura la tensione, circa 1,1 V.',
+      steps: [
+        'In un becher metti una lamina di zinco in una soluzione di solfato di zinco, in un altro una lamina di rame in una soluzione di solfato di rame.',
+        'Collega le due lamine al voltmetro con i cavi a coccodrillo.',
+        'Unisci le due soluzioni con il ponte salino (un tubo a U pieno di gel con un sale): chiude il circuito lasciando passare gli ioni.',
+        'Leggi la tensione: lo zinco è il polo negativo (anodo), il rame il positivo (catodo).',
+      ],
+      mistakes: [
+        'Dimenticare il ponte salino: il circuito resta aperto e il voltmetro segna zero.',
+        'Mettere i due metalli nella stessa soluzione: il rame si deposita sullo zinco e la pila non funziona.',
+        'Usare lo stesso metallo nella stessa soluzione dalle due parti: non c\'è differenza di potenziale.',
+      ],
+      game: 'Prepara i due becher e posali sui due cerchi in fondo al bancone del lavandino; clicca il ponte salino per metterlo o toglierlo. Il voltmetro e la sua finestrella danno la tensione e il polo positivo (equazione di Nernst, potenziali del CRC Handbook).',
+    },
+    en: {
+      title: 'Daniell cell: voltmeter and salt bridge',
+      use: 'A cell turns the energy of a redox reaction into electricity. In the Daniell cell zinc gives up electrons (it is oxidised) and copper takes them (it is reduced): with the two metals kept apart, the electrons flow through the wire and the voltmeter measures the voltage, about 1.1 V.',
+      steps: [
+        'Put a zinc strip in zinc sulfate solution in one beaker and a copper strip in copper sulfate solution in another.',
+        'Connect the two strips to the voltmeter with crocodile clips.',
+        'Join the two solutions with the salt bridge (a U tube filled with a gel containing a salt): it closes the circuit by letting ions through.',
+        'Read the voltage: zinc is the negative pole (anode), copper the positive one (cathode).',
+      ],
+      mistakes: [
+        'Forgetting the salt bridge: the circuit stays open and the voltmeter reads zero.',
+        'Putting both metals in the same solution: copper deposits on the zinc and the cell does not work.',
+        'Using the same metal in the same solution on both sides: there is no potential difference.',
+      ],
+      game: 'Prepare the two beakers and put them on the two circles at the end of the sink counter; click the salt bridge to put it in or take it out. The voltmeter and its popup give the voltage and the positive pole (Nernst equation, potentials from the CRC Handbook).',
+    },
+    eli6: {
+      title: 'Pila',
+      use: 'Con due metalli diversi, ognuno nella sua acqua speciale, si fa una pila! Lo zinco regala dei pezzettini piccolissimi, gli elettroni, e il rame li prende: passando nel filo diventano elettricità.',
+      steps: ['Zinco nel suo bicchiere, rame nel suo.', 'Unisci i bicchieri con il tubo a U.', 'Guarda il numero: circa 1,1 volt.'],
+    },
+  },
+  {
+    id: 'gasmeter',
+    fig: 'gasmeter',
+    it: {
+      title: 'Contatore del gas',
+      use: 'Il contatore misura quanti litri di metano brucia il becco Bunsen. Scaldando dell\'acqua si può stimare quanto calore dà un litro di gas e confrontarlo con quello delle tabelle (circa 36 kJ per litro a 25 °C).',
+      steps: [
+        'Metti un becher con 100 mL d\'acqua sulla reticella e misura la temperatura.',
+        'Azzera il contatore, poi accendi il Bunsen.',
+        'Dopo un po\' spegni il Bunsen, leggi i litri e la temperatura più alta.',
+        'Calore assorbito dall\'acqua: q = m · c · ΔT (c = 4,18 J/g·K); dividilo per i litri bruciati.',
+      ],
+      mistakes: [
+        'Leggere i litri prima di spegnere il Bunsen: il contatore continua a contare.',
+        'Dimenticare di azzerare il contatore all\'inizio.',
+        'Aspettarsi il valore delle tabelle: gran parte del calore scalda l\'aria, la reticella e il vetro.',
+      ],
+      game: 'Il contatore è all\'estremità del bancone A, accanto al Bunsen: un clic lo azzera. Mentre il Bunsen è acceso conta il metano bruciato: circa 3,5 L al minuto, nel tempo del calore che nel gioco corre quattro volte più veloce.',
+    },
+    en: {
+      title: 'Gas meter',
+      use: 'The meter measures how many litres of methane the Bunsen burner burns. By heating some water you can estimate how much heat a litre of gas gives and compare it with the value in the tables (about 36 kJ per litre at 25 °C).',
+      steps: [
+        'Put a beaker with 100 mL of water on the gauze and measure the temperature.',
+        'Reset the meter, then light the Bunsen burner.',
+        'After a while turn the burner off, read the litres and the highest temperature.',
+        'Heat absorbed by the water: q = m · c · ΔT (c = 4.18 J/g·K); divide it by the litres burnt.',
+      ],
+      mistakes: [
+        'Reading the litres before turning the burner off: the meter keeps counting.',
+        'Forgetting to reset the meter at the start.',
+        'Expecting the value in the tables: much of the heat warms the air, the gauze and the glass.',
+      ],
+      game: 'The meter is at the end of bench A, next to the Bunsen burner: one click resets it. While the burner is lit it counts the methane burnt: about 3.5 L a minute, in heating time, which in the game runs four times faster.',
+    },
+    eli6: {
+      title: 'Contatore del gas',
+      use: 'Conta quanto gas usa il fuoco del Bunsen, come il contatore di casa. Così scopri quanto calore dà un po\' di gas.',
+      steps: ['Azzeralo con un clic.', 'Scalda l\'acqua.', 'Leggi quanti litri hai usato.'],
+    },
+  },
 ];
 
 export const TECHNIQUE_PAGES = [

@@ -928,6 +928,72 @@ export const LATE_EXERCISES = [
     book: ['tool:dropper', 'safety:incompatible'],
     solution: [['answer', 'all', true]],
   },
+  // G8: le due misure rimandate dalla G7, come richieste extra (non cambiano i capitoli già superati)
+  {
+    // pila Daniell: Zn | ZnSO₄ 0,1 M || CuSO₄ 0,5 M | Cu. Nernst a 25 °C: 0,34 − (−0,76) + 0,0296 · log(0,5 / 0,1) = 1,12 V
+    id: 'xDaniell',
+    chapter: 6,
+    extra: { rep: 50, giver: 'physics' },
+    pay: 75,
+    par: 360,
+    deliver: 'answers',
+    setup: [
+      { kind: 'beaker100', at: 'bench' },
+      { kind: 'beaker100', at: 'bench' },
+      { kind: 'cylinder100', at: 'bench' },
+      { kind: 'spatula', at: 'bench' },
+      { reagent: 'zn', at: 'shelf' },
+      { reagent: 'cu', at: 'shelf' },
+      { reagent: 'znso4', at: 'shelf' },
+      { reagent: 'cuso4sol', at: 'shelf' },
+    ],
+    answers: { type: 'number', count: 1, value: 1.12, unit: 'V', tol: { real: [0.03, 0.12], simple: [0.06, 0.25] } },
+    steps: [
+      { key: 'dnStep1', when: { any: [{ m: 'grams:Zn', min: 0.3 }, { m: 'mol:znso4', min: 0.002 }] } },
+      { key: 'dnStep2', when: { any: [{ m: 'grams:Cu', min: 0.3 }, { m: 'mol:cuso4', min: 0.005 }] } },
+      { key: 'dnStep3', when: { m: '$ev:bridge', min: 1 } },
+      { key: 'dnStep4', when: { m: '$ev:cellRead', min: 1 } },
+      { key: 'stepAnswer', when: { m: '$answered', min: 1 } },
+    ],
+    goals: [{ answers: true }],
+    report: [
+      { q: 'rq_dnA', opts: ['@rqo_dnA1', '@rqo_dnA2', '@rqo_dnA3'], a: 0 },
+      { q: 'rq_dnB', opts: ['@rqo_dnB1', '@rqo_dnB2', '@rqo_dnB3'], a: 0 },
+    ],
+    book: ['tool:cell', 'tool:spatula', 'tool:cylinder'],
+    solution: [['A', 'add', { solid: ['Zn', 2] }], ['A', 'reagent', 'znso4', 40], ['B', 'add', { solid: ['Cu', 2] }], ['B', 'reagent', 'cuso4sol', 40], ['ev', 'bridge', 1], ['ev', 'cellRead', 1], ['answer', 0, true]],
+  },
+  {
+    // calore del metano con il contatore del gas: q = m·c·ΔT diviso i litri bruciati. Il motore dà 11,4–12,5 kJ/L
+    // (100 mL d'acqua nel becher da 250 mL, da 3 a 10 s di tempo del calore): il resto dei 36 kJ/L delle tabelle
+    // scalda l'aria, la reticella e il vetro (tests/game/apparatus.test.mjs)
+    id: 'xGasHeat',
+    chapter: 7,
+    extra: { rep: 60, giver: 'club' },
+    pay: 70,
+    par: 300,
+    deliver: 'answers',
+    setup: [
+      { kind: 'beaker250', at: 'bench' },
+      { kind: 'cylinder100', at: 'bench' },
+      { kind: 'thermometer', at: 'bench' },
+      { reagent: 'water', at: 'shelf' },
+    ],
+    answers: { type: 'number', count: 1, value: 12, unit: 'kJ/L', tol: { real: [1.5, 4], simple: [2.5, 6] } },
+    steps: [
+      { key: 'ghStep1', when: { any: [{ m: 'volume', min: 90, max: 110 }] } },
+      { key: 'ghStep2', when: { m: '$ev:meterReset', min: 1 } },
+      { key: 'ghStep3', when: { any: [{ m: 'volume', min: 80 }, { m: 'peakC', min: 40 }] } },
+      { key: 'stepAnswer', when: { m: '$answered', min: 1 } },
+    ],
+    goals: [{ answers: true }],
+    report: [
+      { q: 'rq_ghA', opts: ['@rqo_ghA1', '@rqo_ghA2', '@rqo_ghA3'], a: 0 },
+      { q: 'rq_ghB', opts: ['418 J', '4,18 J', '100 J', '41,8 kJ'], a: 0 },
+    ],
+    book: ['tool:gasmeter', 'tool:bunsen', 'tool:thermometer', 'tech:heat'],
+    solution: [['A', 'fill', 100], ['ev', 'meterReset', 1], ['A', 'heat', 60, 30], ['answer', 0, true]],
+  },
 ];
 
 /**

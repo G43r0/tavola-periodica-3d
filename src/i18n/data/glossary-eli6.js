@@ -316,6 +316,14 @@ export const GLOSSARY_ELI6 = {
   'ui.game': {
     d: 'Un videogioco in cui entri nel laboratorio di chimica della scuola e fai gli esperimenti come un vero chimico: prendi i bicchieri di vetro, pesi, versi, scaldi e porti il risultato alla maestra. Se fai cadere un bicchiere si rompe, e la spazzatura va nel bidone giusto!',
   },
+  'term.galvanicCell': {
+    t: 'La pila',
+    d: 'Con due metalli diversi si fa una pila! Lo zinco sta nella sua acqua e il rame nella sua acqua blu. Lo zinco regala dei pezzettini piccolissimi, gli elettroni, e il rame li prende: mentre passano nel filo diventano elettricità, circa 1 volt. Un tubo a U pieno di gelatina salata unisce i due bicchieri, se no la pila si ferma.',
+  },
+  'ui.gameAudio': {
+    t: 'I rumori del laboratorio',
+    d: 'Nel laboratorio senti tutto: l\'acqua che scende, il fuoco del Bunsen, le bollicine, il vetro che si rompe e il campanello della maestra. I rumori arrivano da dove succedono le cose. Premi M per spegnerli o riaccenderli. Quando qualcosa scoppia lo schermo trema un pochino.',
+  },
   'ui.gameStock': {
     d: 'Nel laboratorio il colore del tappo ti dice che cosa c\'è dentro: rosso gli acidi, blu le basi, bianco i sali, giallo le cose che fanno bruciare di più, grigio i metalli, verde le sostanze della vita e del petrolio, viola gli indicatori, azzurro l\'acqua. Le bottiglie scure proteggono dalla luce le sostanze che la luce rovina.',
   },

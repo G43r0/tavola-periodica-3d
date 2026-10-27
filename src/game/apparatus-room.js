@@ -1,6 +1,7 @@
 // Apparecchi fissi dell'aula (fase G4): sostegno della buretta e pinza per il crogiolo sul bancone A; sostegno con
 // l'imbuto, bagno di ghiaccio e apparecchio di distillazione sul bancone del lavandino; alimentatore con gli elettrodi
-// e bombole dei gas sotto la cappa. Costruisce mesh, collisori statici ed «elementi fissi»; la vetreria montata
+// e bombole dei gas sotto la cappa; pila Daniell (voltmetro e ponte salino) in fondo al bancone del lavandino e
+// contatore del gas del Bunsen (fase G8). Costruisce mesh, collisori statici ed «elementi fissi»; la vetreria montata
 // (buretta, imbuto, pallone) è fatta di oggetti veri (items.js) che il gioco fissa ai punti `mounts`.
 import * as THREE from 'three';
 import { seg } from '../gfx/preset.js';
@@ -213,6 +214,81 @@ export function buildApparatus(h) {
   tube(new THREE.Vector3(gr.x - 0.05, Y + 0.48, gr.outZ), new THREE.Vector3(gasOutlet.x, Y + 0.48, gr.outZ), 0.004, pipe);
   tube(new THREE.Vector3(gasOutlet.x, Y + 0.48, gr.outZ), new THREE.Vector3(gasOutlet.x, gasOutlet.y, gr.outZ), 0.003, glass);
 
+  // ------------------------------------------------------------ pila Daniell: due posti, voltmetro, ponte salino
+  // Nei due posti segnati vanno due becher, ognuno con il suo metallo e una soluzione dei suoi ioni (Zn in ZnSO₄, Cu in
+  // CuSO₄); i coccodrilli del voltmetro pendono sopra i posti, il ponte salino si mette e si toglie con un clic.
+  const ce = LAYOUT.cell;
+  const spots = [{ x: ce.x, z: ce.z - 0.17, r: 0.06, y: Y }, { x: ce.x, z: ce.z + 0.17, r: 0.06, y: Y }];
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xe8e6df, transparent: true, opacity: 0.7, depthWrite: false });
+  for (const s of spots) {
+    const ring = mesh(new THREE.RingGeometry(0.045, 0.052, 32), ringMat, s.x, Y + 0.0008, s.z, { cast: false });
+    ring.rotation.x = -Math.PI / 2;
+  }
+  const voltmeter = { kind: 'voltmeter', id: 'voltmeter', hit: [], spots, reading: { volts: 0, plus: null, why: 'empty' } };
+  const vx = ce.x - 0.27;
+  voltmeter.hit.push(solid(0.12, 0.09, 0.17, std({ color: 0xd9a21b, roughness: 0.5 }), vx, Y + 0.045, ce.z, voltmeter));
+  const vLcd = lcdTexture(320, 64);
+  const vScreen = mesh(new THREE.PlaneGeometry(0.12, 0.024), new THREE.MeshBasicMaterial({ map: vLcd.tex, toneMapped: false }), vx + 0.0605, Y + 0.062, ce.z, { cast: false });
+  vScreen.rotation.y = Math.PI / 2;
+  voltmeter.hit.push(vScreen);
+  voltmeter.lcd = vLcd;
+  // morsetti e fili con i coccodrilli sopra i due posti (rosso verso sud, nero verso nord)
+  for (const [mat, s, dz] of [[M.black, spots[0], -0.04], [M.red, spots[1], 0.04]]) {
+    voltmeter.hit.push(mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.012, 10), mat, vx + 0.064, Y + 0.025, ce.z + dz).rotateZ(Math.PI / 2));
+    const clip = new THREE.Vector3(s.x - 0.03, Y + 0.2, s.z);
+    tube(new THREE.Vector3(vx + 0.07, Y + 0.025, ce.z + dz), new THREE.Vector3(vx + 0.12, Y + 0.24, s.z), 0.0018, mat);
+    tube(new THREE.Vector3(vx + 0.12, Y + 0.24, s.z), clip, 0.0018, mat);
+    box(0.012, 0.02, 0.008, mat, clip.x, clip.y - 0.01, clip.z);
+    // elettrodo: la striscia di metallo che il coccodrillo tiene nel becher (il metallo vero è quello nel becher)
+    mesh(new THREE.BoxGeometry(0.003, 0.17, 0.016), std({ color: 0x9aa0a8, metalness: 0.8, roughness: 0.35 }), clip.x, Y + 0.105, clip.z, { cast: false });
+  }
+  // ponte salino: un tubo a U di vetro pieno di gel bianco (KNO₃ in agar); dentro i becher o appoggiato sul bancone
+  const gel = std({ color: 0xf2f0e6, roughness: 0.6, transparent: true, opacity: 0.85 });
+  const bridgeGroup = new THREE.Group();
+  group.add(bridgeGroup);
+  const half = (spots[1].z - spots[0].z) / 2;
+  const legA = new THREE.Vector3(0, 0.035, -half + 0.012);
+  const topA = new THREE.Vector3(0, 0.17, -half + 0.012);
+  const topB = new THREE.Vector3(0, 0.17, half - 0.012);
+  const legB = new THREE.Vector3(0, 0.035, half - 0.012);
+  const bridgeMeshes = [];
+  for (const [a, b] of [[legA, topA], [topA, topB], [topB, legB]]) {
+    for (const [r, mat] of [[0.007, glass], [0.0045, gel]]) {
+      const d = new THREE.Vector3().subVectors(b, a);
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 10, 1, true), mat);
+      m.position.copy(a).add(b).multiplyScalar(0.5);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+      bridgeGroup.add(m);
+      bridgeMeshes.push(m);
+    }
+  }
+  const bridge = { kind: 'bridge', id: 'bridge', hit: bridgeMeshes, in: false, group: bridgeGroup };
+  // appoggiato: in piedi sulle sue gambe, girato lungo x, tra il voltmetro e il bordo del bancone
+  bridge.place = (inside) => {
+    bridge.in = inside;
+    if (inside) {
+      bridgeGroup.position.set(ce.x, Y, ce.z);
+      bridgeGroup.rotation.set(0, 0, 0);
+    } else {
+      bridgeGroup.position.set(ce.x - 0.2, Y - 0.035, ce.z + 0.34);
+      bridgeGroup.rotation.set(0, Math.PI / 2, 0);
+    }
+  };
+  bridge.place(false);
+  fixtures.push(voltmeter, bridge);
+
+  // ------------------------------------------------------------ contatore del gas del Bunsen
+  const gm = LAYOUT.gasMeter;
+  const gasMeter = { kind: 'gasMeter', id: 'gasMeter', hit: [], mol: 0 };
+  gasMeter.hit.push(solid(0.09, 0.07, 0.06, std({ color: 0x8a9099, roughness: 0.45, metalness: 0.3 }), gm.x, Y + 0.035, gm.z, gasMeter));
+  const gLcd = lcdTexture(256, 64);
+  const gScreen = mesh(new THREE.PlaneGeometry(0.07, 0.0175), new THREE.MeshBasicMaterial({ map: gLcd.tex, toneMapped: false }), gm.x, Y + 0.045, gm.z + 0.0305, { cast: false });
+  gasMeter.hit.push(gScreen);
+  gasMeter.lcd = gLcd;
+  // tubo rosso dal contatore al rubinetto del Bunsen
+  tube(new THREE.Vector3(gm.x - 0.045, Y + 0.012, gm.z), new THREE.Vector3(LAYOUT.bunsen.x + 0.05, Y + 0.008, LAYOUT.bunsen.z + 0.02), 0.006, M.red);
+  fixtures.push(gasMeter);
+
   const update = (dt) => {
     mantle.T += (295 + mantle.level * 45 - mantle.T) * Math.min(1, dt * 0.5);
     mantleMat.emissiveIntensity = Math.max(0, (mantle.T - 420) / 600);
@@ -229,6 +305,9 @@ export function buildApparatus(h) {
     power,
     gases,
     icebath,
+    voltmeter,
+    bridge,
+    gasMeter,
     gasOutlet,
     still: { outlet, headLcd },
     // dove il gioco monta la vetreria fissa: buretta (punta), imbuto (punta del gambo), pallone (fondo)

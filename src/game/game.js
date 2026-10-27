@@ -9,6 +9,7 @@ import { gfx } from '../gfx/preset.js';
 import { locale, pick } from '../i18n/index.js';
 import { Physics } from './physics.js';
 import { buildRoom, ROOM, LAYOUT, BENCH_Y, DESK_Y, STATIONS } from './room.js';
+import { SIGN_KEYS } from './room-details.js';
 import { DEFS, createItem, syncItem, disposeItem, placeItem, itemMaterials, itemMassGrams, updateContactShadow, grainTexture } from './items.js';
 import { liquidLevel, pourRate, ballisticLanding, reposeNormal, heapSize } from './liquid.js';
 import { Drops, Motes, Puffs, Stream, createPuddle, createHeap, puddleRadius, puddleState, stainAlphaMap } from './effects.js';
@@ -25,6 +26,7 @@ import { Apparatus, PERMANENT_TOOLS } from './apparatus.js';
 import { nextLevel } from './apparatus-logic.js';
 import { bookRecipes, elementPages, reagentOf } from './book.js';
 import BOOK_VERIFIED from './data/book-verified.js';
+import { pourSound, tapLevel, fireLevel, fizzLevel, impactGain, nearest, shakeAt } from './audio/sound-levels.js';
 
 const WATER = 123;
 const REACH = 2.3;
@@ -157,6 +159,10 @@ export class LabGame {
     this.hoverT = 0;
     this.puffs = new Puffs(this.scene, 1400, false);
     this.flames = new Puffs(this.scene, 700, true);
+    this.sparkFx = new Puffs(this.scene, 600, true, 5); // scintille che ricadono (esplosioni, metalli che bruciano)
+    // lampo delle esplosioni: una luce arancione che si spegne in mezzo secondo
+    this.flash = new THREE.PointLight(0xffa04a, 0, 5, 2);
+    this.scene.add(this.flash);
     this.player = new Player(this.physics, this.camera);
     this.held = null;
     this.holdDist = 0.5;
@@ -194,6 +200,10 @@ export class LabGame {
     this.order = null;
     this.free = false;
     this.pendingBreaks = new Set();
+    this.audio = null; // GameAudio della vista (audio/audio.js): senza, il gioco è muto
+    this.shakeOn = true; // scossa della camera nelle esplosioni (si può spegnere nella pausa)
+    this.shake = null; // { t, amp }: scossa in corso
+    this.lastHit = new WeakMap(); // oggetto → istante dell'ultimo suono d'urto (uno ogni 0,12 s)
     this.physics.preStep = (dt) => this.controlHeld(dt);
     this.physics.onImpact = (owner, force, other, speed) => this.impact(owner, force, other, speed);
     this.player.onTeleport = (from, to) => this.teleported(from, to);
@@ -202,6 +212,7 @@ export class LabGame {
     const shown = FAMILY_ORDER.filter((f, i) => FAMILY_ORDER.findIndex((g) => FAMILIES[g] === FAMILIES[f]) === i);
     this.room.setLegend(t('capLegendTitle'), shown.map((f) => ({ color: FAMILIES[f], label: t(`legend_${f}`) })));
     this.room.setNotebookCover(t('notebookTitle'), t('notebookCover'));
+    this.room.setSigns(Object.fromEntries(SIGN_KEYS.map((k) => [k, t(`sign_${k}`)])));
     this.room.setBookCover(t('bookTitle'), t('bookCover'));
     this.follow = null; // ricetta del libro che si sta seguendo (riquadro con i passi)
     // estintore appeso al muro
@@ -555,6 +566,7 @@ export class LabGame {
 
   /** Campanello: consegna il preparato, chiude un'esercitazione senza preparato o apre le risposte. */
   ringBell() {
+    this.sfx('bell', { x: LAYOUT.bell.x, y: DESK_Y + 0.05, z: LAYOUT.bell.z });
     if (this.free || !this.order) {
       this.toast(this.t('bellFree'));
       return;
@@ -635,6 +647,18 @@ export class LabGame {
 
   toast(text, kind = 'info') {
     this.emit('toast', { text, kind });
+  }
+
+  /** Colpo singolo dell'audio (audio/audio.js), da un punto della stanza o senza posizione (pos null). */
+  sfx(name, pos = null, opts) {
+    this.audio?.play(name, pos, opts);
+  }
+
+  /** Scossa della camera (esplosioni): breve, si somma a una già in corso, niente se spenta nelle impostazioni. */
+  shakeCamera(amp) {
+    if (!this.shakeOn || !(amp > 0)) return;
+    const left = this.shake ? this.shake.amp * Math.max(0, 1 - this.shake.t / 0.6) : 0;
+    this.shake = { t: 0, amp: Math.min(1.5, left + amp) };
   }
 
   fine(kind, text) {
@@ -938,6 +962,10 @@ export class LabGame {
     this.placing = null;
     placeItem(pl.item, pl.pos, pl.quat);
     pl.item.body.setGravityScale(1, true);
+    // vetro, porcellana e strumenti posati sul piano: un tocco leggero, più pieno per gli oggetti pesanti
+    const glass = pl.item.def.breakable || pl.item.def.container;
+    this.sfx(glass ? 'glass-down' : 'clink', pl.pos, { gain: glass ? 0.6 + Math.min(0.5, (pl.item.def.mass ?? 0.1) * 1.5) : 0.4, rate: 0.9 + Math.random() * 0.2 });
+    this.lastHit.set(pl.item, this.time);
   }
 
   /**
@@ -1213,12 +1241,16 @@ export class LabGame {
 
   useFixture(f, fine) {
     const { t } = this;
+    // interruttori e manopole: uno scatto dove si è cliccato
+    if (['hotplate', 'balance', 'hood', 'lamp', 'sink', 'power', 'mantle', 'gas', 'gasMeter'].includes(f.kind)) this.sfx('click', this.hover?.point ?? null, { gain: 0.8 });
     switch (f.kind) {
       case 'hotplate':
         this.setPlate(nextLevel(f.level, fine ? -1 : 1));
         break;
       case 'bunsen':
         f.on = !f.on;
+        if (f.on) this.sfx('ignite', f.flame, { gain: 0.45, rate: 1.3 });
+        else this.sfx('click', f.flame);
         this.toast(f.on ? t('bunsenOn') : t('bunsenOff'));
         break;
       case 'sink':
@@ -1603,7 +1635,15 @@ export class LabGame {
 
   /** Urto tra corpi: la vetreria colpita troppo forte si rompe (dopo il passo, non durante). */
   impact(owner, force, other, speed) {
-    if (!owner?.def?.breakable || owner === this.held || owner === this.placing?.item) return;
+    if (!owner?.def || owner === this.held || owner === this.placing?.item) return;
+    // il suono dell'urto: uno ogni 0,12 s per oggetto (gli eventi di contatto arrivano a ogni passo fisico)
+    const g = impactGain(speed);
+    if (g > 0 && this.time - (this.lastHit.get(owner) ?? -1) > 0.12) {
+      this.lastHit.set(owner, this.time);
+      const glass = owner.def.breakable || owner.def.container;
+      this.sfx(glass ? 'glass-down' : 'clink', owner.mesh.position, { gain: 0.3 + g, rate: 0.85 + Math.random() * 0.3 });
+    }
+    if (!owner.def.breakable) return;
     if (speed > BREAK_SPEED && force > owner.def.mass * 60) this.pendingBreaks.add(owner);
   }
 
@@ -1611,6 +1651,7 @@ export class LabGame {
     if (!this.items.includes(item)) return;
     const p = item.mesh.position.clone();
     const mix = item.mixture;
+    this.sfx('glass-break', p, { rate: 0.9 + Math.random() * 0.25 });
     // schegge che volano
     for (let k = 0; k < 26; k++) this.drops.emit(p.x, p.y + 0.04, p.z, (Math.random() - 0.5) * 2, Math.random() * 1.8, (Math.random() - 0.5) * 2, 0.002 + Math.random() * 0.003, [230, 240, 250], 1.4, 0);
     const hazard = mix && !mix.isEmpty() ? this.hazardOf(mix) : null;
@@ -2049,7 +2090,8 @@ export class LabGame {
       item.peakT = Math.max(item.peakT ?? AMBIENT, mix.T);
       const p = item.mesh.position;
       const top = _v.set(0, item.def.height, 0).applyMatrix4(item.mesh.matrixWorld).clone();
-      // vapore sopra i liquidi caldi
+      // ebollizione (si sente) e vapore sopra i liquidi caldi
+      if (mix.T > 369 && mix.water > 0.5) item.boilT = this.time;
       if (mix.T > 345 && mix.water > 0.5 && Math.random() < (mix.T - 345) / 40) this.puffs.emit(top.x, top.y, top.z, (Math.random() - 0.5) * 0.05, 0.25, (Math.random() - 0.5) * 0.05, { size: 0.02, grow: 4, rgb: [245, 248, 252], alpha: 0.35, life: 1.6 });
       item.mixture.peakT = item.peakT;
       for (const [sid, mol] of ev.gases) {
@@ -2127,6 +2169,10 @@ export class LabGame {
       }
       this.reactionFx(item, sig, ext / dt, dt);
       this.alkaliFlame(item, rx);
+      // combustioni molto calde fuori dall'acqua (il magnesio, il ferro in polvere): scintille dal recipiente
+      if (sig.fire && sig.heat === 'hot' && !aq && Math.random() < Math.min(0.5, (ext / dt) * 300)) {
+        this.sparks(_v.set(0, item.def.height, 0).applyMatrix4(item.mesh.matrixWorld), 3, 0.3);
+      }
       this.noteReaction(id, sig, aq);
     }
   }
@@ -2151,6 +2197,7 @@ export class LabGame {
     };
     item.fxAcc ??= { gas: 0, flake: 0 };
     if (sig.gases.length) {
+      item.fizz = { t: this.time, rate: Math.max(rate, item.fizz?.t > this.time - 0.2 ? item.fizz.rate : 0) };
       item.fxAcc.gas += Math.min(80, Math.max(3, 60000 * rate)) * dt;
       for (; item.fxAcc.gas >= 1; item.fxAcc.gas--) {
         const [x, z] = at();
@@ -2180,6 +2227,7 @@ export class LabGame {
     const y = Math.min(item.liquidMesh.material.userData.uniforms.uLevel.value, p.y + item.def.height);
     const c = this.chem.sub(metal.sid).flameColor ?? [200, 120, 255];
     const r = item.def.profile[0][0] * 0.5;
+    if (Math.random() < 0.06) this.sfx('pop', p, { gain: 0.5, rate: 1.2 + Math.random() * 0.4 });
     this.flames.emit(p.x + (Math.random() - 0.5) * r, y + 0.004, p.z + (Math.random() - 0.5) * r, 0, 0.25, 0, { size: 0.012, grow: 1.8, rgb: c, alpha: 0.85, life: 0.3 });
   }
 
@@ -2322,6 +2370,7 @@ export class LabGame {
     const owner = item ?? puddle;
     if (owner && (owner.noFire ?? 0) > this.time) return;
     this.fires.push({ item, puddle, sid, pos: pos.clone(), fuel: scripted ? 150 : item?.kind === 'towel' ? 8 : 30, hit: 0, age: 0, scripted });
+    this.sfx('ignite', pos, { gain: 0.8 });
     if (scripted) {
       this.alarm = 6;
       return;
@@ -2334,7 +2383,25 @@ export class LabGame {
     this.alarm = 6;
   }
 
+  /** Scintille: punti luminosi che schizzano in tutte le direzioni e ricadono spegnendosi. */
+  sparks(pos, n, power = 1) {
+    const speed = Math.min(2.2, 0.6 + power * 0.5);
+    for (let k = 0; k < n; k++) {
+      const a = Math.random() * Math.PI * 2;
+      const up = Math.random();
+      const v = (0.6 + Math.random() * 1.4) * speed;
+      const rgb = Math.random() < 0.6 ? [255, 216, 130] : [255, 150, 60];
+      this.sparkFx.emit(pos.x, pos.y + 0.03, pos.z, Math.cos(a) * v * (1 - up * 0.6), 0.3 + up * v, Math.sin(a) * v * (1 - up * 0.6), { size: 0.005 + Math.random() * 0.006, grow: 0.5, rgb, alpha: 1, life: 0.3 + Math.random() * 0.5 });
+    }
+  }
+
   explode(pos, power, source) {
+    this.flash.position.copy(pos).y += 0.15;
+    this.flash.intensity = 6 + power * 6;
+    this.sfx('explosion', pos, { gain: Math.min(1.4, 0.6 + power * 0.3), rate: 1.15 - Math.min(0.3, power * 0.1) });
+    // la scossa è più forte vicino al giocatore
+    this.shakeCamera(Math.min(1.2, power * 0.5) * Math.max(0.15, 1 - this.camera.position.distanceTo(pos) / 6));
+    this.sparks(pos, Math.round(30 + power * 25), power);
     this.toast(this.t('explosion'), 'danger');
     this.fine('explosion', this.t('explosion'));
     this.alarm = 6;
@@ -2559,7 +2626,12 @@ export class LabGame {
     this.physics.step(dt, this.items.map((i) => i.body));
     for (const it of this.items) syncItem(it);
     // tappi: tolti mentre si usa il reagente (in mano o appena preso con spatola, ansa o cartina), poi rimessi
-    for (const it of this.items) if (it.cap) it.cap.visible = it !== this.held && this.time - (it.data.usedAt ?? -9) > 2.5;
+    for (const it of this.items) {
+      if (!it.cap) continue;
+      const on = it !== this.held && this.time - (it.data.usedAt ?? -9) > 2.5;
+      if (it.cap.visible && !on) this.sfx('cap', it.mesh.position, { rate: 0.95 + Math.random() * 0.15 });
+      it.cap.visible = on;
+    }
     // con le ombre vere (Professionale) l'ombra di contatto resta leggera
     for (const it of this.items) updateContactShadow(it, this.physics, this.G.shadows ? 0.3 : 0.55);
     for (const p of this.room.props) if (!p.body.isSleeping()) this.syncProp(p);
@@ -2608,6 +2680,57 @@ export class LabGame {
     const hz = this.fx.hood;
     this.puffs.update(dt, hz.on ? (x, y, z) => (x > hz.zone.x0 - 0.3 && z > hz.zone.z0 && z < hz.zone.z1 ? [1.2, 1.6, 0] : null) : null);
     this.flames.update(dt);
+    this.sparkFx.update(dt);
+    if (this.flash.intensity > 0) this.flash.intensity = Math.max(0, this.flash.intensity - dt * 30);
+    this.updateShake(dt);
+    if (this.audio) {
+      this.audio.listen(this.camera);
+      // in una finestra (dt = 0) il laboratorio tace
+      this.audio.loops(dt > 0 ? this.soundLoops() : []);
+    }
+  }
+
+  /** Scossa della camera dopo il movimento del giocatore (che rimette la camera al suo posto a ogni fotogramma). */
+  updateShake(dt) {
+    if (!this.shake) return;
+    this.shake.t += dt;
+    const s = shakeAt(this.shake.t, this.shake.amp);
+    if (!s) {
+      this.shake = null;
+      return;
+    }
+    this.camera.position.x += s.x;
+    this.camera.position.y += s.y;
+    this.camera.rotateZ(s.roll);
+  }
+
+  /**
+   * Suoni ad anello di questo fotogramma: getti, rubinetto e doccia, Bunsen, fuochi, estintore, effervescenza,
+   * ebollizione, gas delle bombole, elettrolisi, allarme. Le sorgenti numerose (getti, bolle) solo le più vicine.
+   * @returns {{id: string, name: string, level: number, pos?: object, rate?: number}[]}
+   */
+  soundLoops() {
+    const out = [];
+    const me = this.camera.position;
+    const pours = [];
+    for (const it of this.items) {
+      if (it.pourT === this.time && it.mixture?.liquidVolume > 0.5 && !it.def.drops) pours.push({ it, pos: it.mesh.position });
+    }
+    for (const { it, pos } of nearest(pours, me, 2)) out.push({ id: `pour:${it.id}`, name: 'pour', pos, ...pourSound(it.pourRate ?? 1) });
+    const sink = this.fx.sink;
+    if (sink.tap) out.push({ id: 'tap', name: 'tap', level: tapLevel(this.tapFlow), pos: sink.spout });
+    if (this.fx.shower.t > 0) out.push({ id: 'shower', name: 'tap', level: 1.4, rate: 0.8, pos: { x: LAYOUT.shower.x, y: 2.2, z: LAYOUT.shower.z } });
+    if (this.fx.bunsen.on) out.push({ id: 'bunsen', name: 'bunsen', level: this.fx.bunsen.boost ? 1.2 : 1, pos: this.fx.bunsen.flame });
+    if (this.fires.length) out.push({ id: 'fire', name: 'fire', level: fireLevel(this.fires.length), pos: nearest(this.fires, me, 1)[0].pos });
+    if (this.held?.kind === 'extinguisher' && this.spraying) out.push({ id: 'extinguisher', name: 'extinguisher', level: 1, pos: this.held.mesh.position });
+    const fizzing = this.items.filter((it) => it.fizz && this.time - it.fizz.t < 0.3).map((it) => ({ it, pos: it.mesh.position }));
+    for (const { it, pos } of nearest(fizzing, me, 2)) out.push({ id: `fizz:${it.id}`, name: 'fizz', level: fizzLevel(it.fizz.rate), pos });
+    const boiling = this.items.filter((it) => this.time - (it.boilT ?? -9) < 0.3).map((it) => ({ it, pos: it.mesh.position }));
+    for (const { it, pos } of nearest(boiling, me, 1)) out.push({ id: `boil:${it.id}`, name: 'boil', level: 1, pos });
+    if (this.apparatus.gases.some((f) => f.open)) out.push({ id: 'gas', name: 'hiss', level: 0.8, rate: 1.2, pos: { x: LAYOUT.gasRack.outX, y: BENCH_Y + 0.1, z: LAYOUT.gasRack.outZ } });
+    if (this.apparatus.cellCurrent > 0.005) out.push({ id: 'cell', name: 'bubbles', level: Math.min(1, 0.4 + this.apparatus.cellCurrent), pos: { x: LAYOUT.power.x - 0.2, y: BENCH_Y + 0.05, z: LAYOUT.power.z + 0.36 } });
+    if (this.alarm > 0) out.push({ id: 'alarm', name: 'alarm', level: 1 });
+    return out;
   }
 
   render() {
@@ -2682,7 +2805,7 @@ export class LabGame {
     else if (h?.type === 'puddle') target = { type: 'puddle', stain: Boolean(h.puddle.stain), heap: Boolean(h.puddle.heap) && h.puddle.mix.liquidVolume < 0.05 };
     else if (h?.type === 'fixture') {
       const f = h.fixture;
-      const on = f.kind === 'sink' ? f.tap : f.kind === 'tongs' ? f.taken : f.kind === 'gas' ? f.open : f.kind === 'power' ? f.volts > 0 : f.on;
+      const on = f.kind === 'sink' ? f.tap : f.kind === 'tongs' ? f.taken : f.kind === 'gas' ? f.open : f.kind === 'power' ? f.volts > 0 : f.kind === 'bridge' ? f.in : f.on;
       target = { type: 'fixture', kind: f.kind, on: Boolean(on), level: f.kind === 'power' ? f.volts : f.level ?? 0, binName: f.bin ? this.t(`bin_${f.bin}`) : '', gas: f.formula ?? '' };
     }
     return legendRows({
@@ -2834,7 +2957,9 @@ export class LabGame {
     let steps = [];
     if (o) {
       // i passi fatti restano spuntati (career.js, stepsDone)
+      const before = o.done?.filter(Boolean).length ?? 0;
       o.done = stepsDone(o.ex, this.snapshot(), this.chemMode, o.done);
+      if (o.done.filter(Boolean).length > before && this.time > o.start + 0.5) this.sfx('ping', null, { gain: 0.8 });
       steps = o.ex.steps.map((st, i) => ({ text: this.t(st.key, this.stepParams(o.ex)), done: o.done[i] }));
     }
     return {

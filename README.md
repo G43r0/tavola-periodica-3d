@@ -12,7 +12,9 @@ Tre **preset grafici** (Semplice, Medio, Professionale) adattano la grafica al c
 l'**aspetto reale** di ogni elemento (colori e materiali veri) in un campione 3D.
 Il **simulatore di laboratorio** è un gioco in prima persona nel laboratorio di chimica della scuola, nello stile di
 *Cooking Simulator*: si prendono becher e bottiglie, si pesa, si versa inclinando, si scalda, si titola con la buretta,
-si filtra, si distilla, si fa l'elettrolisi e si consegna il preparato all'insegnante, con la fisica vera degli oggetti e la chimica delle 554 sostanze e delle reazioni del catalogo.
+si filtra, si distilla, si fa l'elettrolisi, si misura la tensione di una pila e si consegna il preparato all'insegnante, con la fisica vera degli oggetti e la chimica delle 554 sostanze e delle reazioni del catalogo.
+Ha i suoni del laboratorio (registrazioni in pubblico dominio da Freesound) e una Carriera di dieci capitoli con verifiche,
+pagella, richieste extra e sfide a tempo.
 Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 
 | Fase | Contenuto | Stato |
@@ -25,7 +27,7 @@ Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
 | 6 | Sandbox degli elementi: polveri, liquidi e gas con temperatura, reazioni, elettricità, radioattività | ✅ completata |
 | 7 | Lingue (italiano, inglese, «Spiegamelo come se avessi 6 anni») e modalità Spiega | ✅ completata |
 | 8 | Preset grafici (Semplice, Medio, Professionale) e aspetto reale degli elementi | ✅ completata |
-| 9 | Simulatore di laboratorio: il gioco in prima persona nel laboratorio della scuola | 🧪 prototipo giocabile |
+| 9 | Simulatore di laboratorio: il gioco in prima persona nel laboratorio della scuola | ✅ completata |
 
 ---
 
@@ -432,9 +434,10 @@ dall'insegnante, le prepara al bancone e le consegna alla cattedra. Modelli e gr
 fisica è quella di [Rapier](https://rapier.rs) (WebAssembly incluso nell'app, caricato solo alla prima apertura).
 Design e decisioni: `docs/superpowers/specs/2026-10-13-simulatore-laboratorio-design.md`.
 
-**Stato: gioco giocabile in sviluppo.** La Carriera ha tutti i capitoli, dal 0 al 9 (53 esercitazioni tra prove,
-verifiche, esame e richieste extra), con pagella e sfide a tempo; la rifinitura (fase G8) è l'ultima del
-[piano del gioco base](docs/superpowers/specs/2026-10-14-gioco-base-piano.md).
+**Stato: completo.** Le otto fasi del [piano del gioco base](docs/superpowers/specs/2026-10-14-gioco-base-piano.md)
+(G1–G8) sono fatte: la Carriera ha tutti i capitoli, dal 0 al 9 (55 esercitazioni tra prove, verifiche, esame e
+richieste extra), con pagella e sfide a tempo; la rifinitura (G8) ha aggiunto audio, dettagli dell'aula, effetti, pila
+Daniell e contatore del gas.
 
 - **Modalità**: *Carriera* (un anno di scuola in capitoli, vedi sotto) e *Laboratorio libero* (tutti gli strumenti e un
   magazzino con le 554 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
@@ -450,7 +453,8 @@ verifiche, esame e richieste extra), con pagella e sfide a tempo; la rifinitura 
   organica (saponificazione, distillazione, liquidi incogniti dalla densità); 9 · l'esame di fine anno in tre prove.
   Ogni verifica ha campioni incogniti estratti a caso, **non mostra le ricette nel libro** e dà un voto da 4 a 10 che
   finisce nella **pagella** (media, giudizio, promozione con media almeno 6). **Richieste extra** facoltative e **sfide
-  a tempo** (medaglie di bronzo, argento e oro con un premio e un punto di reputazione) completano l'anno. Le
+  a tempo** (medaglie di bronzo, argento e oro con un premio e un punto di reputazione) completano l'anno; tra le
+  richieste extra la **pila Daniell** del professore di fisica e il **calore di un litro di metano** del club di chimica. Le
   esercitazioni sono **dati** (`src/game/data/career-exercises.js` e `career-exercises-late.js`): cosa c'è sul banco, i campioni incogniti, i passi con la
   condizione che li spunta, gli obiettivi con le tolleranze della chimica realistica e semplificata, le domande della
   relazione, le pagine del libro e una soluzione; `career.js` li legge e un test esegue la soluzione di ognuna con il
@@ -580,7 +584,24 @@ verifiche, esame e richieste extra), con pagella e sfide a tempo; la rifinitura 
 - **Etichette verso di sé**: un barattolo o una bottiglia preso in mano mostra sempre l'etichetta a chi lo tiene.
 - **Grafica**: aula in toni medi (pareti verde salvia, mobili grigio ardesia, banconi neri) e luce moderata, perché la
   vetreria e i reagenti si stacchino dallo sfondo; vetro limpido al centro e più chiaro sui bordi, con il labbro della
-  bocca; ombra di contatto sotto ogni oggetto; tone mapping neutro, che conserva i colori veri delle soluzioni.
+  bocca; ombra di contatto sotto ogni oggetto; tone mapping neutro, che conserva i colori veri delle soluzioni. Nel preset
+  Professionale c'è l'occlusione ambientale (GTAO); in tutti la qualità scende da sola, un passo alla volta, se gli fps
+  restano bassi.
+- **Aula**: armadio dei reagenti con le ante di vetro, armadio di sicurezza giallo per gli infiammabili, orologio con
+  l'ora vera, cartelli di sicurezza (occhiali e camice obbligatori, vietato mangiare e bere, uscita, estintore, doccia)
+  tradotti nelle tre lingue, il cortile della scuola fuori dalle finestre, aloni, bruciature e graffi sui banconi
+  (`src/game/room-details.js`).
+- **Suoni**: 21 registrazioni da [Freesound](https://freesound.org), tutte con licenza **CC0** (pubblico dominio):
+  getto, rubinetto e doccia, Bunsen, fuoco, estintore, bolle, ebollizione, gas, elettrolisi, vetro posato o rotto, tappo,
+  esplosione, campanello, allarme, scatti e il «ping» dei passi fatti. Ogni suono viene dal punto in cui nasce. Volume
+  nel menu e nella pausa, `M` spegne l'audio. Le esplosioni hanno anche scintille, un lampo e una breve scossa della
+  camera (si spegne nelle impostazioni). Elenco con autori e collegamenti in `src/game/audio/sound-list.js`; per
+  rigenerare i file servono ffmpeg e la rete: `node scripts/sounds.mjs`.
+- **Pila Daniell e contatore del gas**: in fondo al bancone del lavandino due cerchi per i becher, il voltmetro con i
+  coccodrilli e il ponte salino (un clic lo mette o lo toglie); la tensione viene dall'equazione di Nernst con i
+  potenziali del CRC Handbook e le concentrazioni vere degli ioni (zinco in ZnSO₄ 0,1 M e rame in CuSO₄ 0,5 M: 1,12 V).
+  Accanto al Bunsen il contatore conta i litri di metano bruciati (un clic lo azzera): scaldando 100 mL d'acqua si
+  misura quanto calore arriva davvero da un litro di gas.
 - **Chimica dei contenitori** (`src/game/mixture.js`, testata): moli per sostanza e quanto è sciolto, temperatura,
   volume, massa, pH dal bilancio delle cariche (acidi e basi forti e deboli), colore (ioni dei metalli di transizione,
   indicatori, precipitati in sospensione), solubilità con la temperatura (CRC Handbook) e cristallizzazione anche come
@@ -660,7 +681,11 @@ src/
     game.js           il gioco: oggetti, presa e versamento, strumenti, calore, incidenti, rifiuti, esercitazioni della Carriera
     apparatus.js      buretta, imbuto, distillazione, alimentatore, bombole, pinza, termometro, pH-metro e pipetta nel gioco
     apparatus-room.js i loro supporti nell'aula: sostegni, mantello con refrigerante, alimentatore, bombole, bagno di ghiaccio
-    apparatus-logic.js regole pure degli strumenti: rubinetto, tensioni, letture, refrigerante
+    apparatus-logic.js regole pure degli strumenti: rubinetto, tensioni, letture, refrigerante, pila (Nernst), contatore del gas
+    room-details.js   dettagli dell'aula: armadi, orologio, cartelli di sicurezza, vista dalle finestre, macchie e usura
+    game-render.js    resa: occlusione ambientale nel Professionale, qualità adattiva
+    quality.js        qualità adattiva (funzione pura): misura degli fps e passi di riduzione per preset
+    audio/            audio: motore Web Audio (audio.js), elenco dei suoni CC0 (sound-list.js), volumi (sound-levels.js), file .ogg (sfx/)
     tutorial.js       le pagine del tutorial del quaderno con le illustrazioni SVG
     book.js           libro «Come si fa»: magazzino, ricette generate dalle reazioni (dosi, passi, controlli), esecuzione nel motore
     book-view.js      lettore del libro: indice, pagine, ricette, elementi, ricerca
@@ -698,13 +723,14 @@ tests/lab/            test del motore chimico (npm test)
 tests/sandbox/        test della sandbox (fisica, reazioni, equazioni bilanciate, esempi, sostanze e reazioni del catalogo, strumenti)
 tests/i18n/           test delle lingue e del glossario della modalità Spiega
 tests/gfx/            test dei preset grafici e dell'aspetto reale degli elementi
-tests/game/           test del simulatore (chimica dei contenitori, segnali delle reazioni, quaderno e tutorial, libro e ricette, copertura, reagenti, strumenti, fisica, liquidi, solidi e getto, legenda, Carriera e salvataggi)
+tests/game/           test del simulatore (chimica dei contenitori, segnali delle reazioni, quaderno e tutorial, libro e ricette, copertura, reagenti, strumenti, fisica, liquidi, solidi e getto, legenda, Carriera e salvataggi, pila e contatore, audio e qualità adattiva)
   styles/             token di design, layout, tavola, scheda, visualizzatore
 scripts/
   build-data.mjs      genera e valida elements.json
   build-binding.mjs   genera binding-energies.json (X-ray Data Booklet)
   coverage.mjs        tabella delle reazioni del simulatore realizzabili con scaffale, armadio e magazzino, per gruppo
   book.mjs            esegue ogni ricetta del libro «Come si fa» e scrive src/game/data/book-verified.js
+  sounds.mjs          scarica da Freesound i suoni CC0 del simulatore e li prepara con ffmpeg (src/game/audio/sfx)
   make-icon.mjs       genera build/icon.png (icona dell'app)
 data-sources/         dati di origine (PubChem + dati curati in italiano)
 build/icon.png        icona usata da electron-builder
@@ -756,3 +782,4 @@ build/icon.png        icona usata da electron-builder
 | `I` / `L` / `H` / `Esc` | (simulatore) finestrelle accanto agli oggetti / legenda dei comandi / tutti i comandi / pausa |
 | `N` | (simulatore) quaderno di laboratorio: il tutorial e le reazioni scoperte (anche con un clic sul quaderno del bancone) |
 | `B` | (simulatore) libro «Come si fa»: strumenti, tecniche, sicurezza, elementi, ricette (anche con un clic sul libro) |
+| `M` | (simulatore) audio sì / no (il volume è nel menu e nella pausa) |

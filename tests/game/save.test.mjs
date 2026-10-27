@@ -1,7 +1,7 @@
 // Test dei salvataggi del simulatore (save.js): versione, migrazione dalla versione 1, profili. npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { migrate, SAVE_VERSION, activeProfile, addProfile, renameProfile, deleteProfile, selectProfile, updateActive, newer, cleanName } from '../../src/game/save.js';
+import { migrate, SAVE_VERSION, DEFAULT_VOLUME, activeProfile, addProfile, renameProfile, deleteProfile, selectProfile, updateActive, newer, cleanName } from '../../src/game/save.js';
 import { chapterExercises, PASS_STARS, reputation } from '../../src/game/career.js';
 
 const NOW = '2026-10-17T10:00:00.000Z';
@@ -26,7 +26,8 @@ test('salvataggi: la versione 1 passa alla 2 senza perdere stelle, soldi, impost
   assert.equal(p.career.results.titration.stars, 3.5);
   assert.equal(p.career.results.goldrain.stars, 5);
   assert.deepEqual(p.notebook, v1.notebook);
-  assert.deepEqual(s.settings, { chemMode: 'simple', legend: false, fov: 80 });
+  // le impostazioni dell'audio e della scossa (G8) prendono i valori predefiniti
+  assert.deepEqual(s.settings, { chemMode: 'simple', legend: false, fov: 80, volume: DEFAULT_VOLUME, muted: false, shake: true });
   // chi aveva cominciato la Carriera non rifà il tutorial
   for (const e of chapterExercises(0)) assert.equal(p.career.results[e.id].stars, PASS_STARS);
   assert.ok(reputation(p.career) > 0);
@@ -84,6 +85,21 @@ test('salvataggi: profili (aggiungi, rinomina, scegli, elimina)', () => {
   assert.equal(s.profiles.length, 8, 'al massimo 8 profili');
   assert.equal(cleanName('x'.repeat(40), 'y').length, 24);
   assert.equal(cleanName('   ', 'Studente 1'), 'Studente 1');
+});
+
+test('salvataggi: volume, audio spento e scossa della camera (G8)', () => {
+  const s = migrate({ version: 2, settings: { volume: 0.35, muted: true, shake: false }, profiles: [] }, NOW);
+  assert.equal(s.settings.volume, 0.35);
+  assert.equal(s.settings.muted, true);
+  assert.equal(s.settings.shake, false);
+  // valori sbagliati: il volume resta tra 0 e 1, il resto torna al predefinito
+  const bad = migrate({ version: 2, settings: { volume: 7, muted: 'sì', shake: 0 }, profiles: [] }, NOW);
+  assert.equal(bad.settings.volume, 1);
+  assert.equal(bad.settings.muted, false);
+  assert.equal(bad.settings.shake, true);
+  assert.equal(migrate({ version: 2, settings: { volume: 'forte' }, profiles: [] }, NOW).settings.volume, DEFAULT_VOLUME);
+  assert.equal(migrate({ version: 2, settings: { volume: 0 }, profiles: [] }, NOW).settings.volume, 0);
+  assert.equal(SAVE_VERSION, 2, 'i campi nuovi sono facoltativi: la versione non cambia');
 });
 
 test('salvataggi: tra il file dell\'app e localStorage vince il più recente', () => {

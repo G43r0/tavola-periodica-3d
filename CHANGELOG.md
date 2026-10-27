@@ -8,6 +8,158 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
+## [0.9.0] — 2026-10-27 — Simulatore di laboratorio: il gioco completo
+
+Il simulatore non è più un prototipo: le otto fasi del [piano del gioco base](docs/superpowers/specs/2026-10-14-gioco-base-piano.md)
+(G1–G8) sono completate. Note di rilascio: [docs/release-0.9.0.md](docs/release-0.9.0.md).
+
+### Aggiunto
+- **Simulatore: luce e leggibilità** (fase G1 del [piano del gioco base](docs/superpowers/specs/2026-10-14-gioco-base-piano.md)).
+  L'aula non è più quasi bianca: pareti verde salvia, linoleum e mobili grigio ardesia, strumenti grigio chiaro, piano
+  della cappa nero. Meno luce (emisferica bassa, finestra, due plafoniere sopra i banconi al posto di una lampada forte)
+  e tone mapping neutro in tutti i preset, che conserva i colori veri delle soluzioni. Il vetro è limpido al centro e
+  più chiaro sui bordi (effetto Fresnel), con il labbro della bocca in evidenza: non sembra più plastica grigia. Ogni
+  oggetto ha un'ombra di contatto, che sbiadisce sollevandolo e mostra sopra quale punto lo si tiene.
+- **Simulatore: reagenti riconoscibili** (fase G2 del piano). Ogni reagente ha il suo contenitore, scelto dai dati:
+  barattoli di vetro, di vetro ambrato e di plastica per i solidi; bottiglie di vetro, di vetro ambrato (ciò che la luce
+  decompone) e flaconi di plastica (basi forti, HF) per le soluzioni. Il tappo ha il colore della famiglia (rosso acidi,
+  blu basi, bianco sali, giallo ossidanti, grigio metalli, verde organici, viola indicatori, azzurro acqua), spiegato da
+  una legenda sullo scaffale, e si toglie mentre si usa il reagente. Le etichette hanno la fascia della famiglia, nome,
+  formula, concentrazione, l'avvertenza e i pittogrammi GHS veri dei reagenti dello scaffale (dalle schede di
+  sicurezza, alla concentrazione del gioco); per le altre sostanze del magazzino i pericoli sono dedotti dai dati. Il
+  contenuto dei barattoli si vede, con la grana di polveri e cristalli. Lo scaffale del Laboratorio libero è in ordine
+  di famiglia. Nuove voci della modalità Spiega: «Colore del tappo» e «Pittogrammi di pericolo».
+- **Simulatore: reazioni al centro del gioco** (fase G3 del piano). Le reazioni si vedono: bolle di gas che salgono dal
+  fondo, gas colorati del loro colore, fiocchi di precipitato che scendono, cambi di colore graduali, la fiammella lilla
+  del potassio nell'acqua. La finestrella del contenitore mostra le reazioni appena avvenute con l'equazione bilanciata e
+  gli stati fisici, il ΔH° e che cosa si osserva; se non succede niente (nel Laboratorio libero e nella chimica
+  semplificata) spiega perché: calore, fiamma, catalizzatore, luce, acqua o un reagente che mancano, un metallo meno
+  attivo nella serie di attività (potenziali standard del CRC Handbook), o una reazione che chiede corrente, raggi UV o
+  vapore. Nuovo **quaderno di laboratorio** (`N`): le reazioni scoperte restano tra una partita e l'altra, divise nei 14
+  gruppi del catalogo con la percentuale, e si aprono nel laboratorio molecolare. Nuova **lampada a luce forte** sul
+  bancone per le reazioni fotochimiche (lente, come nella realtà). La temperatura accelera le reazioni lente (fattore di
+  Arrhenius). Nuovo **armadio della scuola** nel magazzino (47 reagenti d'uso divisi per famiglia): con lo scaffale si
+  fanno 383 reazioni invece di 144 (`scripts/coverage.mjs`, test della copertura per gruppo). Sodio, potassio e litio
+  sullo scaffale, sotto olio di paraffina. Più veloce camminare (3 m/s) e correre (5,2 m/s); campo visivo regolabile nel
+  menu e nella pausa; barattoli +15 % e bottiglie +10 %. Voci della modalità Spiega «Quaderno di laboratorio» e «Serie di
+  attività dei metalli».
+- **Simulatore: strumenti del laboratorio** (fase G4 del piano). **Termometro** e **pH-metro** che si immergono nel
+  recipiente e si leggono nella finestrella; **pipetta graduata** da 10 mL (tutta o un millilitro alla volta);
+  **buretta** da 50 mL su sostegno con lo zero in alto, la scala a 0,05 mL e il rubinetto a quattro posizioni (chiuso,
+  goccia a goccia, a filo, aperto); **imbuto con la carta da filtro**, che trattiene il precipitato; nuova postazione di
+  **distillazione** con il pallone sul mantello riscaldante, la testa con il termometro e il refrigerante, da cui
+  gocciolano i vapori che condensano (da acqua ed etanolo distilla prima l'etanolo, a 78 °C); **bagno di ghiaccio**;
+  **crogiolo** e **capsula di porcellana**, che reggono il Bunsen fino al rosso; la **pinza** per i recipienti che
+  scottano (sopra i 60 °C a mani nude non si prendono). Sotto la cappa l'**alimentatore** da 0 a 12 V con gli elettrodi di
+  grafite fa le **elettrolisi** del catalogo con la legge di Faraday (corrente solo con un elettrolita; se l'acqua è
+  distillata il gioco spiega che non conduce) e cinque **bombole** (O₂, H₂, CO₂, Cl₂, NH₃) fanno gorgogliare il gas nel
+  recipiente all'uscita. Con l'alimentatore e le bombole le reazioni realizzabili diventano 315 con lo scaffale (erano
+  153) e 494 con l'armadio (erano 395); il simulatore ne sa fare 1231. Il **quaderno** è un oggetto sul bancone e ha un
+  **tutorial** di 17 pagine illustrate, dai comandi alle tecniche. Con un oggetto in mano `A` e `D` lo ruotano; barattoli e
+  bottiglie presi in mano mostrano l'etichetta a chi li tiene; camminata a 3,6 m/s e corsa a 6,2 m/s (+20 %). Nuove voci
+  della modalità Spiega: strumenti del laboratorio, titolazione, filtrazione, distillazione, elettrolisi.
+- **Simulatore: libro «Come si fa»** (fase G5 del piano), sul bancone A e sulla cattedra (oppure `B`): 24 pagine di
+  strumenti, 15 di tecniche e 5 di sicurezza scritte a mano, con una vignetta SVG ciascuna; le pagine dei 118 elementi
+  con come si ottengono davvero (nuovi dati con la fonte, `src/game/data/element-production.js`), le ricette che li
+  liberano e il motivo per cui le altre reazioni non si fanno nel laboratorio; **668 ricette** generate dalle reazioni del
+  catalogo (`src/game/book.js`), con ingredienti nelle forme del magazzino, dosi calcolate dalle masse molari e
+  arrotondate come sulla bilancia e sul cilindro, la piastra al livello giusto o il Bunsen, passi illustrati, cosa si
+  osserva, pericoli e smaltimento. Ogni ricetta è eseguita dal motore dei contenitori (`node scripts/book.mjs`, test).
+  Ricerca per nome, formula o elemento, filtro «solo con lo scaffale»; **«Prepara sul banco»** nel Laboratorio libero e
+  **«Segui la ricetta»** con un riquadro dei passi che si spuntano da soli. Pagina del tutorial e voce della modalità
+  Spiega sul libro.
+- **Simulatore: i solidi non si comportano più come liquidi**: nel recipiente la superficie segue il recipiente fino
+  all'angolo di riposo (35°) e poi scivola; versati cadono in grani e su bancone e pavimento fanno un mucchietto conico
+  invece di una pozza.
+- **Simulatore: Carriera in capitoli** (fase G6 del piano). Un anno di scuola: i capitoli 0–4 completi (comandi e
+  sicurezza, misure e soluzioni, acidi e basi, precipitazioni e analisi, gas) e le esercitazioni dei cristalli e del
+  saggio alla fiamma, 27 in tutto, scritte come dati (`src/game/data/career-exercises.js`) e lette da
+  `src/game/career.js`; un test le risolve tutte con il motore dei contenitori. Relazione di laboratorio con stelle in
+  più, reputazione con l'insegnante che apre i capitoli, negozio (occhiali e camice, vetreria di scorta, termometro
+  digitale, bilancia di precisione, cappa più potente, chiave dell'armadio), pagine del libro aperte dai capitoli e
+  indicate nella consegna, mappa dell'anno scolastico. Profili (fino a 8) e salvataggi con la versione e la
+  migrazione dalla versione di prima (`src/game/save.js`); nell'app Electron anche su file. Voce «Carriera del
+  simulatore» nella modalità Spiega. Corretto: il velo rimasto dopo aver svuotato un recipiente nei rifiuti si
+  sciacqua senza multa.
+- **Simulatore: capitoli 5–9, verifiche, pagella e sfide a tempo** (fase G7 del piano). Tutti e dieci i capitoli hanno le
+  loro esercitazioni (53 in tutto, scritte come dati in `src/game/data/career-exercises-late.js`): 5 · calore e cristalli
+  (quanto scalda la neutralizzazione, dall'azzurro al bianco con l'idrato del solfato di rame); 6 · ossidoriduzioni (lo
+  zinco sposta il rame, la serie di attività, il permanganato che si scolora, l'elettrolisi dell'acqua); 7 · fiamme
+  (prove antincendio con l'acetone e con due fuochi); 8 · chimica organica (saponificazione dell'acetato di etile,
+  distillazione di etanolo e acqua, liquidi incogniti dalla densità); 9 · l'esame di fine anno in tre prove (sali
+  incogniti, concentrazione di un acido da titolare, soluzione da preparare). Ogni capitolo da 1 a 8 finisce con una
+  **verifica** con campioni incogniti estratti a caso, **senza le ricette nel libro** (restano strumenti, tecniche e
+  sicurezza), che dà un **voto da 4 a 10** (60 % di qualità = 6); i voti vanno nella **pagella** con la media, il
+  giudizio dell'insegnante e il verdetto (promosso con tutte le verifiche e media almeno 6). Quattro **richieste extra**
+  facoltative (club di chimica, professoressa di scienze, professore di fisica, gara tra le scuole), che si aprono con un
+  capitolo completato e la reputazione richiesta, e otto **sfide a tempo** che rifanno un'esercitazione superata contro
+  il cronometro (conto alla rovescia fino all'oro; medaglie di bronzo, argento e oro con un premio in soldi e un punto di
+  reputazione ciascuna, solo con qualità almeno 80 % e nessun incidente). Nuovi nel motore delle soluzioni
+  (`runSolution`): elettrolisi (`volt`), distillazione (`distill`) e gas usciti da uno strumento (`out`); nuovo reagente
+  dell'armadio, l'acetato di etile. I salvataggi conservano il voto di ogni verifica e le medaglie (campi nuovi: i
+  salvataggi di prima restano validi). Testi in italiano, inglese e «Spiegamelo come se avessi 6 anni». Corretto un
+  test del glossario che su Windows con uno spazio nel percorso non trovava i file.
+- **Simulatore: versare è facile, come in *Cooking Simulator***. Si tiene premuto il sinistro: sopra un recipiente, il
+  lavandino o un bidone la bocca va sull'apertura e il recipiente si inclina da solo finché esce un filo, e continua a
+  inclinarsi mentre si svuota; il mouse in su versa più forte, in giù più piano. Altrove (o spostando lo sguardo dal
+  bersaglio) si ferma appena prima del bordo, senza pozze per sbaglio; nella vista del bancone l'oggetto resta fermo
+  sopra il bersaglio mentre si versa. Il destro tenuto + mouse inclina soltanto (non gira più l'oggetto: lo ruotano `A`
+  e `D`), anche per gli strumenti; la rotella con il destro non ruota più a scatti.
+- **Entalpie di formazione** standard di 176 sostanze comuni (NBS, CRC Handbook, NIST: sali, ossidi, alogenuri, ioni in
+  acqua, alcuni composti organici; `src/lab/data/formation-enthalpies.js`): il ΔH° si conosce per 1045 reazioni del
+  catalogo invece di 599, nel laboratorio molecolare, nella sandbox e nel simulatore.
+- Simulatore: la neutralizzazione libera 55,8 kJ per mole d'acqua solo con una base forte; aceto e bicarbonato usano il
+  ΔH° della reazione e raffreddano un po', come nella realtà. Le soluzioni quasi incolori (acido nitrico diluito) non
+  prendono più la tinta del solido. Gli elementi biatomici si scrivono H₂, O₂, Cl₂ nelle equazioni e negli avvisi.
+- **Simulatore: rifinitura** (fase G8, l'ultima del piano: il gioco base è completo).
+  - **Audio**: 21 suoni veri, tutti da [Freesound](https://freesound.org) con licenza **CC0** (pubblico dominio),
+    controllata sulla pagina di ognuno; `node scripts/sounds.mjs` li scarica, li taglia e li prepara con ffmpeg (elenco,
+    autori e collegamenti in `src/game/audio/sound-list.js`). Si sentono il getto che versa, il rubinetto e la doccia, il
+    soffio del Bunsen e la sua accensione, il fuoco, l'estintore, le bolle delle reazioni con gas, l'acqua che bolle, il
+    gas delle bombole, l'elettrolisi, il vetro posato, urtato o rotto, il tappo che si svita, l'esplosione e lo schiocco
+    del potassio, il campanello della cattedra, l'allarme, gli scatti di manopole e interruttori, il «ping» dei passi
+    fatti. Ogni suono viene dal punto della stanza in cui nasce (Web Audio con la distanza e la direzione); gli anelli
+    sfumano quando la loro causa finisce; nella pausa e nel menu il laboratorio tace. Volume nel menu e nella pausa, `M`
+    spegne e riaccende; si salva con le impostazioni.
+  - **Aula**: armadio dei reagenti con le ante di vetro e i barattoli colorati per famiglia, armadio di sicurezza giallo
+    per gli infiammabili con il pittogramma GHS02, orologio da parete con l'ora vera, cartelli di sicurezza in stile ISO
+    7010 tradotti nelle tre lingue (occhiali e camice obbligatori, vietato mangiare e bere, uscita di emergenza, estintore,
+    doccia di emergenza), vista sul cortile della scuola dalle finestre, aloni, bruciature, graffi e strisciate sui
+    banconi, sui mobili e sul pavimento.
+  - **Effetti**: scintille, lampo di luce e **scossa della camera** nelle esplosioni (breve, più forte da vicino, si spegne
+    nelle impostazioni); scintille dalle combustioni molto calde fuori dall'acqua.
+  - **Grafica e prestazioni**: nel preset Professionale l'**occlusione ambientale** (GTAO a metà risoluzione, moltiplicata
+    sull'immagine senza cambiare il vetro tarato nella G1); in tutti i preset la **qualità si adatta** da sola se gli fps
+    restano bassi (sovracampionamento, occlusione, ombre, risoluzione), con un avviso.
+  - **Pila Daniell** in fondo al bancone del lavandino: due posti per i becher, voltmetro con i coccodrilli e ponte
+    salino che si mette e si toglie con un clic. La tensione viene dall'equazione di Nernst con i potenziali del CRC
+    Handbook e le concentrazioni vere degli ioni (Zn | ZnSO₄ 0,1 M || CuSO₄ 0,5 M | Cu: 1,12 V); senza ponte, senza
+    metallo, senza ioni o con due semielementi uguali segna zero e la finestrella dice perché. Nuova postazione della
+    vista del bancone.
+  - **Contatore del gas** del Bunsen: conta i litri di metano bruciati (circa 3,5 L al minuto nel tempo del calore), un
+    clic lo azzera.
+  - Due **richieste extra** nuove, le misure rimandate dalla G7: «La pila di Daniell» (professore di fisica) e «Quanto
+    scalda un litro di metano?» (club di chimica, circa 12 kJ/L misurati contro i 36 delle tabelle: la relazione chiede
+    perché). Sono facoltative, quindi i capitoli già superati restano superati.
+  - Libro «Come si fa»: pagine «Pila Daniell: voltmetro e ponte salino» e «Contatore del gas» con le vignette (26 pagine
+    di strumenti). Modalità Spiega: voci «Pila (cella galvanica)» e «Suoni e grafica del simulatore». Più avvisi del gioco
+    in «Spiegamelo come se avessi 6 anni». La nota del menu non dice più che il gioco è in sviluppo.
+  - Test (`tests/game/g8.test.mjs`): Nernst e lettura della pila, contatore e calore del metano con il motore, livelli
+    dell'audio, elenco dei suoni, qualità adattiva, testi; impostazioni nuove nei salvataggi (volume, muto, scossa:
+    campi facoltativi, la versione resta la 2).
+
+### Corretto
+- Simulatore: il calore delle reazioni scalda o raffredda anche il recipiente (prima solo il contenuto: il carbonato di
+  calcio che si decompone nel crogiolo scendeva a 1 K, alcune reazioni salivano a migliaia di gradi); il magazzino del
+  Laboratorio libero mostra i metalli in pezzi (zinco, ferro, rame…), che per un errore non comparivano; il crogiolo nella fiamma del Bunsen arriva
+  a circa 900 °C anche nel calcolo della copertura (317 reazioni con lo scaffale, 504 con l'armadio, 1182 con il
+  magazzino).
+- Simulatore: il poster della tavola periodica mostrava «undefined» al posto dei numeri atomici.
+- Simulatore: la modalità Spiega elencava i vecchi comandi (versare con il tasto destro, lanciare con `Q`).
+- Simulatore: la soluzione di HCl dello scaffale si chiamava «Cloruro di idrogeno» (il gas) invece di «Acido cloridrico»,
+  sull'etichetta e, dopo un travaso, nella finestrella del contenitore.
+- Simulatore: un pezzo di metallo sul fondo (lo zinco nell'acido) era descritto come «precipitato».
+
 ## [0.8.0] — 2026-10-14 — Sandbox, lingue, preset grafici e simulatore di laboratorio
 
 ### Aggiunto
@@ -118,108 +270,6 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 - Dati: `src/lab/data/reactions-catalogo.js` (generato dal catalogo); `reactions.js` unisce le due liste.
 
 ### Modificato
-- **Simulatore: luce e leggibilità** (fase G1 del [piano del gioco base](docs/superpowers/specs/2026-10-14-gioco-base-piano.md)).
-  L'aula non è più quasi bianca: pareti verde salvia, linoleum e mobili grigio ardesia, strumenti grigio chiaro, piano
-  della cappa nero. Meno luce (emisferica bassa, finestra, due plafoniere sopra i banconi al posto di una lampada forte)
-  e tone mapping neutro in tutti i preset, che conserva i colori veri delle soluzioni. Il vetro è limpido al centro e
-  più chiaro sui bordi (effetto Fresnel), con il labbro della bocca in evidenza: non sembra più plastica grigia. Ogni
-  oggetto ha un'ombra di contatto, che sbiadisce sollevandolo e mostra sopra quale punto lo si tiene.
-- **Simulatore: reagenti riconoscibili** (fase G2 del piano). Ogni reagente ha il suo contenitore, scelto dai dati:
-  barattoli di vetro, di vetro ambrato e di plastica per i solidi; bottiglie di vetro, di vetro ambrato (ciò che la luce
-  decompone) e flaconi di plastica (basi forti, HF) per le soluzioni. Il tappo ha il colore della famiglia (rosso acidi,
-  blu basi, bianco sali, giallo ossidanti, grigio metalli, verde organici, viola indicatori, azzurro acqua), spiegato da
-  una legenda sullo scaffale, e si toglie mentre si usa il reagente. Le etichette hanno la fascia della famiglia, nome,
-  formula, concentrazione, l'avvertenza e i pittogrammi GHS veri dei reagenti dello scaffale (dalle schede di
-  sicurezza, alla concentrazione del gioco); per le altre sostanze del magazzino i pericoli sono dedotti dai dati. Il
-  contenuto dei barattoli si vede, con la grana di polveri e cristalli. Lo scaffale del Laboratorio libero è in ordine
-  di famiglia. Nuove voci della modalità Spiega: «Colore del tappo» e «Pittogrammi di pericolo».
-- **Simulatore: reazioni al centro del gioco** (fase G3 del piano). Le reazioni si vedono: bolle di gas che salgono dal
-  fondo, gas colorati del loro colore, fiocchi di precipitato che scendono, cambi di colore graduali, la fiammella lilla
-  del potassio nell'acqua. La finestrella del contenitore mostra le reazioni appena avvenute con l'equazione bilanciata e
-  gli stati fisici, il ΔH° e che cosa si osserva; se non succede niente (nel Laboratorio libero e nella chimica
-  semplificata) spiega perché: calore, fiamma, catalizzatore, luce, acqua o un reagente che mancano, un metallo meno
-  attivo nella serie di attività (potenziali standard del CRC Handbook), o una reazione che chiede corrente, raggi UV o
-  vapore. Nuovo **quaderno di laboratorio** (`N`): le reazioni scoperte restano tra una partita e l'altra, divise nei 14
-  gruppi del catalogo con la percentuale, e si aprono nel laboratorio molecolare. Nuova **lampada a luce forte** sul
-  bancone per le reazioni fotochimiche (lente, come nella realtà). La temperatura accelera le reazioni lente (fattore di
-  Arrhenius). Nuovo **armadio della scuola** nel magazzino (47 reagenti d'uso divisi per famiglia): con lo scaffale si
-  fanno 383 reazioni invece di 144 (`scripts/coverage.mjs`, test della copertura per gruppo). Sodio, potassio e litio
-  sullo scaffale, sotto olio di paraffina. Più veloce camminare (3 m/s) e correre (5,2 m/s); campo visivo regolabile nel
-  menu e nella pausa; barattoli +15 % e bottiglie +10 %. Voci della modalità Spiega «Quaderno di laboratorio» e «Serie di
-  attività dei metalli».
-- **Simulatore: libro «Come si fa»** (fase G5 del piano), sul bancone A e sulla cattedra (oppure `B`): 24 pagine di
-  strumenti, 15 di tecniche e 5 di sicurezza scritte a mano, con una vignetta SVG ciascuna; le pagine dei 118 elementi
-  con come si ottengono davvero (nuovi dati con la fonte, `src/game/data/element-production.js`), le ricette che li
-  liberano e il motivo per cui le altre reazioni non si fanno nel laboratorio; **668 ricette** generate dalle reazioni del
-  catalogo (`src/game/book.js`), con ingredienti nelle forme del magazzino, dosi calcolate dalle masse molari e
-  arrotondate come sulla bilancia e sul cilindro, la piastra al livello giusto o il Bunsen, passi illustrati, cosa si
-  osserva, pericoli e smaltimento. Ogni ricetta è eseguita dal motore dei contenitori (`node scripts/book.mjs`, test).
-  Ricerca per nome, formula o elemento, filtro «solo con lo scaffale»; **«Prepara sul banco»** nel Laboratorio libero e
-  **«Segui la ricetta»** con un riquadro dei passi che si spuntano da soli. Pagina del tutorial e voce della modalità
-  Spiega sul libro.
-- **Simulatore: i solidi non si comportano più come liquidi**: nel recipiente la superficie segue il recipiente fino
-  all'angolo di riposo (35°) e poi scivola; versati cadono in grani e su bancone e pavimento fanno un mucchietto conico
-  invece di una pozza.
-- **Simulatore: Carriera in capitoli** (fase G6 del piano). Un anno di scuola: i capitoli 0–4 completi (comandi e
-  sicurezza, misure e soluzioni, acidi e basi, precipitazioni e analisi, gas) e le esercitazioni dei cristalli e del
-  saggio alla fiamma, 27 in tutto, scritte come dati (`src/game/data/career-exercises.js`) e lette da
-  `src/game/career.js`; un test le risolve tutte con il motore dei contenitori. Relazione di laboratorio con stelle in
-  più, reputazione con l'insegnante che apre i capitoli, negozio (occhiali e camice, vetreria di scorta, termometro
-  digitale, bilancia di precisione, cappa più potente, chiave dell'armadio), pagine del libro aperte dai capitoli e
-  indicate nella consegna, mappa dell'anno scolastico. Profili (fino a 8) e salvataggi con la versione e la
-  migrazione dalla versione di prima (`src/game/save.js`); nell'app Electron anche su file. Voce «Carriera del
-  simulatore» nella modalità Spiega. Corretto: il velo rimasto dopo aver svuotato un recipiente nei rifiuti si
-  sciacqua senza multa.
-- **Simulatore: capitoli 5–9, verifiche, pagella e sfide a tempo** (fase G7 del piano). Tutti e dieci i capitoli hanno le
-  loro esercitazioni (53 in tutto, scritte come dati in `src/game/data/career-exercises-late.js`): 5 · calore e cristalli
-  (quanto scalda la neutralizzazione, dall'azzurro al bianco con l'idrato del solfato di rame); 6 · ossidoriduzioni (lo
-  zinco sposta il rame, la serie di attività, il permanganato che si scolora, l'elettrolisi dell'acqua); 7 · fiamme
-  (prove antincendio con l'acetone e con due fuochi); 8 · chimica organica (saponificazione dell'acetato di etile,
-  distillazione di etanolo e acqua, liquidi incogniti dalla densità); 9 · l'esame di fine anno in tre prove (sali
-  incogniti, concentrazione di un acido da titolare, soluzione da preparare). Ogni capitolo da 1 a 8 finisce con una
-  **verifica** con campioni incogniti estratti a caso, **senza le ricette nel libro** (restano strumenti, tecniche e
-  sicurezza), che dà un **voto da 4 a 10** (60 % di qualità = 6); i voti vanno nella **pagella** con la media, il
-  giudizio dell'insegnante e il verdetto (promosso con tutte le verifiche e media almeno 6). Quattro **richieste extra**
-  facoltative (club di chimica, professoressa di scienze, professore di fisica, gara tra le scuole), che si aprono con un
-  capitolo completato e la reputazione richiesta, e otto **sfide a tempo** che rifanno un'esercitazione superata contro
-  il cronometro (conto alla rovescia fino all'oro; medaglie di bronzo, argento e oro con un premio in soldi e un punto di
-  reputazione ciascuna, solo con qualità almeno 80 % e nessun incidente). Nuovi nel motore delle soluzioni
-  (`runSolution`): elettrolisi (`volt`), distillazione (`distill`) e gas usciti da uno strumento (`out`); nuovo reagente
-  dell'armadio, l'acetato di etile. I salvataggi conservano il voto di ogni verifica e le medaglie (campi nuovi: i
-  salvataggi di prima restano validi). Testi in italiano, inglese e «Spiegamelo come se avessi 6 anni». Corretto un
-  test del glossario che su Windows con uno spazio nel percorso non trovava i file.
-- **Simulatore: versare è facile, come in *Cooking Simulator***. Si tiene premuto il sinistro: sopra un recipiente, il
-  lavandino o un bidone la bocca va sull'apertura e il recipiente si inclina da solo finché esce un filo, e continua a
-  inclinarsi mentre si svuota; il mouse in su versa più forte, in giù più piano. Altrove (o spostando lo sguardo dal
-  bersaglio) si ferma appena prima del bordo, senza pozze per sbaglio; nella vista del bancone l'oggetto resta fermo
-  sopra il bersaglio mentre si versa. Il destro tenuto + mouse inclina soltanto (non gira più l'oggetto: lo ruotano `A`
-  e `D`), anche per gli strumenti; la rotella con il destro non ruota più a scatti.
-- **Corretto**: il calore delle reazioni scalda o raffredda anche il recipiente (prima solo il contenuto: il carbonato di
-  calcio che si decompone nel crogiolo scendeva a 1 K, alcune reazioni salivano a migliaia di gradi); il magazzino del
-  Laboratorio libero mostra i metalli in pezzi (zinco, ferro, rame…), che per un errore non comparivano; il crogiolo nella fiamma del Bunsen arriva
-  a circa 900 °C anche nel calcolo della copertura (317 reazioni con lo scaffale, 504 con l'armadio, 1182 con il
-  magazzino).
-- **Simulatore: strumenti del laboratorio** (fase G4 del piano). **Termometro** e **pH-metro** che si immergono nel
-  recipiente e si leggono nella finestrella; **pipetta graduata** da 10 mL (tutta o un millilitro alla volta);
-  **buretta** da 50 mL su sostegno con lo zero in alto, la scala a 0,05 mL e il rubinetto a quattro posizioni (chiuso,
-  goccia a goccia, a filo, aperto); **imbuto con la carta da filtro**, che trattiene il precipitato; nuova postazione di
-  **distillazione** con il pallone sul mantello riscaldante, la testa con il termometro e il refrigerante, da cui
-  gocciolano i vapori che condensano (da acqua ed etanolo distilla prima l'etanolo, a 78 °C); **bagno di ghiaccio**;
-  **crogiolo** e **capsula di porcellana**, che reggono il Bunsen fino al rosso; la **pinza** per i recipienti che
-  scottano (sopra i 60 °C a mani nude non si prendono). Sotto la cappa l'**alimentatore** da 0 a 12 V con gli elettrodi di
-  grafite fa le **elettrolisi** del catalogo con la legge di Faraday (corrente solo con un elettrolita; se l'acqua è
-  distillata il gioco spiega che non conduce) e cinque **bombole** (O₂, H₂, CO₂, Cl₂, NH₃) fanno gorgogliare il gas nel
-  recipiente all'uscita. Con l'alimentatore e le bombole le reazioni realizzabili diventano 315 con lo scaffale (erano
-  153) e 494 con l'armadio (erano 395); il simulatore ne sa fare 1231. Il **quaderno** è un oggetto sul bancone e ha un
-  **tutorial** di 17 pagine illustrate, dai comandi alle tecniche. Con un oggetto in mano `A` e `D` lo ruotano; barattoli e
-  bottiglie presi in mano mostrano l'etichetta a chi li tiene; camminata a 3,6 m/s e corsa a 6,2 m/s (+20 %). Nuove voci
-  della modalità Spiega: strumenti del laboratorio, titolazione, filtrazione, distillazione, elettrolisi.
-- **Entalpie di formazione** standard di 176 sostanze comuni (NBS, CRC Handbook, NIST: sali, ossidi, alogenuri, ioni in
-  acqua, alcuni composti organici; `src/lab/data/formation-enthalpies.js`): il ΔH° si conosce per 1045 reazioni del
-  catalogo invece di 599, nel laboratorio molecolare, nella sandbox e nel simulatore.
-- Simulatore: la neutralizzazione libera 55,8 kJ per mole d'acqua solo con una base forte; aceto e bicarbonato usano il
-  ΔH° della reazione e raffreddano un po', come nella realtà. Le soluzioni quasi incolori (acido nitrico diluito) non
-  prendono più la tinta del solido. Gli elementi biatomici si scrivono H₂, O₂, Cl₂ nelle equazioni e negli avvisi.
 - La Content Security Policy permette la compilazione di WebAssembly (`'wasm-unsafe-eval'`, non `eval` di JavaScript):
   serve al motore fisico Rapier del simulatore.
 - «Simula reazione» non esegue le reazioni che richiedono altro (catalizzatori, soluzione acquosa, enzimi) né gli
@@ -229,13 +279,6 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
   pulsante è disattivato e la scheda lo spiega.
 - Test: bilanciamento e conservazione della carica per tutte le 1349 reazioni; il modello di «sintesi per addizione» si
   prova con le sole reazioni scritte a mano.
-
-### Corretto
-- Simulatore: il poster della tavola periodica mostrava «undefined» al posto dei numeri atomici.
-- Simulatore: la modalità Spiega elencava i vecchi comandi (versare con il tasto destro, lanciare con `Q`).
-- Simulatore: la soluzione di HCl dello scaffale si chiamava «Cloruro di idrogeno» (il gas) invece di «Acido cloridrico»,
-  sull'etichetta e, dopo un travaso, nella finestrella del contenitore.
-- Simulatore: un pezzo di metallo sul fondo (lo zinco nell'acido) era descritto come «precipitato».
 
 ## [0.7.0] — 2026-10-11 — Catalogo delle reazioni
 

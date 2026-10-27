@@ -207,6 +207,14 @@ const PAGES = {
   ghs: () => ['GHS01', 'GHS02', 'GHS03', 'GHS04', 'GHS05', 'GHS06', 'GHS07', 'GHS08', 'GHS09'].map((id, k) => ghs(id, 40 + (k % 5) * 60, 50 + Math.floor(k / 5) * 72, 50)).join(''),
   incompatible: () => bench() + beaker(50, 160, 50, 60, { level: 0.6, color: '#f6f9d0' }) + text(160, 100, '+', { 'font-size': 30 }) + beaker(210, 160, 50, 60, { level: 0.6, color: '#ffd9a0' })
     + path('M110 40 L210 140 M210 40 L110 140', { stroke: '#c8161d', 'stroke-width': 6 }),
+  // pila Daniell: zinco nel solfato di zinco, rame nel solfato di rame, il ponte salino e il voltmetro (fase G8)
+  cell: () => bench() + beaker(50, 160, 70, 80, { level: 0.6, color: '#e8eef2' }) + beaker(200, 160, 70, 80, { level: 0.6, color: '#4f86e0' })
+    + rect(78, 70, 10, 80, { fill: '#9aa0a8' }) + rect(228, 70, 10, 80, { fill: '#c8743a' }) + text(83, 64, 'Zn', { 'font-size': 11 }) + text(233, 64, 'Cu', { 'font-size': 11 })
+    + path('M104 130 V96 H216 V130', { stroke: '#e8e6df', 'stroke-width': 9 }) + path('M104 130 V96 H216 V130', { 'stroke-width': 1.4 })
+    + rect(120, 22, 80, 34, { fill: '#d9a21b' }) + display(128, 27, 64, '1.10 V') + path('M120 40 H83 V70', { stroke: INK, 'stroke-width': 2 }) + path('M200 40 H233 V70', { stroke: '#c8161d', 'stroke-width': 2 }),
+  // contatore del gas: i litri di metano bruciati dal Bunsen mentre l'acqua si scalda
+  gasmeter: () => bench() + bunsenStand(150, 160) + beaker(126, 110, 48, 56, { level: 0.6 }) + path('M150 52 V112', { stroke: '#c8161d', 'stroke-width': 3 })
+    + rect(230, 120, 60, 40, { fill: '#8a9099' }) + display(234, 126, 52, '1.47 L') + path('M230 156 H160', { stroke: '#c8161d', 'stroke-width': 4 }),
   incidents: () => bench() + path('M60 160 V40 H120', { 'stroke-width': 4 }) + circle(120, 52, 14, { fill: '#2f9a4c' }) + [0, 1, 2, 3].map((k) => path(`M${112 + k * 6} 68 l-6 ${30 + k * 4}`, { stroke: WATER, 'stroke-width': 2.4 })).join('')
     + rect(200, 70, 40, 90, { rx: 12, fill: '#c8161d' }) + text(220, 60, 'CO₂', { 'font-size': 12 }),
 };

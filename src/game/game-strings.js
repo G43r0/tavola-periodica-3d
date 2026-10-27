@@ -3,6 +3,7 @@
 
 import { G7_EXERCISE_STRINGS } from './data/strings-g7-exercises.js';
 import { G7_UI_STRINGS } from './data/strings-g7-ui.js';
+import { G8_STRINGS } from './data/strings-g8.js';
 
 const plural = (n, one, many) => (Number(n) === 1 ? one : many);
 
@@ -2426,3 +2427,5 @@ export const GAME_STRINGS = {
 
 // G7: esercitazioni dei capitoli 5–9, verifiche, pagella, richieste extra e sfide (gli stessi nomi vincono su quelli di prima)
 for (const lang of Object.keys(GAME_STRINGS)) Object.assign(GAME_STRINGS[lang], G7_UI_STRINGS[lang], G7_EXERCISE_STRINGS[lang]);
+// G8: cartelli, audio, scossa della camera, qualità adattiva
+for (const lang of Object.keys(GAME_STRINGS)) Object.assign(GAME_STRINGS[lang], G8_STRINGS[lang]);

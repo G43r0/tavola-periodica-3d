@@ -1,10 +1,12 @@
 // L'aula di chimica della scuola: pavimento, pareti, finestre, banconi, lavandino, cappa aspirante, cattedra con il
 // vassoio delle consegne, lavagna, contenitori dei rifiuti, doccia di emergenza, magazzino, poster della tavola
 // periodica. Costruisce le mesh, i collisori statici e gli «elementi fissi» con cui si interagisce (tasto E).
+// Arredi e dettagli senza interazione (armadi, orologio, cartelli, vista dalle finestre, usura) in room-details.js.
 import * as THREE from 'three';
 import { seg } from '../gfx/preset.js';
 import { CATEGORY } from '../data/categories.js';
 import { buildApparatus } from './apparatus-room.js';
+import { buildDetails, outdoorViews } from './room-details.js';
 
 export const ROOM = { W: 10, D: 8, H: 3.2 };
 export const BENCH_Y = 0.92;
@@ -27,6 +29,8 @@ export const LAYOUT = {
   filter: { x: -4.5, z: -1.25 }, // bancone del lavandino: sostegno con l'imbuto e la carta da filtro
   icebath: { x: -4.55, z: 0.36 },
   still: { x: -4.55, z: 1.2 }, // distillazione: mantello e pallone, il refrigerante scende verso sud
+  cell: { x: -4.6, z: 2.15 }, // pila Daniell: i due posti dei semielementi (a nord e a sud), voltmetro e ponte salino
+  gasMeter: { x: 1.66, z: -0.68 }, // contatore del gas del Bunsen, all'estremità del bancone A
   power: { x: 4.84, z: -2.3 }, // cappa: alimentatore, gli elettrodi pendono 36 cm verso il giocatore
   gasRack: { x: 4.9, z0: -1.14, step: -0.095, outX: 4.5, outZ: -1.33 }, // cappa: bombole (da sud a nord) e uscita del gas
   sink: { x: -4.62, z: -0.3, w: 0.42, d: 0.5, depth: 0.24 },
@@ -55,6 +59,7 @@ export const STATIONS = [
   { key: 'shelf', cam: [0, 1.9, 0.62], look: [0, 1.05, 1.62], stand: [0, 0.75] },
   { key: 'sink', cam: [-3.55, 1.72, -0.3], look: [-4.6, BENCH_Y - 0.05, -0.3], stand: [-3.7, -0.3] },
   { key: 'still', cam: [-3.6, 1.7, 1.45], look: [-4.6, BENCH_Y + 0.05, 1.45], stand: [-3.7, 1.45] },
+  { key: 'cell', cam: [-3.7, 1.62, 2.15], look: [-4.65, BENCH_Y + 0.06, 2.15], stand: [-3.8, 2.15] },
   { key: 'hood', cam: [3.45, 1.78, -1.8], look: [4.6, BENCH_Y + 0.05, -1.8], stand: [3.6, -1.8] },
   { key: 'desk', cam: [0.5, 1.6, -1.9], look: [0.5, DESK_Y, -2.75], stand: [0.5, -2.0] },
   { key: 'bins', cam: [-3.3, 1.75, 2.55], look: [-3.3, 0.55, 3.65], stand: [-3.3, 2.6] },
@@ -122,6 +127,17 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
       for (let x = 0; x < w; x += 64) g.strokeRect(x + 3, 6, 58, h - 12);
       g.fillStyle = '#c3c8ce';
       for (let x = 0; x < w; x += 64) g.fillRect(x + 28, 14, 8, 3);
+      // usura: graffi chiari vicino alle maniglie e in basso, dove si urta con i piedi
+      g.strokeStyle = 'rgba(200,206,212,0.18)';
+      g.lineWidth = 1;
+      for (let k = 0; k < 40; k++) {
+        const x = Math.random() * w;
+        const y = k % 3 ? h - 10 - Math.random() * 30 : 18 + Math.random() * 20;
+        g.beginPath();
+        g.moveTo(x, y);
+        g.lineTo(x + 4 + Math.random() * 14, y + (Math.random() - 0.5) * 4);
+        g.stroke();
+      }
     }, [1, 1]), roughness: 0.85 }),
     steel: std({ color: 0xc4c9cf, metalness: 0.85, roughness: 0.3, envMapIntensity: 1 }),
     darkSteel: std({ color: 0x5a6068, metalness: 0.7, roughness: 0.4, envMapIntensity: 1 }),
@@ -131,7 +147,6 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     // strumenti (bilancia, piastra): grigio chiaro, così sul bancone nero si vedono ma non abbagliano
     instrument: std({ color: 0xaeb4bb, roughness: 0.45 }),
     glassPane: new THREE.MeshStandardMaterial({ color: 0xcfe6ff, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.18, depthWrite: false, envMap }),
-    sky: new THREE.MeshBasicMaterial({ color: 0xa9c6e2 }),
     light: new THREE.MeshBasicMaterial({ color: 0xf2f5fa }),
     red: std({ color: 0xc8161d, roughness: 0.4 }),
     green: std({ color: 0x2f9a4c, roughness: 0.5 }),
@@ -174,9 +189,11 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   physics.box(-W / 2 - 0.1, H / 2, 0, 0.1, H / 2, D / 2);
   physics.box(W / 2 + 0.1, H / 2, 0, 0.1, H / 2, D / 2);
 
-  // finestre (parete sud) e porta
-  for (const x of [-1.6, 0.2, 2.0]) {
-    box(1.4, 1.3, 0.02, M.sky, x, 1.75, D / 2 - 0.005, { cast: false, receive: false });
+  // finestre (parete sud), con la vista sul cortile, e porta
+  const windows = [-1.6, 0.2, 2.0];
+  const views = outdoorViews(windows, 1.4);
+  for (const [i, x] of windows.entries()) {
+    box(1.4, 1.3, 0.02, views[i], x, 1.75, D / 2 - 0.005, { cast: false, receive: false });
     box(1.5, 0.06, 0.08, M.white, x, 1.08, D / 2 - 0.04, { cast: false });
     box(1.5, 0.06, 0.08, M.white, x, 2.42, D / 2 - 0.04, { cast: false });
     box(0.05, 1.3, 0.06, M.white, x, 1.75, D / 2 - 0.03, { cast: false });
@@ -622,16 +639,7 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   shower.hit.push(pull);
   mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.55, 4), M.darkSteel, sh.x + 0.05, 2.0, sh.z);
   physics.cylinder(sh.x + 0.35, 1.2, sh.z, 1.2, 0.03);
-  shower.signMat = new THREE.MeshBasicMaterial({ map: canvasTexture(128, 128, (g) => {
-    g.fillStyle = '#1a8f3c';
-    g.fillRect(0, 0, 128, 128);
-    g.fillStyle = '#fff';
-    g.font = '700 70px sans-serif';
-    g.textAlign = 'center';
-    g.fillText('🚿', 64, 92);
-  }) });
-  const sign = mesh(new THREE.PlaneGeometry(0.3, 0.3), shower.signMat, W / 2 - 0.01, 2.5, sh.z, { cast: false });
-  sign.rotation.y = -Math.PI / 2;
+  // il cartello della doccia è con gli altri in room-details.js
   fixtures.push(shower);
   // supporto dell'estintore
   const ex = LAYOUT.extinguisher;
@@ -672,6 +680,8 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
 
   // ------------------------------------------------------------ apparecchi della fase G4 (apparatus-room.js)
   const apparatus = buildApparatus({ group, scene, physics, fixtures, mesh, box, solid, std, M, BENCH_Y, LAYOUT, canvasTexture });
+  // armadi, orologio, cartelli, macchie (fase G8)
+  const details = buildDetails({ group, physics, box, solid, std, M, ROOM, LAYOUT, BENCH_Y });
 
   const zones = { hood: hood.zone, tray: tray.zone, basin: sinkFix.basin, bins, balancePan: balance.pan, plate: hotplate.plate, gauze: bunsen.gauze, flame: bunsen.flame };
 
@@ -694,9 +704,10 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     hood.lightMat.color.set(hood.on ? 0xf4f8ff : 0x3a3f46);
     hood.led.color.set(hood.on ? 0x30ff60 : 0x3a1010);
     apparatus.update(dt);
+    details.update(dt);
   };
 
-  return { group, fixtures, zones, update, setBoard, setBalance, setLegend, setNotebookCover, setBookCover, bins, props, apparatus, lights: { sun, hemi, ceiling, ceilingB } };
+  return { group, fixtures, zones, update, setBoard, setBalance, setLegend, setNotebookCover, setBookCover, setSigns: details.setSigns, bins, props, apparatus, lights: { sun, hemi, ceiling, ceilingB } };
 }
 
 function fitLine(g, text, x, y, w) {

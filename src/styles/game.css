@@ -846,6 +846,19 @@
   text-align: right;
   color: var(--text-2);
 }
+.gm-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+  cursor: pointer;
+}
+.gm-check input {
+  accent-color: var(--accent);
+}
 .gm-menu__foot,
 .gm-actions {
   display: flex;

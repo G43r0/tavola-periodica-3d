@@ -1,6 +1,6 @@
 # Gioco base — piano
 
-Data: 2026-10-14 · Stato: **in corso — da G1 a G7 completate, resta la G8** · Parte dal prototipo del simulatore
+Data: 2026-10-14 · Stato: **completato — da G1 a G8** (release 0.9.0) · Parte dal prototipo del simulatore
 ([design](2026-10-13-simulatore-laboratorio-design.md), branch `ccr-9fd85180-nfjaik`, fase 9)
 
 ## Da dove partiamo
@@ -219,7 +219,7 @@ Ogni fase è giocabile da sola, con test e screenshot nei tre preset prima di pa
 | **G5** ✅ | Libro «Come si fa»: lettore e riquadro, strumenti, tecniche, sicurezza, pagine dei 118 elementi, ricette generate con le vignette SVG, «Prepara sul banco», «Segui la ricetta», test che esegue ogni ricetta | G4 |
 | **G6** ✅ | Carriera: capitoli 0–4 (~25 esercitazioni) scritti come dati, pagine del libro sbloccate, relazione, negozio, reputazione, salvataggi versionati | G5 |
 | **G7** ✅ | Carriera: capitoli 5–9, verifiche, pagella, sfide a tempo, richieste extra | G6 |
-| **G8** | Rifinitura: dettagli della stanza, effetti, audio (se lo vogliamo), prestazioni, inglese e «Spiegamelo come se avessi 6 anni», modalità Spiega, README e CHANGELOG | G7 |
+| **G8** ✅ | Rifinitura: dettagli della stanza, effetti, audio (se lo vogliamo), prestazioni, inglese e «Spiegamelo come se avessi 6 anni», modalità Spiega, README e CHANGELOG | G7 |
 
 ### G1 — fatto
 
@@ -453,6 +453,53 @@ Verificato con gli screenshot della stessa inquadratura (prima persona, bancone,
   trovava i file con uno spazio nel percorso.
 - Rimandato alla G8: audio, dettagli della stanza, la pila Daniell e le misure di calore delle combustioni (servono nuovi
   dati nel motore).
+
+### G8 — fatto
+
+- **Audio** (domanda 3 di «Da decidere»: l'utente ha scelto suoni veri, senza copyright, invece di quelli generati nel
+  codice): 21 registrazioni da Freesound, tutte con licenza CC0 controllata sulla pagina di ognuna
+  (`src/game/audio/sound-list.js`: autore, titolo, collegamento, tratto usato, volume). `scripts/sounds.mjs` le scarica
+  (anteprime in alta qualità, MP3 128 kbit/s), le taglia, rende senza scatti quelle ad anello (gli ultimi 0,4 s sfumati sui
+  primi), le porta a −1 dB di picco e le salva in Ogg Vorbis mono (936 kB in tutto). `audio.js` (Web Audio): colpi singoli
+  con un massimo di 24 voci e anelli che seguono la loro causa a ogni fotogramma, con il volume che sale e scende in 0,1 s;
+  ogni suono ha il suo panner con l'attenuazione della distanza, l'ascoltatore è la camera. Il contesto parte al primo
+  gesto e si sospende nel menu e a simulatore chiuso; nella pausa e nelle finestre gli anelli tacciono. Volume (0–1) e
+  muto nel menu, nella pausa e con `M`, salvati (campi facoltativi: la versione dei salvataggi resta la 2).
+- **Dettagli della stanza** (`src/game/room-details.js`): armadio dei reagenti con le ante di vetro (barattoli istanziati,
+  tappi dei colori delle famiglie), armadio di sicurezza giallo con il GHS02, orologio con l'ora vera, otto cartelli in
+  stile ISO 7010 disegnati su Canvas con il testo nella lingua dell'interfaccia (il cartello della doccia non è più
+  un'emoji), un panorama del cortile diviso tra le tre finestre, decalcomanie di aloni, bruciature, macchie, graffi e
+  strisciate; graffi sul legno dei mobili.
+- **Effetti**: scintille (punti additivi con la gravità), lampo di luce e scossa della camera nelle esplosioni, con la
+  forza che cala con la distanza (`shakeAt`, disattivabile); scintille dalle combustioni molto calde fuori dall'acqua.
+  Fumi colorati, vapore, fiocchi di precipitato e fiamme colorate c'erano già dalla G3.
+- **Occlusione ambientale** nel Professionale (`src/game/game-render.js`): GTAO di three.js a metà risoluzione, che
+  ignora i trasparenti (vetro, liquidi, fumi, decalcomanie). Non passa dall'EffectComposer: in un'immagine intermedia
+  lineare i trasparenti si fondono in un altro modo e il vetro sbiancava. La scena si disegna direttamente come prima e
+  l'occlusione si moltiplica sopra (fusione moltiplicativa, alfa della tela intatto: lasciandolo scrivere, la pagina
+  traspariva e l'immagine sbiadiva).
+- **Prestazioni** (`src/game/quality.js`, puro e testato): media degli fps su 2 s di gioco, dopo 3 s di riscaldamento;
+  due misure di fila sotto la soglia del preset fanno un passo (Professionale: sovracampionamento, occlusione, ombre,
+  risoluzione 1; Medio: risoluzione 1 e 0,75; Semplice: 0,75), con un avviso.
+- **Pila Daniell** (rimandata dalla G7) in fondo al bancone del lavandino, con la sua postazione della vista del bancone:
+  due cerchi per i becher, voltmetro, coccodrilli con le lamine e ponte salino che si mette e si toglie. `cellReading`
+  (puro): equazione di Nernst a 25 °C con i potenziali del CRC Handbook già in `reagents.js` e le cariche degli ioni;
+  `Apparatus.halfCell` trova nel becher il metallo solido e la concentrazione dei suoi ioni dai sali sciolti
+  (`ctx.counts`). Il voltmetro non fa passare corrente, quindi il motore dei contenitori non cambia. Zn | ZnSO₄ 0,1 M ||
+  CuSO₄ 0,5 M | Cu dà 1,12 V; senza ponte, metallo o ioni, o con due semielementi uguali, zero con il motivo.
+- **Calore delle combustioni** (rimandato dalla G7): invece di un fornelletto nuovo, un **contatore del gas** sul tubo
+  del Bunsen. Il Bunsen brucia 0,0024 mol/s di metano (3,5 L/min, circa 2 kW) nel tempo del calore (accelerato ×4 come
+  il resto, `HEAT_SPEED`), così i conti con l'acqua tornano: sulla reticella arrivano 850 W, e con 100 mL d'acqua nel
+  becher da 250 mL lo studente misura 11,4–12,5 kJ/L contro i 36 kJ/L delle tabelle (test con il motore).
+- Le due misure sono **richieste extra** (`xDaniell` del professore di fisica, `xGasHeat` del club di chimica) e non
+  esercitazioni dei capitoli: aggiunte ai capitoli 6 e 7 avrebbero tolto il «superato» a chi li aveva già finiti.
+- **Libro**: pagine «Pila Daniell» e «Contatore del gas» con le vignette (26 pagine di strumenti). **Modalità Spiega**:
+  «Pila (cella galvanica)» e «Suoni e grafica del simulatore». **Lingue**: l'inglese era già completo; nuovi testi della
+  G8 nelle tre lingue e più avvisi del gioco in «Spiegamelo come se avessi 6 anni» (gli altri ricadono sull'italiano,
+  com'è previsto). La nota del menu non dice più «in sviluppo».
+- **Test**: `tests/game/g8.test.mjs` (pila, contatore e metano, audio, suoni, qualità adattiva, testi) e i salvataggi;
+  225 test verdi. Verificato nel browser: armadi, orologio, cartelli, finestre, esplosione, occlusione (confronto
+  numerico dei pixel con e senza), pila a 1,12 V, contatore.
 
 ## Verifiche
 

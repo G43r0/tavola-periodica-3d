@@ -190,10 +190,14 @@ void main() {
   gl_FragColor = vec4(vColor.rgb, vColor.a * (1.0 - r) * (1.0 - r));
 }`;
 
-/** Sbuffi morbidi che salgono, si allargano e svaniscono (vapore, fumo, gas, fiamme con la miscelazione additiva). */
+/**
+ * Sbuffi morbidi che salgono, si allargano e svaniscono (vapore, fumo, gas, fiamme con la miscelazione additiva).
+ * gravity (m/s²): le scintille ricadono; gli sbuffi no (0).
+ */
 export class Puffs {
-  constructor(scene, max = 1200, additive = false) {
+  constructor(scene, max = 1200, additive = false, gravity = 0) {
     this.max = max;
+    this.gravity = gravity;
     this.geo = new THREE.BufferGeometry();
     this.pos = new Float32Array(max * 3);
     this.sizeA = new Float32Array(max);
@@ -243,6 +247,7 @@ export class Puffs {
           this.v[k + 2] += f[2] * dt;
         }
       }
+      this.v[k + 1] -= this.gravity * dt;
       this.pos[k] += this.v[k] * dt;
       this.pos[k + 1] += this.v[k + 1] * dt;
       this.pos[k + 2] += this.v[k + 2] * dt;

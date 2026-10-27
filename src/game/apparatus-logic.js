@@ -84,3 +84,48 @@ export function splitVapours(ctx, gases) {
 export function displayCurrent(amps) {
   return amps < 0.005 ? 0 : Math.round(amps * 100) / 100;
 }
+
+// ------------------------------------------------------------------ pila Daniell e contatore del gas (fase G8)
+
+/** Carica degli ioni dei metalli in soluzione (Zn²⁺, Cu²⁺, Ag⁺, Al³⁺…), per l'equazione di Nernst. */
+export const ION_CHARGE = { Li: 1, Na: 1, K: 1, Ag: 1, Mg: 2, Ca: 2, Ba: 2, Mn: 2, Zn: 2, Fe: 2, Cd: 2, Co: 2, Ni: 2, Sn: 2, Pb: 2, Cu: 2, Hg: 2, Al: 3, Cr: 3, Au: 3 };
+
+/** (R·T·ln 10) / F a 25 °C, in volt. */
+export const NERNST_SLOPE = 0.05916;
+
+/**
+ * Potenziale di un semielemento M | Mⁿ⁺ con gli ioni alla concentrazione c (mol/L), equazione di Nernst a 25 °C:
+ * E = E° + (0,05916 / n) · log₁₀ c. Senza ioni (c = 0) non è definito: null.
+ */
+export function halfCellPotential(E0, n, c) {
+  if (!(c > 0) || !(n > 0)) return null;
+  return E0 + (NERNST_SLOPE / n) * Math.log10(c);
+}
+
+/**
+ * Lettura del voltmetro tra due semielementi { metal, E0, n, conc } (o null se nel posto non c'è un recipiente).
+ * Il voltmetro (resistenza altissima) non fa passare corrente: la pila non si consuma. Senza ponte salino il circuito è
+ * aperto e segna 0. Restituisce { volts (≥ 0, arrotondati a 0,01 V come il display), plus: 'a'|'b' (il polo +, il
+ * metallo più nobile), why: null | 'empty' | 'electrode' | 'ions' | 'bridge' | 'same' }.
+ */
+export function cellReading(a, b, bridge) {
+  for (const h of [a, b]) {
+    if (!h) return { volts: 0, plus: null, why: 'empty' };
+    if (!h.metal) return { volts: 0, plus: null, why: 'electrode' };
+    if (!(h.conc > 1e-6)) return { volts: 0, plus: null, why: 'ions' };
+  }
+  if (!bridge) return { volts: 0, plus: null, why: 'bridge' };
+  const Ea = halfCellPotential(a.E0, a.n, a.conc);
+  const Eb = halfCellPotential(b.E0, b.n, b.conc);
+  const volts = Math.round(Math.abs(Eb - Ea) * 100) / 100;
+  // due semielementi uguali (stesso metallo, stessa concentrazione): niente differenza di potenziale
+  if (a.metal === b.metal && volts < 0.005) return { volts: 0, plus: null, why: 'same' };
+  return { volts, plus: Eb >= Ea ? 'b' : 'a', why: null };
+}
+
+/** Metano che brucia il Bunsen acceso (mol/s): circa 3,5 L al minuto, una fiamma da scuola di circa 2 kW. */
+export const BUNSEN_GAS = 0.0024;
+/** Volume di una mole di gas a 25 °C e 1 atm (L), per il contatore del gas. */
+export const MOLAR_VOLUME = 24.5;
+/** Litri che segna il contatore (arrotondati a 0,01 L come il display). */
+export const meterLitres = (mol) => Math.round(mol * MOLAR_VOLUME * 100) / 100;

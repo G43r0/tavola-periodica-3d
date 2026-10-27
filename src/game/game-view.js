@@ -19,6 +19,8 @@ import { TUTORIAL, illustration } from './tutorial.js';
 import { storeIndex } from './book.js';
 import { createBookView } from './book-view.js';
 import { TOOL_PAGES, TECHNIQUE_PAGES, SAFETY_PAGES } from './data/book-pages.js';
+import { GameAudio } from './audio/audio.js';
+import { GameRenderer } from './game-render.js';
 
 const t = createT(GAME_STRINGS);
 const SAVE_KEY = 'tp3d.game';
@@ -104,6 +106,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
 
   let game = null;
   let renderer = null;
+  let view = null; // GameRenderer: occlusione ambientale (Professionale) e qualità adattiva
+  let audio = null; // GameAudio: i suoni CC0 di Freesound
   let raf = 0;
   let lastT = 0;
   let hudAcc = 0;
@@ -118,6 +122,9 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   let showInfo = true;
   let showLegend = save.settings.legend;
   let fov = Math.max(FOV.min, Math.min(FOV.max, Number(save.settings.fov) || FOV.default));
+  let volume = save.settings.volume;
+  let muted = save.settings.muted;
+  let shake = save.settings.shake;
   let notebook = loadNotebook(activeProfile(save).notebook);
   /** Scrive il salvataggio (con l'ora, per scegliere il più recente tra il file dell'app e localStorage). */
   function storeSave() {
@@ -161,6 +168,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       chemMode = save.settings.chemMode;
       showLegend = save.settings.legend;
       fov = Math.max(FOV.min, Math.min(FOV.max, Number(save.settings.fov) || FOV.default));
+      ({ volume, muted, shake } = save.settings);
       notebook = loadNotebook(profile().notebook);
     }
     const G = gfx();
@@ -177,9 +185,13 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     stage.append(renderer.domElement);
     game = new LabGame(renderer, R, elements, { t, onEvent });
     game.setFov(fov);
+    game.shakeOn = shake;
+    audio = new GameAudio({ volume, muted });
+    game.audio = audio;
+    view = new GameRenderer(renderer, game, G, { onStep: () => toast(t('qualityDown'), 'info', 5000) });
     game.notebook = notebook;
     bookView = createBookView({ game, t, kj, canOpenLab: () => Boolean(onOpenLab) });
-    if (import.meta.env?.DEV) window.__game = game;
+    if (import.meta.env?.DEV) Object.assign(window, { __game: game, __view: view });
     layout();
     $('.gm-loading').hidden = true;
   }
@@ -188,7 +200,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     if (!renderer) return;
     const w = stage.clientWidth || window.innerWidth;
     const h = stage.clientHeight || window.innerHeight;
-    renderer.setSize(w, h, false);
+    view.setSize(w, h);
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
     game.resize(w, h);
@@ -262,6 +274,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
 
   function setState(s) {
     state = s;
+    if (s === 'menu') audio?.suspend();
+    else audio?.resume();
     hud.hidden = s === 'menu';
     $('.gm-menu').hidden = s !== 'menu';
     $('.gm-dialog').hidden = s !== 'dialog' && s !== 'pause';
@@ -310,7 +324,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
           <label><input type="radio" name="gm-chem" value="real" ${chemMode === 'real' ? 'checked' : ''}/><span><b>${t('chemReal')}</b><small>${t('chemRealText')}</small></span></label>
           <label><input type="radio" name="gm-chem" value="simple" ${chemMode === 'simple' ? 'checked' : ''}/><span><b>${t('chemSimple')}</b><small>${t('chemSimpleText')}</small></span></label>
         </fieldset>
-        ${fovHtml()}
+        ${settingsHtml()}
         <div class="gm-menu__foot">
           <button type="button" class="btn-ghost" data-act="help">${icons.keyboard(16)}<span>${t('controls')}</span></button>
           <button type="button" class="btn-ghost" data-act="close">${icons.prev(16)}<span>${t('back')}</span></button>
@@ -322,6 +336,11 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   /** Cursore del campo visivo (menu principale e pausa). */
   const fovHtml = () => `<label class="gm-fov" title="${t('fovTitle')}"><span>${t('fov')}</span>
     <input type="range" name="gm-fov" min="${FOV.min}" max="${FOV.max}" step="1" value="${fov}"/><output>${fov}°</output></label>`;
+  /** Impostazioni del menu e della pausa: campo visivo, volume dell'audio (M: muto) e scossa della camera. */
+  const settingsHtml = () => `${fovHtml()}
+    <label class="gm-fov" title="${t('volumeTitle')}"><span>${t('volume')}</span>
+      <input type="range" name="gm-vol" min="0" max="100" step="5" value="${Math.round(volume * 100)}"/><output>${muted ? t('mutedShort') : `${Math.round(volume * 100)} %`}</output></label>
+    <label class="gm-check"><input type="checkbox" name="gm-shake" ${shake ? 'checked' : ''}/><span>${t('shakeLabel')}</span></label>`;
 
   const fmtMoney = (v) => `${(game?.fmt ?? ((n, d) => n.toFixed(d)))(v, 2)} €`;
 
@@ -689,7 +708,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
         <button type="button" class="btn-ghost" data-act="menu">${t('toMenu')}</button>
         <button type="button" class="btn-ghost" data-act="close">${t('backToTable')}</button>
       </div>
-      ${fovHtml()}</div>`;
+      ${settingsHtml()}</div>`;
     d.querySelector('.gm-primary').focus({ preventScroll: true });
   }
 
@@ -850,7 +869,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       <p class="gm-help__note">${t('helpNote')}</p>
       <div class="gm-help">
         <div><h4>${t('helpWalk')}</h4><dl>${rows(t('helpWalkRows'))}</dl></div>
-        <div><h4>${t('helpBench')}</h4><dl>${rows(t('helpBenchRows'))}</dl><h4>${t('helpTools')}</h4><dl>${rows(t('helpToolsRows'))}</dl></div>
+        <div><h4>${t('helpBench')}</h4><dl>${rows(t('helpBenchRows'))}</dl><h4>${t('helpTools')}</h4><dl>${rows([...t('helpToolsRows'), t('helpAudioRow')])}</dl></div>
       </div>
       <div class="gm-actions"><button type="button" class="gm-primary" data-act="${prev === 'menu' ? 'menu' : 'play'}">${t('ok')}</button></div>`, 'gm-helpcard');
   }
@@ -871,6 +890,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   root.addEventListener('click', (ev) => {
     const b = ev.target.closest('button');
     if (!b) return;
+    if (state !== 'menu') audio?.resume();
+    audio?.play('click', null, { gain: 0.45 });
     if (b.closest('.gm-book') && bookClick(b)) return;
     const act = b.dataset.act;
     if (act === 'close') close();
@@ -971,6 +992,14 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       if (box) box.innerHTML = bookView.results();
       return;
     }
+    if (ev.target.name === 'gm-vol') {
+      volume = Number(ev.target.value) / 100;
+      muted = false;
+      audio?.setMuted(false);
+      audio?.setVolume(volume);
+      ev.target.nextElementSibling.textContent = `${Math.round(volume * 100)} %`;
+      return;
+    }
     if (ev.target.name !== 'gm-fov') return;
     fov = Number(ev.target.value);
     game?.setFov(fov);
@@ -984,6 +1013,18 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     }
     if (ev.target.name === 'gm-fov') {
       save = { ...save, settings: { ...save.settings, fov } };
+      storeSave();
+    }
+    if (ev.target.name === 'gm-vol') {
+      audio?.resume();
+      audio?.play('ping', null, { gain: 0.7 });
+      save = { ...save, settings: { ...save.settings, volume, muted } };
+      storeSave();
+    }
+    if (ev.target.name === 'gm-shake') {
+      shake = ev.target.checked;
+      if (game) game.shakeOn = shake;
+      save = { ...save, settings: { ...save.settings, shake } };
       storeSave();
     }
     if (ev.target.name === 'gm-chem') {
@@ -1045,6 +1086,13 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       if (!showLegend) toast(t('legendHidden'));
     }
     else if (code === 'KeyH') showHelp();
+    else if (code === 'KeyM') {
+      muted = !muted;
+      audio?.setMuted(muted);
+      save = { ...save, settings: { ...save.settings, muted } };
+      storeSave();
+      toast(t(muted ? 'audioOff' : 'audioOn'));
+    }
     else if (code === 'KeyN') showNotebook();
     else if (code === 'KeyB') showBook();
     else if (code === 'KeyF') {
@@ -1352,7 +1400,9 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     // sinistro tenuto fermo con un recipiente in mano: dopo un attimo comincia a versare (un clic, invece, lo posa)
     if (state === 'play' && lmb && !lmb.pour && canPour() && isClick(lmb.moved) && now - lmb.t > POUR_HOLD_MS) startPour();
     if (state === 'play' || state === 'dialog') game.update(state === 'play' ? dt : 0, { blocked: state !== 'play' });
-    game.render();
+    else audio?.loops([]); // pausa e menu: il laboratorio tace
+    view.render();
+    if (state === 'play') view.sample(dt);
     if (state !== 'menu') {
       placePops();
       drawCharge();
@@ -1397,6 +1447,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   function close() {
     if (root.hidden) return;
     unlock();
+    audio?.suspend();
     if (state === 'play') setState('pause');
     root.classList.add('is-leaving');
     setTimeout(() => {

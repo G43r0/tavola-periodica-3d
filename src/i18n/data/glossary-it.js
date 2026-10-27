@@ -626,7 +626,7 @@ export const GLOSSARY_IT = {
     w: 'simulatore|simulatore di laboratorio|gioco del laboratorio',
     d: 'Un gioco in prima persona nel laboratorio di chimica della scuola, ispirato ai simulatori di cucina: prendi becher e bottiglie, pesa sulla bilancia, versa inclinando il recipiente, scalda sulla piastra o sul becco Bunsen e consegna il preparato alla cattedra. Le esercitazioni sono valutate con stelle e soldi; il vetro si rompe, i liquidi si versano, i gas tossici vanno sotto la cappa e i rifiuti nel contenitore giusto. La chimica è quella vera della libreria (554 sostanze e le reazioni del catalogo), in versione realistica o semplificata.',
     k: [['W A S D', 'cammina'], ['A / D', 'con un oggetto in mano: ruotalo'], ['Clic', 'prendi / posa'], ['Sinistro tenuto', 'versa (mouse ↑ più, ↓ meno)'], ['Destro tenuto + mouse', 'inclina'], ['E', 'usa'], ['Tasto centrale tenuto', 'lancia'], ['Tab', 'vista del bancone'], ['N', 'quaderno'], ['Esc', 'pausa']],
-    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook', 'ui.gameCareer'],
+    s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook', 'ui.gameCareer', 'ui.gameAudio'],
   },
   'ui.gameCareer': {
     t: 'Carriera del simulatore',
@@ -653,7 +653,7 @@ export const GLOSSARY_IT = {
     t: 'Strumenti del laboratorio',
     w: 'strumenti del laboratorio|buretta|pipetta|pipetta graduata|pH-metro|piaccametro|termometro|mantello riscaldante|alimentatore|bombola|bombole|pinza|crogiolo|capsula di porcellana|bagno di ghiaccio',
     d: 'Nel simulatore, oltre a becher e beute, ci sono gli strumenti del laboratorio di scuola. La buretta da 50 mL sul sostegno ha lo zero in alto: il rubinetto ha quattro posizioni (chiuso, goccia a goccia, a filo, aperto) e la scala dice quanto hai versato, con la precisione di 0,05 mL, come in una titolazione. La pipetta graduata preleva fino a 10 mL e li rilascia tutti insieme o un millilitro alla volta. Il termometro e il pH-metro si immergono nel liquido: il termometro sale piano, il pH-metro si stabilizza in un attimo. L\'imbuto con la carta da filtro separa un precipitato dal liquido (filtrazione); il pallone sul mantello riscaldante, con la testa e il refrigerante, separa i liquidi che bollono a temperature diverse (distillazione). Sotto la cappa l\'alimentatore da 0 a 12 V fa passare la corrente nelle soluzioni (elettrolisi) e cinque bombole fanno gorgogliare ossigeno, idrogeno, anidride carbonica, cloro e ammoniaca nel recipiente all\'uscita. Sopra i 60 °C un recipiente scotta e si prende con la pinza; il crogiolo e la capsula di porcellana reggono la fiamma del Bunsen fino al rosso; il bagno di ghiaccio tiene un recipiente a 0 °C. Ogni strumento ha la sua pagina nel tutorial del quaderno.',
-    s: ['term.titration', 'term.filtration', 'term.distillation', 'term.electrolysis', 'ui.gameNotebook'],
+    s: ['term.titration', 'term.filtration', 'term.distillation', 'term.electrolysis', 'term.galvanicCell', 'ui.gameNotebook'],
   },
   'term.titration': {
     t: 'Titolazione',
@@ -684,6 +684,19 @@ export const GLOSSARY_IT = {
     w: 'serie di attività|serie elettrochimica|potenziale standard|potenziale di riduzione|E°',
     d: 'I metalli in ordine di quanto cedono facilmente elettroni, dal potenziale standard di riduzione E° (in volt): litio −3,04, potassio −2,93, sodio −2,71, magnesio −2,37, alluminio −1,66, zinco −0,76, ferro −0,45, piombo −0,13, idrogeno 0, rame +0,34, argento +0,80, oro +1,50. Un metallo sposta dai sali i metalli con il potenziale più alto (lo zinco nel solfato di rame si ricopre di rame, il rame nel solfato di zinco no) e libera idrogeno dagli acidi come HCl solo se il suo potenziale è negativo: per questo il rame e l\'argento non reagiscono con l\'acido cloridrico, mentre li sciolgono gli acidi ossidanti come l\'acido nitrico.',
     s: ['term.reaction', 'ui.gameNotebook'],
+  },
+  'term.galvanicCell': {
+    t: 'Pila (cella galvanica)',
+    w: 'pila|pile|pila Daniell|cella galvanica|celle galvaniche|ponte salino|voltmetro|equazione di Nernst',
+    d: 'Una pila trasforma l\'energia di una reazione redox in corrente elettrica tenendo separati i due reagenti: in un recipiente il metallo che si ossida (anodo, polo −), nell\'altro quello che si riduce (catodo, polo +), ognuno nella soluzione dei suoi ioni. Gli elettroni passano nel filo esterno; il ponte salino, un tubo pieno di gel con un sale, chiude il circuito lasciando passare gli ioni, così le soluzioni restano neutre. Nella pila Daniell lo zinco (E° = −0,76 V) cede elettroni al rame (E° = +0,34 V): con le soluzioni 1 M la tensione è 1,10 V. L\'equazione di Nernst dice come cambia con le concentrazioni: E = E° + (0,059 / n) · log c a 25 °C, cioè circa 0,03 V per ogni fattore 10 di concentrazione degli ioni di un metallo con carica 2. Nel simulatore la pila è in fondo al bancone del lavandino: due cerchi per i becher, il voltmetro e il ponte salino che si mette e si toglie con un clic.',
+    s: ['term.redox', 'term.activitySeries', 'term.electrolysis', 'ui.gameInstruments'],
+  },
+  'ui.gameAudio': {
+    t: 'Suoni e grafica del simulatore',
+    w: 'suoni del simulatore|audio del simulatore|scossa della camera|qualità adattiva',
+    d: 'Il laboratorio si sente: il getto che versa, il rubinetto, il soffio del Bunsen, le bolle di una reazione, l\'acqua che bolle, il vetro posato o rotto, il fuoco, l\'allarme, il campanello della cattedra. Ogni suono viene dal punto della stanza in cui nasce. Sono registrazioni di Freesound.org in pubblico dominio (licenza CC0); il volume è nel menu e nella pausa, M spegne e riaccende l\'audio. Le esplosioni scuotono la camera per un attimo (si può spegnere). Se il computer non regge, il gioco abbassa da solo la qualità grafica un passo alla volta (risoluzione, ombre, occlusione ambientale del preset Professionale) per restare fluido.',
+    k: [['M', 'audio sì / no']],
+    s: ['ui.game'],
   },
   'ui.gameStock': {
     t: 'Colore del tappo',
