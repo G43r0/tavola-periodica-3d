@@ -24,6 +24,9 @@ const GROUPS = {
   // li sposta il controllore del personaggio con i suoi impulsi
   player: group(G.PLAYER, G.STATIC),
   debris: group(G.DEBRIS, G.STATIC | G.ITEM | G.PROP),
+  // strumenti da immergere (termometro, pH-metro, pipetta): toccano solo la stanza, così in mano entrano nei
+  // recipienti senza spingerli
+  ghost: group(G.DEBRIS, G.STATIC | G.PROP),
   prop: group(G.PROP, G.STATIC | G.ITEM | G.DEBRIS | G.PROP | G.PLAYER),
   // cosa «vede» il controllore del personaggio: la stanza e gli arredi mobili, non la vetreria né l'oggetto in mano
   playerQuery: group(G.PLAYER, G.STATIC | G.PROP),
@@ -79,7 +82,7 @@ export class Physics {
    * Corpo dinamico. shapes: [{ type: 'cylinder'|'box'|'ball'|'hull', y, hh, r, hx, hy, hz, points }], posizione
    * dell'origine (in basso al centro dell'oggetto) e rotazione; mass: massa totale in kg.
    */
-  dynamic({ pos, quat, shapes, mass, owner, ccd = true, debris = false, friction = 0.7, restitution = 0.05, events = false }) {
+  dynamic({ pos, quat, shapes, mass, owner, ccd = true, debris = false, ghost = false, friction = 0.7, restitution = 0.05, events = false }) {
     const { R } = this;
     const desc = R.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setCcdEnabled(ccd).setLinearDamping(0.05).setAngularDamping(0.3);
     if (quat) desc.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w });
@@ -92,7 +95,7 @@ export class Physics {
       else if (s.type === 'hull') cd = R.ColliderDesc.convexHull(s.points);
       else cd = R.ColliderDesc.cuboid(s.hx, s.hy, s.hz);
       cd.setTranslation(s.x ?? 0, s.y ?? 0, s.z ?? 0).setDensity(mass / volume).setFriction(friction).setRestitution(restitution);
-      cd.setCollisionGroups(debris ? GROUPS.debris : GROUPS.item);
+      cd.setCollisionGroups(ghost ? GROUPS.ghost : debris ? GROUPS.debris : GROUPS.item);
       if (events) {
         cd.setActiveEvents(R.ActiveEvents.CONTACT_FORCE_EVENTS);
         cd.setContactForceEventThreshold(Math.max(0.5, mass * 25));
@@ -128,6 +131,11 @@ export class Physics {
     cc.controller.computeColliderMovement(cc.collider, delta, undefined, cc.query);
     this.world.timestep = STEP;
     return cc.controller.computedMovement();
+  }
+
+  /** Rende fisso un corpo (gli apparecchi montati sui sostegni: buretta, imbuto, pallone da distillazione). */
+  fix(body) {
+    body.setBodyType(this.R.RigidBodyType.Fixed, true);
   }
 
   remove(body) {

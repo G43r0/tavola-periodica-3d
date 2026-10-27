@@ -4,3 +4,5 @@ release/
 *.log
 .claude/
 graphify-out/
+
+data-sources/sounds-raw/

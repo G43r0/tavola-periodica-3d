@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { _setLangForTests, createT } from '../../src/i18n/index.js';
 import { entry, wordIndex, shortcut, variants, allKeys } from '../../src/i18n/glossary.js';
 import { GLOSSARY_IT } from '../../src/i18n/data/glossary-it.js';
@@ -99,7 +100,7 @@ test('glossario: ogni data-help usato nell\'interfaccia ha una spiegazione in og
       else if (f.name.endsWith('.js')) files.push(path.join(dir, f.name));
     }
   };
-  walk(new URL('../../src', import.meta.url).pathname);
+  walk(fileURLToPath(new URL('../../src', import.meta.url)));
   const keys = new Set();
   for (const f of files) {
     const src = fs.readFileSync(f, 'utf8');

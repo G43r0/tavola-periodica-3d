@@ -5,13 +5,17 @@
 
 /**
  * Tasti che compaiono nella legenda (etichette nei testi: key_<id>). Lo schema è quello di Cooking Simulator: clic
- * sinistro prende, posa e usa (tenuto con il mouse versa), destro tenuto ruota (un clic annulla o rimette a posto),
- * tasto centrale lancia, Maiusc tenuto per la precisione, E per pulire e usare gli strumenti.
+ * sinistro prende, posa e usa (tenuto con un recipiente versa), destro tenuto + mouse inclina (un clic annulla la
+ * rotazione o rimette a posto), A e D ruotano, tasto centrale lancia, Maiusc tenuto per la precisione, E per pulire e
+ * usare gli strumenti.
  */
 export const KEY_IDS = ['lmb', 'rmb', 'mmb', 'mouse', 'mousex', 'wheel', 'e', 'shift', 'tab', 'h', 'wasd', 'ad'];
 
 /** Righe al massimo (le ultime sono quelle di base: movimento, visuale, aiuto). */
-export const MAX_ROWS = 9;
+export const MAX_ROWS = 10;
+
+/** Millisecondi di sinistro tenuto fermo, con un recipiente in mano, dopo cui si comincia a versare (prima è un clic). */
+export const POUR_HOLD_MS = 200;
 
 const row = (keys, key, params = null, off = false) => ({ keys, key, params, off });
 
@@ -28,6 +32,12 @@ function fixtureRow(f, key = 'lmb') {
       return row([key], 'lgTare');
     case 'hood':
       return row([key], f.on ? 'lgHoodOff' : 'lgHoodOn');
+    case 'lamp':
+      return row([key], f.on ? 'lgLampOff' : 'lgLampOn');
+    case 'notebook':
+      return row([key], 'lgNotebook');
+    case 'book':
+      return row([key], 'lgBook');
     case 'shower':
       return row([key], 'lgShower');
     case 'bell':
@@ -38,8 +48,36 @@ function fixtureRow(f, key = 'lmb') {
       return row([key], 'lgTowels');
     case 'strips':
       return row([key], 'lgStrips');
+    case 'tongs':
+      return row([key], f.on ? 'lgTongsBack' : 'lgTongsTake');
+    case 'mantle':
+      return row([key], f.level ? 'lgMantleUp' : 'lgMantleOn', { n: f.level });
+    case 'power':
+      return row([key], 'lgPowerUp', { v: nextVoltsLabel(f.level) });
+    case 'gas':
+      return row([key], f.on ? 'lgValveClose' : 'lgValveOpen', { gas: f.gas ?? '' });
+    case 'bridge':
+      return row([key], f.on ? 'lgBridgeOut' : 'lgBridgeIn');
+    case 'gasMeter':
+      return row([key], 'lgMeterReset');
     default:
       return null;
+  }
+}
+
+/** Tensione dopo un clic sull'alimentatore (per la legenda): 0 → 2 → 4 → 6 → 9 → 12 → 0 V. */
+const VOLT_STEPS = [0, 2, 4, 6, 9, 12];
+const nextVoltsLabel = (v) => VOLT_STEPS[(VOLT_STEPS.indexOf(v) + 1) % VOLT_STEPS.length];
+
+/** Apparecchi fissi (buretta, imbuto, pallone): cosa fa il clic (o E, con qualcosa in mano). */
+function rigRows(target, key = 'lmb') {
+  switch (target.rig) {
+    case 'burette':
+      return [row([key], `lgStopcock${(target.level + 1) % 4}`), ...(target.level && key === 'lmb' ? [row(['rmb'], 'lgStopcockClose')] : [])];
+    case 'funnel':
+      return [row([key], 'lgFilterPaper')];
+    default:
+      return [];
   }
 }
 
@@ -56,9 +94,18 @@ function toolRows(held, target) {
     case 'strip':
       return [row(['e'], 'lgStrip', null, !onVessel)];
     case 'towel':
-      return [row(['e'], target?.stain ? 'lgWipeStain' : 'lgWipe', null, target?.type !== 'puddle')];
+      return [row(['e'], target?.heap ? 'lgWipeHeap' : target?.stain ? 'lgWipeStain' : 'lgWipe', null, target?.type !== 'puddle')];
     case 'extinguisher':
       return [row(['e'], 'lgSpray')];
+    case 'thermometer':
+    case 'phmeter':
+      return [row(['e'], 'lgReadout', null, !held.probing)];
+    case 'pipette':
+      if (target?.type === 'fixture' && target.kind === 'sink') return [row(['e'], 'lgWashPipette')];
+      if (target?.type === 'fixture' && target.kind === 'bin') return [row(['e'], 'lgEmpty', { bin: target.binName ?? '' }, !held.loaded)];
+      return held.loaded
+        ? [row(['e'], 'lgPipetteOut', null, !held.probing), row(['shift', 'e'], 'lgPipetteOne', null, !held.probing)]
+        : [row(['e'], 'lgPipetteIn', null, !held.probing)];
     default:
       return [];
   }
@@ -68,9 +115,12 @@ function toolRows(held, target) {
  * Righe della legenda.
  * @param {{mode: 'walk'|'bench', held: null|{kind: string, container: boolean, loaded?: boolean},
  *          target: null|{type: 'item'|'fixture'|'puddle', kind?: string, name?: string, container?: boolean,
- *                         on?: boolean, level?: number, binName?: string, stain?: boolean},
- *          canPlace?: boolean, pouring?: boolean, precise?: boolean, filling?: boolean, tapFlow?: number,
- *          rotated?: boolean, canPutBack?: boolean}} s
+ *                         on?: boolean, level?: number, binName?: string, stain?: boolean, heap?: boolean},
+ *          canPlace?: boolean, pouring?: boolean, pourAuto?: boolean, precise?: boolean, filling?: boolean, tapFlow?: number,
+ *          rotated?: boolean, canPutBack?: boolean, tongs?: boolean}} s
+ *   target.rig: apparecchio fisso (buretta, imbuto, pallone) con target.level = posizione del rubinetto; target.hot:
+ *   scotta (senza la pinza non si prende); held.probing: lo strumento in mano è immerso in un recipiente; pourAuto: si
+ *   versa con il sinistro (il recipiente si inclina da solo), altrimenti pouring vuol dire che lo si inclina con il destro
  * @returns {{keys: string[], key: string, params: object|null, off: boolean}[]}
  */
 export function legendRows(s) {
@@ -84,49 +134,64 @@ export function legendRows(s) {
       out.push(row(['lmb'], 'lgFillHold'));
       out.push(row(['wheel'], 'lgTapFlow', { ml: s.tapFlow ?? 0 }));
       out.push(row(['rmb'], 'lgFillStop'));
-    } else if (held.container && s.pouring) {
-      // mentre si versa contano solo l'inclinazione e dove va il liquido
-      out.push(row(['lmb', 'mouse'], into ? 'lgPouringInto' : 'lgPouring', { name: target?.name ?? '' }));
+    } else if (held.container && s.pouring && !s.precise) {
+      // mentre si versa contano solo il getto (o l'inclinazione, con il destro) e dove va il liquido
+      if (s.pourAuto) out.push(row(['lmb', 'mouse'], into ? 'lgPouringInto' : 'lgPouring', { name: target?.name ?? '' }));
+      else out.push(row(['rmb', 'mouse'], 'lgTilting'));
     } else if (s.precise) {
       // manipolazione precisa (Maiusc tenuto): la camera è ferma, il mouse sposta l'oggetto
       out.push(row(['mouse'], 'lgPreciseMove'));
       out.push(row(['lmb', 'mouse'], 'lgPreciseHeight'));
-      out.push(row(['rmb', 'mouse'], held.container ? 'lgPreciseRotatePour' : 'lgRotate'));
+      out.push(row(['rmb', 'mouse'], held.container ? 'lgPreciseTiltPour' : 'lgTilt'));
       out.push(row(['mmb'], 'lgPreciseLeave'));
       if (!held.container) out.push(...toolRows(held, target).slice(0, 1));
       out.push(row(['shift'], 'lgPreciseExit'));
     } else {
       out.push(row(['lmb'], held.container && f?.kind === 'sink' ? 'lgFill' : s.canPlace ? 'lgPlace' : 'lgDrop'));
       if (held.container) {
-        out.push(row(['lmb', 'mouse'], into ? 'lgPourInto' : 'lgPour', { name: into ? target.name : '' }));
+        // tenuto: versa (sopra un recipiente, il lavandino o un bidone esce subito; altrove si ferma al bordo)
+        if (into) out.push(row(['lmb'], 'lgPourInto', { name: target.name }));
+        else if (f?.kind === 'sink') out.push(row(['lmb'], 'lgPourSink'));
+        else if (f?.kind === 'bin') out.push(row(['lmb'], 'lgPourBin', { bin: f.binName ?? '' }));
+        else out.push(row(['lmb'], 'lgPour'));
         if (f?.kind === 'sink') out.push(row(['e'], 'lgWash'));
         else if (f?.kind === 'bin') out.push(row(['e'], 'lgEmpty', { bin: f.binName ?? '' }));
         else if (f && fixtureRow(f, 'e')) out.push(fixtureRow(f, 'e'));
+        else if (target?.rig && rigRows(target, 'e').length) out.push(rigRows(target, 'e')[0]);
         else out.push(row(['e'], 'lgSwirl'));
       } else out.push(...toolRows(held, target));
-      out.push(row(['rmb', 'mousex'], 'lgRotate'));
+      out.push(row(['rmb', 'mouse'], 'lgTilt'));
+      out.push(row(['ad'], 'lgRotateKeys'));
       out.push(s.rotated ? row(['rmb'], 'lgCancelRotation') : row(['rmb'], 'lgPutBack', null, !s.canPutBack));
       out.push(row(['mmb'], 'lgThrow'));
       if (mode === 'walk') out.push(row(['shift'], 'lgPrecise'));
       out.push(row(['wheel'], mode === 'bench' ? 'lgHeight' : 'lgDistance'));
     }
   } else if (target?.type === 'item') {
-    out.push(row(['lmb'], 'lgTake', { name: target.name ?? '' }));
+    if (target.rig) out.push(...rigRows(target));
+    else if (target.hot && !s.tongs) out.push(row(['lmb'], 'lgTooHot', { name: target.name ?? '' }, true));
+    else out.push(row(['lmb'], s.tongs ? 'lgTakeTongs' : 'lgTake', { name: target.name ?? '' }));
   } else if (f) {
     const r = fixtureRow(f);
     if (r) out.push(r);
-    if (f.kind === 'hotplate') {
-      if (f.level) out.push(row(['rmb'], 'lgPlateDown'));
+    if (f.kind === 'hotplate' || f.kind === 'mantle') {
+      if (f.level) out.push(row(['rmb'], f.kind === 'mantle' ? 'lgMantleDown' : 'lgPlateDown'));
       out.push(row(['wheel'], 'lgPlateWheel'));
     }
+    if (f.kind === 'power' && f.on) out.push(row(['rmb'], 'lgPowerOff'));
     if (f.kind === 'bin') out.push(row(['e'], 'lgBinNeedsVessel', { bin: f.binName ?? '' }, true));
   } else if (target?.type === 'puddle') {
-    out.push(row(['e'], target.stain ? 'lgNeedTowelStain' : 'lgNeedTowel', null, true));
+    out.push(row(['e'], target.heap ? 'lgNeedTowelHeap' : target.stain ? 'lgNeedTowelStain' : 'lgNeedTowel', null, true));
   }
   const rows = out.slice(0, MAX_ROWS - 1);
   // nella manipolazione precisa e al rubinetto si sta fermi: niente righe di movimento
   const still = held && (s.precise || s.filling);
-  const base = still ? [] : mode === 'bench' ? [row(['ad'], 'lgStation'), row(['tab'], 'lgFirstPerson')] : [row(['wasd'], 'lgWalk'), row(['tab'], 'lgBenchView')];
+  // con un oggetto in mano A e D lo ruotano: nella vista del bancone non cambiano postazione, in prima persona si
+  // cammina solo avanti e indietro
+  let base;
+  if (still) base = [];
+  else if (mode === 'bench') base = held ? [row(['tab'], 'lgFirstPerson')] : [row(['ad'], 'lgStation'), row(['tab'], 'lgFirstPerson')];
+  else base = [row(['wasd'], held ? 'lgWalkHeld' : 'lgWalk'), row(['tab'], 'lgBenchView')];
   for (const b of base) if (rows.length < MAX_ROWS - 1) rows.push(b);
   rows.push(row(['h'], 'lgHelp'));
   return rows;
@@ -153,7 +218,7 @@ export function throwSpeed(seconds) {
 
 /**
  * Un clic (non un trascinamento): il mouse si è mosso meno di 4 pixel. Con un recipiente in mano il clic sinistro posa,
- * il trascinamento versa; il clic destro annulla la rotazione o rimette a posto, il trascinamento ruota.
+ * tenerlo premuto (o trascinare) versa; il clic destro annulla la rotazione o rimette a posto, il trascinamento inclina.
  */
 export function isClick(movedPx) {
   return movedPx < 4;
