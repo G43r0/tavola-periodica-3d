@@ -27,6 +27,7 @@ import { nextLevel } from './apparatus-logic.js';
 import { bookRecipes, elementPages, reagentOf } from './book.js';
 import BOOK_VERIFIED from './data/book-verified.js';
 import { pourSound, tapLevel, fireLevel, fizzLevel, impactGain, nearest, shakeAt } from './audio/sound-levels.js';
+import { TRICKLE_HOLD_MS, SPOON_EMPTY_G, scoopGrams, tapGrams, trickleRate, spoonHeap } from './spatula.js';
 
 const WATER = 123;
 const REACH = 2.3;
@@ -181,6 +182,7 @@ export class LabGame {
     this.rotating = false; // destro tenuto: il mouse inclina l'oggetto in mano invece di girare lo sguardo
     this.rotPour = false; // ...e, se è un recipiente, versa (l'inclinazione resta finché si tiene il tasto)
     this.precise = null; // manipolazione precisa (Maiusc tenuto): { anchor, off }
+    this.spoonPour = null; // E tenuto con la spatola carica: { target, t, trickling, flow, poured }
     this.filling = false; // clic sul lavandino con un recipiente: è sotto il rubinetto, l'acqua scorre tenendo il sinistro
     this.tapWasOn = false;
     this.tapFlow = TAP_FLOW;
@@ -1203,8 +1205,8 @@ export class LabGame {
 
   /**
    * Tasto E: usa ciò che si guarda (o lo strumento in mano su ciò che si guarda).
-   * @param {boolean} down premuto (true) o rilasciato (false, per l'estintore)
-   * @param {boolean} fine con Maiusc: un pizzico con la spatola, abbassa la piastra (come il clic destro)
+   * @param {boolean} down premuto (true) o rilasciato (false, per l'estintore e la spatola)
+   * @param {boolean} fine con Maiusc: un pizzico o un colpetto con la spatola, abbassa la piastra (come il clic destro)
    */
   use(down = true, fine = false) {
     const held = this.held;
@@ -1212,12 +1214,12 @@ export class LabGame {
       this.spraying = down;
       return;
     }
-    if (!down) return;
     const h = this.hover;
-    const fixture = h?.type === 'fixture' ? h.fixture : null;
     const target = h?.type === 'item' ? h.item : null;
+    if (held?.kind === 'spatula' && (down || this.spoonPour)) return this.useSpatula(held, target, fine, down);
+    if (!down) return;
+    const fixture = h?.type === 'fixture' ? h.fixture : null;
     // strumenti in mano
-    if (held?.kind === 'spatula') return this.useSpatula(held, target, fine);
     if (held?.kind === 'loop') return this.useLoop(held, target);
     if (held?.kind === 'strip') return this.useStrip(held, target);
     if (held?.def.probe && this.apparatus.useTool(held, target, fixture, fine)) return;
@@ -1304,19 +1306,31 @@ export class LabGame {
     return this.camera.position.clone().addScaledVector(_v, 0.45).add(new THREE.Vector3(0, -0.08, 0));
   }
 
-  useSpatula(sp, target, pinch) {
-    if (target) target.data.usedAt = this.time;
+  /**
+   * Spatola: E su un barattolo prende un cucchiaino (Maiusc+E un pizzico). Con il solido sul cucchiaio, sopra un
+   * recipiente: E premuto e lasciato subito lo fa cadere tutto, E tenuto lo fa scivolare piano finché non lo si lascia
+   * (updateSpoonPour), Maiusc+E dà un colpetto e ne cadono pochi centesimi di grammo.
+   */
+  useSpatula(sp, target, fine, down = true) {
     const { t, chem } = this;
+    if (!down) {
+      // E lasciato: dopo un tocco breve cade tutto, dopo un versamento lento il resto rimane sul cucchiaio
+      const p = this.spoonPour;
+      this.spoonPour = null;
+      if (!this.loaded(sp) || !this.items.includes(p.target)) return;
+      if (!p.trickling) this.spoonDrop(sp, p.target, sp.load.mass);
+      else if (p.poured > 0) this.toast(t('spatulaDrop', { g: this.fmt(p.poured, 2), name: this.itemName(p.target) }));
+      return;
+    }
+    if (target) target.data.usedAt = this.time;
     if (!target?.def.container || !target.mixture) {
       this.toast(t('spatulaHint'));
       return;
     }
     const mix = target.mixture;
-    if (sp.load && !sp.load.isEmpty()) {
-      target.mixture.add(sp.load);
-      this.toast(t('spatulaDrop', { g: this.fmt(sp.load.mass, 2), name: this.itemName(target) }));
-      sp.load = null;
-      sp.heap.visible = false;
+    if (this.loaded(sp)) {
+      if (fine) this.spoonDrop(sp, target, tapGrams(this.chemMode), { tap: true });
+      else this.spoonPour = { target, t: this.time, trickling: false, flow: 0, poured: 0 };
       return;
     }
     const solid = mix.solidVolume;
@@ -1324,7 +1338,7 @@ export class LabGame {
       this.toast(t('spatulaEmpty'));
       return;
     }
-    const grams = this.chemMode === 'simple' ? (pinch ? 0.1 : 1) : pinch ? 0.05 + Math.random() * 0.12 : 0.6 + Math.random() * 0.65;
+    const grams = scoopGrams(this.chemMode, fine);
     // grammi di solido non sciolto nel contenitore
     let solidG = 0;
     for (const [sid, mol] of mix.n) if (typeof sid === 'number' && sid !== WATER && mix.phaseOf(sid) === 1) solidG += (mol - (mix.d.get(sid) ?? 0)) * chem.molar(sid);
@@ -1336,10 +1350,73 @@ export class LabGame {
     }
     sp.load = mix.takeFraction(Math.min(1, grams / solidG), { solidOnly: true, keepLiquid: true });
     if (target.data.reagent) this.addCost(sp.load.mass * PRICES.solidPerGram);
-    sp.heap.visible = true;
     const c = sp.load.appearance().solid;
     sp.heap.material.color.setRGB(c[0] / 255, c[1] / 255, c[2] / 255);
-    sp.heap.scale.setScalar(Math.max(0.4, Math.min(1.4, Math.cbrt(sp.load.mass))));
+    this.fitSpoonHeap(sp);
+  }
+
+  /** La spatola ha del solido sul cucchiaio? */
+  loaded(sp) {
+    return Boolean(sp.load && !sp.load.isEmpty());
+  }
+
+  /** Mucchietto sul cucchiaio grande quanto il solido che resta (nascosto se il cucchiaio è vuoto). */
+  fitSpoonHeap(sp) {
+    sp.heap.visible = this.loaded(sp);
+    if (!sp.heap.visible) return;
+    const s = spoonHeap(sp.load.mass);
+    sp.heap.scale.set(s.xz * 1.3, s.y, s.xz); // il cucchiaio è ovale, più lungo che largo
+  }
+
+  /**
+   * Fa cadere dalla spatola `grams` di solido nel recipiente (tutto, se ne resta poco), con i grani che si vedono
+   * cadere dal cucchiaio. tap: un colpetto (si sente, senza avviso); quiet: versamento lento, l'avviso arriva alla fine.
+   */
+  spoonDrop(sp, target, grams, { tap = false, quiet = false } = {}) {
+    const load = sp.load;
+    const all = grams >= load.mass - SPOON_EMPTY_G;
+    const portion = all ? load : load.takeFraction(grams / load.mass, { solidOnly: true });
+    target.mixture.add(portion);
+    if (all) sp.load = null;
+    this.fitSpoonHeap(sp);
+    // i grani partono dal cucchiaio e finiscono sul fondo (o sul contenuto) del recipiente
+    const from = _v.set(...TOOL_TIPS.spatula).applyMatrix4(sp.mesh.matrixWorld);
+    const bottom = _v2.set(0, target.def.profile[0][1], 0).applyMatrix4(target.mesh.matrixWorld).y;
+    const floor = Math.min(from.y - 0.005, Math.max(bottom, target.levelInfo?.level ?? bottom));
+    const col = portion.appearance().solid;
+    const n = Math.min(14, 1 + Math.round(portion.mass * 12));
+    for (let i = 0; i < n; i++) {
+      const j = () => (Math.random() - 0.5) * 0.008;
+      this.grains.emit(from.x + j(), from.y, from.z + j(), j() * 4, -0.02 - Math.random() * 0.08, j() * 4, 0.0005 + Math.random() * 0.0007, col, 1.2, floor);
+    }
+    // il colpetto della spatola sul bordo del recipiente
+    if (tap) this.sfx('clink', from, { gain: 0.25, rate: 1.6 + Math.random() * 0.3 });
+    else if (!quiet) this.toast(this.t('spatulaDrop', { g: this.fmt(portion.mass, 2), name: this.itemName(target) }));
+    return portion.mass;
+  }
+
+  /**
+   * E tenuto con la spatola carica sopra un recipiente: dopo un attimo il solido scivola piano dal cucchiaio, prima
+   * lento e poi più svelto; spostando la spatola fuori dal recipiente si ferma.
+   */
+  updateSpoonPour(dt) {
+    const p = this.spoonPour;
+    if (!p) return;
+    const sp = this.held;
+    if (sp?.kind !== 'spatula' || !this.loaded(sp) || !this.items.includes(p.target)) {
+      this.spoonPour = null;
+      return;
+    }
+    if (this.time - p.t < TRICKLE_HOLD_MS / 1000) return;
+    p.trickling = true;
+    if (this.hover?.item !== p.target) return;
+    p.flow += dt;
+    p.acc = (p.acc ?? 0) + trickleRate(p.flow) * dt;
+    // a pizzichi di qualche milligrammo, così i grani si vedono cadere uno alla volta
+    if (p.acc < 0.004) return;
+    p.poured += this.spoonDrop(sp, p.target, p.acc, { quiet: true });
+    p.acc = 0;
+    if (!this.loaded(sp)) this.toast(this.t('spatulaDrop', { g: this.fmt(p.poured, 2), name: this.itemName(p.target) }));
   }
 
   useLoop(loop, target) {
@@ -1558,6 +1635,11 @@ export class LabGame {
     if (item.kind === 'loop' && h.fixture?.kind === 'bunsen') {
       const fl = this.fx.bunsen.flame;
       return out.set(fl.x, fl.y + 0.07, fl.z).sub(offset);
+    }
+    // la spatola su un recipiente: il cucchiaio sopra la bocca, così il solido ci cade dentro
+    if (item.kind === 'spatula' && h.type === 'item' && h.item.def.container && !h.item.rig) {
+      const prof = h.item.def.profile;
+      return out.set(0, prof[prof.length - 1][1] + 0.012, 0).applyMatrix4(h.item.mesh.matrixWorld).sub(offset);
     }
     // davanti al punto colpito, non dentro la superficie
     const dir = this.pointerRay().ray.direction;
@@ -2636,6 +2718,7 @@ export class LabGame {
     for (const it of this.items) updateContactShadow(it, this.physics, this.G.shadows ? 0.3 : 0.55);
     for (const p of this.room.props) if (!p.body.isSleeping()) this.syncProp(p);
     for (const it of this.items) if (it.def.container && it.mixture) this.pourFrom(it, dt);
+    this.updateSpoonPour(dt);
     this.apparatus.update(dt);
     // pH-metro immerso con una lettura: il campione conta come misurato
     if (this.order && this.held?.kind === 'phmeter' && this.probing && this.held.data.reading !== null) this.order.phRead.add(this.probing.id);

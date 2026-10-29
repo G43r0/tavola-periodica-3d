@@ -86,8 +86,9 @@ function toolRows(held, target) {
   const onVessel = target?.type === 'item' && target.container;
   switch (held.kind) {
     case 'spatula':
+      // carica: E tutto, E tenuto piano (come il sinistro tenuto con un recipiente), Maiusc+E un colpetto
       return held.loaded
-        ? [row(['e'], 'lgSpatulaDrop', null, !onVessel)]
+        ? [row(['e'], 'lgSpatulaDrop', null, !onVessel), row(['e'], 'lgSpatulaTrickle', null, !onVessel), row(['shift', 'e'], 'lgSpatulaTap', null, !onVessel)]
         : [row(['e'], 'lgSpatulaTake', null, !onVessel), row(['shift', 'e'], 'lgSpatulaPinch', null, !onVessel)];
     case 'loop':
       return [row(['e'], 'lgLoop', null, !onVessel)];
