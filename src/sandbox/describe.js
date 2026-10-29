@@ -160,6 +160,31 @@ function burnEquation(subs, id) {
   return `${coef(x)}${s.symbol} + ${coef(y)}O₂ → ${coef(z)}${oxideFormula(s.symbol, c)}`;
 }
 
+/** Prodotti della combustione completa per elemento del combustibile (come exhaustOf): [Z, formula, atomi di Z, ossigeni]. */
+const EXHAUST = [[6, 'CO₂', 1, 2], [1, 'H₂O', 2, 1], [16, 'SO₂', 1, 2], [7, 'N₂', 2, 0], [15, 'P₄O₁₀', 4, 10], [9, 'HF', 1, 0], [17, 'HCl', 1, 0], [35, 'HBr', 1, 0], [53, 'HI', 1, 0], [14, 'SiO₂', 1, 2]];
+const HALOGEN_Z = [9, 17, 35, 53];
+
+/**
+ * Combustione completa di un composto fuori catalogo, bilanciata dagli atomi: CₓHᵧ… + O₂ → CO₂ + H₂O + SO₂ + N₂ +
+ * P₄O₁₀ + HX + SiO₂ (gli stessi prodotti che il motore ricava con exhaustOf). null se il composto ha altri elementi.
+ */
+function compoundBurnEquation(s) {
+  const n = (z) => s.counts?.[z] ?? 0;
+  if (!s.counts || Object.keys(s.counts).some((z) => z !== '8' && !EXHAUST.some(([e]) => e === Number(z)))) return null;
+  const halogens = HALOGEN_Z.reduce((t, z) => t + n(z), 0);
+  if (n(1) < halogens) return null;
+  // moli di ogni prodotto per una mole di combustibile (l'idrogeno degli alogenuri non fa acqua)
+  const products = EXHAUST.map(([z, f, a, o]) => [f, (z === 1 ? n(1) - halogens : n(z)) / a, o]).filter(([, c]) => c > 0);
+  const o2 = (products.reduce((t, [, c, o]) => t + c * o, 0) - n(8)) / 2;
+  if (!products.length || o2 <= 0) return null;
+  // il più piccolo moltiplicatore che rende interi tutti i coefficienti
+  const whole = (k) => [o2, ...products.map(([, c]) => c)].every((c) => Math.abs(c * k - Math.round(c * k)) < 1e-9);
+  let k = 1;
+  while (k < 8 && !whole(k)) k++;
+  const c = (x) => coef(Math.round(x * k));
+  return `${c(1)}${s.formula} + ${c(o2)}O₂ → ${products.map(([f, x]) => `${c(x)}${f}`).join(' + ')}`;
+}
+
 function saltEquation(M, X) {
   const c = M.charge || 1;
   // x M + y X₂ → z MXc
@@ -229,7 +254,11 @@ export function describeEvent(subs, key) {
     case 'burn': {
       const s = L[Number(a)];
       if (s.kind === 'compound') {
-        return { group: t('gCombustions'), title: t('burn', { name: low(s.name) }), equation: `${s.formula} + O₂ → ${s.counts?.[6] ? 'CO₂ + ' : ''}H₂O + …`, note: t('burnGeneric') };
+        // i prodotti che il motore ricava dagli atomi del composto (C → CO₂, H → H₂O, S → SO₂…), bilanciati se si può
+        // (con altri elementi, come il germanio di GeH₄, restano anche prodotti non elencati)
+        const products = (subs.exhaustFor(s.id) ?? []).map(([id]) => `${substanceLabel(subs, id).formula} + `).join('');
+        const equation = compoundBurnEquation(s) ?? `${s.formula} + O₂ → ${products}…`;
+        return { group: t('gCombustions'), title: t('burn', { name: low(s.name) }), equation, note: t('burnGeneric') };
       }
       const notes = t('burnNotes');
       const flame = s.kind === 'element' && FLAME_COLOR_NAME[s.symbol] ? t('flame', { c: FLAME_COLOR_NAME[s.symbol] }) : '';

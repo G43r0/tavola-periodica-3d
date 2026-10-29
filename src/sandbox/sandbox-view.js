@@ -999,8 +999,9 @@ export function createSandbox(elements, { onClose } = {}) {
     }
     const s = L[c.id];
     const label = substanceLabel(subs, c.id, c.ctype);
+    if (c.id === WATER && c.phase === GAS) label.name = t('hSteam');
     const sym = s.kind === 'element' ? `<span class="sbx-hover__sym">${esc(s.symbol)}</span>` : '';
-    const state_ = s.flags & S.FIRE ? t('hFlame') : c.dissolved || s.flags & S.AQUEOUS ? (c.phase === SOLID ? t('hFrozenSolution') : t('hSolution')) : c.phase === SOLID ? (s.flags & S.BLOCK_ONLY ? t('hSolid') : c.powder ? t('hPowder') : t('hBlock')) : PHASE_NAME[c.phase];
+    const state_ = s.flags & S.FIRE ? t('hFlame') : c.fume ? t('hFume') : c.dissolved || s.flags & S.AQUEOUS ? (c.phase === SOLID ? t('hFrozenSolution') : t('hSolution')) : c.phase === SOLID ? (s.flags & S.BLOCK_ONLY ? t('hSolid') : c.powder ? t('hPowder') : t('hBlock')) : PHASE_NAME[c.phase];
     const extra = [c.burning ? t('hBurning') : '', c.spark ? t('hCurrent') : ''].filter(Boolean).join(' · ');
     const tShow = s.flags & S.WALL ? '' : ` · <b>${fmtCelsius(c.temp)}</b>`;
     el.innerHTML = `${sym}<b>${esc(label.name)}</b>${label.formula && label.formula !== s.symbol ? ` <span class="muted">${esc(label.formula)}</span>` : ''} · ${state_}${tShow}${extra ? ` · <span class="sbx-hover__hot">${extra}</span>` : ''}
