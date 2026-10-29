@@ -8,7 +8,10 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
-## [Non rilasciato]
+## [0.9.1] — 2026-10-29 — Gas delle combustioni e spatola più precisa
+
+Versione di correzioni, con le due segnalazioni arrivate dopo la 0.9.0. Note di rilascio:
+[docs/release-0.9.1.md](docs/release-0.9.1.md).
 
 ### Corretto
 - **Sandbox: i gas delle combustioni** ([issue #13](https://github.com/G43r0/tavola-periodica-3d/issues/13)). Chi
