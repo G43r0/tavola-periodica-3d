@@ -80,7 +80,8 @@ export const DEFS = {
     container: true, glass: true, rig: 'still', mass: 0.1, outer: [0.0406, 0.135], flow: 0.6,
     profile: [[0.0088, 0.006], [0.0223, 0.012], [0.0322, 0.022], [0.0377, 0.034], [0.039, 0.044], [0.0376, 0.056], [0.0307, 0.068], [0.0223, 0.076], [0.015, 0.08], [0.012, 0.083], [0.012, 0.135]],
   },
-  spatula: { tool: true, mass: 0.03, size: [0.19, 0.004, 0.012] },
+  // ghost: come gli strumenti da immergere, passa sopra e dentro i recipienti senza spostarli
+  spatula: { tool: true, ghost: true, mass: 0.03, size: [0.19, 0.006, 0.022] },
   // strumenti da immergere (probe): sottili, in mano entrano nei recipienti senza urtarli
   thermometer: { tool: true, probe: true, mass: 0.015, size: [0.2, 0.008, 0.008] },
   phmeter: { tool: true, probe: true, mass: 0.06, size: [0.18, 0.024, 0.024] },
@@ -130,6 +131,8 @@ export function itemMaterials(G, envMap) {
     glass,
     brown,
     steel: new THREE.MeshStandardMaterial({ color: 0xc8ccd2, metalness: 0.9, roughness: 0.28 }),
+    // acciaio inox spazzolato (spatola): righe sottili che allungano i riflessi; DoubleSide per l'interno del cucchiaio
+    brushed: new THREE.MeshStandardMaterial({ color: 0xd4d8de, metalness: 0.92, roughness: 0.42, roughnessMap: brushedTexture(), side: THREE.DoubleSide }),
     wood: new THREE.MeshStandardMaterial({ color: 0x8a5a32, roughness: 0.7 }),
     paper: new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.95 }),
     red: new THREE.MeshStandardMaterial({ color: 0xc8161d, roughness: 0.35, metalness: 0.2 }),
@@ -371,6 +374,27 @@ export function drawGhs(g, id, cx, cy, size) {
     }
   }
   g.restore();
+}
+
+/** Acciaio spazzolato: righe orizzontali di ruvidità diversa (la u corre lungo lo strumento). Condivisa. */
+let BRUSHED = null;
+function brushedTexture() {
+  if (BRUSHED) return BRUSHED;
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#9a9a9a';
+  g.fillRect(0, 0, 256, 64);
+  for (let i = 0; i < 700; i++) {
+    const v = 110 + Math.floor(Math.random() * 120);
+    g.fillStyle = `rgb(${v},${v},${v})`;
+    g.fillRect(Math.random() * 256, Math.floor(Math.random() * 64), 30 + Math.random() * 140, 1);
+  }
+  BRUSHED = new THREE.CanvasTexture(c);
+  BRUSHED.wrapS = BRUSHED.wrapT = THREE.RepeatWrapping;
+  BRUSHED.userData.shared = true;
+  return BRUSHED;
 }
 
 /** Grana dei solidi (polveri e cristalli): una trama chiara che moltiplica il colore del contenuto. Condivisa. */
@@ -661,10 +685,33 @@ function buildTool(item, env, opts) {
   const [sx, sy, sz] = def.size;
   let shapes = [{ type: 'box', hx: sx / 2, hy: sy / 2, hz: sz / 2, y: sy / 2 }];
   if (kind === 'spatula') {
-    add(new THREE.BoxGeometry(0.13, 0.0025, 0.006), mats.steel, -0.03, 0.002, 0);
-    const spoon = add(new THREE.CylinderGeometry(0.009, 0.009, 0.0025, 16), mats.steel, 0.075, 0.002, 0);
-    spoon.scale.set(1.3, 1, 1);
-    item.heap = new THREE.Mesh(new THREE.SphereGeometry(0.007, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }));
+    // spatola-cucchiaio d'acciaio: lama piatta arrotondata dietro, manico che si stringe, cucchiaio concavo in punta (+x)
+    const blade = new THREE.Shape();
+    blade.moveTo(-0.09, -0.0045);
+    blade.lineTo(-0.055, -0.0045);
+    blade.lineTo(-0.042, -0.0022);
+    blade.lineTo(0.066, -0.0022);
+    blade.lineTo(0.066, 0.0022);
+    blade.lineTo(-0.042, 0.0022);
+    blade.lineTo(-0.055, 0.0045);
+    blade.lineTo(-0.09, 0.0045);
+    blade.absarc(-0.09, 0, 0.0045, Math.PI / 2, Math.PI * 1.5, false);
+    const flat = new THREE.ExtrudeGeometry(blade, { depth: 0.0016, bevelEnabled: false, curveSegments: 10 });
+    flat.rotateX(-Math.PI / 2);
+    // coordinate della trama lungo lo strumento, così le righe dello spazzolato corrono per il lungo
+    const pos = flat.attributes.position;
+    const uv = flat.attributes.uv;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + 0.095) / 0.19, pos.getZ(i) / 0.009 + 0.5);
+    add(flat, mats.brushed, 0, 0.0029, 0);
+    // il cucchiaio: mezza sfera schiacciata e allungata, con il bordo all'altezza del manico
+    const bowl = add(new THREE.SphereGeometry(0.0105, seg(24, 14), seg(10, 6), 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), mats.brushed, 0.075, 0.0045, 0);
+    bowl.scale.set(1.35, 0.42, 1);
+    const rim = add(new THREE.TorusGeometry(0.0105, 0.0006, 4, seg(24, 14)), mats.brushed, 0.075, 0.0045, 0);
+    rim.rotation.x = Math.PI / 2;
+    rim.scale.set(1.35, 1, 1);
+    // il mucchietto di polvere nel cucchiaio (grandezza da spoonHeap in game.js)
+    const powder = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, map: grainTexture() });
+    item.heap = new THREE.Mesh(new THREE.SphereGeometry(0.0095, seg(16, 10), 6, 0, Math.PI * 2, 0, Math.PI / 2), powder);
     item.heap.position.set(0.075, 0.003, 0);
     item.heap.visible = false;
     group.add(item.heap);
@@ -762,7 +809,7 @@ function buildTool(item, env, opts) {
     item.hits.push(pick);
   }
   item.shapes = shapes; // forma del corpo: serve anche per l'ingombro quando lo si posa
-  item.body = physics.dynamic({ pos: opts.pos, quat: opts.quat, shapes, mass: def.mass, owner: item, friction: 0.9, events: kind === 'extinguisher', ghost: Boolean(def.probe) });
+  item.body = physics.dynamic({ pos: opts.pos, quat: opts.quat, shapes, mass: def.mass, owner: item, friction: 0.9, events: kind === 'extinguisher', ghost: Boolean(def.probe || def.ghost) });
 }
 
 /** Dopo createItem per gli strumenti la posizione va impostata sul corpo. */

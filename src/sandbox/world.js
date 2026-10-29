@@ -3,7 +3,7 @@
 // fissione ed esplosioni. Modulo puro (niente DOM): lo disegna render.js, lo pilota sandbox-view.js, lo provano i test.
 import {
   AMBIENT, T_MAX, AIR_DENSITY, SOLID, LIQUID, GAS, S, DECAY,
-  EMPTY, WOOD, COAL, WATER, FIRE, SMOKE, SALT, OXIDE, SOLUTION, GENERATOR, saltCtype,
+  EMPTY, WOOD, COAL, WATER, FIRE, SMOKE, CO2, SALT, OXIDE, SOLUTION, GENERATOR, saltCtype,
 } from './substances.js';
 import { buildChemistry, PAIR_K } from './chemistry.js';
 
@@ -18,6 +18,8 @@ export const C_POWDER = 1; // solido sciolto (polvere) invece che blocco
 export const C_BURN = 2; // sta bruciando
 const PHASE_MASK = 3 << 2; // ultimo stato fisico registrato (per i cambiamenti di stato)
 export const C_DISSOLVED = 16; // sciolto in acqua: la cella è una soluzione (es. NaCl(aq))
+export const C_FUME = 32; // gas di scarico di una combustione, diluito nell'aria: si disperde dopo `life` passi
+const FUME_LIFE = 200; // passi: un gas di scarico resta visibile da 200 a 400 passi
 const FREEZE_AQ = 271.15; // K: una soluzione acquosa gela poco sotto 0 °C…
 const BOIL_AQ = 373.15; // …e bollendo lascia cristallizzare il soluto
 
@@ -52,6 +54,12 @@ const SPARK_DY = [-1, -1, -1, 0, 0, 1, 1, 1, -2, 0, 0, 2];
 
 const clampT = (t) => (t > T_MAX ? T_MAX : t < 0 ? 0 : t);
 
+/** Sceglie un id da [[id, probabilità], …] con il numero casuale r ∈ [0, 1). */
+function pickShare(list, r) {
+  for (const [id, p] of list) if ((r -= p) < 0) return id;
+  return list[list.length - 1][0];
+}
+
 export class World {
   /**
    * @param {ReturnType<import('./substances.js').createSubstances>} subs
@@ -62,6 +70,7 @@ export class World {
     this.subs = subs;
     this.P = subs.P;
     this.chem = subs.chem ?? (subs.chem = buildChemistry(subs)); // reazioni del catalogo (una volta per tabella)
+    this.CO = subs.byKey.get('co')?.id ?? 0; // monossido di carbonio: combustione con poco ossigeno
     this.rng = seed >>> 0 || 1;
     this.openEdges = false;
     this.resize(W, H);
@@ -296,8 +305,8 @@ export class World {
       }
       const j = ny * W + nx;
       const id = type[j];
-      if (!id || id === FIRE || id === SMOKE) {
-        air = true; // la fiamma e il fumo sono mescolati all'aria
+      if (!id || id === FIRE || id === SMOKE || this.flags[j] & C_FUME) {
+        air = true; // la fiamma, il fumo e i gas di scarico sono mescolati all'aria
         this.airCell = j;
       } else if (P.flags[id] & S.OXIDIZER) return j;
     }
@@ -311,8 +320,9 @@ export class World {
       const nx = x + DX[k];
       const ny = y + DY[k];
       if (nx < 0 || ny < 0 || nx >= this.W || ny >= this.H) continue;
-      const id = this.type[ny * this.W + nx];
-      if (!id || id === FIRE || id === SMOKE || this.P.flags[id] & S.OXIDIZER) n++;
+      const j = ny * this.W + nx;
+      const id = this.type[j];
+      if (!id || id === FIRE || id === SMOKE || this.flags[j] & C_FUME || this.P.flags[id] & S.OXIDIZER) n++;
     }
     return n;
   }
@@ -380,7 +390,7 @@ export class World {
       this.updateFire(i, x, y);
       return;
     }
-    if (sf & S.FADES && --this.life[i] <= 0) {
+    if ((sf & S.FADES || this.flags[i] & C_FUME) && --this.life[i] <= 0) {
       this.clearCell(i);
       return;
     }
@@ -447,12 +457,24 @@ export class World {
     if (this.type[i] !== id) return;
     if (rx) this.applyReaction(rx, [i], x, y);
     else {
-      this.setType(i, SMOKE, 2000);
+      // senza reazione in catalogo: i gas caldi che vengono dagli atomi dell'esplosivo (N₂, CO₂, H₂O…)
+      const gases = this.subs.exhaustFor(id);
+      if (gases) this.setType(i, pickShare(gases, this.rand()), 2000);
+      else this.clearCell(i);
       this.event(`boom:${id}`);
     }
   }
 
   changePhase(i, id, from, to) {
+    if (this.flags[i] & C_FUME && to !== GAS) {
+      // il vapore acqueo di una fiamma resta umidità nell'aria; gli altri fumi (P₄O₁₀, SiO₂…) si posano come polvere
+      if (id === WATER) {
+        this.clearCell(i);
+        return true;
+      }
+      this.flags[i] &= ~C_FUME;
+      this.life[i] = 0;
+    }
     let fl = (this.flags[i] & ~PHASE_MASK) | (to << 2);
     if (from && to === SOLID) fl &= ~C_POWDER; // il fuso solidifica in un blocco
     this.flags[i] = fl;
@@ -667,20 +689,26 @@ export class World {
     const P = this.P;
     const T = Math.max(this.temp[i], P.flame[id]);
     this.temp[i] = T;
+    const fume = this.flags[i] & C_FUME; // il CO di scarico che brucia nella fiamma dà CO₂ di scarico
     const rx = this.chem.comb.get(id);
-    const oxCell = ox >= 0 && (!this.type[ox] || this.type[ox] === O_Z || this.type[ox] === FIRE || this.type[ox] === SMOKE) ? ox : -1;
+    const t = ox >= 0 ? this.type[ox] : -1;
+    const oxCell = ox >= 0 && (!t || t === O_Z || t === FIRE || t === SMOKE || this.flags[ox] & C_FUME) ? ox : -1;
     if (rx) {
       const slots = rx.reactants.map((r) => (r.sid === id ? i : oxCell));
       if (slots[rx.air] < 0) slots[rx.air] = -1;
       this.applyReaction(rx, slots, x, y);
     } else {
-      // senza reazione in catalogo: il carbonio diventa CO₂, l'idrogeno acqua
-      const counts = this.subs.list[id].counts ?? {};
-      const products = [counts[6] ? this.subs.byKey.get('co2').id : 0, counts[1] ? WATER : 0].filter(Boolean);
-      if (!products.length) products.push(SMOKE);
-      this.setType(i, products[0], T);
-      if (products[1] && oxCell >= 0) this.setType(oxCell, products[1], T * 0.9);
+      // senza reazione in catalogo: i prodotti che vengono dagli atomi (C → CO₂, H → H₂O, S → SO₂, N → N₂…)
+      const gases = this.subs.exhaustFor(id);
+      if (gases) {
+        this.setType(i, pickShare(gases, this.rand()), T);
+        if (oxCell >= 0) this.setType(oxCell, pickShare(gases, this.rand()), T * 0.9);
+      } else this.clearCell(i);
       this.event(`burn:${id}`);
+    }
+    if (fume && this.type[i] && this.phaseOf(this.type[i], this.temp[i]) === GAS) {
+      this.flags[i] |= C_FUME;
+      this.life[i] = FUME_LIFE;
     }
     if (flash) {
       const tint = P.flameTint[id];
@@ -800,10 +828,10 @@ export class World {
     const T = this.temp[i];
     if (T < hot) this.temp[i] = clampT(T + (hot - T) * 0.2);
     if (this.rand() < 0.55) this.spawnNear(x, y, FIRE, flame * (0.8 + 0.15 * this.rand()), tint, true);
-    if (P.burnGas[id] && this.rand() < P.gasChance[id]) this.spawnNear(x, y, P.burnGas[id], flame * 0.6, 0, true);
+    if (this.rand() < P.gasChance[id]) this.exhaust(x, y, this.burnGas(id, x, y, pure), flame);
     if (pure && this.rand() < 0.04) {
       // l'ossigeno puro si consuma
-      const gas = P.burnGas[id] && P.burnGas[id] !== SMOKE ? P.burnGas[id] : P.burnEnd[id] && P.burnEnd[id] !== OXIDE ? P.burnEnd[id] : 0;
+      const gas = this.burnGas(id, x, y, true) || (P.burnEnd[id] && P.burnEnd[id] !== OXIDE ? P.burnEnd[id] : 0);
       if (gas) this.setType(ox, gas, flame * 0.6);
       else this.clearCell(ox);
     }
@@ -812,6 +840,32 @@ export class World {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Uno dei gas che `id` libera bruciando (0 se nessuno). Nell'ossigeno puro il carbonio brucia tutto in CO₂;
+   * con poco ossigeno (al più un lato all'aria) metà del CO₂ diventa monossido di carbonio o fuliggine.
+   */
+  burnGas(id, x, y, pure) {
+    const P = this.P;
+    const list = P.burnGases[id];
+    if (!list) return 0;
+    const g = pickShare(list, this.rand());
+    if (!P.soot[id] || (g !== CO2 && g !== SMOKE)) return g;
+    if (pure) return CO2;
+    if (g === CO2 && this.oxidizerCount(x, y) <= 1 && this.rand() < 0.5) return this.CO && this.rand() < 0.5 ? this.CO : SMOKE;
+    return g;
+  }
+
+  /** Gas di scarico accanto alla fiamma: parte come vapore caldo e si disperde nell'aria dopo qualche secondo. */
+  exhaust(x, y, id, flame) {
+    if (!id) return;
+    const P = this.P;
+    const j = this.spawnNear(x, y, id, Math.min(flame, Math.max(flame * 0.6, P.bp[id] + 30)), 0, true);
+    // la fuliggine svanisce da sé (FADES); i solidi come SiO₂ cadono come polvere
+    if (j < 0 || id === SMOKE || this.phaseOf(id, this.temp[j]) !== GAS) return;
+    this.flags[j] |= C_FUME;
+    this.life[j] = FUME_LIFE + ((this.rand() * FUME_LIFE) | 0);
   }
 
   finishBurn(i, x, y, id, ox) {
@@ -880,9 +934,9 @@ export class World {
     let T = this.temp[i];
     T -= (T - AMBIENT) * 0.035;
     this.temp[i] = T;
+    // la fiamma spenta torna aria: i suoi prodotti (CO₂, vapore, fuliggine…) li libera chi brucia
     if (--this.life[i] <= 0 || T < 480) {
-      if (this.rand() < 0.08) this.setType(i, SMOKE, T);
-      else this.clearCell(i);
+      this.clearCell(i);
       return;
     }
     const k = (this.rand() * 8) | 0;
@@ -1751,6 +1805,7 @@ export class World {
       powder: Boolean(this.flags[i] & C_POWDER),
       dissolved: Boolean(this.flags[i] & C_DISSOLVED),
       burning: Boolean(this.flags[i] & C_BURN),
+      fume: Boolean(this.flags[i] & C_FUME),
       spark: this.spark[i] >= SPARK_ACTIVE,
     };
   }

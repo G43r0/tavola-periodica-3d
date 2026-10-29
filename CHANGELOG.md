@@ -8,6 +8,25 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
+## [Non rilasciato]
+
+### Corretto
+- **Sandbox: i gas delle combustioni** ([issue #13](https://github.com/G43r0/tavola-periodica-3d/issues/13)). Chi
+  brucia non libera più solo un generico «Fumo»: il legno dà anidride carbonica e vapore acqueo, il carbone CO₂, lo
+  zolfo SO₂, il fosforo il fumo bianco di P₄O₁₀ (che si posa come polvere), l'arsenico As₄O₆; i composti della libreria
+  i gas che vengono dai loro atomi (C → CO₂, H → H₂O, S → SO₂, N → N₂, alogeni → HF/HCl/HBr/HI, Si → SiO₂). Dove l'aria
+  scarseggia parte del carbonio diventa monossido di carbonio (che può bruciare a sua volta nella fiamma) o fuliggine,
+  ora chiamata «Fumo nero (fuliggine)»; nell'ossigeno puro brucia tutto in CO₂. I gas di scarico si disperdono
+  nell'aria dopo qualche secondo e, sotto il cursore, si leggono come «gas di combustione» (il vapore come «Vapore
+  acqueo»). Le combustioni dei composti fuori catalogo hanno nel registro l'equazione bilanciata.
+- **Simulatore: pesare con la spatola** ([issue #14](https://github.com/G43r0/tavola-periodica-3d/issues/14)). Nella
+  chimica realistica un cucchiaino pesa 1 g ± 5 % e un pizzico 0,1 g ± 20 % (prima da 0,6 a 1,25 g). Sopra il
+  recipiente la spatola va sulla bocca e il solido si vede cadere a granelli: E lo versa tutto, E tenuto lo fa
+  scivolare piano (prima adagio, poi più svelto) finché non si lascia il tasto, Maiusc+E dà un colpetto e ne cadono
+  pochi centesimi di grammo, così si arriva alla massa voluta guardando la bilancia. Nuovo modello della spatola in
+  acciaio spazzolato, con lama arrotondata, manico che si stringe e cucchiaio concavo in cui il mucchietto di polvere
+  cresce con la quantità presa.
+
 ## [0.9.0] — 2026-10-27 — Simulatore di laboratorio: il gioco completo
 
 Il simulatore non è più un prototipo: le otto fasi del [piano del gioco base](docs/superpowers/specs/2026-10-14-gioco-base-piano.md)

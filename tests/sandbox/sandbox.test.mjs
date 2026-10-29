@@ -6,7 +6,7 @@ import {
   createSubstances, phaseAt, gameHalfLife, AMBIENT, AIR_DENSITY, SOLID, LIQUID, GAS, S,
   WOOD, COAL, CONCRETE, WALL, WATER, SALT, OXIDE, SOLUTION, GENERATOR, ASH, SMOKE, saltCtype,
 } from '../../src/sandbox/substances.js';
-import { World, C_POWDER, SPARK_ACTIVE, NEUTRON } from '../../src/sandbox/world.js';
+import { World, C_POWDER, C_FUME, SPARK_ACTIVE, NEUTRON } from '../../src/sandbox/world.js';
 import { describeEvent, substanceLabel, substanceNotes } from '../../src/sandbox/describe.js';
 import { PRESETS } from '../../src/sandbox/presets.js';
 
@@ -161,6 +161,57 @@ test('combustione: il legno brucia all\'aria (fumo, cenere); senza ossigeno si c
   run(v, 400);
   assert.equal(events(v, `burn:${WOOD}`), 0);
   assert.ok(events(v, 'pyrolysis') > 0);
+});
+
+/** Celle di gas di scarico (C_FUME) per sostanza, raccolte a ogni passo. */
+function fumes(w, steps) {
+  const seen = new Map();
+  for (let k = 0; k < steps; k++) {
+    w.step();
+    for (let i = 0; i < w.N; i++) if (w.flags[i] & C_FUME) seen.set(w.type[i], (seen.get(w.type[i]) ?? 0) + 1);
+  }
+  return seen;
+}
+
+test('gas di combustione: il legno libera CO₂ e vapore acqueo, non solo fumo; con poca aria anche CO e fuliggine', () => {
+  const w = world();
+  for (let y = 30; y < 39; y++) for (let x = 20; x < 40; x++) w.paint(x, y, 0, WOOD);
+  w.ignite(30, 29, 3);
+  const seen = fumes(w, 900);
+  assert.ok(seen.get(Z('co2')) > 50, 'anidride carbonica');
+  assert.ok(seen.get(WATER) > 50, 'vapore acqueo');
+  assert.ok(seen.get(Z('co')) > 0, 'monossido di carbonio dove l\'aria scarseggia');
+  assert.ok(count(w, SMOKE) + events(w, `burn:${WOOD}`) > 0);
+  assert.equal(subs.list[SMOKE].name, 'Fumo nero (fuliggine)');
+  // i gas di scarico si disperdono: senza più fiamme, dopo qualche secondo non ne resta nessuno
+  for (let i = 0; i < w.N; i++) if (!(w.flags[i] & C_FUME) && w.type[i] !== WALL) w.clearCell(i);
+  assert.ok(w.flags.some((f) => f & C_FUME));
+  run(w, 450);
+  assert.equal(w.flags.filter((f) => f & C_FUME).length, 0);
+});
+
+test('gas di combustione: fosforo → P₄O₁₀, zolfo → SO₂, etanolo → CO₂ + H₂O, magnesio senza fumo', () => {
+  const burnt = (id, opts = {}) => {
+    const w = world();
+    w.paint(30, 34, 3, id, { powder: true, ...opts });
+    w.heat(30, 34, 3, 700);
+    w.ignite(30, 30, 1);
+    return fumes(w, 400);
+  };
+  const p = burnt(Z('P'));
+  assert.ok(p.get(Z('p4o10')) > 0, 'fumo bianco di P₄O₁₀');
+  assert.ok(burnt(Z('S')).get(Z('so2')) > 0, 'anidride solforosa');
+  const etoh = burnt(Z('etanolo'), { powder: false });
+  assert.ok(etoh.get(Z('co2')) > 0 && etoh.get(WATER) > 0, 'etanolo: CO₂ e vapore');
+  assert.equal(etoh.get(SMOKE) ?? 0, 0);
+  const mg = world();
+  mg.paint(30, 34, 3, Z('Mg'), { powder: true, temp: 900 });
+  run(mg, 300);
+  assert.ok(events(mg, `burn:${Z('Mg')}`) > 0);
+  assert.equal(count(mg, SMOKE), 0, 'il magnesio non fa fuliggine');
+  // l'equazione nel registro per un composto bruciato fuori catalogo: bilanciata dagli atomi
+  assert.equal(describeEvent(subs, `burn:${Z('etilbenzene')}`).equation, '2 C₆H₅C₂H₅ + 21 O₂ → 16 CO₂ + 10 H₂O');
+  assert.equal(describeEvent(subs, `burn:${Z('co')}`).equation, '2 CO + O₂ → 2 CO₂');
 });
 
 test('idrogeno e ossigeno: una scintilla e diventano acqua', () => {

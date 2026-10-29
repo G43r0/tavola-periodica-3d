@@ -161,13 +161,14 @@ const ESTIMATE = {
 
 /**
  * Combustione: temperatura di accensione (K), probabilità per passo una volta raggiunta, temperatura della fiamma,
- * durata (passi), gas emesso e cosa resta. I metalli bruciano solo in polvere o fusi, salvo BURNS_AS_BLOCK.
+ * durata (passi), gas emessi ([sostanza, quota]) e cosa resta. I metalli bruciano solo in polvere o fusi, salvo
+ * BURNS_AS_BLOCK. `soot`: contiene carbonio, quindi con poco ossigeno dà monossido di carbonio e fuliggine.
  */
 const BURN = {
   H: { ignite: 858, flame: 2400, instant: true },
-  C: { ignite: 973, flame: 1600, fuel: [500, 800], gas: 'CO2', gasChance: 0.12, end: 'CO2', block: true },
-  P: { ignite: 307, chance: 0.04, flame: 1100, fuel: [25, 45], gas: 'SMOKE', gasChance: 0.5, end: 'OXIDE', block: true },
-  S: { ignite: 505, flame: 1100, fuel: [70, 130], gas: 'SO2', gasChance: 0.3, end: 'SO2', block: true },
+  C: { ignite: 973, flame: 1600, fuel: [500, 800], gases: [['CO2', 1]], gasChance: 0.12, soot: true, end: 'CO2', block: true },
+  P: { ignite: 307, chance: 0.04, flame: 1100, fuel: [25, 45], gases: [['p4o10', 1]], gasChance: 0.5, end: 'OXIDE', block: true },
+  S: { ignite: 505, flame: 1100, fuel: [70, 130], gases: [['SO2', 1]], gasChance: 0.3, end: 'SO2', block: true },
   Li: { ignite: 453, flame: 1500, fuel: [60, 100], end: 'OXIDE', block: true },
   Na: { ignite: 388, flame: 1300, fuel: [60, 110], end: 'OXIDE', block: true },
   K: { ignite: 340, flame: 1300, fuel: [50, 90], end: 'OXIDE', block: true },
@@ -187,7 +188,7 @@ const BURN = {
   Zn: { ignite: 733, flame: 1400, fuel: [30, 60], end: 'OXIDE' },
   Zr: { ignite: 900, flame: 2800, fuel: [40, 70], end: 'OXIDE' },
   Hf: { ignite: 1000, flame: 2800, fuel: [40, 70], end: 'OXIDE' },
-  As: { ignite: 600, flame: 1200, fuel: [30, 60], gas: 'SMOKE', gasChance: 0.3, end: 'OXIDE' },
+  As: { ignite: 600, flame: 1200, fuel: [30, 60], gases: [['as4o6', 1]], gasChance: 0.3, end: 'OXIDE' },
   Se: { ignite: 650, flame: 1200, fuel: [30, 60], end: 'OXIDE' },
   Sb: { ignite: 900, flame: 1500, fuel: [30, 60], end: 'OXIDE' },
   La: { ignite: 720, flame: 2000, fuel: [40, 70], end: 'OXIDE' },
@@ -396,13 +397,15 @@ function makeOthers() {
       ...base, id: WOOD, key: 'wood', name: L('Legno', 'Wood'), symbol: L('Legno', 'Wood'), mp: Infinity, bp: Infinity, densS: 0.6, densL: 0.6, densG: 0.0013,
       cond: 0.012, hardness: 0.35, flags: S.FLAMMABLE | S.BURNS_AS_BLOCK | S.BLOCK_DEFAULT,
       colors: { [SOLID]: [138, 92, 48, 1], [LIQUID]: [138, 92, 48, 1], [GAS]: [138, 92, 48, 0.3] },
-      burn: { ignite: 573, chance: 1, flame: 1150, fuel: [70, 150], gas: 'SMOKE', gasChance: 0.22, residue: [['ASH', 0.4], ['COAL', 0.08]] },
+      // (C₆H₁₀O₅)ₙ: circa 6 CO₂ ogni 5 H₂O, più la fuliggine (e il catrame) di ciò che non brucia del tutto: il fumo
+      // della legna si vede, quello della CO₂ e del vapore quasi no
+      burn: { ignite: 573, chance: 1, flame: 1150, fuel: [70, 150], gases: [['CO2', 0.4], ['water', 0.35], ['SMOKE', 0.25]], gasChance: 0.35, soot: true, residue: [['ASH', 0.4], ['COAL', 0.08]] },
     },
     {
       ...base, id: COAL, key: 'coal', name: L('Carbone', 'Coal'), symbol: L('Carb.', 'Coal'), mp: Infinity, bp: Infinity, densS: 1.35, densL: 1.35, densG: 0.0013,
       cond: 0.02, hardness: 0.3, flags: S.FLAMMABLE | S.BURNS_AS_BLOCK | S.BLOCK_DEFAULT,
       colors: { [SOLID]: [36, 33, 31, 1], [LIQUID]: [36, 33, 31, 1], [GAS]: [60, 60, 60, 0.3] },
-      burn: { ignite: 700, chance: 1, flame: 1450, fuel: [450, 750], gas: 'CO2', gasChance: 0.08, residue: [['ASH', 0.3]] },
+      burn: { ignite: 700, chance: 1, flame: 1450, fuel: [450, 750], gases: [['CO2', 1]], gasChance: 0.08, soot: true, residue: [['ASH', 0.3]] },
     },
     {
       ...base, id: CONCRETE, key: 'concrete', name: L('Calcestruzzo', 'Concrete'), symbol: L('Cls', 'Conc.'), mp: 1900, bp: 3200, densS: 2.4, densL: 2.5, densG: gasOf(60),
@@ -440,7 +443,8 @@ function makeOthers() {
       colors: { [SOLID]: [255, 140, 30, 1], [LIQUID]: [255, 140, 30, 1], [GAS]: [255, 140, 30, 0.9] },
     },
     {
-      ...base, kind: 'product', id: SMOKE, key: 'smoke', name: L('Fumo', 'Smoke'), symbol: L('Fumo', 'Smoke'), mp: -1, bp: -1, densS: 1, densL: 1, densG: 0.00105,
+      // particelle di carbonio incombusto: si formano solo quando l'ossigeno non basta
+      ...base, kind: 'product', id: SMOKE, key: 'smoke', name: L('Fumo nero (fuliggine)', 'Black smoke (soot)'), symbol: 'C', mp: -1, bp: -1, densS: 1, densL: 1, densG: 0.00105,
       cond: 0.02, flags: S.FADES,
       colors: { [SOLID]: [90, 90, 90, 0.45], [LIQUID]: [90, 90, 90, 0.45], [GAS]: [92, 92, 96, 0.42] },
     },
@@ -509,6 +513,28 @@ export function variantColor(subs, id, ctype) {
 const WATER_RGB = [40, 120, 220];
 const gcd = (a, b) => (b ? gcd(b, a % b) : Math.abs(a));
 
+/**
+ * Gas di scarico di una sostanza che brucia, dagli atomi che contiene (quote in moli di prodotto): C → CO₂,
+ * H → vapore acqueo, S → SO₂, N → N₂, P → P₄O₁₀, alogeni → HF/HCl/HBr/HI, Si → SiO₂ (fumo bianco).
+ * @param {Record<number, number>} counts atomi per Z
+ * @returns {[string, number][]} [chiave della sostanza, quota], quote che sommano a 1
+ */
+export function exhaustOf(counts) {
+  const n = (z) => counts[z] ?? 0;
+  const halogens = n(9) + n(17) + n(35) + n(53);
+  const out = [
+    ['CO2', n(6)],
+    ['water', Math.max(0, n(1) - halogens) / 2],
+    ['SO2', n(16)],
+    ['N', n(7) / 2],
+    ['p4o10', n(15) / 4],
+    ['hf', n(9)], ['hcl', n(17)], ['hbr', n(35)], ['hi', n(53)],
+    ['sio2', n(14)],
+  ].filter(([, w]) => w > 0);
+  const total = out.reduce((t, [, w]) => t + w, 0);
+  return out.map(([k, w]) => [k, w / total]);
+}
+
 /** Una voce della libreria del laboratorio come sostanza della sandbox. */
 function makeCompound(id, entry, data, elements, lab) {
   const [mpC, bpC, d, color, opts = '', ignC] = data;
@@ -556,7 +582,8 @@ function makeCompound(id, entry, data, elements, lab) {
   if (has('f')) {
     flags |= S.FLAMMABLE | S.BURNS_AS_BLOCK;
     if (state25 === 'gas') flags |= S.INSTANT_BURN;
-    burn = { ignite: ignC != null ? ignC + 273.15 : organic ? 573 : 673, chance: 1, flame: state25 === 'gas' ? 2200 : 1700, fuel: [60, 140], gas: organic ? 'SMOKE' : null, gasChance: organic ? 0.15 : 0 };
+    const gases = exhaustOf(counts);
+    burn = { ignite: ignC != null ? ignC + 273.15 : organic ? 573 : 673, chance: 1, flame: state25 === 'gas' ? 2200 : 1700, fuel: [60, 140], gases, gasChance: gases.length ? 0.15 : 0, soot: Boolean(counts[6]) };
   }
   const rgb = color ? hex(color) : null;
   const colors = {
@@ -640,6 +667,12 @@ export function createSubstances(elements) {
     libraryId.set(entry.id, s.id);
   }
   const keyId = (k) => (k ? byKey.get({ CO2: 'co2', SO2: 'so2', SMOKE: 'smoke', ASH: 'ash', COAL: 'coal', OXIDE: 'oxide' }[k] ?? k)?.id ?? 0 : 0);
+  /** [chiave, quota] → [id, probabilità]; se una sostanza manca, le quote delle altre si rinormalizzano. */
+  const idShares = (pairs) => {
+    const ids = pairs.map(([k, p]) => [keyId(k), p]).filter(([id]) => id);
+    const total = ids.reduce((t, [, p]) => t + p, 0);
+    return ids.length ? ids.map(([id, p]) => [id, p / total]) : null;
+  };
 
   const n = list.length;
   const P = {
@@ -658,8 +691,8 @@ export function createSubstances(elements) {
     flame: new Float32Array(n),
     fuelMin: new Uint16Array(n),
     fuelMax: new Uint16Array(n),
-    burnGas: new Uint16Array(n),
     gasChance: new Float32Array(n),
+    soot: new Uint8Array(n), // contiene carbonio: con poco ossigeno dà CO e fuliggine invece di CO₂
     burnEnd: new Uint16Array(n), // sostanza in cui si trasforma a fine combustione (OXIDE: ossido dell'elemento)
     waterRate: new Float32Array(n),
     waterHeat: new Float32Array(n),
@@ -677,6 +710,7 @@ export function createSubstances(elements) {
     flameTint: new Uint8Array(n), // Z che colora la fiamma (0 = colore normale)
   };
   P.residue = new Array(n).fill(null); // [[id, probabilità], …]
+  P.burnGases = new Array(n).fill(null); // gas liberati bruciando: [[id, probabilità], …]
 
   for (const s of list) {
     if (!s) continue;
@@ -705,8 +739,9 @@ export function createSubstances(elements) {
       P.flame[i] = s.burn.flame;
       P.fuelMin[i] = s.burn.fuel?.[0] ?? 0;
       P.fuelMax[i] = s.burn.fuel?.[1] ?? 0;
-      P.burnGas[i] = keyId(s.burn.gas);
-      P.gasChance[i] = s.burn.gasChance ?? 0;
+      P.burnGases[i] = idShares(s.burn.gases ?? []);
+      P.gasChance[i] = P.burnGases[i] ? s.burn.gasChance ?? 0 : 0;
+      P.soot[i] = s.burn.soot ? 1 : 0;
       P.burnEnd[i] = keyId(s.burn.end);
       if (s.burn.residue) P.residue[i] = s.burn.residue.map(([k, p]) => [keyId(k), p]);
     }
@@ -753,6 +788,8 @@ export function createSubstances(elements) {
       }),
     /** Idrossido M(OH)ₙ della libreria (0 se non c'è). */
     hydroxideFor: (z) => cached(`h${z}`, () => byAtoms([atom(z), ...rep(8, list[z].charge || 1), ...rep(1, list[z].charge || 1)])),
+    /** Gas di scarico di un composto, dagli atomi ([[id, probabilità], …] o null): combustioni e detonazioni fuori catalogo. */
+    exhaustFor: (id) => cached(`x${id}`, () => P.burnGases[id] ?? (list[id].counts ? idShares(exhaustOf(list[id].counts)) : null)),
   };
 
   return { list, byKey, P, elements, lab, library, libraryId, groups: MOLECULE_GROUPS, firstCompound: FIRST_COMPOUND, ...lookups };

@@ -135,6 +135,8 @@ export const SANDBOX_STRINGS = {
     hPowder: 'polvere',
     hBlock: 'blocco',
     hBurning: 'brucia',
+    hFume: 'gas di combustione',
+    hSteam: 'Vapore acqueo',
     hCurrent: 'corrente',
     // finestra dei comandi
     helpMouse: 'Mouse',
@@ -289,6 +291,8 @@ export const SANDBOX_STRINGS = {
     hPowder: 'powder',
     hBlock: 'block',
     hBurning: 'burning',
+    hFume: 'combustion gas',
+    hSteam: 'Water vapour',
     hCurrent: 'current',
     helpMouse: 'Mouse',
     helpKeyboard: 'Keyboard',

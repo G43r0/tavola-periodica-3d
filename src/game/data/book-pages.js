@@ -255,6 +255,7 @@ export const TOOL_PAGES = [
       steps: [
         'Usa una spatola pulita e asciutta per ogni reagente.',
         'Prendi poco solido alla volta; vicino alla massa voluta aggiungine solo un pizzico.',
+        'Per gli ultimi centesimi di grammo tieni la spatola inclinata sopra il recipiente e picchiettala piano: il solido cade a granelli.',
         'Richiudi subito il barattolo dopo l\'uso.',
         'Pulisci e asciuga la spatola prima di cambiare sostanza.',
       ],
@@ -262,7 +263,7 @@ export const TOOL_PAGES = [
         'Rimettere nel barattolo il solido avanzato: si rischia di contaminare tutto il reagente.',
         'Usare la stessa spatola per due solidi senza pulirla: le sostanze si mescolano e possono reagire.',
       ],
-      game: 'Con la spatola in mano premi E su un barattolo per prendere un cucchiaino (Maiusc+E: un pizzico), poi E sul recipiente per versarlo.',
+      game: 'Con la spatola in mano premi E su un barattolo per prendere un cucchiaino (Maiusc+E: un pizzico). Sul recipiente: E lo versa tutto, E tenuto lo fa scivolare piano, Maiusc+E dà un colpetto.',
     },
     en: {
       title: 'Spatula',
@@ -270,6 +271,7 @@ export const TOOL_PAGES = [
       steps: [
         'Use a clean, dry spatula for each reagent.',
         'Take a little solid at a time; near the mass you want, add just a pinch.',
+        'For the last hundredths of a gram hold the spatula tilted over the container and tap it gently: the solid falls grain by grain.',
         'Close the jar again straight after use.',
         'Clean and dry the spatula before changing substance.',
       ],
@@ -277,7 +279,7 @@ export const TOOL_PAGES = [
         'Putting leftover solid back into the jar: you risk contaminating the whole reagent.',
         'Using the same spatula for two solids without cleaning it: the substances mix and may react.',
       ],
-      game: 'With the spatula in hand press E on a jar to take a spoonful (Shift+E: a pinch), then E on the vessel to tip it in.',
+      game: 'With the spatula in hand press E on a jar to take a spoonful (Shift+E: a pinch). On the vessel: E tips it all in, holding E lets it slide off slowly, Shift+E gives a tap.',
     },
     eli6: {
       title: 'Spatola',
@@ -1074,7 +1076,7 @@ export const TECHNIQUE_PAGES = [
         'Appoggiarsi al bancone o toccare il recipiente mentre si legge: il numero cambia.',
         'Superare la massa e rimettere nel barattolo il solido in più: il reagente si contamina.',
       ],
-      game: 'Posa il becher sulla bilancia e cliccala (tara); con la spatola premi E su un barattolo e poi E sul becher, finché il display segna la massa voluta.',
+      game: 'Posa il becher sulla bilancia e cliccala (tara); con la spatola premi E su un barattolo e poi E sul becher (tenuto: il solido scivola piano), finché il display segna la massa voluta. Gli ultimi centesimi a colpetti, con Maiusc+E.',
     },
     en: {
       title: 'Weighing with the tare',
@@ -1091,7 +1093,7 @@ export const TECHNIQUE_PAGES = [
         'Leaning on the bench or touching the container while reading: the number changes.',
         'Overshooting and putting the extra solid back in the jar: the reagent gets contaminated.',
       ],
-      game: 'Put the beaker on the balance and click it (tare); with the spatula press E on a jar and then E on the beaker, until the display shows the mass you want.',
+      game: 'Put the beaker on the balance and click it (tare); with the spatula press E on a jar and then E on the beaker (held: the solid slides off slowly), until the display shows the mass you want. The last hundredths with taps, Shift+E.',
     },
     eli6: {
       title: 'Pesare',

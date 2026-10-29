@@ -2,7 +2,7 @@
 // Colori realistici delle sostanze, incandescenza dei corpi caldi (dal punto di Draper, 525 °C), fiamme colorate,
 // scintille, scarica nei gas e vista termica. Riempie due buffer: colore e bagliore (per l'effetto glow).
 import { SOLID, LIQUID, GAS, S, WOOD, CONCRETE, WALL, GENERATOR, SOURCE, DRAIN, SALT, OXIDE, SOLUTION, variantColor } from './substances.js';
-import { C_BURN, C_DISSOLVED, C_POWDER, SPARK_ACTIVE, NEUTRON } from './world.js';
+import { C_BURN, C_DISSOLVED, C_FUME, C_POWDER, SPARK_ACTIVE, NEUTRON } from './world.js';
 
 // classi di trama per il disegno dettagliato (preset Professionale)
 const T_EMPTY = 0;
@@ -213,6 +213,7 @@ export function createRenderer(world, subs) {
           b = base[o + 2];
         }
         a = isDissolved ? 0.88 : base[o + 3] / 255;
+        if (cf[i] & C_FUME && life[i] < 60) a *= life[i] / 60; // il gas di scarico svanisce disperdendosi
         const x = i % W;
         const y = (i / W) | 0;
         // trama: grana del legno, ghiaia del calcestruzzo, muro tratteggiato, variazioni delle polveri

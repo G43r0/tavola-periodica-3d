@@ -206,7 +206,7 @@ export const PRESETS = [
   {
     id: 'incendio',
     name: P('Legno e carbone', 'Wood and coal'),
-    description: P('Una capanna di legno e una catasta di carbone: fiamme, fumo, cenere, brace e pirolisi.', 'A wooden hut and a pile of coal: flames, smoke, ash, embers and pyrolysis.'),
+    description: P('Una capanna di legno e una catasta di carbone: fiamme, gas di combustione (CO₂, vapore, CO, fuliggine), cenere, brace e pirolisi.', 'A wooden hut and a pile of coal: flames, combustion gases (CO₂, steam, CO, soot), ash, embers and pyrolysis.'),
     build(world) {
       const t = tools(world);
       const { X, Y } = t;
