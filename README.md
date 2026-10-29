@@ -300,10 +300,13 @@ nel pennello). È una «sabbiera» a particelle ispirata a *The Powder Toy*: una
   alto, cloro e radon in basso, i gas caldi salgono).
 - **Calore**: conduzione tra celle (i metalli conducono di più, il muro isola), raffreddamento verso i 22 °C dell'aria,
   incandescenza dei corpi oltre il punto di Draper (525 °C) e vista termica (`H`).
-- **Combustione** (serve aria o ossigeno): legno (fiamma, fumo, cenere; senza ossigeno **pirolisi** in carbone), carbone
-  (brace lenta), carbonio, zolfo (fiamma blu, SO₂), fosforo (si accende a 34 °C), idrogeno (brucia di colpo e diventa
-  vapore acqueo), metalli in polvere (magnesio, alluminio, ferro…). Ogni metallo colora la fiamma (**saggio alla fiamma**:
-  litio rosso, sodio giallo, potassio lilla, bario verde, rame verde-azzurro…). Acqua e CO₂ fredda spengono il fuoco.
+- **Combustione** (serve aria o ossigeno): legno (fiamma, CO₂ e vapore acqueo, fuliggine, cenere; senza ossigeno
+  **pirolisi** in carbone), carbone (brace lenta, CO₂), carbonio, zolfo (fiamma blu, SO₂), fosforo (si accende a 34 °C,
+  fumo bianco di P₄O₁₀), idrogeno (brucia di colpo e diventa vapore acqueo), metalli in polvere (magnesio, alluminio,
+  ferro…). I composti liberano i gas che vengono dai loro atomi (C → CO₂, H → H₂O, S → SO₂, N → N₂, alogeni → HX); con
+  poca aria si formano anche **monossido di carbonio** e fuliggine. I gas di combustione si disperdono nell'aria dopo
+  qualche secondo. Ogni metallo colora la fiamma (**saggio alla fiamma**: litio rosso, sodio giallo, potassio lilla,
+  bario verde, rame verde-azzurro…). Acqua e CO₂ fredda spengono il fuoco.
 - **Reazioni chimiche**: metalli alcalini e alcalino-terrosi + acqua (idrogeno, idrossido, calore; rubidio e cesio
   esplodono), metallo + alogeno → sale (più veloce quanto più grande è la differenza di elettronegatività), alluminotermia
   (2 Al + Fe₂O₃, innesco con il magnesio), ruggine del ferro bagnato.
@@ -466,8 +469,8 @@ Daniell e contatore del gas.
   libro «Come si fa» apre le sue pagine con i capitoli e l'insegnante indica quelle che servono. **Profili** (fino a 8),
   ognuno con la sua Carriera e il suo quaderno; i **salvataggi** hanno una versione e passano da soli dalla vecchia alla
   nuova (`src/game/save.js`); nell'app Electron sono anche in un file nella cartella dei dati dell'utente.
-- **Chimica** scelta all'inizio: *realistica* (si legge la bilancia, la graduazione e le etichette; la spatola prende
-  quantità variabili; tolleranze strette) o *semplificata* (un cucchiaino = 1 g, quantità e pH sempre visibili,
+- **Chimica** scelta all'inizio: *realistica* (si legge la bilancia, la graduazione e le etichette; un cucchiaino di
+  spatola pesa 1 g ± 5 %; tolleranze strette) o *semplificata* (un cucchiaino = 1 g, quantità e pH sempre visibili,
   tolleranze larghe).
 - **Due visuali**: prima persona (`W A S D` e mouse, 3,6 m/s camminando e 6,2 correndo) e vista dall'alto del bancone
   (`Tab`; `A`/`D` cambia postazione: bancone, scaffale, lavandino, distillazione, cappa, cattedra, rifiuti; l'oggetto in
@@ -505,7 +508,8 @@ Daniell e contatore del gas.
   lavandino o nei rifiuti, rosso se farà una pozza. Il getto è un filo continuo che si assottiglia cadendo e si ferma
   sugli ostacoli (il bordo di un altro becher); il liquido arriva quando il getto tocca il bersaglio.
 - **Strumenti**: becher da 100 e 250 mL, beuta, cilindro graduato (tacche da 1 mL), bottiglie di reagenti con etichetta e
-  pittogrammi, spruzzetta di acqua distillata, contagocce di fenolftaleina, barattoli, spatola (un cucchiaino o un pizzico),
+  pittogrammi, spruzzetta di acqua distillata, contagocce di fenolftaleina, barattoli, spatola in acciaio (un cucchiaino o un pizzico; sul recipiente lo versa tutto, piano tenendo premuto `E`
+  o a colpetti con `Maiusc+E`),
   bilancia con tara, piastra riscaldante con agitatore (5 livelli), becco Bunsen con treppiede e reticella, lampada a luce
   forte per le reazioni fotochimiche, crogiolo e capsula di porcellana, ansa di nichel-cromo per il saggio alla fiamma, cartine indicatrici universali, carta assorbente, lavandino con rubinetto,
   cappa aspirante, doccia di emergenza, estintore a CO₂, contenitori dei rifiuti, vassoio delle consegne e campanello.
@@ -776,7 +780,7 @@ build/icon.png        icona usata da electron-builder
 | destro tenuto + mouse / clic destro | (simulatore) ruota l'oggetto / annulla la rotazione o rimetti a posto (sulla piastra: abbassa) |
 | tasto centrale (tenuto) / rotella | (simulatore) carica e lancia / distanza o altezza dell'oggetto |
 | `Maiusc` (tenuto) | (simulatore) con un oggetto in mano: manipolazione precisa (mouse sposta, sinistro + mouse alza, destro + mouse ruota, centrale lascia) |
-| `E` / `Maiusc+E` | (simulatore) pulisci e usa gli strumenti: spatola, ansa, carta, cartina, estintore, termometro, pH-metro, pipetta (un pizzico con la spatola, un millilitro con la pipetta); con un recipiente agita, al lavandino lava, sui rifiuti svuota |
+| `E` / `Maiusc+E` | (simulatore) pulisci e usa gli strumenti: spatola, ansa, carta, cartina, estintore, termometro, pH-metro, pipetta (un pizzico o un colpetto con la spatola, un millilitro con la pipetta; `E` tenuto con la spatola carica: il solido scivola piano); con un recipiente agita, al lavandino lava, sui rifiuti svuota |
 | `A` `D` | (simulatore) con un oggetto in mano: ruotalo |
 | `Tab` / `A` `D` | (simulatore) vista del bancone / postazione precedente o successiva |
 | `I` / `L` / `H` / `Esc` | (simulatore) finestrelle accanto agli oggetti / legenda dei comandi / tutti i comandi / pausa |
