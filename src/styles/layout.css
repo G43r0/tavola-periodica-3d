@@ -309,21 +309,31 @@
 .gfx__item[aria-checked='true'] span {
   color: var(--text-1);
 }
-@media (max-width: 1640px) {
-  .lab-entry,
-  .explain-toggle {
-    padding: 0 9px;
-  }
-  .lab-entry span,
-  .explain-toggle span,
-  .gfx__btn span {
-    display: none;
-  }
+/* barra adattiva: toolbar.js misura lo spazio e sale di livello (data-fit) finché tutto ci sta.
+   1 senza conteggio e sottotitolo · 2 solo icone · 3 filtri compatti e ricerca stretta · 4 senza titolo */
+.toolbar:is([data-fit='1'], [data-fit='2'], [data-fit='3'], [data-fit='4']) :is(.result-count, .brand p) {
+  display: none;
 }
-@media (max-width: 1760px) {
-  .result-count {
-    display: none;
-  }
+.toolbar:is([data-fit='2'], [data-fit='3'], [data-fit='4']) :is(.lab-entry, .explain-toggle) {
+  padding: 0 9px;
+}
+.toolbar:is([data-fit='2'], [data-fit='3'], [data-fit='4']) :is(.lab-entry span, .explain-toggle span, .gfx__btn span) {
+  display: none;
+}
+.toolbar:is([data-fit='3'], [data-fit='4']) :is(.filter-group__label, .segmented__btn span) {
+  display: none;
+}
+.toolbar:is([data-fit='3'], [data-fit='4']) .segmented__btn[data-state='all'] span {
+  display: inline;
+}
+.toolbar:is([data-fit='3'], [data-fit='4']) .search {
+  min-width: 150px;
+}
+.toolbar[data-fit='4'] {
+  gap: 10px;
+}
+.toolbar[data-fit='4'] .brand__text {
+  display: none;
 }
 
 /* ================================================================ legenda */
@@ -492,18 +502,6 @@
 @media (max-width: 1700px) {
   .legend__note {
     display: none;
-  }
-}
-
-@media (max-width: 1360px) {
-  .filter-group__label {
-    display: none;
-  }
-  .segmented__btn span {
-    display: none;
-  }
-  .segmented__btn[data-state='all'] span {
-    display: inline;
   }
 }
 

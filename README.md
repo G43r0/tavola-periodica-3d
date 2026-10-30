@@ -83,11 +83,26 @@ npm run dist
 
 Nella cartella `release/` trovi:
 
-- `Tavola Periodica 3D Setup <versione>.exe` — installer (permette di scegliere la cartella di installazione)
+- `TavolaPeriodica3D-Setup-<versione>.exe` — installer (permette di scegliere la cartella di installazione)
 - `TavolaPeriodica3D-portable-<versione>.exe` — versione portabile, si avvia senza installazione
 - `win-unpacked/` — l'app non impacchettata (utile per test)
 
 La prima build scarica una volta i binari di Electron e NSIS (serve Internet solo in questa fase).
+
+Insieme ai due eseguibili compaiono `latest.yml` e il file `.blockmap`: servono agli **aggiornamenti automatici** e vanno
+caricati nella release di GitHub accanto ai due `.exe` (vedi la sezione successiva).
+
+### Aggiornamenti automatici
+
+L'app installata cerca da sola le versioni nuove dalle release di GitHub (15 secondi dopo l'avvio e poi ogni 6 ore), le
+scarica in sottofondo e le installa alla chiusura; un avviso permette di «Riavviare e aggiornare» subito. La versione
+portabile non può sostituirsi da sola: avvisa e apre la pagina della release. In **Informazioni** si vede la versione,
+si può controllare a mano e spegnere la ricerca automatica (l'impostazione è nel file `impostazioni.json` nella cartella
+dei dati dell'utente). Internet serve solo per questo.
+
+Per pubblicare una versione nuova: aumenta `version` in `package.json`, `npm run dist`, crea la release su GitHub con
+il tag `vX.Y.Z` e allega `TavolaPeriodica3D-Setup-<versione>.exe`, il suo `.blockmap`, `latest.yml` e la versione
+portabile. L'aggiornamento riconosce solo le release pubbliche (non le bozze né le prerelease).
 
 ### macOS / Linux (opzionale)
 
@@ -636,7 +651,9 @@ incidenti, bidoni sbagliati) e 1 per il tempo. La paga è proporzionale alle ste
 ```
 electron/
   main.cjs            processo principale (finestra, menu, sicurezza: contextIsolation, sandbox)
-  preload.cjs         ponte minimo verso il renderer
+  preload.cjs         ponte minimo verso il renderer (lingua, salvataggi, aggiornamenti)
+  updater.cjs         aggiornamenti automatici (electron-updater; versione portabile: avviso e collegamento)
+  update-logic.cjs    logica pura degli aggiornamenti (confronto delle versioni, impostazioni), provata dai test
 src/
   main.js             avvio dell'interfaccia e scorciatoie globali
   gfx/                preset grafici e aspetto reale degli elementi

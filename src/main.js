@@ -25,6 +25,7 @@ import { createInfoDialog } from './ui/info-dialog.js';
 import { toast } from './ui/toast.js';
 import { createExplain } from './ui/explain.js';
 import { initSparks } from './ui/sparks.js';
+import { initUpdater } from './ui/updater.js';
 
 const t = createT({
   it: {
@@ -216,3 +217,4 @@ window.addEventListener('keydown', (ev) => {
 });
 
 if (window.desktop) document.documentElement.dataset.platform = window.desktop.platform;
+initUpdater();

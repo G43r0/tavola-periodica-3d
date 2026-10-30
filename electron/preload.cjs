@@ -14,4 +14,17 @@ contextBridge.exposeInMainWorld('desktop', {
     read: () => ipcRenderer.invoke('game-save:read'),
     write: (json) => ipcRenderer.send('game-save:write', String(json)),
   },
+  // aggiornamenti (electron/updater.cjs): stato, controllo a richiesta, installazione e ricerca automatica sì/no
+  updater: {
+    get: () => ipcRenderer.invoke('updater:get'),
+    check: () => ipcRenderer.invoke('updater:check'),
+    setAuto: (on) => ipcRenderer.invoke('updater:set-auto', Boolean(on)),
+    install: () => ipcRenderer.send('updater:install'),
+    openRelease: () => ipcRenderer.send('updater:open-release'),
+    onStatus: (fn) => {
+      const handler = (_event, status) => fn(status);
+      ipcRenderer.on('updater:status', handler);
+      return () => ipcRenderer.removeListener('updater:status', handler);
+    },
+  },
 });

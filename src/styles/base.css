@@ -294,3 +294,52 @@ kbd {
     transform: translateY(8px) scale(0.98);
   }
 }
+
+/* ---- aggiornamenti dell'app desktop */
+.update-banner {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 12px 10px 16px;
+  color: var(--text-0);
+  background: var(--glass);
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(12px);
+}
+.update-banner span {
+  flex: 1;
+  font-size: 13.5px;
+}
+.update-section {
+  margin-bottom: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.update-section__version,
+.update-section__auto {
+  margin: 4px 0;
+  font-size: 13.5px;
+}
+.update-section__auto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.update-section__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.update-section__msg {
+  font-size: 13px;
+  color: var(--text-1);
+}

@@ -1,6 +1,7 @@
 // Finestra "Fonti e guida": provenienza dei dati e convenzioni usate.
 import { icons } from './icons.js';
 import { createT } from '../i18n/index.js';
+import { createUpdateSection } from './updater.js';
 
 const t = createT({
   it: {
@@ -145,9 +146,16 @@ export function createInfoDialog() {
       <h3>${t('hModels')}</h3>
       ${list(t('models'))}
     </form>`;
+  const updates = createUpdateSection();
+  if (updates) dlg.querySelector('.info-dialog__inner header').after(updates.el);
   document.body.append(dlg);
   dlg.addEventListener('click', (ev) => {
     if (ev.target === dlg) dlg.close();
   });
-  return { open: () => dlg.showModal() };
+  return {
+    open: () => {
+      updates?.refresh();
+      dlg.showModal();
+    },
+  };
 }

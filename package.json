@@ -1,7 +1,7 @@
 {
   "name": "tavola-periodica-3d",
   "productName": "Tavola Periodica 3D",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Tavola periodica interattiva con modelli atomici 3D esplorabili",
   "author": "Tavola Periodica 3D",
   "license": "MIT",
@@ -53,7 +53,8 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "Tavola Periodica 3D"
+      "shortcutName": "Tavola Periodica 3D",
+      "artifactName": "TavolaPeriodica3D-Setup-${version}.${ext}"
     },
     "portable": {
       "artifactName": "TavolaPeriodica3D-portable-${version}.exe"
@@ -67,7 +68,15 @@
       "target": "AppImage",
       "category": "Education",
       "icon": "build/icon.png"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "G43r0",
+        "repo": "tavola-periodica-3d",
+        "releaseType": "release"
+      }
+    ]
   },
   "devDependencies": {
     "@dimforge/rapier3d-compat": "^0.19.3",
@@ -75,10 +84,13 @@
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "concurrently": "^10.0.6",
     "cross-env": "^10.1.0",
-    "electron": "^44.7.0",
-    "electron-builder": "^26.15.3",
+    "electron": "^44.10.0",
+    "electron-builder": "^26.18.0",
     "three": "^0.186.1",
-    "vite": "^8.3.4",
+    "vite": "^8.3.5",
     "wait-on": "^9.5.1"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
   }
 }

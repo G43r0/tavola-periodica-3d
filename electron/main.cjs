@@ -1,5 +1,6 @@
 // Processo principale Electron: crea la finestra e carica l'interfaccia (offline).
-const { app, BrowserWindow, Menu, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, net } = require('electron');
+const { setupUpdater } = require('./updater.cjs');
 const path = require('node:path');
 const fs = require('node:fs');
 
@@ -118,6 +119,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     buildMenu();
     createWindow();
+    setupUpdater({ app, ipcMain, shell, net, getWindow: () => mainWindow, isDev }).schedule();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
