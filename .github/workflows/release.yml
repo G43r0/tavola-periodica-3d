@@ -1,0 +1,60 @@
+# Costruisce l'installer e la versione portabile su Windows e pubblica la release su GitHub.
+# Si lancia a mano da Actions → Release → Run workflow, indicando il tag (es. v0.9.2) e il commit o il ramo da costruire.
+# Le release si pubblicano in ordine di versione: GitHub considera «ultima» quella creata per ultima, ed è quella che
+# gli aggiornamenti automatici dell'app cercano.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag della release (es. v0.9.2)'
+        required: true
+      ref:
+        description: 'Commit o ramo da costruire (es. main)'
+        required: true
+        default: main
+      update_files:
+        description: 'Allega latest.yml e .blockmap (servono agli aggiornamenti automatici: solo dalla 0.9.2)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx vite build
+      - name: Installer e versione portabile
+        run: >
+          npx electron-builder --win --x64 --publish never
+          --config.publish.provider=github --config.publish.owner=G43r0 --config.publish.repo=tavola-periodica-3d
+      - name: Pubblica la release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+          UPDATE_FILES: ${{ inputs.update_files }}
+        run: |
+          version="${TAG#v}"
+          sha="$(git rev-parse HEAD)"
+          notes="docs/release-${version}.md"
+          [ -f "$notes" ] || { echo "manca $notes"; exit 1; }
+          title="$(head -1 "$notes" | sed -E 's/^#+ *//; s/^Tavola Periodica 3D v/v/')"
+          files=(release/*.exe)
+          if [ "$UPDATE_FILES" = "true" ]; then files+=(release/*.blockmap release/latest.yml); fi
+          ls -la release
+          gh release create "$TAG" --target "$sha" --title "$title" --notes-file "$notes" "${files[@]}"
