@@ -293,6 +293,28 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
   store.subscribe(render);
   render(store.get());
 
+  // ---- barra adattiva: se i pulsanti non ci stanno si sale di livello (prima meno testo, poi solo icone, poi meno
+  // filtri e ricerca più stretta) invece di perderli fuori dallo schermo; sotto i 900 px la barra va a capo da sola
+  const MAX_FIT = 4;
+  const fit = () => {
+    if (header.clientWidth <= 900) {
+      delete header.dataset.fit;
+      return;
+    }
+    let level = 0;
+    header.dataset.fit = '0';
+    while (header.scrollWidth > header.clientWidth + 1 && level < MAX_FIT) header.dataset.fit = String(++level);
+  };
+  let fitting = 0;
+  const scheduleFit = () => {
+    cancelAnimationFrame(fitting);
+    fitting = requestAnimationFrame(fit);
+  };
+  new ResizeObserver(scheduleFit).observe(header);
+  new MutationObserver(scheduleFit).observe(count, { childList: true, characterData: true, subtree: true });
+  document.fonts?.ready.then(scheduleFit);
+  scheduleFit();
+
   return {
     focusSearch() {
       input.focus();

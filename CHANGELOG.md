@@ -8,6 +8,34 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
+## [0.9.2] — 2026-10-30 — Aggiornamenti automatici e barra che ci sta sempre
+
+Versione di correzioni e di una funzione nuova, la prima del piano per la 1.0
+([docs/superpowers/specs/2026-10-29-versione-1.0-piano.md](docs/superpowers/specs/2026-10-29-versione-1.0-piano.md)).
+Note di rilascio: [docs/release-0.9.2.md](docs/release-0.9.2.md).
+
+### Aggiunto
+- **Aggiornamenti automatici** (app desktop). L'app installata cerca da sola le versioni nuove dalle release di GitHub
+  (15 secondi dopo l'avvio e poi ogni 6 ore), le scarica in sottofondo e le installa alla chiusura; un avviso in basso a
+  destra permette anche di «Riavviare e aggiornare» subito. La versione portabile non può sostituirsi da sola: ti
+  avvisa quando esce una versione nuova e apre la pagina per scaricarla. In **Informazioni** (`i` nella barra) c'è la
+  sezione «Aggiornamenti» con la versione installata, «Controlla ora» e l'interruttore per spegnere la ricerca
+  automatica. Internet serve solo per questo: senza rete l'app funziona come sempre. Il collegamento da aprire è sempre
+  una pagina del repository del progetto. Codice in `electron/updater.cjs` (processo principale),
+  `electron/update-logic.cjs` (logica pura, provata dai test) e `src/ui/updater.js`.
+
+### Corretto
+- **La barra in alto usciva dallo schermo** a quasi tutte le larghezze tra 1024 e 1920 px (a 1920×1080 mancavano Lingua e
+  Informazioni, a 1366×768 anche Simulatore, Spiega e Grafica): i pulsanti tagliati non si potevano raggiungere. Ora la
+  barra misura lo spazio vero e si stringe a livelli (prima senza conteggio e sottotitolo, poi solo icone, poi filtri
+  compatti e ricerca più stretta). Provato da 1024 a 2560 px in italiano, inglese e «Spiegamelo come se avessi 6 anni».
+
+### Modificato
+- **Electron 44.10** (era 44.7, con un avviso di sicurezza di gravità alta sui certificati), electron-builder 26.18 e
+  Vite 8.3.5: `npm audit` non segnala più nulla.
+- Il nome dell'installer non ha più spazi (`TavolaPeriodica3D-Setup-<versione>.exe`), come quello della versione
+  portabile: serve agli aggiornamenti automatici, che cercano il file sul nome scritto in `latest.yml`.
+
 ## [0.9.1] — 2026-10-29 — Gas delle combustioni e spatola più precisa
 
 Versione di correzioni, con le due segnalazioni arrivate dopo la 0.9.0. Note di rilascio:
