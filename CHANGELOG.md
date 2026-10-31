@@ -12,7 +12,25 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 
 Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
 
+### Aggiunto
+- **SMILES come si copiano da PubChem e Wikipedia** nel riquadro Formula: aromatici minuscoli (`c1ccccc1`,
+  `c1ccncc1`, `c1cc[nH]c1`, che diventano una struttura di Kekulé), stereochimica (`/`, `\`, `@`, `@@`, ignorata),
+  isotopi (`[13CH4]`, `[2H]O[2H]`) e anelli oltre il 9 (`%10`) (#41).
+- **Ferro- e ferricianuro di potassio** e i due ioni esacianoferrato nella libreria (558 sostanze); un sale con uno
+  ione complesso ha il nome del complesso: Na₃[Fe(CN)₆] → «Esacianoferrato(III) di sodio», [Cu(NH₃)₄]SO₄ → «Solfato di
+  tetraamminorame(II)» (#19).
+
 ### Corretto
+- **Laboratorio, Formula.** La carica dopo una parentesi quadra è una carica (`[Fe(CN)6]3-` non è più Fe₃C₁₈N₁₈⁻) e
+  `SO42-`, `PO43-`, `Cr2O72-` sono SO₄²⁻, PO₄³⁻, Cr₂O₇²⁻, con l'avviso di lettura (#17); gli stati fisici `(aq)`, `(s)`,
+  `(l)`, `(g)` si ignorano e un nome sconosciuto («ethanol») non dà più l'errore delle maiuscole (#20); mentre si scrive
+  `H2 + ` l'anteprima mostra H₂ e «manca ancora una sostanza», non lo ione H₂⁺ (#21); gli SMILES malformati (`C)C`,
+  `C(`, `C==C`, `CC.`…) sono un errore e non bloccano più il banco fino al ricaricamento (#40).
+- **Laboratorio, Combina.** 4 N e 4 O diventano 2 N₂ e 2 O₂ (6 O → 3 O₂), non N₄ e O₄ (#18); con molti atomi diversi
+  risponde in meno di 2 secondi invece di bloccare l'app per minuti (#65).
+- **Laboratorio, scheda.** Le due strutture di Kekulé di un anello sono la stessa molecola: l'aspirina, l'acido
+  salicilico e l'o-xilene con i doppi legami spostati sono riconosciuti (#54); l'angolo ideale VSEPR dipende dalla forma
+  (XeF₂ lineare 180°, ClF₃ a T < 90°) (#55).
 - **Laboratorio, Formula.** Scrivere `[Cu(NH3)4]2+` a mano non manda più in crash la pagina (ciclo infinito con una «[»
   non ancora chiusa, #66); numeri enormi come `C1000000000` non bloccano più l'anteprima occupando gigabyte (#67).
 - **Laboratorio.** «Simula» su una seconda reazione (o Annulla) subito dopo la prima non si perde più (#75); in

@@ -610,7 +610,7 @@ export const GLOSSARY_EN = {
   },
   'ui.lab': {
     t: 'Molecular lab',
-    d: 'A 3D bench where you build molecules atom by atom, bond them, split them, turn them into ions and simulate chemical reactions, with a library of 554 substances and over 1,300 reactions.',
+    d: 'A 3D bench where you build molecules atom by atom, bond them, split them, turn them into ions and simulate chemical reactions, with a library of 558 substances and over 1,300 reactions.',
     k: [['V / B / X', 'move / bond / scissors'], ['C', 'combine'], ['R', 'simulate reaction'], ['S', 'separate'], ['F', 'formula'], ['Ctrl + Z / Y', 'undo / redo'], ['Del', 'delete the selection']],
     s: ['term.molecule', 'term.reaction'],
   },
@@ -622,7 +622,7 @@ export const GLOSSARY_EN = {
   'ui.game': {
     t: 'Laboratory simulator',
     w: 'simulator|laboratory simulator|lab game',
-    d: 'A first-person game in the school chemistry lab, inspired by cooking simulators: pick up beakers and bottles, weigh on the balance, pour by tilting the vessel, heat on the hot plate or the Bunsen burner and hand in your preparation at the teacher\'s desk. Exercises are graded with stars and money; glass breaks, liquids spill, toxic gases belong under the fume hood and waste in the right container. The chemistry is the real one of the library (554 substances and the catalogue reactions), in a realistic or simplified version.',
+    d: 'A first-person game in the school chemistry lab, inspired by cooking simulators: pick up beakers and bottles, weigh on the balance, pour by tilting the vessel, heat on the hot plate or the Bunsen burner and hand in your preparation at the teacher\'s desk. Exercises are graded with stars and money; glass breaks, liquids spill, toxic gases belong under the fume hood and waste in the right container. The chemistry is the real one of the library (558 substances and the catalogue reactions), in a realistic or simplified version.',
     k: [['W A S D', 'walk'], ['A / D', 'with an object in hand: rotate it'], ['Click', 'pick up / put down'], ['Hold left', 'pour (mouse ↑ more, ↓ less)'], ['Hold right + mouse', 'tilt'], ['E', 'use'], ['Hold middle button', 'throw'], ['Tab', 'bench view'], ['N', 'notebook'], ['Esc', 'pause']],
     s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook', 'ui.gameCareer', 'ui.gameAudio'],
   },
@@ -805,7 +805,7 @@ export const GLOSSARY_EN = {
   },
   'lab.examples': {
     t: 'Examples',
-    d: '554 ready-made substances to put on the bench: elements, inorganic molecules, acids, ions, ionic compounds, organic molecules. Search them by name or formula.',
+    d: '558 ready-made substances to put on the bench: elements, inorganic molecules, acids, ions, ionic compounds, organic molecules. Search them by name or formula.',
   },
   'lab.labels': {
     t: 'Labels',
@@ -868,7 +868,7 @@ export const GLOSSARY_EN = {
   'sandbox.tools': { t: 'Tools', d: 'They do not add substances but act on what is there: they heat, cool, ignite, give an electric shock, fire neutrons or blow things up.' },
   'sandbox.utilities': { t: 'Utilities', d: 'For setting up experiments: mixing, blowing, bringing things back to room temperature, putting out flames and picking substances.' },
   'sandbox.materials': { t: 'Materials', d: 'Building materials and special objects: wood and coal burn, concrete withstands heat, the wall is indestructible, the generator gives current, the source creates and the drain swallows whatever it touches.' },
-  'sandbox.library': { t: 'Library substances', d: 'The 554 substances of the molecular lab, to place in the sandbox with their state, colour and behaviour.' },
+  'sandbox.library': { t: 'Library substances', d: 'The 558 substances of the molecular lab, to place in the sandbox with their state, colour and behaviour.' },
   'sandbox.log': { t: 'Observed reactions', d: 'The record of what happens in the sandbox: chemical reactions, radioactive decays and changes of state, with their equations and how many times they happened.' },
   'sandbox.brush': { t: 'Brush', d: 'Brush size, from 0 (a single grain) to 30.', k: [['[ / ]', 'smaller / bigger'], ['Wheel', 'change size']] },
   'sandbox.grid': { t: 'Grid', d: 'How many grains the sandbox holds. A bigger grid has more detail but needs a more powerful computer; changing it clears the sandbox.' },

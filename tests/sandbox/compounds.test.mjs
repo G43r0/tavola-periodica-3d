@@ -36,8 +36,8 @@ function basin(w, top) {
   }
 }
 
-test('tutte le 554 sostanze della libreria sono nella sandbox, con dati fisici completi', () => {
-  assert.equal(MOLECULES.length, 554);
+test('tutte le 558 sostanze della libreria sono nella sandbox, con dati fisici completi', () => {
+  assert.equal(MOLECULES.length, 558);
   for (const m of MOLECULES) {
     assert.ok(m.id in COMPOUND_DATA || m.id in LIBRARY_ALIASES, `dati mancanti: ${m.id}`);
     const id = subs.libraryId.get(m.id);
