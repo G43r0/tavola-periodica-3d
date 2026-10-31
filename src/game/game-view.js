@@ -4,11 +4,11 @@ import * as THREE from 'three';
 import '../styles/game.css';
 import { createT, locale, pick } from '../i18n/index.js';
 import { gfx } from '../gfx/preset.js';
-import { esc, normalize } from '../chem/format.js';
+import { esc, normalize, fmtNumber } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
 import { loadPhysics } from './physics.js';
 import { LabGame, FOV } from './game.js';
-import { CHAPTERS, EXERCISES, EXERCISE_BY_ID, EXTRAS, CHALLENGES, CHALLENGE_BY_ID, MEDALS, chapterExercises, chapterState, exerciseOpen, nextExercise, reputation, repTitle, recordResult, recordChallenge, challengeOpen, reportCard, SHOP, canBuy, buy, passed, newCareer, bookUnlocks } from './career.js';
+import { CHAPTERS, EXERCISES, EXERCISE_BY_ID, EXTRAS, CHALLENGES, CHALLENGE_BY_ID, MEDALS, chapterExercises, chapterState, exerciseOpen, nextExercise, reputation, repTitle, recordResult, recordChallenge, challengeOpen, reportCard, SHOP, canBuy, buy, passed, newCareer, bookUnlocks, lineParams, answerNumber } from './career.js';
 import { migrate, activeProfile, addProfile, renameProfile, deleteProfile, selectProfile, updateActive, newer } from './save.js';
 import { SHELF, CABINET } from './reagents.js';
 import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
@@ -368,7 +368,24 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       <div class="gm-actions">
         ${save.profiles.length < 8 ? `<button type="button" class="btn-ghost" data-act="profile-new">${icons.plus(14)}<span>${t('profileNew')}</span></button>` : ''}
         <button type="button" class="gm-primary" data-act="menu">${t('done')}</button></div>`, 'gm-profiles-card');
-    $('[data-profile-name]')?.focus();
+    const nameInput = $('[data-profile-name]');
+    // Invio conferma il nome come il pulsante Salva
+    nameInput?.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      $(`[data-profile-save="${CSS.escape(nameInput.dataset.profileName)}"]`)?.click();
+    });
+    nameInput?.focus();
+  }
+
+  /** Conferma prima di eliminare un profilo: Carriera, soldi e quaderno si perdono per sempre. */
+  function showProfileDelete(id) {
+    const p = save.profiles.find((x) => x.id === id);
+    if (!p) return showProfiles();
+    showDialog(`
+      <h3>${t('profileDeleteTitle')}</h3>
+      <p>${t('profileDeleteText', { name: esc(p.name) })}</p>
+      <div class="gm-actions"><button type="button" class="btn-ghost" data-act="profiles">${t('cancel')}</button><button type="button" class="gm-primary gm-danger" data-profile-del-yes="${esc(id)}">${t('profileDeleteYes')}</button></div>`);
   }
 
   // ---------------------------------------------------------------- Carriera
@@ -582,7 +599,10 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   /** Nome di una risposta: il testo tradotto (ans_<valore>), il nome dell'elemento (saggio alla fiamma) o il numero. */
   function answerLabel(ex, v) {
     if (v === null || v === undefined || v === '' || v === '—') return '—';
-    if (ex?.answers?.type === 'number') return `${game.fmt(Number(String(v).replace(',', '.')), 2)} ${ex.answers.unit}`;
+    if (ex?.answers?.type === 'number') {
+      const n = answerNumber(v);
+      return Number.isFinite(n) ? `${game.fmt(n, 2)} ${ex.answers.unit}` : '—';
+    }
     if (ex?.answers?.options === 'flame') return `${game.chem.sub(game.chem.id(v))?.name ?? v} (${v})`;
     return t(`ans_${v}`);
   }
@@ -659,7 +679,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
         .map((x) => `<div class="gm-cat-row"><span><b>${esc(x.name)}</b> <code>${esc(x.formula)}</code></span><span class="gm-cat-btns">
           ${x.st === 'solid' ? `<button type="button" data-spawn="${esc(x.key)}" data-form="solid">${t('formSolid')}</button>` : ''}
           ${x.st === 'liquid' ? `<button type="button" data-spawn="${esc(x.key)}" data-form="liquid">${t('formLiquid')}</button>` : ''}
-          ${x.soluble ? `<button type="button" data-spawn="${esc(x.key)}" data-form="sol01">0,1 M</button><button type="button" data-spawn="${esc(x.key)}" data-form="sol1">1 M</button>` : ''}
+          ${x.soluble ? `<button type="button" data-spawn="${esc(x.key)}" data-form="sol01">${fmtNumber(0.1)} M</button><button type="button" data-spawn="${esc(x.key)}" data-form="sol1">1 M</button>` : ''}
         </span></div>`)
         .join('');
     };
@@ -691,7 +711,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     if (r.water) return t('distilledWater');
     if (r.indicator) return c.name(r.indicator);
     const key = r.solute ?? r.solid ?? r.liquid;
-    return `${c.formula(c.id(key)) || c.name(c.id(key))}${r.molar ? ` ${String(r.molar).replace('.', ',')} M` : ''}`;
+    return `${c.formula(c.id(key)) || c.name(c.id(key))}${r.molar ? ` ${fmtNumber(r.molar)} M` : ''}`;
   }
 
   function showPause() {
@@ -875,16 +895,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   }
 
   const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-  function formatParams(p = {}) {
-    const out = {};
-    for (const [k, v] of Object.entries(p)) {
-      if (typeof v !== 'number') out[k] = v;
-      else if (!Number.isFinite(v)) out[k] = '—';
-      else if (k === 'value' || k === 'target') out[k] = game.fmt(v, Math.abs(v) < 1 ? 3 : Math.abs(v) < 10 ? 2 : 1);
-      else out[k] = game.fmt(v, 0);
-    }
-    return out;
-  }
+  const formatParams = (p) => lineParams(p, (n, d) => game.fmt(n, d));
 
   // ---------------------------------------------------------------- clic nelle finestre e nei menu
   root.addEventListener('click', (ev) => {
@@ -918,8 +929,9 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       save = renameProfile(save, b.dataset.profileSave, input?.value ?? '');
       storeSave();
       showProfiles();
-    } else if (b.dataset.profileDel) {
-      useProfile(deleteProfile(save, b.dataset.profileDel));
+    } else if (b.dataset.profileDel) showProfileDelete(b.dataset.profileDel);
+    else if (b.dataset.profileDelYes) {
+      useProfile(deleteProfile(save, b.dataset.profileDelYes));
       showProfiles();
     } else if (act === 'shop') showShop();
     else if (b.dataset.buy) {
@@ -1423,15 +1435,20 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
 
   // ---------------------------------------------------------------- apertura / chiusura
   let lastFocus = null;
+  let booting = null; // avvio in corso: un secondo clic durante il caricamento non deve creare un altro renderer
+  let closing = 0; // timer della chiusura animata: riaprendo subito non deve più nascondere il simulatore
   async function open() {
+    clearTimeout(closing);
     lastFocus = document.activeElement;
     root.hidden = false;
+    root.classList.remove('is-leaving');
     root.classList.add('is-entering');
     setTimeout(() => root.classList.remove('is-entering'), 600);
     if (!game) {
       try {
-        await boot();
+        await (booting ??= boot());
       } catch (err) {
+        booting = null;
         console.error(err);
         $('.gm-loading').innerHTML = `<p>${t('loadError')}</p><button type="button" class="btn-ghost" data-act="close">${t('back')}</button>`;
         return;
@@ -1450,7 +1467,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     audio?.suspend();
     if (state === 'play') setState('pause');
     root.classList.add('is-leaving');
-    setTimeout(() => {
+    clearTimeout(closing);
+    closing = setTimeout(() => {
       root.hidden = true;
       root.classList.remove('is-leaving');
       cancelAnimationFrame(raf);

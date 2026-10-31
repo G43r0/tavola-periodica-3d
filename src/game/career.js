@@ -315,14 +315,23 @@ export function rightAnswer(ex, unknowns, i) {
   return u?.answer;
 }
 
+/**
+ * Numero scritto in una risposta: con la virgola o il punto, anche seguito dall'unità («1,09 g/mL», «16 mL»);
+ * NaN se non c'è un numero.
+ */
+export function answerNumber(text) {
+  const m = /[-−]?\d+(?:[.,]\d+)?(?:e[-−+]?\d+)?/i.exec(String(text ?? ''));
+  return m ? Number(m[0].replace(',', '.').replace(/−/g, '-')) : NaN;
+}
+
 /** Punteggio di una risposta: 1 o 0 a scelta, con la tolleranza (relativa) per un numero. */
 export function answerScore(ex, unknowns, answers, i, mode) {
   const a = ex.answers;
   const right = rightAnswer(ex, unknowns, i);
   const given = answers?.[i];
   if (a.type === 'number') {
-    const v = Number(String(given ?? '').replace(',', '.'));
-    if (!Number.isFinite(v) || given === '' || given === undefined) return 0;
+    const v = answerNumber(given);
+    if (!Number.isFinite(v)) return 0;
     const [full, zero] = pickMode(a.tol, mode);
     return score(Math.abs(v - right) / Math.abs(right), full, zero);
   }
@@ -351,6 +360,22 @@ function goalScore(g, v, mode) {
     return score(over / den, tol.over[0], tol.over[1]);
   }
   return score((under + over) / den, tol[0], tol[1]);
+}
+
+/**
+ * Parametri di una riga del resoconto pronti da scrivere: i numeri interi (conteggi come il disordine o i fuochi
+ * spenti, percentuali tonde) senza decimali, le misure con 3, 2 o 1 decimali secondo la grandezza. fmt(n, cifre)
+ * scrive il numero nella lingua dell'interfaccia.
+ */
+export function lineParams(p = {}, fmt) {
+  const out = {};
+  for (const [k, v] of Object.entries(p)) {
+    if (typeof v !== 'number') out[k] = v;
+    else if (!Number.isFinite(v)) out[k] = '—';
+    else if ((k === 'value' || k === 'target') && !Number.isInteger(v)) out[k] = fmt(v, Math.abs(v) < 1 ? 3 : Math.abs(v) < 10 ? 2 : 1);
+    else out[k] = fmt(v, 0);
+  }
+  return out;
 }
 
 /**

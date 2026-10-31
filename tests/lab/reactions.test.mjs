@@ -7,6 +7,7 @@ import { createLibraryIndex } from '../../src/lab/chem/identify.js';
 import { speciesInfo, balance, reactionEnthalpy, balanceTable } from '../../src/lab/chem/reactions.js';
 import { MOLECULES } from '../../src/lab/data/molecules.js';
 import { REACTIONS, REACTION_GROUPS, BASE_REACTIONS } from '../../src/lab/data/reactions.js';
+import { MAX_COEF } from '../../src/lab/reaction-panel.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
 const lab = createLabElements(elements);
@@ -105,4 +106,11 @@ test('bilanciamento di equazioni scritte senza coefficienti', () => {
   assert.deepEqual(b(['c2h6', 'o2'], ['co2', 'h2o']), { ok: true, reactants: [2, 7], products: [4, 6] });
   assert.deepEqual(b(['glucosio', 'o2'], ['co2', 'h2o']), { ok: true, reactants: [1, 6], products: [6, 6] });
   assert.equal(b(['h2'], ['h2o']).ok, false, 'manca l\'ossigeno');
+});
+
+test('«Bilancia tu»: ogni reazione del catalogo si può bilanciare con i pulsanti dei coefficienti', () => {
+  // prima il massimo era 20: 2 C₈H₁₈ + 25 O₂ (e altre 33 combustioni, fino a 51 O₂) restavano «non bilanciate»
+  const over = REACTIONS.filter((r) => [...r.reactants, ...r.products].some(([c]) => c > MAX_COEF)).map((r) => r.id);
+  assert.deepEqual(over, []);
+  assert.ok(REACTIONS.some((r) => r.reactants.some(([c]) => c > 20)), 'il catalogo ha coefficienti oltre 20');
 });

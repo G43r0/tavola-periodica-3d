@@ -7,6 +7,9 @@ import { reactionDH } from './chem/simulate.js';
 import { icons } from '../ui/icons.js';
 import { createT } from '../i18n/index.js';
 
+/** Coefficiente più alto che si può scegliere in «Bilancia tu» (nel catalogo si arriva a 51 O₂, acido oleico). */
+export const MAX_COEF = 99;
+
 const tr = createT({
   it: {
     running: 'Simulazione in corso…',

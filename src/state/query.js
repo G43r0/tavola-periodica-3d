@@ -30,10 +30,12 @@ export function computeVisibility(elements, s) {
   const visible = new Set();
   let best = null;
   let bestScore = 0;
+  // un testo di soli spazi vale come la ricerca vuota
+  const query = s.query.trim();
   for (const el of elements) {
     if (!passesFilters(el, s)) continue;
-    if (s.query) {
-      const score = searchScore(el, s.query);
+    if (query) {
+      const score = searchScore(el, query);
       if (!score) continue;
       if (score > bestScore) {
         best = el;

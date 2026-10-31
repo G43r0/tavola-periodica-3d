@@ -261,5 +261,17 @@ export function splitFormulaList(text) {
 /** Numero totale di atomi di una specie (senza il coefficiente). */
 export const speciesAtomCount = (sp) => [...sp.counts.values()].reduce((s, n) => s + n, 0);
 
+/**
+ * Gli atomi di una specie ({z, charge: 0} uno per atomo), o null se sono più di `max`: una formula come C1000000000
+ * non deve diventare un elenco di un miliardo di oggetti solo per l'anteprima.
+ * @param {(symbol: string) => number} zOf
+ */
+export function speciesAtoms(sp, zOf, max) {
+  if (!(speciesAtomCount(sp) <= max)) return null;
+  const atoms = [];
+  for (const [sym, n] of sp.counts) for (let k = 0; k < n; k++) atoms.push({ z: zOf(sym), charge: 0 });
+  return atoms;
+}
+
 /** Testo SMILES? Caratteri che non compaiono mai in una formula. */
 export const looksLikeSmiles = (text) => /[=#@/\\]/.test(text) || /\[[A-Z][a-z]?H?\d*[+-]\d*\]/.test(text);

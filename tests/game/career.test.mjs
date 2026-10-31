@@ -13,7 +13,7 @@ import {
   pickSamples, answerOptions, answerScore, reportQuestions, reportStars, reputation, repTitle, chapterState, exerciseOpen,
   nextExercise, bookUnlocks, newCareer, recordResult, canBuy, buy, SHOP, gradeExercise, solubilityAt, PASS_STARS,
   EXAMS, EXTRAS, CHALLENGES, CHALLENGE_BY_ID, examMark, reportCard, judgement, extraOpen, challengeOpen, challengeMedal,
-  challengeBonus, recordChallenge, chapterDone, sampleValue,
+  challengeBonus, recordChallenge, chapterDone, sampleValue, lineParams, answerNumber,
 } from '../../src/game/career.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
@@ -367,4 +367,29 @@ test('G7: nelle verifiche il libro non mostra le ricette', () => {
   assert.ok(normal.groups.size > 0 && normal.groups.has('acidi-basi'));
   assert.equal(exam.groups.size, 0);
   assert.deepEqual([...exam.pages].sort(), [...normal.pages].sort(), 'strumenti, tecniche e sicurezza restano');
+});
+
+test('resoconto: i conteggi senza decimali, le misure con i decimali secondo la grandezza', () => {
+  const fmt = (n, d) => n.toFixed(d);
+  // «Disordine rimasto: 1,00», «Rifiuti nel contenitore sbagliato: 0,000», «Recipienti puliti: 0,000 % (obiettivo 100,0 %)»
+  assert.deepEqual(lineParams({ value: 1 }, fmt), { value: '1' });
+  assert.deepEqual(lineParams({ value: 0, target: 2 }, fmt), { value: '0', target: '2' });
+  assert.deepEqual(lineParams({ value: 0, target: 100 }, fmt), { value: '0', target: '100' });
+  assert.deepEqual(lineParams({ value: 0.0123, target: 0.05 }, fmt), { value: '0.012', target: '0.050' });
+  assert.deepEqual(lineParams({ value: 7.25, target: 12.5 }, fmt), { value: '7.25', target: '12.5' });
+  assert.deepEqual(lineParams({ value: Infinity, sample: 'A', i: 2 }, fmt), { value: '—', sample: 'A', i: '2' });
+});
+
+test('risposte numeriche: si legge il numero anche con l\'unità o la virgola, il resto non vale', () => {
+  // «16 mL» diventava NaN: 0 punti e nel resoconto «Hai risposto NaN g/mL»
+  assert.equal(answerNumber('16 mL'), 16);
+  assert.equal(answerNumber('1,09 g/mL'), 1.09);
+  assert.equal(answerNumber('12,5ml'), 12.5);
+  assert.equal(answerNumber(' 0.8 '), 0.8);
+  assert.equal(answerNumber('−0,5 V'), -0.5);
+  assert.equal(answerNumber('1,2e-3'), 0.0012);
+  for (const bad of ['', 'boh', 'mL', undefined, null]) assert.ok(Number.isNaN(answerNumber(bad)), String(bad));
+  const vin = EXERCISE_BY_ID.get('vinegar');
+  assert.equal(answerScore(vin, [], { 0: '0,8 mol/L' }, 0, 'real'), 1);
+  assert.equal(answerScore(vin, [], { 0: 'mol/L' }, 0, 'real'), 0);
 });

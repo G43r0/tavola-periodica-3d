@@ -63,8 +63,11 @@ export function parseSmiles(smiles, bySymbol) {
       i++;
     } else if (ch === '[') {
       const end = smiles.indexOf(']', i);
+      // senza «]» (es. mentre si scrive «[Cu(NH3)4]2+») si ripartirebbe da capo all'infinito
+      if (end < 0) throw new Error(t('invalid', { s: smiles.slice(i) }));
       const body = smiles.slice(i + 1, end);
-      const m = body.match(/^([A-Z][a-z]?)(H(\d*))?([+-]+\d*|[+-]\d+)?$/);
+      // idrogeni: H e al massimo una cifra, come in OpenSMILES
+      const m = body.match(/^([A-Z][a-z]?)(H(\d?))?([+-]+\d*|[+-]\d+)?$/);
       if (!m) throw new Error(t('invalid', { s: `[${body}]` }));
       const el = bySymbol.get(m[1]);
       if (!el) throw new Error(t('unknown', { s: m[1] }));

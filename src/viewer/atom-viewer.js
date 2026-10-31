@@ -13,6 +13,7 @@ import { particleHtml, quarkTooltip } from './particle-panel.js';
 import { nucleusRadius, NUCLEON_R } from './packing.js';
 import { electronList, orbitalOccupancy, isValence, orbitalHtml } from '../chem/quantum-numbers.js';
 import { L_LETTERS } from '../chem/electron-config.js';
+import { viewerIsotopes } from '../chem/nuclear.js';
 import { CATEGORY } from '../data/categories.js';
 import { esc, fmtNumber, fmtAbundance, isotopeNotation } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
@@ -332,7 +333,7 @@ export function createAtomViewer(elements, { onClose }) {
     state.exploded = false;
     const main = el.isotopes.find((i) => i.main);
     state.neutrons = main.neutrons;
-    state.isotopes = el.isotopes.filter((i) => !i.isomer);
+    state.isotopes = viewerIsotopes(el.isotopes);
     const maxN = Math.max(...state.isotopes.map((i) => i.neutrons));
 
     nucleus.build(z, state.neutrons, maxN, { intro });
@@ -900,7 +901,9 @@ export function createAtomViewer(elements, { onClose }) {
 
   // ------------------------------------------------------------ apertura / chiusura
   let lastFocus = null;
+  let closing = 0; // timer della chiusura animata: riaprendo subito non deve più nascondere il visualizzatore
   function open(z) {
+    clearTimeout(closing);
     lastFocus = document.activeElement;
     root.hidden = false;
     root.classList.remove('is-leaving');
@@ -923,7 +926,8 @@ export function createAtomViewer(elements, { onClose }) {
     setHover(null);
     clearSelection({ fly: false });
     root.classList.add('is-leaving');
-    setTimeout(() => {
+    clearTimeout(closing);
+    closing = setTimeout(() => {
       root.hidden = true;
       root.classList.remove('is-leaving');
       engine.stop();

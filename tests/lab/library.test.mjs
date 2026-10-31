@@ -6,7 +6,7 @@ import { createLabElements } from '../../src/lab/chem/elements-lab.js';
 import { analyzeLewis } from '../../src/lab/chem/lewis.js';
 import { createLibraryIndex, formulaKey, covalentParts, unitSignature } from '../../src/lab/chem/identify.js';
 import { combine, entryBonds } from '../../src/lab/chem/combine.js';
-import { parseFormula } from '../../src/lab/chem/formula.js';
+import { parseFormula, speciesAtoms } from '../../src/lab/chem/formula.js';
 import { binaryCovalentName, linearAlkaneName } from '../../src/lab/chem/naming.js';
 import { MOLECULES, MOLECULE_GROUPS } from '../../src/lab/data/molecules.js';
 
@@ -146,6 +146,21 @@ test('lettura delle formule', () => {
   assert.ok(!one('CH3COOH')[0].parts);
   for (const bad of ['nacl', 'Xy2', 'Ca(OH', 'H2O)', '']) assert.equal(parseFormula(bad, isSymbol).ok, false, bad);
   assert.equal(parseFormula('2H2 + O2 -> 2H2O', isSymbol).note, 'equation');
+});
+
+test('formule enormi: gli atomi di una specie si elencano solo entro il limite del banco', () => {
+  const zOf = (s) => lab.bySymbol.get(s).z;
+  const [water] = parseFormula('H2O', isSymbol).species;
+  assert.deepEqual(speciesAtoms(water, zOf, 150), [{ z: 1, charge: 0 }, { z: 1, charge: 0 }, { z: 8, charge: 0 }]);
+  const [c150] = parseFormula('C150', isSymbol).species;
+  assert.equal(speciesAtoms(c150, zOf, 150).length, 150);
+  // prima l'anteprima creava un oggetto per atomo: con C1000000000 «Invalid array length» e gigabyte di memoria
+  for (const t of ['C151', 'C1000000000', '((C999)999)999', '(H2O)99999']) {
+    const [sp] = parseFormula(t, isSymbol).species;
+    const start = performance.now();
+    assert.equal(speciesAtoms(sp, zOf, 150), null, t);
+    assert.ok(performance.now() - start < 50, `${t}: ${performance.now() - start} ms`);
+  }
 });
 
 test('nomi sistematici delle molecole binarie', () => {

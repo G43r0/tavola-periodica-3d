@@ -642,9 +642,11 @@ export function createSandbox(elements, { onClose } = {}) {
     $('[data-act="undo"]').disabled = !history.undo.length;
     $('[data-act="redo"]').disabled = !history.redo.length;
   }
-  /** Da chiamare prima di ogni modifica fatta dall'utente. */
-  function remember() {
-    history.undo.push(world.snapshot());
+  /** Stato da annullare: la griglia e le etichette degli esempi, che vanno e vengono con il loro disegno. */
+  const snapshot = () => ({ world: world.snapshot(), labels: state.labels });
+  /** Da chiamare prima di ogni modifica fatta dall'utente (o dopo, con la copia presa prima). */
+  function remember(snap = snapshot()) {
+    history.undo.push(snap);
     if (history.undo.length > UNDO_MAX) history.undo.shift();
     history.redo.length = 0;
     syncHistory();
@@ -657,8 +659,9 @@ export function createSandbox(elements, { onClose } = {}) {
   function travel(from, to, label) {
     const snap = from.pop();
     if (!snap) return;
-    to.push(world.snapshot());
-    world.restore(snap);
+    to.push(snapshot());
+    world.restore(snap.world);
+    state.labels = snap.labels;
     syncHistory();
     message(label, 1500);
   }
@@ -679,9 +682,10 @@ export function createSandbox(elements, { onClose } = {}) {
   }
 
   function bucket(x, y, mode) {
+    // niente da riempire (o da cancellare): nessun passo da annullare, e Ripeti resta com'era
     if (mode === 'erase') {
-      remember();
-      world.fill(x, y, 0);
+      const snap = snapshot();
+      if (world.fill(x, y, 0)) remember(snap);
       return;
     }
     const sel = state.sel;
@@ -689,13 +693,9 @@ export function createSandbox(elements, { onClose } = {}) {
       message(t('bucketNeedsSubstance'), 3000);
       return;
     }
-    remember();
+    const snap = snapshot();
     const temp = state.place.dissolved ? Math.min(state.place.temp, 372) : state.place.temp;
-    const n = world.fill(x, y, sel.id, { temp, powder: state.place.form === 'powder', ctype: sel.ctype, dissolved: state.place.dissolved });
-    if (!n) {
-      history.undo.pop(); // niente da riempire: non c'è nulla da annullare
-      syncHistory();
-    }
+    if (world.fill(x, y, sel.id, { temp, powder: state.place.form === 'powder', ctype: sel.ctype, dissolved: state.place.dissolved })) remember(snap);
   }
 
   function setMode(key) {
@@ -1099,7 +1099,9 @@ export function createSandbox(elements, { onClose } = {}) {
   // ---------------------------------------------------------------- apertura / chiusura
   let lastFocus = null;
   let opened = false;
+  let closing = 0; // timer della chiusura animata: riaprendo subito non deve più nascondere la sandbox
   function open(z) {
+    clearTimeout(closing);
     lastFocus = document.activeElement;
     root.hidden = false;
     root.classList.remove('is-leaving');
@@ -1123,7 +1125,8 @@ export function createSandbox(elements, { onClose } = {}) {
   function close() {
     if (root.hidden) return;
     root.classList.add('is-leaving');
-    setTimeout(() => {
+    clearTimeout(closing);
+    closing = setTimeout(() => {
       root.hidden = true;
       root.classList.remove('is-leaving');
       cancelAnimationFrame(raf);

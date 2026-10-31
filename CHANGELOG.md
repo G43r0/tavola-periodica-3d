@@ -8,6 +8,29 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
+## [Non rilasciato] — per la 1.0.0
+
+Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
+
+### Corretto
+- **Laboratorio, Formula.** Scrivere `[Cu(NH3)4]2+` a mano non manda più in crash la pagina (ciclo infinito con una «[»
+  non ancora chiusa, #66); numeri enormi come `C1000000000` non bloccano più l'anteprima occupando gigabyte (#67).
+- **Laboratorio.** «Simula» su una seconda reazione (o Annulla) subito dopo la prima non si perde più (#75); in
+  «Bilancia tu» i coefficienti arrivano a 99, così si bilanciano anche le 34 reazioni che chiedono più di 20 (#78).
+- **Simulatore.** Un doppio clic su «Simulatore» non crea più due renderer con la stanza nera (#68); «Elimina» un
+  profilo chiede conferma e Invio salva il nuovo nome (#70); i conteggi del resoconto non hanno più decimali inutili
+  (#76); una risposta numerica scritta con l'unità («1,09 g/mL») vale e il resoconto non dice più «NaN» (#79); in
+  inglese le concentrazioni del magazzino usano il punto decimale (#73).
+- **Libro «Come si fa».** La bilancia delle vignette mostra «0,3 g» invece di «0,30000000000000004 g» (#69).
+- **Sandbox.** Annulla/Ripeti segue anche le etichette degli esempi e il secchiello «a vuoto» non cancella più Ripeti
+  (#71).
+- **Finestre.** Visualizzatore 3D, laboratorio, sandbox e simulatore riaperti subito dopo la chiusura non si richiudono
+  più da soli (#72).
+- **Tavola.** Una ricerca di soli spazi non nasconde più tutti gli elementi (#74); il visualizzatore 3D mostra anche il
+  tantalio-180m, isotopo naturale (#77).
+- **App desktop.** Le scritture del salvataggio del simulatore vanno una alla volta (prima due salvataggi ravvicinati
+  potevano lasciare un file JSON rotto o vecchio) e se il file è rotto si legge la copia `.bak` (#26).
+
 ## [0.9.2] — 2026-10-30 — Aggiornamenti automatici e barra che ci sta sempre
 
 Versione di correzioni e di una funzione nuova, la prima del piano per la 1.0

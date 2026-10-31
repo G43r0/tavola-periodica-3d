@@ -10,7 +10,7 @@ import { checkBond, checkOrder, bondCharacter, ORDER_NAME, Art } from './chem/bo
 import { createRelaxer, initialLayout, vsepr } from './chem/geometry.js';
 import { createLibraryIndex, covalentParts, displayFormula, chargeText, formulaKey, normalizeName, subscript, signature } from './chem/identify.js';
 import { combine, entryBonds, entryEnergy, ionicDecomposition } from './chem/combine.js';
-import { parseFormula, looksLikeSmiles, splitFormulaList } from './chem/formula.js';
+import { parseFormula, looksLikeSmiles, splitFormulaList, speciesAtoms, speciesAtomCount } from './chem/formula.js';
 import { parseSmiles } from './chem/smiles.js';
 import { ionName, ionicCompoundName, binaryCovalentName, linearAlkaneName } from './chem/naming.js';
 import { createBenchScene } from './bench-scene.js';
@@ -20,7 +20,7 @@ import { REACTIONS } from './data/reactions.js';
 import { speciesInfo, reactionEnthalpy } from './chem/reactions.js';
 import { planReactions, diagnose, modelReaction, graphBondEnergy, reactionDH } from './chem/simulate.js';
 import { bondEnergy } from './chem/bond-energy.js';
-import { reactionListHtml, reactionResultsHtml, reactionGroupBodyHtml, reactionCardHtml, reactionTitle, equationHtml, equationText, stepEquation, simulationReportHtml } from './reaction-panel.js';
+import { reactionListHtml, reactionResultsHtml, reactionGroupBodyHtml, reactionCardHtml, reactionTitle, equationHtml, equationText, stepEquation, simulationReportHtml, MAX_COEF } from './reaction-panel.js';
 import { esc, fmtNumber } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
 import { createT } from '../i18n/index.js';
@@ -131,10 +131,11 @@ export function createLab(elements, { onClose }) {
     opts: { labels: true, lone: true },
     rx: { open: false, current: null, practice: false, coeffs: null, query: '', groups: new Set() },
     anim: null, // animazione di una reazione in corso
+    starting: null, // reagenti appena messi sul banco: timer della partenza dell'animazione
     sim: null, // ultima «Simula reazione»: passi, molecole avanzate, diagnosi
   };
-  /** Reazione o simulazione in corso: il banco non si modifica. */
-  const busy = () => Boolean(state.anim) || state.sim?.status === 'running';
+  /** Reazione (anche in partenza) o simulazione in corso: il banco non si modifica. */
+  const busy = () => Boolean(state.anim || state.starting) || state.sim?.status === 'running';
 
   // reazioni caricate: specie con formula da mostrare, coefficienti ed entalpia
   const reactions = REACTIONS.map((r) => {
@@ -878,10 +879,11 @@ export function createLab(elements, { onClose }) {
   /** Una specie letta dalla formula → cosa costruire. */
   function resolveSpecies(sp) {
     if (sp.parts) return { coef: sp.coef, sp, hydrate: sp.parts.map(resolveSpecies) };
-    const atoms = [];
-    for (const [sym, n] of sp.counts) for (let k = 0; k < n; k++) atoms.push({ z: lab.bySymbol.get(sym).z, charge: 0 });
+    // oltre il limite del banco l'elenco degli atomi non serve: basta il numero, per l'avviso «Troppi atomi»
+    const atoms = speciesAtoms(sp, (sym) => lab.bySymbol.get(sym).z, MAX_ATOMS);
+    if (!atoms) return { coef: sp.coef, sp, atoms: null, size: speciesAtomCount(sp), entry: null, alternatives: [] };
     const [entry, ...alternatives] = libraryCandidates(atoms, sp.charge);
-    return { coef: sp.coef, sp, atoms, entry: entry ?? null, alternatives };
+    return { coef: sp.coef, sp, atoms, size: atoms.length, entry: entry ?? null, alternatives };
   }
 
   /** Testo → nome della libreria, formula o SMILES. */
@@ -953,7 +955,7 @@ export function createLab(elements, { onClose }) {
       }
       const count = it.coef * mult;
       if (it.entry && !atomsOnly) jobs.push({ count, entry: it.entry });
-      else jobs.push({ count, atoms: it.atoms, charge: it.sp.charge, sp: it.sp, free: atomsOnly });
+      else jobs.push({ count, atoms: it.atoms, size: it.size, charge: it.sp.charge, sp: it.sp, free: atomsOnly });
     };
     if (res.kind === 'name') {
       if (atomsOnly) jobs.push({ count: 1, item: library.get(res.entry.id), free: true });
@@ -964,7 +966,7 @@ export function createLab(elements, { onClose }) {
     return jobs;
   }
 
-  const jobSize = (j) => (j.entry ? library.get(j.entry.id).graph.atoms.length : j.item ? j.item.graph.atoms.length : j.atoms.length);
+  const jobSize = (j) => (j.entry ? library.get(j.entry.id).graph.atoms.length : j.item ? j.item.graph.atoms.length : j.size ?? j.atoms.length);
 
   /** Descrizione di una specie letta dalla formula (per l'anteprima). */
   function speciesLabel(x) {
@@ -978,7 +980,7 @@ export function createLab(elements, { onClose }) {
       return x.sp.charge ? tr('ion', { name: esc(ionName(info, x.sp.charge)) }) : tr('atomOf', { name: esc(info.name.toLowerCase()) });
     }
     if (x.sp.charge) return `<span class="lf-warn">${tr('ionNotInLibrary')}</span>`;
-    const salt = ionicDecomposition(lab, library, x.atoms.map((a) => a.z));
+    const salt = x.atoms && ionicDecomposition(lab, library, x.atoms.map((a) => a.z));
     if (salt) {
       // es. «Solfato di ferro(III)» (2 Fe³⁺ + 3 SO₄²⁻)
       const parts = covalentParts(salt.graph.atoms, salt.graph.bonds).map((f) => {
@@ -1332,13 +1334,20 @@ export function createLab(elements, { onClose }) {
 
   function runReaction(id) {
     const re = reactionById.get(id);
-    if (!re || busy()) return;
+    if (!re) return;
+    if (busy()) return message(tr('waitReaction'), 'info', 2000);
     let groups = availableUnits(re);
     if (!groups) {
       groups = prepareReactants(re);
       if (!groups) return;
       message(tr('reactantsReady'), 'info', 1500);
-      setTimeout(() => startAnimation(re, groups), 900);
+      // fino alla partenza il banco resta fermo: un Annulla o un'altra reazione lascerebbero l'animazione senza reagenti
+      state.starting = setTimeout(() => {
+        state.starting = null;
+        startAnimation(re, groups);
+        updateDock();
+      }, 900);
+      updateDock();
       return;
     }
     startAnimation(re, groups);
@@ -1951,7 +1960,7 @@ export function createLab(elements, { onClose }) {
     if (t.dataset.coef) {
       const [side, i, d] = t.dataset.coef.split(':');
       const arr = state.rx.coeffs[side];
-      arr[Number(i)] = Math.min(20, Math.max(1, arr[Number(i)] + Number(d)));
+      arr[Number(i)] = Math.min(MAX_COEF, Math.max(1, arr[Number(i)] + Number(d)));
       renderPanel();
     }
     if (t.dataset.unit) {
@@ -2126,12 +2135,19 @@ export function createLab(elements, { onClose }) {
   // ---------------------------------------------------------------- apertura / chiusura
   let lastFocus = null;
   let closeHook = null;
+  let closing = 0; // timer della chiusura animata: riaprendo subito non deve più nascondere il laboratorio
   /**
    * @param {number} [z] elemento da mettere sul banco
    * @param {{reaction?: string, above?: boolean, onClose?: Function}} [opts] reaction: scheda da aprire; above: sopra il
    *   simulatore di laboratorio (dal suo quaderno); onClose: chiamata quando si chiude
    */
   function open(z, opts = {}) {
+    if (closing) {
+      // riaperto durante la chiusura: chi l'aveva aperto prima viene comunque avvisato
+      clearTimeout(closing);
+      closing = 0;
+      closeHook?.();
+    }
     lastFocus = document.activeElement;
     root.classList.toggle('is-above', Boolean(opts.above));
     closeHook = opts.onClose ?? null;
@@ -2151,7 +2167,9 @@ export function createLab(elements, { onClose }) {
   function close() {
     if (root.hidden) return;
     root.classList.add('is-leaving');
-    setTimeout(() => {
+    clearTimeout(closing);
+    closing = setTimeout(() => {
+      closing = 0;
       root.hidden = true;
       root.classList.remove('is-leaving');
       engine.stop();

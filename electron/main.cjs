@@ -1,8 +1,8 @@
 // Processo principale Electron: crea la finestra e carica l'interfaccia (offline).
 const { app, BrowserWindow, Menu, shell, ipcMain, net } = require('electron');
 const { setupUpdater } = require('./updater.cjs');
+const { createSaveFile } = require('./save-file.cjs');
 const path = require('node:path');
-const fs = require('node:fs');
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 const isDev = Boolean(DEV_URL);
@@ -79,31 +79,12 @@ function buildMenu(lang = 'it') {
 
 ipcMain.on('set-language', (_event, code) => buildMenu(code === 'en' ? 'en' : 'it'));
 
-// Salvataggi del simulatore: un file JSON nella cartella dei dati dell'utente (accanto, la copia precedente). Si accetta
-// solo JSON valido fino a 5 MB; la scrittura passa da un file temporaneo, così un'interruzione non lascia il file a metà.
-const SAVE_MAX = 5 * 1024 * 1024;
-const saveFile = () => path.join(app.getPath('userData'), 'simulatore-salvataggio.json');
-ipcMain.handle('game-save:read', async () => {
-  try {
-    const text = await fs.promises.readFile(saveFile(), 'utf8');
-    return text.length <= SAVE_MAX ? text : null;
-  } catch {
-    return null;
-  }
-});
+// Salvataggi del simulatore (electron/save-file.cjs): un file JSON nella cartella dei dati dell'utente.
+let saves = null;
+const saveStore = () => (saves ??= createSaveFile(path.join(app.getPath('userData'), 'simulatore-salvataggio.json')));
+ipcMain.handle('game-save:read', () => saveStore().read());
 ipcMain.on('game-save:write', (_event, json) => {
-  if (typeof json !== 'string' || json.length > SAVE_MAX) return;
-  try {
-    JSON.parse(json);
-  } catch {
-    return;
-  }
-  const file = saveFile();
-  const tmp = `${file}.tmp`;
-  fs.promises.writeFile(tmp, json, 'utf8')
-    .then(() => fs.promises.copyFile(file, `${file}.bak`).catch(() => {}))
-    .then(() => fs.promises.rename(tmp, file))
-    .catch(() => {});
+  saveStore().write(json);
 });
 
 if (!app.requestSingleInstanceLock()) {

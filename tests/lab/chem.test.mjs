@@ -45,6 +45,18 @@ test('la libreria si legge tutta e le formule sono corrette', () => {
   assert.equal(displayFormula(lab, lib.get('nh3').graph.atoms), 'NH₃');
 });
 
+test('SMILES: una parentesi quadra non chiusa è un errore, non un ciclo infinito', () => {
+  // «[Cu(NH3)4]2+» scritto a mano nella finestra Formula passa per «[Cu»: prima il lettore ripartiva da capo
+  // all'infinito (i = indexOf(']') + 1 = 0) fino a esaurire la memoria
+  for (const s of ['[Na', '[Fe', '[Cu(NH3)4', 'C[Na', '[NH4+', '[Na+].[Cl']) {
+    assert.throws(() => parseSmiles(s, lab.bySymbol), /SMILES/, s);
+  }
+  // idrogeni tra parentesi: H e al massimo una cifra (OpenSMILES), niente miliardi di atomi
+  assert.throws(() => parseSmiles('[NH999999999]', lab.bySymbol), /SMILES/);
+  assert.equal(parseSmiles('[NH4+]', lab.bySymbol).atoms.length, 5);
+  assert.equal(parseSmiles('[Na+].[Cl-]', lab.bySymbol).atoms.length, 2);
+});
+
 test('ogni voce della libreria ha una struttura di Lewis coerente', () => {
   const radicals = new Set(['no', 'no2', 'clo2', 'ko2']); // KO₂: lo ione superossido O₂⁻ ha un elettrone spaiato
   const incomplete = new Set(['bf3', 'becl2']);

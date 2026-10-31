@@ -31,3 +31,11 @@ export function bindingPerNucleon(z, a) {
   if (a < 16) return null;
   return { mev: weizsacker(z, a), measured: false };
 }
+
+/**
+ * Isotopi da proporre nel modello 3D, uno per numero di neutroni: lo stato fondamentale, oppure l'isomero se è l'unico
+ * nucleo con quei neutroni nei dati (il ¹⁸⁰ᵐTa naturale: lo stato fondamentale ¹⁸⁰Ta dura poche ore).
+ */
+export function viewerIsotopes(isotopes) {
+  return isotopes.filter((i) => !i.isomer || !isotopes.some((g) => !g.isomer && g.neutrons === i.neutrons));
+}
