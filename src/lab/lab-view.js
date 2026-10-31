@@ -1048,8 +1048,9 @@ export function createLab(elements, { onClose }) {
           <small class="lf-mass">${fmtNumber(massOf(it.sp.counts), 3)} g/mol</small></p>`);
       }
       if (res.items.length === 1) counts = res.items[0].sp.counts;
-      if (res.items.some((it) => it.sp.monoGuess)) lines.push(`<p class="lf-sub">${tr('chargeDigits')}</p>`);
+      if (res.items.some((it) => it.sp.monoGuess || it.sp.chargeGuess)) lines.push(`<p class="lf-sub">${tr('chargeDigits')}</p>`);
       if (res.note === 'equation') lines.push(`<p class="lf-sub">${tr('equationNote')}</p>`);
+      if (res.note === 'incomplete') lines.push(`<p class="lf-sub">${tr('incompleteNote')}</p>`);
     }
     if (counts && counts.size > 1) {
       const mass = massOf(counts);

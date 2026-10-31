@@ -3,7 +3,7 @@
 Applicazione desktop (Electron + Three.js) con la tavola periodica interattiva dei 118 elementi,
 schede informative in italiano e modelli 3D degli atomi esplorabili fino alle singole particelle
 (protoni, neutroni, elettroni e quark), più un **laboratorio molecolare** in cui si collegano gli atomi per formare
-molecole e composti e una **sandbox degli elementi** in stile *The Powder Toy*: i 118 elementi, le 554 sostanze della
+molecole e composti e una **sandbox degli elementi** in stile *The Powder Toy*: i 118 elementi, le 558 sostanze della
 libreria e i materiali di base (legno, carbone, calcestruzzo, muro indistruttibile) cadono, fondono, bollono, si sciolgono,
 bruciano e reagiscono secondo i loro dati reali e le reazioni del catalogo.
 L'interfaccia è in **italiano**, in **inglese** e in **«Spiegamelo come se avessi 6 anni»** (le stesse spiegazioni con parole
@@ -12,7 +12,7 @@ Tre **preset grafici** (Semplice, Medio, Professionale) adattano la grafica al c
 l'**aspetto reale** di ogni elemento (colori e materiali veri) in un campione 3D.
 Il **simulatore di laboratorio** è un gioco in prima persona nel laboratorio di chimica della scuola, nello stile di
 *Cooking Simulator*: si prendono becher e bottiglie, si pesa, si versa inclinando, si scalda, si titola con la buretta,
-si filtra, si distilla, si fa l'elettrolisi, si misura la tensione di una pila e si consegna il preparato all'insegnante, con la fisica vera degli oggetti e la chimica delle 554 sostanze e delle reazioni del catalogo.
+si filtra, si distilla, si fa l'elettrolisi, si misura la tensione di una pila e si consegna il preparato all'insegnante, con la fisica vera degli oggetti e la chimica delle 558 sostanze e delle reazioni del catalogo.
 Ha i suoni del laboratorio (registrazioni in pubblico dominio da Freesound) e una Carriera di dieci capitoli con verifiche,
 pagella, richieste extra e sfide a tempo.
 Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
@@ -208,7 +208,7 @@ Si apre dal pulsante con la beuta nella barra in alto, oppure con «Usa nel labo
   2 H + O → H₂O, Na + Cl → NaCl, 4 H + 2 O → 2 H₂O, C₂H₆O → etanolo (con l'etere dimetilico come isomero alternativo).
 - **Separa** (`S`): scompone la molecola in atomi (H₂ → 2 H); per i composti ionici anche «In ioni» (Na⁺ e Cl⁻).
 - **±e⁻**: aggiunge o toglie un elettrone (es. NH₃ + H⁺ → NH₄⁺, OH + e⁻ → OH⁻).
-- **Esempi**: 554 sostanze pronte in 14 gruppi, con ricerca per nome o formula: almeno un composto per ogni elemento
+- **Esempi**: 558 sostanze pronte in 14 gruppi, con ricerca per nome o formula: almeno un composto per ogni elemento
   che ne forma fino all'einsteinio (esclusi He, Ne, Ar, Rn, At, Fr), idrocarburi, composti organici, biomolecole
   (amminoacidi, zuccheri, basi del DNA), farmaci e aromi, ioni (anche monoatomici e complessi: Na⁺, Cl⁻, Fe³⁺,
   [Cu(NH₃)₄]²⁺), sali, idrati, composti dei metalli di transizione, di lantanidi e attinidi.
@@ -287,7 +287,7 @@ nel pennello). È una «sabbiera» a particelle ispirata a *The Powder Toy*: una
 400 × 225), ognuna un granello di sostanza con la sua temperatura.
 
 - **Sostanze**: i 118 elementi (tavola periodica nella tavolozza), i materiali di base — **legno**, **carbone**,
-  **calcestruzzo**, **muro indistruttibile** — più il **generatore elettrico** e **tutte le 554 sostanze della libreria
+  **calcestruzzo**, **muro indistruttibile** — più il **generatore elettrico** e **tutte le 558 sostanze della libreria
   del laboratorio** (molecole, acidi, basi, sali, ossidi, ioni, composti organici ed esplosivi), divise per gruppi e
   con una ricerca per nome o formula (`CuSO4` trova il solfato di rame). Ogni sostanza ha i suoi dati fisici: temperature
   di fusione ed ebollizione, densità, colore, solubilità in acqua, infiammabilità e temperatura di accensione
@@ -381,7 +381,7 @@ equilibri; la radioattività segue il solo isotopo principale. Il motore è un m
 l'elemento che si stava guardando (anche il menu dell'app desktop cambia lingua).
 
 - **Italiano** e **inglese**: tutta l'interfaccia, le schede dei 118 elementi (origine del nome, scoperta, usi, dove si
-  trova, decadimenti), il visualizzatore 3D e l'analisi delle particelle, il laboratorio con le 554 sostanze e le 1349
+  trova, decadimenti), il visualizzatore 3D e l'analisi delle particelle, il laboratorio con le 558 sostanze e le 1349
   reazioni (nomi, descrizioni, condizioni, nomi IUPAC generati), la sandbox con le sue schede e il registro.
   La ricerca trova gli elementi e le sostanze per nome in entrambe le lingue.
 - **«Spiegamelo come se avessi 6 anni»**: italiano con parole semplici e paragoni di tutti i giorni, senza linguaggio
@@ -399,7 +399,7 @@ sandbox). Quando è attiva:
 
 - **evidenzia** una parola o una frase, oppure fai **clic destro** su qualsiasi cosa: si apre una scheda che la spiega;
 - riconosce gli **81 termini** di chimica e fisica del glossario (con sinonimi e plurali), le **famiglie**, i **gruppi** e i
-  **periodi**, i **118 elementi** (con «Apri la scheda»), le **554 sostanze** del laboratorio (con la formula), le
+  **periodi**, i **118 elementi** (con «Apri la scheda»), le **558 sostanze** del laboratorio (con la formula), le
   **funzioni** dell'interfaccia (ogni pulsante, interruttore e area) e i **tasti**: su un `<kbd>` la scheda dice cosa fa
   quel tasto in ogni parte dell'app;
 - ogni scheda ha le scorciatoie utili e i «Vedi anche»; anche le parole dentro la scheda si possono spiegare (con
@@ -458,7 +458,7 @@ richieste extra), con pagella e sfide a tempo; la rifinitura (G8) ha aggiunto au
 Daniell e contatore del gas.
 
 - **Modalità**: *Carriera* (un anno di scuola in capitoli, vedi sotto) e *Laboratorio libero* (tutti gli strumenti e un
-  magazzino con le 554 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
+  magazzino con le 558 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
 - **Carriera**: dieci capitoli, ognuno con 4–6 esercitazioni e, da 1 a 8, una verifica in fondo. 0 · comandi e sicurezza (portare l'acqua alla cattedra,
   misurare 50 mL, pesare 2,00 g, pulire il bancone, spegnere un fuoco con l'estintore); 1 · misure e soluzioni
   (soluzione di NaCl, diluizione, densità di un liquido misterioso, soluzione satura, sciroppo al 10 %); 2 · acidi e basi
@@ -536,7 +536,7 @@ Daniell e contatore del gas.
   («Pericolo» / «Attenzione») e i pittogrammi GHS: quelli delle schede di sicurezza per i reagenti dello scaffale, dedotti
   dai dati (indicativi) per le altre sostanze del magazzino. Barattoli e bottiglie sono un po' più grandi del vero (+15 % e
   +10 %), per riconoscerli e prenderli meglio. Sodio, potassio e litio stanno sotto olio di paraffina (la spatola prende
-  il pezzetto di metallo e lascia l'olio). Nel magazzino del Laboratorio libero, oltre alle 554 sostanze, c'è l'**armadio
+  il pezzetto di metallo e lascia l'olio). Nel magazzino del Laboratorio libero, oltre alle 558 sostanze, c'è l'**armadio
   della scuola**: 47 reagenti d'uso (acidi e basi 1 M, sali 0,1 M, candeggina, acqua ossigenata 3 %, metalli, ossidi,
   carbonati…) divisi per famiglia con il colore del tappo. Con lo scaffale, l'armadio, l'alimentatore e le bombole si
   possono fare 504 reazioni del catalogo (317 con il solo scaffale; `node scripts/coverage.mjs` dà la tabella per gruppo,
@@ -731,7 +731,7 @@ src/
     game-strings.js   testi del simulatore nelle tre lingue
   sandbox/            sandbox degli elementi
     substances.js     sostanze: elementi (dati reali), materiali, prodotti, sostanze della libreria; proprietà per il motore
-    data/compounds.js dati fisici delle 554 sostanze della libreria (fusione, ebollizione, densità, colore, solubilità…)
+    data/compounds.js dati fisici delle 558 sostanze della libreria (fusione, ebollizione, densità, colore, solubilità…)
     chemistry.js      le reazioni del catalogo per il motore: specie, condizioni, catalizzatori, indici per coppia
     world.js          motore: movimento, calore, cambi di stato, soluzioni, combustione, reazioni, elettricità, radioattività, esplosioni
     render.js         disegno: colori, incandescenza, fiamme colorate, scariche, vista termica, bagliore

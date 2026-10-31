@@ -5,9 +5,9 @@ import fs from 'node:fs';
 import { createLabElements } from '../../src/lab/chem/elements-lab.js';
 import { analyzeLewis } from '../../src/lab/chem/lewis.js';
 import { createLibraryIndex, formulaKey, covalentParts, unitSignature } from '../../src/lab/chem/identify.js';
-import { combine, entryBonds } from '../../src/lab/chem/combine.js';
+import { combine, entryBonds, ionicDecomposition } from '../../src/lab/chem/combine.js';
 import { parseFormula, speciesAtoms } from '../../src/lab/chem/formula.js';
-import { binaryCovalentName, linearAlkaneName } from '../../src/lab/chem/naming.js';
+import { binaryCovalentName, linearAlkaneName, ionicCompoundName } from '../../src/lab/chem/naming.js';
 import { MOLECULES, MOLECULE_GROUPS } from '../../src/lab/data/molecules.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
@@ -148,6 +148,69 @@ test('lettura delle formule', () => {
   assert.equal(parseFormula('2H2 + O2 -> 2H2O', isSymbol).note, 'equation');
 });
 
+test('formule: la carica dopo «]» o dopo un pedice non diventa un pedice', () => {
+  const sp = (t) => {
+    const r = parseFormula(t, isSymbol);
+    assert.ok(r.ok, `${t}: ${r.error}`);
+    return r.species[0];
+  };
+  const counts = (s) => Object.fromEntries(s.counts);
+  for (const [t, c, q] of [
+    ['[Fe(CN)6]3-', { Fe: 1, C: 6, N: 6 }, -3],
+    ['[Fe(CN)6]4-', { Fe: 1, C: 6, N: 6 }, -4],
+    ['[Cu(NH3)4]2+', { Cu: 1, N: 4, H: 12 }, 2],
+  ]) {
+    assert.deepEqual(counts(sp(t)), c, t);
+    assert.equal(sp(t).charge, q, t);
+    assert.ok(!sp(t).chargeGuess, `${t}: dopo «]» la carica non è ambigua`);
+  }
+  // «SO42-»: l'ultima cifra è la carica (con l'avviso), non 42 atomi di ossigeno
+  for (const [t, c, q] of [
+    ['SO42-', { S: 1, O: 4 }, -2],
+    ['PO43-', { P: 1, O: 4 }, -3],
+    ['CO32-', { C: 1, O: 3 }, -2],
+    ['Cr2O72-', { Cr: 2, O: 7 }, -2],
+    ['HPO42-', { H: 1, P: 1, O: 4 }, -2],
+  ]) {
+    assert.deepEqual(counts(sp(t)), c, t);
+    assert.equal(sp(t).charge, q, t);
+    assert.ok(sp(t).chargeGuess, `${t}: avviso di lettura`);
+  }
+  assert.equal(sp('NO3-').charge, -1);
+  assert.deepEqual(counts(sp('NO3-')), { N: 1, O: 3 });
+  assert.ok(!sp('NO3-').chargeGuess);
+  assert.deepEqual(counts(sp('C60-')), { C: 60 }, 'una cifra 0 non è una carica');
+});
+
+test('formule: gli stati fisici (aq), (s), (l), (g) si ignorano; un nome sconosciuto non è «senza maiuscola»', () => {
+  const r = (t) => parseFormula(t, isSymbol);
+  assert.deepEqual(Object.fromEntries(r('NaCl(aq)').species[0].counts), { Na: 1, Cl: 1 });
+  assert.equal(r('H2O(l)').species[0].pretty, 'H₂O');
+  const eq = r('2 H2(g) + O2(g)');
+  assert.deepEqual(eq.species.map((s) => [s.coef, s.pretty]), [[2, 'H₂'], [1, 'O₂']]);
+  assert.equal(r('Na+(aq)').species[0].charge, 1);
+  assert.equal(r('SO4^2-(aq)').species[0].charge, -2);
+  assert.deepEqual(Object.fromEntries(r('CuSO4·5H2O(s)').species[0].counts), { Cu: 1, S: 1, O: 9, H: 10 });
+  assert.deepEqual(r('H2(g)+O2(g)').species.map((s) => s.pretty), ['H₂', 'O₂']);
+  const name = r('ethanol');
+  assert.equal(name.ok, false);
+  assert.match(name.error, /ethanol/, 'il messaggio parla del nome scritto, non delle maiuscole');
+  assert.match(r('nacl').error, /maiuscola/, '«nacl» è una formula scritta in minuscolo');
+});
+
+test('formule: «H2 + » mentre si scrive è una specie seguita da un «+» incompleto, non lo ione H₂⁺', () => {
+  for (const t of ['H2 + ', 'H2 +', '2 H2 + ']) {
+    const r = parseFormula(t, isSymbol);
+    assert.ok(r.ok, t);
+    assert.equal(r.species.length, 1, t);
+    assert.equal(r.species[0].charge, 0, t);
+    assert.equal(r.species[0].pretty, 'H₂', t);
+    assert.equal(r.note, 'incomplete', t);
+  }
+  assert.equal(parseFormula('NH4+', isSymbol).species[0].charge, 1, 'senza spazio resta una carica');
+  assert.equal(parseFormula('H2 + O2', isSymbol).note, null);
+});
+
 test('formule enormi: gli atomi di una specie si elencano solo entro il limite del banco', () => {
   const zOf = (s) => lab.bySymbol.get(s).z;
   const [water] = parseFormula('H2O', isSymbol).species;
@@ -161,6 +224,35 @@ test('formule enormi: gli atomi di una specie si elencano solo entro il limite d
     assert.equal(speciesAtoms(sp, zOf, 150), null, t);
     assert.ok(performance.now() - start < 50, `${t}: ${performance.now() - start} ms`);
   }
+});
+
+test('complessi: ferro- e ferricianuro di potassio con il loro nome, lo ione complesso resta un\'unità', () => {
+  const entry = (t) => {
+    const [sp] = parseFormula(t, isSymbol).species;
+    const atoms = speciesAtoms(sp, sym, 150);
+    return lib.byFormula(formulaKey(lab, atoms, sp.charge))[0];
+  };
+  assert.equal(entry('K3[Fe(CN)6]')?.name, 'Esacianoferrato(III) di potassio');
+  assert.equal(entry('K4[Fe(CN)6]')?.name, 'Esacianoferrato(II) di potassio');
+  assert.equal(entry('[Fe(CN)6]3-')?.name, 'Ione esacianoferrato(III)');
+  assert.equal(entry('[Fe(CN)6]4-')?.name, 'Ione esacianoferrato(II)');
+  assert.equal(lib.byName('ferricianuro di potassio').exact?.id, 'k3fecn6');
+  assert.equal(lib.byName('ferrocianuro di potassio').exact?.id, 'k4fecn6');
+  // un sale non in libreria con lo ione complesso: nome dal complesso, non «cianuro di sodio e ferro(III)»
+  const name = (symbols) => {
+    const salt = ionicDecomposition(lab, lib, symbols.map(sym));
+    assert.ok(salt, symbols.join(''));
+    const parts = covalentParts(salt.graph.atoms, salt.graph.bonds).map((f) => ({
+      info: f.atoms.length === 1 ? lab.get(f.atoms[0].z) : null,
+      charge: f.charge,
+      libraryName: f.atoms.length > 1 ? lib.identify(f.atoms, f.bonds).entry?.name ?? null : null,
+    }));
+    return ionicCompoundName(parts);
+  };
+  const na3 = ['Na', 'Na', 'Na', 'Fe', ...Array(6).fill('C'), ...Array(6).fill('N')];
+  assert.equal(name(na3), 'Esacianoferrato(III) di sodio');
+  // i numeri romani dei nomi della libreria restano maiuscoli
+  assert.equal(name(['Cu', 'N', 'N', 'N', 'N', ...Array(12).fill('H'), 'S', 'O', 'O', 'O', 'O']), 'Solfato di tetraamminorame(II)');
 });
 
 test('nomi sistematici delle molecole binarie', () => {

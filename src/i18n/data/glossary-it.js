@@ -612,7 +612,7 @@ export const GLOSSARY_IT = {
   },
   'ui.lab': {
     t: 'Laboratorio molecolare',
-    d: 'Un banco 3D dove costruisci molecole atomo per atomo, le leghi, le separi, le trasformi in ioni e simuli reazioni chimiche, con una libreria di 554 sostanze e oltre 1300 reazioni.',
+    d: 'Un banco 3D dove costruisci molecole atomo per atomo, le leghi, le separi, le trasformi in ioni e simuli reazioni chimiche, con una libreria di 558 sostanze e oltre 1300 reazioni.',
     k: [['V / B / X', 'sposta / lega / forbici'], ['C', 'combina'], ['R', 'simula reazione'], ['S', 'separa'], ['F', 'formula'], ['Ctrl + Z / Y', 'annulla / ripeti'], ['Canc', 'elimina la selezione']],
     s: ['term.molecule', 'term.reaction'],
   },
@@ -624,7 +624,7 @@ export const GLOSSARY_IT = {
   'ui.game': {
     t: 'Simulatore di laboratorio',
     w: 'simulatore|simulatore di laboratorio|gioco del laboratorio',
-    d: 'Un gioco in prima persona nel laboratorio di chimica della scuola, ispirato ai simulatori di cucina: prendi becher e bottiglie, pesa sulla bilancia, versa inclinando il recipiente, scalda sulla piastra o sul becco Bunsen e consegna il preparato alla cattedra. Le esercitazioni sono valutate con stelle e soldi; il vetro si rompe, i liquidi si versano, i gas tossici vanno sotto la cappa e i rifiuti nel contenitore giusto. La chimica è quella vera della libreria (554 sostanze e le reazioni del catalogo), in versione realistica o semplificata.',
+    d: 'Un gioco in prima persona nel laboratorio di chimica della scuola, ispirato ai simulatori di cucina: prendi becher e bottiglie, pesa sulla bilancia, versa inclinando il recipiente, scalda sulla piastra o sul becco Bunsen e consegna il preparato alla cattedra. Le esercitazioni sono valutate con stelle e soldi; il vetro si rompe, i liquidi si versano, i gas tossici vanno sotto la cappa e i rifiuti nel contenitore giusto. La chimica è quella vera della libreria (558 sostanze e le reazioni del catalogo), in versione realistica o semplificata.',
     k: [['W A S D', 'cammina'], ['A / D', 'con un oggetto in mano: ruotalo'], ['Clic', 'prendi / posa'], ['Sinistro tenuto', 'versa (mouse ↑ più, ↓ meno)'], ['Destro tenuto + mouse', 'inclina'], ['E', 'usa'], ['Tasto centrale tenuto', 'lancia'], ['Tab', 'vista del bancone'], ['N', 'quaderno'], ['Esc', 'pausa']],
     s: ['term.reaction', 'ui.lab', 'ui.gameStock', 'ui.gameNotebook', 'ui.gameInstruments', 'ui.gameBook', 'ui.gameCareer', 'ui.gameAudio'],
   },
@@ -807,7 +807,7 @@ export const GLOSSARY_IT = {
   },
   'lab.examples': {
     t: 'Esempi',
-    d: '554 sostanze pronte da mettere sul banco: elementi, molecole inorganiche, acidi, ioni, composti ionici, molecole organiche. Si cercano per nome o per formula.',
+    d: '558 sostanze pronte da mettere sul banco: elementi, molecole inorganiche, acidi, ioni, composti ionici, molecole organiche. Si cercano per nome o per formula.',
   },
   'lab.labels': {
     t: 'Etichette',
@@ -870,7 +870,7 @@ export const GLOSSARY_IT = {
   'sandbox.tools': { t: 'Strumenti', d: 'Non aggiungono sostanze ma agiscono su ciò che c\'è: scaldano, raffreddano, accendono, danno la scossa, sparano neutroni o fanno esplodere.' },
   'sandbox.utilities': { t: 'Utilità', d: 'Servono a preparare gli esperimenti: mescolare, soffiare, riportare a temperatura ambiente, spegnere fiamme e prelevare sostanze.' },
   'sandbox.materials': { t: 'Materiali', d: 'Materiali da costruzione e oggetti speciali: legno e carbone bruciano, il calcestruzzo resiste al calore, il muro è indistruttibile, il generatore dà corrente, la sorgente crea e il pozzo inghiotte ciò che tocca.' },
-  'sandbox.library': { t: 'Sostanze della libreria', d: 'Le 554 sostanze del laboratorio molecolare, da posare nella sandbox con il loro stato, colore e comportamento.' },
+  'sandbox.library': { t: 'Sostanze della libreria', d: 'Le 558 sostanze del laboratorio molecolare, da posare nella sandbox con il loro stato, colore e comportamento.' },
   'sandbox.log': { t: 'Reazioni osservate', d: 'Il registro di ciò che succede nella sandbox: reazioni chimiche, decadimenti radioattivi e cambiamenti di stato, con le equazioni e il numero di volte in cui sono avvenuti.' },
   'sandbox.brush': { t: 'Pennello', d: 'Dimensione del pennello, da 0 (un solo granello) a 30.', k: [['[ / ]', 'più piccolo / più grande'], ['Rotella', 'cambia dimensione']] },
   'sandbox.grid': { t: 'Griglia', d: 'Quanti granelli ci sono nella sandbox. Una griglia più grande ha più dettagli ma richiede un computer più potente; cambiandola si svuota la sandbox.' },

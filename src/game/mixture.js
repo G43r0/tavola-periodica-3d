@@ -1,5 +1,5 @@
 // Motore chimico dei contenitori del simulatore di laboratorio. Ogni contenitore ha una miscela: moli di ogni sostanza
-// (le stesse della sandbox: elementi, acqua e le 554 sostanze della libreria), quanto ne è sciolto in acqua, la
+// (le stesse della sandbox: elementi, acqua e le 558 sostanze della libreria), quanto ne è sciolto in acqua, la
 // temperatura. Da qui: volume, massa, pH, colore, scioglimento e cristallizzazione (anche come idrati), ebollizione ed
 // evaporazione, gas che si liberano, reazioni del catalogo con le loro condizioni e il loro calore.
 // Modulo puro (niente DOM, niente Three.js): lo usano il gioco e i test.

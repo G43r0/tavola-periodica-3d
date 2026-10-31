@@ -66,20 +66,23 @@ function rank(info) {
   return k < 0 ? -1 : k; // i metalli vengono prima di tutti
 }
 
+/** Numeri di ossidazione maiuscoli dopo il minuscolo: «tetraamminorame(II)», non «(ii)». */
+const roman = (s) => s.replace(/\(([ivx]+)\)/g, (m, r) => `(${r.toUpperCase()})`);
+
 /**
  * Nome di un composto ionico dai suoi frammenti.
  * @param {{info:object|null, charge:number, libraryName:string|null}[]} parts frammenti con carica
  */
 export function ionicCompoundName(parts) {
   if (!isItalian()) {
-    const stripEn = (n) => n.replace(/ ion$/i, '').toLowerCase();
+    const stripEn = (n) => roman(n.replace(/ ion$/i, '').toLowerCase());
     const namesEn = (list) => [...new Set(list.map((p) => (p.libraryName ? stripEn(p.libraryName) : p.info ? ionName(p.info, p.charge) : '?')))];
     const an = namesEn(parts.filter((p) => p.charge < 0));
     const cat = namesEn(parts.filter((p) => p.charge > 0));
     if (!an.length || !cat.length) return null;
     return capital(`${cat.join(' ')} ${an.join(' ')}`);
   }
-  const strip = (n) => n.replace(/^Ione /i, '').toLowerCase();
+  const strip = (n) => roman(n.replace(/^Ione /i, '').toLowerCase());
   const names = (list) => [...new Set(list.map((p) => (p.libraryName ? strip(p.libraryName) : p.info ? ionName(p.info, p.charge) : '?')))];
   const anions = names(parts.filter((p) => p.charge < 0));
   const cations = names(parts.filter((p) => p.charge > 0));

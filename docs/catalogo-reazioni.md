@@ -9,9 +9,9 @@ La libreria «Esempi» del laboratorio conteneva **445 sostanze** (`src/lab/data
 molecole, ioni e composti ionici. Per scrivere le reazioni classiche che mancavano ne sono state aggiunte **109**
 (`src/lab/data/molecules-reazioni.js`): gli ioni monoatomici (Na⁺, K⁺, Ag⁺, Ca²⁺, Ba²⁺, Pb²⁺, Cu²⁺, Zn²⁺, Fe²⁺,
 Fe³⁺, Mn²⁺, Cr³⁺, Cl⁻, Br⁻, I⁻), quattro complessi, la silice e i silicati, i sali di manganese, cromo, piombo,
-ferro, rame e argento, tre idrati e una ventina di composti organici di base. Ora sono **554**.
+ferro, rame e argento, tre idrati e una ventina di composti organici di base. Ora sono **558**.
 
-Gli elementi chimici sono 118. Il catalogo usa quindi **672 specie**: le 554 sostanze più i 118 elementi nel loro
+Gli elementi chimici sono 118. Il catalogo usa quindi **676 specie**: le 558 sostanze più i 118 elementi nel loro
 stato standard (`el:Na`, `el:Fe`, `el:C`…), che il motore supporta già.
 
 ## Che cosa vuol dire «tutte le reazioni possibili»
@@ -26,7 +26,7 @@ Non si può arrivare all'elenco provando tutte le combinazioni. Con 672 specie c
 Il catalogo elenca quindi tutte le reazioni **reali e documentate** (chimica generale, analitica, industriale,
 organica e biochimica) che rispettano due condizioni:
 
-1. **Sono chiuse sulla libreria**: ogni reagente e ogni prodotto è una delle 554 voci o un elemento `el:X`.
+1. **Sono chiuse sulla libreria**: ogni reagente e ogni prodotto è una delle 558 voci o un elemento `el:X`.
    Il motore attuale le può quindi caricare senza aggiungere sostanze.
 2. **Sono bilanciate** con i coefficienti interi minimi. Se una specie è uno ione, si conserva anche la carica.
 

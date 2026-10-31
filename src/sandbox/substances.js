@@ -1,5 +1,5 @@
 // Sostanze della sandbox: i 118 elementi con i dati reali di elements.json (fusione, ebollizione, densità,
-// radioattività, elettronegatività), i materiali di base, i prodotti delle reazioni e le 554 sostanze della libreria
+// radioattività, elettronegatività), i materiali di base, i prodotti delle reazioni e le 558 sostanze della libreria
 // del laboratorio (dati fisici in data/compounds.js).
 // Modulo puro (niente DOM): lo usano il motore (world.js), il disegno e i test.
 import { MOLECULES, MOLECULE_GROUPS } from '../lab/data/molecules.js';
@@ -651,7 +651,7 @@ export function createSubstances(elements) {
   for (const s of makeOthers()) list[s.id] = s;
 
   const byKey = new Map(list.map((s) => [s.key, s]));
-  // le 554 voci della libreria: alcune sono già sostanze (H₂ → idrogeno, H₂O → acqua), le altre diventano composti
+  // le 558 voci della libreria: alcune sono già sostanze (H₂ → idrogeno, H₂O → acqua), le altre diventano composti
   const libraryId = new Map();
   for (const entry of library.entries) {
     const alias = LIBRARY_ALIASES[entry.id];
