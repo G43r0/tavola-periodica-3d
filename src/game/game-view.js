@@ -9,7 +9,7 @@ import { icons } from '../ui/icons.js';
 import { loadPhysics } from './physics.js';
 import { LabGame, FOV } from './game.js';
 import { CHAPTERS, EXERCISES, EXERCISE_BY_ID, EXTRAS, CHALLENGES, CHALLENGE_BY_ID, MEDALS, chapterExercises, chapterState, exerciseOpen, nextExercise, reputation, repTitle, recordResult, recordChallenge, challengeOpen, reportCard, SHOP, canBuy, buy, passed, newCareer, bookUnlocks, lineParams, answerNumber } from './career.js';
-import { migrate, activeProfile, addProfile, renameProfile, deleteProfile, selectProfile, updateActive, newer } from './save.js';
+import { migrate, activeProfile, addProfile, renameProfile, deleteProfile, selectProfile, updateActive, newer, freeProfileName } from './save.js';
 import { SHELF, CABINET } from './reagents.js';
 import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
 import { isClick, POUR_HOLD_MS } from './controls.js';
@@ -917,7 +917,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       showMenu();
     } else if (act === 'profiles') showProfiles();
     else if (act === 'profile-new') {
-      const next = addProfile(save, t('profileDefault', { n: save.profiles.length + 1 }));
+      const next = addProfile(save, freeProfileName(save.profiles, profileName));
       if (next) useProfile(next);
       showProfiles(next ? profile().id : null);
     } else if (b.dataset.profileUse) {

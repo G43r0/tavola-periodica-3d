@@ -1,7 +1,7 @@
 // Test dei salvataggi del simulatore (save.js): versione, migrazione dalla versione 1, profili. npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { migrate, SAVE_VERSION, DEFAULT_VOLUME, activeProfile, addProfile, renameProfile, deleteProfile, selectProfile, updateActive, newer, cleanName } from '../../src/game/save.js';
+import { migrate, SAVE_VERSION, DEFAULT_VOLUME, activeProfile, addProfile, renameProfile, deleteProfile, selectProfile, updateActive, newer, cleanName, freeProfileName } from '../../src/game/save.js';
 import { chapterExercises, PASS_STARS, reputation } from '../../src/game/career.js';
 
 const NOW = '2026-10-17T10:00:00.000Z';
@@ -109,4 +109,23 @@ test('salvataggi: tra il file dell\'app e localStorage vince il più recente', (
   assert.equal(newer(b, a), b);
   assert.equal(newer(null, a), a);
   assert.equal(newer(a, null), a);
+});
+
+test('profili: il nome predefinito nuovo è il primo libero, gli id non si ripetono', () => {
+  let save = migrate(null);
+  save = addProfile(save, freeProfileName(save.profiles));
+  save = addProfile(save, freeProfileName(save.profiles));
+  assert.deepEqual(save.profiles.map((p) => p.name), ['Studente 1', 'Studente 2', 'Studente 3']);
+  save = deleteProfile(save, save.profiles[1].id);
+  save = addProfile(save, freeProfileName(save.profiles));
+  assert.deepEqual(save.profiles.map((p) => p.name).sort(), ['Studente 1', 'Studente 2', 'Studente 3'], 'niente «Studente 3» doppio');
+  assert.equal(new Set(save.profiles.map((p) => p.id)).size, 3);
+  // con un nome tradotto
+  assert.equal(freeProfileName([{ name: 'Student 1' }], (n) => `Student ${n}`), 'Student 2');
+  // un profilo senza id prima di uno che ha già «p1»: due id diversi
+  const m = migrate({ version: 2, active: 'p1', profiles: [{ name: 'A' }, { id: 'p1', name: 'B' }] });
+  assert.equal(new Set(m.profiles.map((p) => p.id)).size, 2, m.profiles.map((p) => p.id).join(','));
+  // id doppi in un salvataggio rovinato: il secondo cambia
+  const d = migrate({ version: 2, active: 'p1', profiles: [{ id: 'p1', name: 'A' }, { id: 'p1', name: 'B' }] });
+  assert.equal(new Set(d.profiles.map((p) => p.id)).size, 2);
 });

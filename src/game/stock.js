@@ -5,7 +5,7 @@
 // sostanze del magazzino sono dedotti dai dati della sandbox (infiammabile, esplosivo, ossidante, reattivo con l'acqua),
 // dalla forza di acidi e basi e dai metalli pesanti, quindi sono indicativi.
 import { S } from '../sandbox/substances.js';
-import { LIGHT_SENSITIVE } from './reagents.js';
+import { LIGHT_SENSITIVE, KNOWN_HAZARDS } from './reagents.js';
 import { GHS_IDS } from './ghs.js';
 
 /** Colore del tappo per famiglia: un codice del laboratorio della scuola, spiegato dalla legenda sullo scaffale. */
@@ -102,10 +102,19 @@ export function derivedHazards(ctx, sid, { form, molar = 0 }) {
   const f = ctx.P.flags[sid];
   const ghs = new Set();
   const solution = form === 'solution';
+  // classificazione armonizzata delle sostanze note: vale al posto di quella dedotta
+  const known = KNOWN_HAZARDS[s.key];
+  if (known) {
+    const k = Array.isArray(known) ? { ghs: known } : known;
+    const list = !solution ? k.ghs : molar < 0.05 ? [] : molar < (k.diluteBelow ?? 0) ? k.dilute : k.ghs.filter((g) => g !== 'GHS02');
+    return { ghs: GHS_IDS.filter((g) => list.includes(g)), signal: !list.length ? null : list.some((g) => DANGER.has(g)) ? 'danger' : 'warning' };
+  }
   if (f & S.EXPLOSIVE) ghs.add('GHS01');
   // infiammabili: liquidi, gas e solo gli elementi solidi (fosforo, zolfo, metalli in polvere); zucchero, amido e cera
-  // bruciano ma non sono «solidi infiammabili» per il CLP
-  if (f & S.FLAMMABLE && !solution && (s.state25 !== 'solid' || s.kind === 'element')) ghs.add('GHS02');
+  // bruciano ma non sono «solidi infiammabili» per il CLP. Un liquido è infiammabile con il punto di infiammabilità
+  // sotto i 60 °C: in mancanza del dato, se bolle sotto i 175 °C (sì decano e xilene; no glicerolo, glicole, DMSO, anilina)
+  const liquidLow = s.state25 !== 'liquid' || !(s.bp > 448);
+  if (f & S.FLAMMABLE && !solution && (s.state25 !== 'solid' || s.kind === 'element') && liquidLow) ghs.add('GHS02');
   if (f & S.OXIDIZER && !solution) ghs.add('GHS03');
   if (f & S.WATER_REACTIVE && s.kind === 'element') ghs.add('GHS02').add('GHS05');
   // alogeni puri: lo iodio è nocivo, il bromo (liquido) corrosivo e tossico; entrambi per l'ambiente

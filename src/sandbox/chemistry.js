@@ -189,11 +189,13 @@ function handledByHand(reactants, P, subs) {
 
 /** Condizioni di una reazione dal testo del catalogo (`cond`, `needs`). */
 export function parseConditions(r, { byFormula, keyId }) {
-  const text = [r.cond, r.needs].filter(Boolean).join(', ');
+  // cond e needs sono spesso uguali: il testo una volta sola («una goccia di H₂SO₄», non ripetuto)
+  const text = [...new Set([r.cond, r.needs].filter(Boolean))].join(', ');
   const t = text.toLowerCase();
   const c = { minT: 0, maxT: Infinity, rate: 0.08, water: false, steam: false, catalysts: null, spark: false, discharge: false, light: false, shock: false, ignite: false, hot: false, molten: false, lowO2: false, disabled: null, text };
   if (r.rev) c.disabled = 'equilibrio (⇌)';
   if (/zeolit/.test(t)) c.disabled = 'catalizzatore non disponibile';
+  if (/in due passaggi/.test(t)) c.disabled = 'in due passaggi (serve un intermedio)';
   if (c.disabled) return c;
   const living = LIVING.test(t);
 
@@ -201,8 +203,9 @@ export function parseConditions(r, { byFormula, keyId }) {
   if (temps.length) c.minT = Math.min(...temps) + 273.15;
   if (text.includes('Δ') || /altoforno|riscald/.test(t)) c.hot = true;
   if (/altoforno/.test(t) && !temps.length) c.minT = 1100;
-  if (/innesco|scintilla/.test(t)) c.ignite = true;
-  if (/urto|detonat/.test(t)) c.shock = true;
+  if (/innesco|scintilla|fiamma/.test(t)) c.ignite = true;
+  // «detonazione», «detonatore», «urto», «sfregamento»: da sole non partono (prima «detonazione» sfuggiva a /detonat/)
+  if (/urto|deton|sfregament/.test(t)) c.shock = true;
   if (/\buv\b|scarica/.test(t)) c.discharge = true; // raggi UV o scarica elettrica: serve una scintilla vicina
   else if (/luce/.test(t)) {
     c.light = true;
@@ -210,13 +213,15 @@ export function parseConditions(r, { byFormula, keyId }) {
   }
   if (/elettrolisi/.test(t)) c.spark = true;
   if (c.spark || c.discharge) c.rate = 0.01;
-  if (/fus[ao]|ignea/.test(t) && !/confus/.test(t)) c.molten = true;
+  if (/fus(?:[ao]|ione)\b|ignea/.test(t) && !/confus/.test(t)) c.molten = true;
   if (/cracking/.test(t)) c.minT = Math.max(c.minT, 700);
   if (/freddo|acqua fredda/.test(t)) c.maxT = 300;
   if (/acqua calda|soluzione calda/.test(t)) c.minT = Math.max(c.minT, 330);
+  else if (/\bcald[oa]\b/.test(t)) c.hot = true; // «caldo»: Cl₂ + KOH a caldo dà il clorato, a freddo l'ipoclorito
   if (/vapore/.test(t)) c.steam = true;
   if (/soluzion|umidit|acqua(?! regia)/.test(t) && !c.steam) c.water = true;
   if (/lenta|aria umida/.test(t) || /^aria/.test(t)) c.rate = 0.004;
+  if (/\banni\b|\bmesi\b/.test(t)) c.rate = 0.0005; // la patina verde del rame: anni
   if (/ossigeno (molto )?(limitato|insufficiente|scarso)|poco ossigeno|senz'aria/.test(t)) c.lowO2 = true;
   if (c.lowO2) c.rate = 0.02;
 
@@ -234,6 +239,17 @@ export function parseConditions(r, { byFormula, keyId }) {
     }
     if (needs.size === before && /cat\.|catalizz/.test(seg) && !/acido|base|carbone attivo|lindlar/.test(seg)) unresolved = true;
   }
+  // ogni parola che è la formula di una sostanza è un requisito, anche senza «cat.»: «una goccia di H₂SO₄», «P₄O₁₀»,
+  // «Ca(OH)₂, borati», «NH₃» (parole intere: «Luce» non è il lutezio, «°C» non è il carbonio)
+  for (const raw of text.split(/[\s,;]+/)) {
+    let w = raw.replace(/[.:;]+$/, '');
+    const open = (w.match(/\(/g) ?? []).length;
+    const close = (w.match(/\)/g) ?? []).length;
+    if (open > close) w = w.replace(/^\(/, '');
+    else if (close > open) w = w.replace(/\)$/, '');
+    if (byFormula.has(w)) needs.add(byFormula.get(w));
+  }
+  if (text.split(/,\s*/).some((seg) => seg.trim().toLowerCase() === 'base')) AUXILIARY['catalizzatore base'].forEach((key) => needs.add(keyId(key)));
   needs.delete(0);
   if (needs.size) c.catalysts = needs;
   // enzimi e batteri: la reazione resta possibile solo se c'è un'alternativa (cat. MnO₂ o catalasi, Δ o enzima…)

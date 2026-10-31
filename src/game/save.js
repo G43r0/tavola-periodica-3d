@@ -35,9 +35,17 @@ const newId = (profiles) => {
 /** Nome predefinito del profilo n (la vista lo passa tradotto). */
 const defaultName = (n) => `Studente ${n}`;
 
+/** Il primo nome predefinito che nessun profilo usa («Studente 2» dopo aver eliminato il secondo, non «Studente 3» doppio). */
+export function freeProfileName(profiles, name = defaultName) {
+  const used = new Set(profiles.map((p) => p.name));
+  let n = 1;
+  while (used.has(name(n))) n++;
+  return name(n);
+}
+
 /** Profilo nuovo con la Carriera vuota. */
 export function newProfile(profiles, name, now = new Date().toISOString(), fallback = defaultName) {
-  return { id: newId(profiles), name: cleanName(name, fallback(profiles.length + 1)), created: now, career: newCareer(), notebook: null };
+  return { id: newId(profiles), name: cleanName(name, freeProfileName(profiles, fallback)), created: now, career: newCareer(), notebook: null };
 }
 
 /** Carriera della versione 1 nella forma nuova: le stelle per esercitazione, i soldi; il capitolo 0 dato per fatto. */
@@ -102,8 +110,17 @@ export function migrate(raw, now = new Date().toISOString(), name = defaultName)
     muted: settings.muted === true,
     shake: settings.shake !== false,
   };
-  save.profiles = save.profiles.filter((p) => p && typeof p === 'object').slice(0, MAX_PROFILES).map((p, i, all) => ({
-    id: typeof p.id === 'string' && p.id ? p.id : newId(all.slice(0, i)),
+  const list = save.profiles.filter((p) => p && typeof p === 'object').slice(0, MAX_PROFILES);
+  // id: quelli scritti restano (il primo, se è doppio); a chi non ce l'ha uno che nessun altro profilo usa
+  const given = list.map((p) => (typeof p.id === 'string' && p.id ? p.id : null));
+  const taken = [];
+  const ids = list.map((p, i) => {
+    const id = given[i] && !taken.some((t) => t.id === given[i]) ? given[i] : newId([...taken, ...given.filter(Boolean).map((g) => ({ id: g }))]);
+    taken.push({ id });
+    return id;
+  });
+  save.profiles = list.map((p, i) => ({
+    id: ids[i],
     name: cleanName(p.name, name(i + 1)),
     created: typeof p.created === 'string' ? p.created : now,
     career: sanitizeCareer(p.career),

@@ -7,7 +7,7 @@ import { createSubstances, AMBIENT, GAS, LIQUID, SOLID, S, WATER, phaseAt } from
 import { buildChemistry, parseConditions, PAIR_K } from '../sandbox/chemistry.js';
 import { speciesInfo, reactionEnthalpy } from '../lab/chem/reactions.js';
 import { pick } from '../i18n/index.js';
-import { SOLUBILITY, HYDRATES, ACID_BASE, TOXIC_GASES, HEAVY_METALS, SINK_SAFE, INDICATORS } from './reagents.js';
+import { SOLUBILITY, HYDRATES, ACID_BASE, TOXIC_GASES, HEAVY_METALS, SINK_SAFE, INERT_SOLIDS, INDICATORS } from './reagents.js';
 
 /** Il tempo termico (riscaldamento, raffreddamento, evaporazione) scorre 4 volte più veloce del reale. */
 export const HEAT_SPEED = 4;
@@ -75,6 +75,7 @@ export function createLabChemistry(elements) {
   for (const [k, v] of Object.entries(ACID_BASE)) if (id(k)) acidBase.set(id(k), v);
   const toxic = new Set(TOXIC_GASES.map(id).filter(Boolean));
   const sinkSafe = new Set([...SINK_SAFE].map(id).filter(Boolean));
+  const inert = new Set([...INERT_SOLIDS].map(id).filter(Boolean));
   const O2 = id('O');
   const counts = (sid) => {
     const s = list[sid];
@@ -234,7 +235,7 @@ export function createLabChemistry(elements) {
 
   return {
     subs, chem, list, P, id, sub, molar: (sid) => (typeof sid === 'string' ? INDICATORS[sid]?.molar ?? 300 : molarCache[sid]),
-    solubility, hydrate, hydrateOf, acidBase, toxic, sinkSafe, heavy, counts, rxs, pairIdx, singleIdx, airIdx, comb, O2,
+    solubility, hydrate, hydrateOf, acidBase, toxic, sinkSafe, inert, heavy, counts, rxs, pairIdx, singleIdx, airIdx, comb, O2,
     offline, offPair, offSingle, rxById: new Map([...rxs, ...offline].map((rx) => [rx.id, rx])), electrolyte,
     name, formula,
   };
@@ -801,8 +802,9 @@ export class Mixture {
     if (!candidates.size) return;
     const hasWater = this.water > 0.5;
     // la temperatura accelera le reazioni lente (fattore di Arrhenius con Ea ≈ 50 kJ/mol: ×2 ogni 10 °C circa);
-    // quelle tra ioni sciolti sono già istantanee
-    const arrhenius = Math.min(30, Math.max(0.15, Math.exp(6000 * (1 / 298 - 1 / Math.max(this.T, 150)))));
+    // quelle tra ioni sciolti sono già istantanee. Senza minimo: sotto i −50 °C una reazione si ferma quasi del tutto
+    // (prima andava sempre almeno al 15 % e una reazione endotermica portava il contenuto fino a 1 K)
+    const arrhenius = Math.min(30, Math.exp(6000 * (1 / 298 - 1 / Math.max(this.T, 1))));
     for (const rx of candidates.values()) {
       if (rx.electro || this.blocker(rx, { flame, light })) continue;
       let xi = Infinity;
@@ -1016,16 +1018,25 @@ export function wasteClass(mix) {
   const { ctx } = mix;
   let organicVol = 0;
   let unsafe = false;
+  let organicUnsafe = false; // un composto organico che non va nel lavandino, anche diluito (acetone in acqua)
+  let notInert = false; // qualcosa che non è né innocuo né un solido inerte (sabbia, marmo, carbone)
   const liquid = mix.liquidVolume;
   for (const [sid, mol] of mix.n) {
     if (mol <= 1e-9 || typeof sid === 'string' || sid === WATER) continue;
     if (ctx.heavy[sid]) return 'heavy';
     const s = ctx.sub(sid);
+    const inLiquid = mix.phaseOf(sid) === LIQUID || (mix.d.get(sid) ?? 0) > 0;
     if (s.flags & S.ORGANIC && mix.phaseOf(sid) === LIQUID) organicVol += (mol * ctx.molar(sid)) / (s.densL || 1);
-    if (!ctx.sinkSafe.has(sid) && mol > 2e-6) unsafe = true; // tracce trascurabili (resti di una titolazione)
+    if (!ctx.sinkSafe.has(sid) && mol > 2e-6) {
+      // tracce trascurabili (resti di una titolazione) a parte
+      unsafe = true;
+      if (s.flags & S.ORGANIC && inLiquid) organicUnsafe = true;
+      if (!ctx.inert.has(sid)) notInert = true;
+    }
   }
   if (organicVol > 2 && organicVol > liquid * 0.1) return 'organic';
-  if (liquid < 0.05) return unsafe ? 'inorganic' : 'solid';
+  if (organicUnsafe) return 'organic';
+  if (liquid < 0.05) return unsafe && notInert ? 'inorganic' : 'solid';
   const ph = mix.pH();
   if (ph !== null && (ph < 5.5 || ph > 9)) return 'inorganic';
   // anche le soluzioni innocue vanno nei rifiuti se sono concentrate (oltre ~1 mol/L di sali)

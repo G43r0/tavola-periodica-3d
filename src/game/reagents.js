@@ -89,9 +89,21 @@ export const ACID_BASE = {
   hf: { ka: [6.3e-4] }, h3po4: { ka: [6.9e-3] }, h2co3: { ka: [4.5e-7] }, hcn: { ka: [6.2e-10] }, hclo: { ka: [2.9e-8] },
   h2s: { ka: [8.9e-8] }, nh4: { ka: [5.6e-10] }, nh4cl: { ka: [5.6e-10] }, nh4no3: { ka: [5.6e-10] },
   fecl3: { ka: [6.3e-3] }, // l'idrolisi di Fe³⁺ rende acide le sue soluzioni
+  // idrolisi degli altri ioni metallici: [M(H₂O)ₙ]ᶻ⁺ ⇌ [M(OH)(H₂O)ₙ₋₁]⁽ᶻ⁻¹⁾⁺ + H⁺. phOnly: contano solo per il pH, non
+  // fanno del sale un acido (le sue reazioni non si fanno per forza in soluzione, non scioglie i metalli)
+  alcl3: { ka: [1.4e-5], phOnly: true }, al2so43: { ka: [1.4e-5, 1.4e-5], phOnly: true },
+  cuso4: { ka: [1.0e-8], phOnly: true }, cucl2: { ka: [1.0e-8], phOnly: true }, cuno32: { ka: [1.0e-8], phOnly: true }, 'ione-rame': { ka: [1.0e-8], phOnly: true },
+  znso4: { ka: [1.0e-9], phOnly: true }, zncl2: { ka: [1.0e-9], phOnly: true }, 'ione-zinco': { ka: [1.0e-9], phOnly: true },
+  feso4: { ka: [3.2e-10], phOnly: true }, fecl2: { ka: [3.2e-10], phOnly: true }, 'ione-ferro2': { ka: [3.2e-10], phOnly: true },
+  niso4: { ka: [1.3e-10], phOnly: true },
+  fenolo: { ka: [1.0e-10], phOnly: true },
   nh3: { kb: [1.8e-5] }, na2co3: { kb: [2.1e-4] }, k2co3: { kb: [2.1e-4] }, co3: { kb: [2.1e-4] },
-  nahco3: { kb: [2.2e-8] }, hco3: { kb: [2.2e-8] }, 'acetato-di-sodio': { kb: [5.7e-10] }, acetato: { kb: [5.7e-10] },
+  // il bicarbonato è anfotero: come base (Kb = Kw/Ka₁) e come acido (Ka₂), pH ≈ (pKa₁ + pKa₂)/2 ≈ 8,3
+  nahco3: { kb: [2.2e-8], ka: [4.7e-11], phOnly: true }, hco3: { kb: [2.2e-8], ka: [4.7e-11], phOnly: true },
+  'acetato-di-sodio': { kb: [5.7e-10] }, acetato: { kb: [5.7e-10] },
   na2s: { kb: [1.0e-1] }, kcn: { kb: [1.6e-5] }, nacn: { kb: [1.6e-5] }, ipoclorito: { kb: [3.4e-7] },
+  naclo: { kb: [3.4e-7] }, // il soluto della candeggina (Kb = Kw/Ka di HClO)
+  na3po4: { kb: [2.1e-2] }, // PO₄³⁻ (Kb₁ = Kw/Ka₃ di H₃PO₄)
 };
 
 /** Gas tossici o irritanti: fuori dalla cappa accesa fanno scattare l'allarme. */
@@ -104,8 +116,31 @@ export const HEAVY_METALS = new Set([24, 25, 27, 28, 29, 30, 33, 34, 47, 48, 50,
 export const SINK_SAFE = new Set([
   'nacl', 'kcl', 'kno3', 'nano3', 'na2so4', 'k2so4', 'mgso4', 'mgcl2', 'cacl2', 'na2co3', 'nahco3', 'k2co3',
   'nh4cl', 'glucosio', 'saccarosio', 'urea', 'acido-citrico', 'acetato-di-sodio', 'ki', 'kbr', 'nai', 'nabr', 'licl',
-  'ione-sodio', 'cloruro', 'acetato', 'co3', 'hco3', 'h2co3', 'o2', 'co2', 'n2',
+  'ione-sodio', 'cloruro', 'acetato', 'co3', 'hco3', 'h2co3', 'o2', 'co2', 'n2', 'etanolo', 'glicerolo',
 ]);
+
+/** Solidi inerti e insolubili: asciutti vanno nei rifiuti solidi (sabbia, marmo, carbone, allumina, gesso). */
+export const INERT_SOLIDS = new Set(['sio2', 'caco3', 'C', 'al2o3', 'tio2', 'caso4']);
+
+/**
+ * Pittogrammi della classificazione armonizzata CLP (allegato VI) di sostanze del magazzino senza scheda nello
+ * scaffale: valgono al posto di quelli dedotti dai dati. In soluzione si toglie GHS02; sotto 0,05 M niente.
+ * L'ammoniaca sotto il 5 % circa (3 M) è solo irritante.
+ */
+export const KNOWN_HAZARDS = {
+  metanolo: ['GHS02', 'GHS06', 'GHS08'],
+  fenolo: ['GHS05', 'GHS06', 'GHS08'],
+  formaldeide: ['GHS05', 'GHS06', 'GHS08'],
+  benzene: ['GHS02', 'GHS07', 'GHS08'],
+  toluene: ['GHS02', 'GHS07', 'GHS08'],
+  ccl4: ['GHS06', 'GHS08'],
+  chcl3: ['GHS06', 'GHS08'],
+  anilina: ['GHS05', 'GHS06', 'GHS08'], // più GHS09: l'etichetta del gioco ne mostra al massimo 3
+  nitrobenzene: ['GHS06', 'GHS08', 'GHS09'],
+  'acido-acetico': ['GHS02', 'GHS05'],
+  'acido-ossalico': ['GHS05', 'GHS07'],
+  nh3: { ghs: ['GHS05', 'GHS07', 'GHS09'], diluteBelow: 3, dilute: ['GHS07'] },
+};
 
 /** Indicatori (sostanze del gioco, fuori dalla libreria): massa molare e colori. */
 export const INDICATORS = {

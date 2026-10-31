@@ -176,3 +176,14 @@ test('libro: nomi dei colori per le osservazioni', () => {
   assert.equal(colorName([120, 70, 30]), 'brown');
   assert.equal(colorName(null), 'none');
 });
+
+test('libro: niente miscele esplosive o vietate e niente fosgene tra le ricette', () => {
+  const book = bookRecipes(ctx, VERIFIED);
+  for (const n of [990, 991, 993, 994, 1002, 370, 454, 455, 840, 841, 941]) {
+    const id = `cat-${n}`;
+    assert.ok(!book.byId.has(id), `${id} è nel libro`);
+    assert.ok(['danger', 'shock'].includes(book.failed.get(id)?.why), `${id}: ${book.failed.get(id)?.why}`);
+  }
+  // le ricette che riuscivano solo perché le condizioni erano ignorate non ci sono più
+  for (const n of [366, 995, 1109, 1110, 206]) assert.ok(!(`cat-${n}` in VERIFIED), `cat-${n}`);
+});

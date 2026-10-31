@@ -564,7 +564,7 @@ Daniell e contatore del gas.
   elementi, con come si ottengono davvero (miniera e industria, aria liquida, elettrolisi, sottoprodotto, reattore o
   acceleratore, dalle fonti CRC Handbook e Greenwood ed Earnshaw), le ricette del libro che li liberano e le altre
   reazioni del catalogo che li liberano con il motivo per cui il laboratorio non le fa (un forno oltre i 900 °C, un sale
-  fuso, un gas che il laboratorio non ha…); le **ricette** di 668 reazioni del catalogo, generate dai dati
+  fuso, un gas che il laboratorio non ha…); le **ricette** di 648 reazioni del catalogo, generate dai dati
   (`src/game/book.js`): ingredienti nelle forme che il magazzino dà davvero (solido, liquido, soluzione 0,1 o 1 M, gas
   delle bombole, aria), con le dosi calcolate dalle masse molari per una dose da scuola e un leggero eccesso, lette sulla
   bilancia (0,05 g) e sul cilindro (1 mL); il recipiente; la piastra al livello giusto (calcolato con le perdite di
