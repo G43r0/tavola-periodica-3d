@@ -31,6 +31,12 @@ Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
 - **Laboratorio, scheda.** Le due strutture di Kekulé di un anello sono la stessa molecola: l'aspirina, l'acido
   salicilico e l'o-xilene con i doppi legami spostati sono riconosciuti (#54); l'angolo ideale VSEPR dipende dalla forma
   (XeF₂ lineare 180°, ClF₃ a T < 90°) (#55).
+- **Sandbox.** I 78 composti che «si decompongono» senza una reazione nel catalogo restano solidi invece di diventare
+  vapore di sé stessi, e gli idrati perdono l'acqua: CuSO₄·5H₂O a 150 °C diventa CuSO₄ bianco più vapore (#22); a
+  pressione atmosferica l'elio resta liquido fino allo zero assoluto (#52); cambiare la griglia conserva il disegno
+  (centrato e appoggiato in basso) e si annulla come ogni altra modifica (#43); il campo Temperatura rispetta i limiti
+  (le soluzioni tra 0 e 99 °C) e vuoto lascia il valore di prima (#44); nella barra laterale non ci sono più etichette
+  tagliate a 1280×800 né alla finestra minima (#23).
 - **Laboratorio, Formula.** Scrivere `[Cu(NH3)4]2+` a mano non manda più in crash la pagina (ciclo infinito con una «[»
   non ancora chiusa, #66); numeri enormi come `C1000000000` non bloccano più l'anteprima occupando gigabyte (#67).
 - **Laboratorio.** «Simula» su una seconda reazione (o Annulla) subito dopo la prima non si perde più (#75); in

@@ -107,6 +107,59 @@ test('i gas salgono o scendono secondo la densità', () => {
   assert.ok(meanY(w, Z('Cl')) > 38, `cloro in basso (y medio ${meanY(w, Z('Cl'))})`);
 });
 
+test('cambiare griglia conserva il disegno, centrato e appoggiato in basso', () => {
+  const w = world(60, 40);
+  w.paint(30, 37, 2, Z('Fe'));
+  w.paint(30, 10, 0, Z('Cu'));
+  const fe = count(w, Z('Fe'));
+  const yFe = meanY(w, Z('Fe'));
+  const { dx, dy } = w.resizeKeeping(80, 50);
+  assert.deepEqual([w.W, w.H, dx, dy], [80, 50, 10, 10]);
+  assert.equal(count(w, Z('Fe')), fe, 'nessuna cella persa ingrandendo');
+  assert.equal(count(w, Z('Cu')), 1);
+  assert.ok(Math.abs(meanY(w, Z('Fe')) - (yFe + 10)) < 1e-9, 'il ferro resta appoggiato in basso');
+  assert.equal(w.type[(10 + 10) * 80 + 30 + 10], Z('Cu'), 'il rame si sposta dello stesso scarto');
+  // rimpicciolendo si taglia sopra e ai lati, il fondo resta
+  w.resizeKeeping(40, 25);
+  assert.equal(count(w, Z('Fe')), fe);
+  assert.equal(count(w, Z('Cu')), 0, 'il rame era in alto: fuori dalla griglia piccola');
+  run(w, 5);
+});
+
+test('un composto che si decompone non diventa vapore di sé stesso; gli idrati perdono l\'acqua', () => {
+  const gassy = [];
+  for (const s of subs.list) {
+    if (!(s.flags & S.DECOMPOSES) || s.flags & S.EXPLOSIVE || !Number.isFinite(s.bp)) continue;
+    const w = world(12, 12);
+    w.paint(6, 9, 0, s.id, { temp: s.bp + 40 });
+    w.step();
+    const i = 9 * 12 + 6;
+    if (w.type[i] === s.id && w.cellPhase(i) === GAS) gassy.push(s.key);
+  }
+  assert.deepEqual(gassy, [], 'diventano gas alla temperatura di decomposizione');
+  // CuSO₄·5H₂O a 150 °C: solfato di rame anidro e vapore
+  const w = world(30, 20);
+  for (let x = 10; x < 20; x++) for (let y = 15; y < 19; y++) w.paint(x, y, 0, Z('cuso4-5h2o'), { temp: 423 });
+  for (let k = 0; k < 40; k++) {
+    w.heat(15, 17, 6, 5);
+    w.step();
+  }
+  assert.ok(count(w, Z('cuso4')) > 0, 'resta il sale anidro');
+  assert.ok(count(w, WATER) > 0, 'e l\'acqua se ne va come vapore');
+  const ev = [...w.events.keys()].find((k) => k.startsWith('dehyd:'));
+  assert.ok(ev, 'nel registro');
+  assert.match(describeEvent(subs, ev).title, /solfato di rame/i);
+});
+
+test('elio: a pressione atmosferica resta liquido fino allo zero assoluto', () => {
+  const he = subs.byKey.get('He');
+  for (const T of [0, 0.5, 0.94, 2, 4]) assert.equal(phaseAt(he, T), LIQUID, `${T} K`);
+  assert.equal(phaseAt(he, 4.3), GAS);
+  const w = world(20, 10);
+  for (const T of [0, 0.5, 2]) assert.equal(w.phaseOf(Z('He'), T), LIQUID, `motore a ${T} K`);
+  assert.ok(substanceNotes(subs, Z('He')).some((n) => /2[,.]?17|superflu|non solidifica/i.test(n)), 'la scheda lo dice');
+});
+
 test('cambiamenti di stato: il ferro fonde a 1538 °C, l\'acqua gela e bolle', () => {
   const w = world();
   w.paint(30, 30, 3, Z('Fe'), { powder: false });

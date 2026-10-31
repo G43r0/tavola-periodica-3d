@@ -389,7 +389,7 @@ export function createSandbox(elements, { onClose } = {}) {
     const cat = s.kind === 'element' ? CATEGORY[s.category] ?? CATEGORY.unknown : null;
     const phase = phaseAt(s, state.place.temp);
     const canSolid = Number.isFinite(s.mp) ? s.mp > 2 : true;
-    const canLiquid = Number.isFinite(s.mp) && s.mp > 0 && s.bp > s.mp;
+    const canLiquid = Number.isFinite(s.mp) && s.mp >= 0 && s.bp > s.mp; // l'elio ha mp = 0
     const canGas = Number.isFinite(s.bp) && s.bp > 0;
     const blockOnly = s.flags & S.BLOCK_ONLY;
     const groupLabel = s.kind === 'compound' ? subs.groups.find((g) => g.key === s.group)?.label : null;
@@ -408,7 +408,7 @@ export function createSandbox(elements, { onClose } = {}) {
           ? ''
           : aqueous
             ? `<div class="sbx-place"><p class="sbx-label">${t('placeAs')}</p><p class="sbx-place__aq">${t('aqueousOnly')}</p>
-               <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="-273" max="99" value="${Math.round(state.place.temp - 273.15)}" /> °C</label></div>`
+               <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="0" max="99" value="${Math.round(state.place.temp - 273.15)}" /> °C</label></div>`
             : `<div class="sbx-place">
         <p class="sbx-label">${t('placeAs')}</p>
         <div class="segmented sbx-phase" role="group" aria-label="${t('phase')}" data-help="term.state">
@@ -421,7 +421,7 @@ export function createSandbox(elements, { onClose } = {}) {
           <button type="button" class="segmented__btn" data-form="powder" aria-pressed="${state.place.form === 'powder'}">${t('powder')}</button>
           <button type="button" class="segmented__btn" data-form="block" aria-pressed="${state.place.form === 'block'}">${t('block')}</button>
         </div>
-        <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="-273" max="${Math.round(T_MAX - 273.15)}" value="${Math.round(state.place.temp - 273.15)}" /> °C</label>
+        <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="${dissolved ? 0 : -273}" max="${dissolved ? 99 : Math.round(T_MAX - 273.15)}" value="${Math.round(state.place.temp - 273.15)}" /> °C</label>
       </div>`
       }
       <ul class="sbx-notes">${substanceNotes(subs, sel.id, sel.ctype).map((n) => `<li>${esc(n)}</li>`).join('')}</ul>`;
@@ -447,8 +447,12 @@ export function createSandbox(elements, { onClose } = {}) {
   });
   $('.sbx-card').addEventListener('change', (ev) => {
     if (!ev.target.matches('.sbx-temp input')) return;
-    const c = Number(ev.target.value);
-    if (Number.isFinite(c)) state.place.temp = Math.min(T_MAX, Math.max(0, c + 273.15));
+    // campo vuoto: resta la temperatura di prima (Number('') sarebbe 0 °C); i limiti sono quelli del campo (le
+    // soluzioni tra 0 e 99 °C)
+    const c = ev.target.value.trim() === '' ? NaN : Number(ev.target.value);
+    const lo = Number(ev.target.min);
+    const hi = Number(ev.target.max);
+    if (Number.isFinite(c)) state.place.temp = Math.min(T_MAX, Math.max(0, Math.min(hi, Math.max(lo, c)) + 273.15));
     renderSelection();
   });
   $('.sbx-card').addEventListener('keydown', (ev) => ev.stopPropagation());
@@ -651,15 +655,15 @@ export function createSandbox(elements, { onClose } = {}) {
     history.redo.length = 0;
     syncHistory();
   }
-  function resetHistory() {
-    history.undo.length = 0;
-    history.redo.length = 0;
-    syncHistory();
-  }
   function travel(from, to, label) {
     const snap = from.pop();
     if (!snap) return;
     to.push(snapshot());
+    // un passo fatto su un'altra griglia (cambio di griglia annullato): prima si torna a quella dimensione
+    if (snap.world.W !== world.W || snap.world.H !== world.H) {
+      world.resizeKeeping(snap.world.W, snap.world.H);
+      gridChanged();
+    }
     world.restore(snap.world);
     state.labels = snap.labels;
     syncHistory();
@@ -925,18 +929,24 @@ export function createSandbox(elements, { onClose } = {}) {
     if (opt === 'edges') world.openEdges = ev.target.checked;
     if (opt === 'filled') state.filled = ev.target.checked;
     if (ev.target.matches('.sbx-gridsize select')) {
+      // il disegno resta (centrato e appoggiato in basso) e il cambio si annulla come ogni altra modifica
       const [W, H] = GRIDS[ev.target.value];
-      world.resize(W, H);
-      resetHistory();
-      world.openEdges = $('[data-opt="edges"]').checked;
-      state.labels = [];
-      state.logKeys = [];
-      state.logSeen = -1;
-      allocBuffers();
-      layout();
-      renderLog();
+      remember();
+      const { dx, dy } = world.resizeKeeping(W, H);
+      state.labels = state.labels.map((l) => ({ ...l, x: l.x + dx, y: l.y + dy }));
+      gridChanged();
     }
   });
+
+  /** Dopo un cambio di dimensione del mondo: buffer, misure della vista e la voce scelta nel menu Griglia. */
+  function gridChanged() {
+    world.openEdges = $('[data-opt="edges"]').checked;
+    allocBuffers();
+    layout();
+    const key = Object.keys(GRIDS).find((k) => GRIDS[k][0] === world.W && GRIDS[k][1] === world.H);
+    if (key) $('.sbx-gridsize select').value = key;
+    renderLog();
+  }
 
   // ---------------------------------------------------------------- introduzione
   const FEATURED = ['alcalini', 'fiamma', 'termite', 'fissione', 'neon', 'idrogeno'];

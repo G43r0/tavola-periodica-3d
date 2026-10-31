@@ -97,6 +97,31 @@ export class World {
     this.generators = 0;
   }
 
+  /**
+   * Cambia griglia conservando il disegno: centrato in orizzontale e appoggiato in basso (le cose cadono), tagliato
+   * se la griglia nuova è più piccola. Restano anche il tempo e il registro. Restituisce lo scarto { dx, dy }.
+   */
+  resizeKeeping(W, H) {
+    const old = this.snapshot();
+    const keep = { tick: this.tick, events: this.events, eventCount: this.eventCount };
+    const dx = Math.floor((W - old.W) / 2);
+    const dy = H - old.H;
+    this.resize(W, H);
+    Object.assign(this, keep);
+    const keys = ['type', 'temp', 'life', 'ctype', 'flags', 'seed', 'vx', 'vy', 'spark'];
+    for (let y = Math.max(0, -dy); y < old.H && y + dy < H; y++) {
+      for (let x = Math.max(0, -dx); x < old.W && x + dx < W; x++) {
+        const i = y * old.W + x;
+        const j = (y + dy) * W + x + dx;
+        for (const k of keys) this[k][j] = old[k][i];
+      }
+    }
+    this.particles = old.particles
+      .map((p) => ({ ...p, x: p.x + dx, y: p.y + dy }))
+      .filter((p) => p.x >= 0 && p.x < W && p.y >= 0 && p.y < H);
+    return { dx, dy };
+  }
+
   clear() {
     this.type.fill(0);
     this.temp.fill(AMBIENT);
@@ -131,7 +156,11 @@ export class World {
   phaseOf(id, T) {
     const P = this.P;
     if (P.flags[id] & S.FIRE) return GAS;
-    return T < P.mp[id] ? SOLID : T < P.bp[id] ? LIQUID : GAS;
+    if (T < P.mp[id]) return SOLID;
+    if (T < P.bp[id]) return LIQUID;
+    // chi si decompone non bolle: finché non si decompone resta solido (o fuso, se fonde prima)
+    if (P.flags[id] & S.DECOMPOSES) return P.mp[id] < P.bp[id] ? LIQUID : SOLID;
+    return GAS;
   }
 
   /** Stato fisico della cella: le soluzioni sono liquide tra il gelo e l'ebollizione dell'acqua. */
@@ -407,8 +436,9 @@ export class World {
       phase = this.cellPhase(i);
       this.flags[i] = (this.flags[i] & ~PHASE_MASK) | (phase << 2);
     } else {
-      // si decompone invece di bollire (carbonato di calcio, zuccheri, nitrati…)
-      const decomposes = sf & S.DECOMPOSES && (this.chem.single.has(id) || sf & S.ORGANIC);
+      // si decompone invece di bollire (carbonato di calcio, zuccheri, nitrati, idrati…); senza una decomposizione
+      // nota resta solido (o fuso) invece di diventare vapore di sé stesso
+      const decomposes = sf & S.DECOMPOSES;
       if (decomposes && T >= P.bp[id] && this.decompose(i, x, y, id)) return;
       phase = T < P.mp[id] ? SOLID : T < P.bp[id] || decomposes ? (P.mp[id] < P.bp[id] ? LIQUID : SOLID) : GAS;
       const last = (this.flags[i] >> 2) & 3;
@@ -442,6 +472,15 @@ export class World {
       this.transmute(i, C_Z, T);
       this.spawnNear(x, y, WATER, T, 0, true);
       this.event(`char:${id}`);
+      return true;
+    }
+    // idrati: l'acqua di cristallizzazione se ne va come vapore e resta il sale anidro (CuSO₄·5H₂O azzurro → CuSO₄)
+    const anhydrous = this.subs.anhydrousOf?.(id);
+    if (anhydrous && this.rand() < 0.2) {
+      const T = this.temp[i];
+      if (this.spawnNear(x, y, WATER, T, 0, true) < 0) return false;
+      this.transmute(i, anhydrous, T);
+      this.event(`dehyd:${id}`);
       return true;
     }
     return false;
