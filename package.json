@@ -21,7 +21,8 @@
     "test": "node --test \"tests/**/*.test.mjs\"",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -p tsconfig.json"
   },
   "build": {
     "appId": "it.tavolaperiodica3d.app",
@@ -96,6 +97,7 @@
     "globals": "17.14.0",
     "prettier": "3.9.10",
     "three": "^0.186.1",
+    "typescript": "7.0.2",
     "vite": "^8.3.5",
     "wait-on": "^9.5.1"
   },

@@ -1,3 +1,4 @@
+// @ts-check
 // Lettore SMILES, per scrivere la libreria di molecole in modo compatto e per incollare le SMILES di PubChem o Wikipedia.
 // Supporta: sottoinsieme organico (B C N O P S F Cl Br I) con idrogeni impliciti, atomi tra parentesi quadre con
 // isotopo, stereochimica, idrogeni, carica e classe ([NH4+], [O-2], [13CH4], [C@@H], [Na+]), legami - = # : / \,

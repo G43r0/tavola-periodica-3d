@@ -1,3 +1,4 @@
+// @ts-check
 // Struttura di Lewis di un frammento covalente (atomi uniti da legami covalenti).
 // Conservazione degli elettroni: elettroni = Σ elettroni di valenza − carica.
 // Procedura dei libri di testo: gli elettroni non di legame completano prima gli ottetti degli atomi
@@ -21,21 +22,27 @@ const t = createT({
   },
 });
 
-/** L'atomo segue la regola dell'ottetto (o del duetto)? */
+/**
+ * L'atomo segue la regola dell'ottetto (o del duetto)?
+ * @param {import('../../types').LabElement} info
+ */
 export function usesOctet(info) {
   if (info.tier !== TIER.MAIN) return false;
   if (info.z === 1 || info.z === 2) return true;
   return info.group >= 14;
 }
 
+/** @param {import('../../types').LabElement} info */
 export const octetTarget = (info) => (info.z <= 2 ? 2 : 8);
 
+/** @param {import('../../types').LabElement} info */
 const canExpand = (info) => info.tier === TIER.MAIN && info.period >= 3 && info.group >= 14;
 
 /**
- * @param {{get:(z:number)=>object}} lab
- * @param {{z:number,charge:number}[]} atoms carica di ogni atomo (ioni, elettroni aggiunti/tolti)
- * @param {{i:number,j:number,order:number}[]} bonds legami covalenti
+ * @param {import('../../types').LabElements} lab
+ * @param {import('../../types').GraphAtom[]} atoms carica di ogni atomo (ioni, elettroni aggiunti/tolti)
+ * @param {import('../../types').GraphBond[]} bonds legami covalenti
+ * @returns {import('../../types').LewisResult}
  */
 export function analyzeLewis(lab, atoms, bonds) {
   const n = atoms.length;
@@ -49,7 +56,8 @@ export function analyzeLewis(lab, atoms, bonds) {
   const electrons = info.reduce((s, x) => s + x.V, 0) - Q;
   let R = electrons - B.reduce((s, x) => s + x, 0);
   const L = new Array(n).fill(0);
-  const result = { charge: Q, electrons, invalid: null };
+  // gli altri campi (atoms, radical…) si aggiungono più sotto
+  const result = /** @type {import('../../types').LewisResult} */ ({ charge: Q, electrons, invalid: null });
 
   if (R < 0) {
     result.invalid = t('notEnough');

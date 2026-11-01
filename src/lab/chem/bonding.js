@@ -1,3 +1,4 @@
+// @ts-check
 // Regole per formare, cambiare o rompere legami, con il motivo (nella lingua dell'interfaccia) quando non si può.
 import { analyzeLewis, usesOctet, octetTarget } from './lewis.js';
 import { TIER } from './elements-lab.js';

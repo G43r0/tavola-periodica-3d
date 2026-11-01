@@ -853,5 +853,8 @@ const BASE_EXERCISES = [
   },
 ];
 
-/** Tutte le esercitazioni, nell'ordine dei capitoli (dentro un capitolo vale l'ordine della lista: le verifiche sono in fondo). */
+/**
+ * Tutte le esercitazioni, nell'ordine dei capitoli (dentro un capitolo vale l'ordine della lista: le verifiche sono in fondo).
+ * @type {import('../../types').Exercise[]}
+ */
 export const EXERCISES = [...BASE_EXERCISES, ...LATE_EXERCISES];

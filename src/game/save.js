@@ -1,3 +1,4 @@
+// @ts-check
 // Salvataggi del simulatore, con la versione e la migrazione. Modulo puro: riceve e restituisce oggetti (la vista li
 // scrive in localStorage e, nell'app Electron, anche in un file nella cartella dei dati dell'utente).
 //
@@ -49,7 +50,11 @@ export function freeProfileName(profiles, name = defaultName) {
   return name(n);
 }
 
-/** Profilo nuovo con la Carriera vuota. */
+/**
+ * Profilo nuovo con la Carriera vuota.
+ * @param {import('../types').Profile[]} profiles
+ * @returns {import('../types').Profile}
+ */
 export function newProfile(profiles, name, now = new Date().toISOString(), fallback = defaultName) {
   return {
     id: newId(profiles),
@@ -60,7 +65,10 @@ export function newProfile(profiles, name, now = new Date().toISOString(), fallb
   };
 }
 
-/** Carriera della versione 1 nella forma nuova: le stelle per esercitazione, i soldi; il capitolo 0 dato per fatto. */
+/**
+ * Carriera della versione 1 nella forma nuova: le stelle per esercitazione, i soldi; il capitolo 0 dato per fatto.
+ * @returns {import('../types').Career}
+ */
 export function migrateCareerV1(old) {
   const career = newCareer();
   if (!old) return career;
@@ -77,7 +85,10 @@ export function migrateCareerV1(old) {
   return career;
 }
 
-/** Controlla e completa una Carriera letta da un salvataggio (campi mancanti o di tipo sbagliato). */
+/**
+ * Controlla e completa una Carriera letta da un salvataggio (campi mancanti o di tipo sbagliato).
+ * @returns {import('../types').Career}
+ */
 function sanitizeCareer(c) {
   const out = newCareer();
   if (!c || typeof c !== 'object') return out;
@@ -114,7 +125,7 @@ function sanitizeCareer(c) {
 /**
  * Salvataggio di qualsiasi versione (o niente, o qualcosa di rotto) → versione 2 valida. Non modifica l'originale.
  * name(n): nome predefinito dei profili nella lingua dell'interfaccia.
- * @returns {{version: number, settings: object, active: string, profiles: object[]}}
+ * @returns {import('../types').Save}
  */
 export function migrate(raw, now = new Date().toISOString(), name = defaultName) {
   const data = raw && typeof raw === 'object' ? raw : {};
@@ -169,7 +180,10 @@ export function migrate(raw, now = new Date().toISOString(), name = defaultName)
   return save;
 }
 
-/** Profilo attivo. */
+/**
+ * Profilo attivo.
+ * @param {import('../types').Save} save
+ */
 export const activeProfile = (save) => save.profiles.find((p) => p.id === save.active) ?? save.profiles[0];
 
 /** Aggiunge un profilo e lo rende attivo (al massimo 8): restituisce il salvataggio nuovo o null. */

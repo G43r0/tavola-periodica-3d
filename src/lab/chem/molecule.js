@@ -1,3 +1,4 @@
+// @ts-check
 // Banco di lavoro come grafo: atomi, legami covalenti (ordine 1–3) e legami ionici
 // (elettroni trasferiti dal metallo al non metallo). Nessuna grafica qui.
 

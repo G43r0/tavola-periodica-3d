@@ -1,3 +1,4 @@
+// @ts-check
 // Energia di legame nucleare per nucleone.
 // Valori sperimentali AME2020 (Atomic Mass Evaluation) per i 2548 nuclei misurati (src/data/ame2020.js, generato da
 // scripts/build-ame.mjs); per gli altri la formula semi-empirica di Weizsäcker (errore tipico ≈ 1 % per A > 20).

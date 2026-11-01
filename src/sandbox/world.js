@@ -1,3 +1,4 @@
+// @ts-check
 // Motore della sandbox: griglia di celle (automa cellulare) con temperatura, cambiamenti di stato, densità reali,
 // conduzione del calore, combustione, soluzioni acquose, le reazioni del catalogo, elettricità, radioattività,
 // fissione ed esplosioni. Modulo puro (niente DOM): lo disegna render.js, lo pilota sandbox-view.js, lo provano i test.
@@ -81,7 +82,7 @@ function pickShare(list, r) {
 
 export class World {
   /**
-   * @param {ReturnType<import('./substances.js').createSubstances>} subs
+   * @param {import('../types').Substances} subs
    * @param {number} W colonne
    * @param {number} H righe
    */
@@ -1608,7 +1609,12 @@ export class World {
     });
   }
 
-  /** Mette `id` nella cella i con lo stato scelto (polvere o blocco, sciolto in acqua). */
+  /**
+   * Mette `id` nella cella i con lo stato scelto (polvere o blocco, sciolto in acqua).
+   * @param {number} i
+   * @param {number} id
+   * @param {{temp?:number, powder?:boolean, ctype?:number, dissolved?:boolean}} opts
+   */
   paintCell(i, id, { temp = AMBIENT, powder, ctype = 0, dissolved = false } = {}) {
     this.setType(i, id, temp, ctype);
     if (this.P.flags[id] & S.SOURCE && ctype)

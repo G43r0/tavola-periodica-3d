@@ -1,3 +1,4 @@
+// @ts-check
 // Geometria delle molecole.
 // VSEPR: notazione AXₙEₘ e nome della forma. Posizioni 3D per rilassamento ("position based"):
 //  - molle sui legami (lunghezza dai raggi covalenti, o sperimentale per le molecole della libreria)
@@ -108,8 +109,9 @@ const IDEAL_SHAPE_EN = { ...IDEAL_SHAPE_IT, '3-1': '< 109.5°', '2-2': '< 109.5�
 
 /**
  * Classificazione VSEPR di ogni atomo con almeno 2 vicini.
- * @param {object} desc {atoms, bonds}
- * @param {object} lewis analyzeLewis
+ * @param {import('../../types').LabElements} lab
+ * @param {import('../../types').Graph} desc
+ * @param {import('../../types').LewisResult} lewis analyzeLewis
  */
 export function vsepr(lab, desc, lewis) {
   const neighbors = desc.atoms.map(() => new Set());
@@ -174,10 +176,11 @@ function lookupAngle(geo, A, C, B) {
 
 /**
  * Prepara il rilassamento.
- * @param {object} desc {atoms:[{z,charge}], bonds:[{i,j,order}], ionic:[{i,j,transfer,donor}]}
- * @param {object[]} lewisAtoms per atomo {lonePairs, unpaired} (indici di desc)
+ * @param {import('../../types').LabElements} lab
+ * @param {import('../../types').Description} desc
+ * @param {Pick<import('../../types').LewisAtom, 'lonePairs' | 'unpaired'>[]} lewisAtoms per atomo (indici di desc)
  * @param {number[][]} positions posizioni iniziali (unità della scena), modificate in place
- * @param {object} [geo] valori sperimentali della libreria
+ * @param {Record<string, number> | null} [geo] valori sperimentali della libreria
  */
 export function createRelaxer(lab, desc, lewisAtoms, positions, geo = null) {
   const n = desc.atoms.length;
@@ -489,12 +492,15 @@ export function createRelaxer(lab, desc, lewisAtoms, positions, geo = null) {
  * Disposizione iniziale di una molecola costruita da zero: "stress majorization" sulle distanze nel
  * grafo (somma delle lunghezze di legame lungo il cammino più breve). Districa anelli e catene; poi il
  * rilassamento sistema angoli e coppie solitarie.
+ * @param {import('../../types').LabElements} lab
+ * @param {import('../../types').Description} desc
  * @param {number[]} [center] centro attorno a cui disporre gli atomi
  */
 export function initialLayout(lab, desc, center = [0, 0, 0], seed = 1) {
   const n = desc.atoms.length;
   const info = desc.atoms.map((a) => lab.get(a.z));
   const INF = 1e9;
+  /** @type {number[][]} */
   const D = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 0 : INF)));
   for (const b of desc.bonds) {
     const l = covalentLength(info[b.i], info[b.j], b.order) / 100;

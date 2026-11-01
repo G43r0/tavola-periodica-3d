@@ -1,3 +1,4 @@
+// @ts-check
 // Proprietà degli elementi usate dal laboratorio molecolare.
 // Riceve i dati di elements.json (così il modulo resta puro e testabile in Node).
 
@@ -140,10 +141,12 @@ const positiveStates = (el) =>
   );
 
 /**
- * @param {object[]} elements array di elements.json
+ * @param {import('../../types').Element[]} elements array di elements.json
  * @param {Record<string,{color:string}>} categoryColors colori di riserva per categoria
+ * @returns {import('../../types').LabElements}
  */
 export function createLabElements(elements, categoryColors = {}) {
+  /** @type {Map<number, import('../../types').LabElement>} */
   const byZ = new Map();
   for (const el of elements) {
     const tier = el.z >= 104 ? TIER.UNKNOWN : el.block === 'd' || el.block === 'f' ? TIER.UNVERIFIED : TIER.MAIN;

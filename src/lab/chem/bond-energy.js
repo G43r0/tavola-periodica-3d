@@ -1,3 +1,4 @@
+// @ts-check
 // Energie di legame medie (kJ/mol, molecole in fase gassosa), valori dei testi di chimica generale
 // (Housecroft & Sharpe, CRC Handbook). Sono medie su molte molecole: indicative, non esatte.
 // Per le coppie mancanti: stima di Pauling D(A–B) = ½[D(A–A) + D(B–B)] + 96,5·(ΔEN)².

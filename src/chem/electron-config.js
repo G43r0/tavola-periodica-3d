@@ -1,3 +1,4 @@
+// @ts-check
 // Configurazione elettronica dello stato fondamentale.
 // Regola di Madelung (aufbau) + eccezioni note (NIST Atomic Spectra Database).
 // Modulo puro: usato sia dallo script di build dei dati sia dall'interfaccia

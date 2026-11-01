@@ -1,3 +1,4 @@
+// @ts-check
 // Nomi generati per ioni monoatomici e composti ionici non presenti in libreria
 // (nomenclatura tradizionale italiana; numero di ossidazione di Stock per i metalli con più cariche).
 // In inglese si usa la nomenclatura IUPAC inglese: iron(III) chloride, dinitrogen pentoxide, hexane.
@@ -105,7 +106,7 @@ function prefixed(n, word, { mono = false } = {}) {
 /**
  * Nome sistematico di una molecola binaria non in libreria (es. PCl₅ → pentacloruro di fosforo, N₂O₅ →
  * pentossido di diazoto). Restituisce null se non è un composto binario tra non metalli.
- * @param {Map<object, number>} counts info dell'elemento → numero di atomi
+ * @param {Map<import('../../types').LabElement, number>} counts info dell'elemento → numero di atomi
  */
 export function binaryCovalentName(counts) {
   if (counts.size !== 2) return null;

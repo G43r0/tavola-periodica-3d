@@ -1,3 +1,4 @@
+// @ts-check
 // Formule e riconoscimento delle molecole.
 // L'"impronta" di un grafo (algoritmo di Weisfeiler–Lehman) non dipende dall'ordine in cui gli atomi
 // sono stati aggiunti: due molecole con la stessa impronta hanno la stessa struttura.
@@ -57,6 +58,7 @@ export function displayFormula(lab, atoms, charge = 0, { ionic = false } = {}) {
   if (ionic) {
     // prima i cationi (atomi con carica positiva), poi il resto per elettronegatività crescente
     const cations = new Set(atoms.filter((a) => a.charge > 0).map((a) => lab.get(a.z).symbol));
+    // @ts-expect-error differenza tra booleani: true − false = 1, i cationi passano per primi
     order = [...counts.keys()].sort((a, b) => cations.has(b) - cations.has(a) || en(a) - en(b));
   } else if (counts.has('C')) {
     order = hillOrder(counts);
@@ -174,12 +176,18 @@ export function unitSignature(atoms, bonds, orders = true) {
 
 /**
  * Indice della libreria: per ogni voce struttura (SMILES), impronte e formula.
- * @param {object[]} entries
+ * @param {import('../../types').LabElements} lab
+ * @param {import('../../types').Molecule[]} entries
+ * @returns {import('../../types').LibraryIndex}
  */
 export function createLibraryIndex(lab, entries) {
+  /** @type {Map<string, import('../../types').LibraryEntry>} */
   const full = new Map();
+  /** @type {Map<string, import('../../types').LibraryEntry[]>} */
   const skeleton = new Map();
+  /** @type {Map<string, import('../../types').LibraryEntry[]>} */
   const byFormula = new Map();
+  /** @type {Map<string, import('../../types').LibraryEntry>} */
   const parsed = new Map();
   for (const e of entries) {
     const g = parseSmiles(e.smiles, lab.bySymbol);
@@ -213,7 +221,6 @@ export function createLibraryIndex(lab, entries) {
     byFormula: (key) => byFormula.get(key) ?? [],
     /**
      * Cerca per nome: voce con il nome esatto e voci che lo contengono (al massimo `limit`).
-     * @returns {{exact:object|null, matches:object[]}}
      */
     byName(query, limit = 8) {
       const q = normalizeName(query);
@@ -228,7 +235,6 @@ export function createLibraryIndex(lab, entries) {
     /**
      * Riconosce un'unità costruita sul banco.
      * @param {{z:number,charge:number}[]} atoms cariche degli atomi (ioni e elettroni aggiunti/tolti)
-     * @returns {{entry:object|null, exact:boolean, byFormula?:boolean, sameFormula:object[]}}
      */
     identify(atoms, bonds) {
       const charge = atoms.reduce((s, a) => s + a.charge, 0);

@@ -1,3 +1,4 @@
+// @ts-check
 // Libro «Come si fa»: le ricette delle reazioni del catalogo che si possono fare nel laboratorio del gioco, generate dai
 // dati. Per ogni reazione: con quali reagenti del magazzino (nelle forme che il magazzino dà davvero: solido, liquido,
 // soluzione 0,1 M o 1 M, i gas delle bombole, l'aria), in che dosi (calcolate dalle masse molari per una dose da
@@ -53,6 +54,7 @@ const liquidMlOf = (ml) => (ml >= 1 ? mlOf(ml) : Math.max(0.2, roundTo(ml, 0.1))
  * Che cosa dà il magazzino del Laboratorio libero, sostanza per sostanza (come il catalogo del gioco): le sostanze della
  * libreria solide o liquide a 25 °C (non i gas, non gli ioni), le soluzioni 0,1 M e 1 M di quelle che si sciolgono, e
  * i metalli in pezzi. sol = solubilità a 22 °C (g/100 g d'acqua).
+ * @param {import('../types').LabChemistry} ctx
  * @returns {Map<number, {key: string, st: 'solid'|'liquid', soluble: boolean, sol: number}>}
  */
 export function storeIndex(ctx) {
@@ -74,7 +76,10 @@ export function storeIndex(ctx) {
   return out;
 }
 
-/** Reagenti dello scaffale e dell'armadio per sostanza: chiave, forma e molarità (si preferiscono nelle ricette). */
+/**
+ * Reagenti dello scaffale e dell'armadio per sostanza: chiave, forma e molarità (si preferiscono nelle ricette).
+ * @param {import('../types').LabChemistry} ctx
+ */
 export function shelfIndex(ctx) {
   const out = new Map();
   for (const [key, r] of Object.entries({ ...SHELF, ...CABINET })) {
@@ -88,23 +93,26 @@ export function shelfIndex(ctx) {
   return out;
 }
 
+/** @param {import('../types').LabChemistry} ctx */
 const CYLINDER = (ctx) => new Map(CYLINDER_GASES.map((k) => [ctx.id(k), k]));
 
 // ------------------------------------------------------------------ ricetta
 
 /**
  * Ricetta di una reazione del simulatore, oppure il motivo per cui il laboratorio non la sa preparare.
- * @param {object} ctx contesto chimico (createLabChemistry)
- * @param {object} rx reazione di ctx.rxs
- * @returns {{ok: true, id: string, rx: object, ingredients: object[], vessel: string, heat: object|null, flame: boolean,
- *   light: boolean, volts: number, gas: string|null, hood: boolean, steps: object[], tags: string[], signals: object,
- *   main: number, from: number[], difficulty: number, shelfOnly: boolean, ghs: string[], products: object[]}
- *   | {ok: false, id: string, why: string, sid?: number, T?: number}}
+ * @param {import('../types').LabChemistry} ctx contesto chimico (createLabChemistry)
+ * @param {import('../types').LabReaction} rx reazione di ctx.rxs
+ * @returns {import('../types').Recipe | import('../types').RecipeFailure}
  *   why: 'shock' (esplosivi), 'danger' (miscele esplosive o vietate, fosgene), 'molten' (sale fuso, elettrolisi
  *   ignea), 'lowO2' (senz'aria), 'tooHot' (forno oltre i 1000 K), 'unavailable' (un reagente che il magazzino non ha),
  *   'catalyst' (manca il catalizzatore), 'gasOnly' (solo gas: non si fa in un becher)
  */
 export function buildRecipe(ctx, rx, store = storeIndex(ctx), shelf = shelfIndex(ctx), cylinders = CYLINDER(ctx)) {
+  /**
+   * @param {string} why
+   * @param {{sid?: number, T?: number}} [extra]
+   * @returns {import('../types').RecipeFailure}
+   */
   const fail = (why, extra = {}) => ({ ok: false, id: rx.id, why, ...extra });
   const c = rx.cond;
   if (c.shock) return fail('shock');
@@ -305,7 +313,8 @@ export function buildRecipe(ctx, rx, store = storeIndex(ctx), shelf = shelfIndex
     element?.sid ?? sig.solids[0]?.sid ?? rx.products.find((p) => p.sid !== WATER)?.sid ?? rx.products[0].sid;
   const from = rx.reactants.filter((r) => r.sid !== WATER && !(r.sid === ctx.O2 && rx.air >= 0)).map((r) => r.sid);
 
-  const recipe = {
+  // steps, difficulty, shelfOnly e ghs si aggiungono più sotto
+  const recipe = /** @type {import('../types').Recipe} */ ({
     ok: true,
     id: rx.id,
     rx,
@@ -323,7 +332,7 @@ export function buildRecipe(ctx, rx, store = storeIndex(ctx), shelf = shelfIndex
     from,
     aqueous,
     slow: Boolean(rx.slow || light),
-  };
+  });
   recipe.steps = recipeSteps(ctx, recipe);
   recipe.difficulty = heat?.how === 'bunsen' || flame || volts || gas || toxicGas ? 3 : heat || aux || light ? 2 : 1;
   recipe.shelfOnly = ingredients.every(
@@ -341,7 +350,11 @@ export function reagentOf(x) {
   return { solid: x.key };
 }
 
-/** Pittogrammi dei reagenti (come sulle etichette del gioco) e dei gas delle bombole, senza ripetizioni. */
+/**
+ * Pittogrammi dei reagenti (come sulle etichette del gioco) e dei gas delle bombole, senza ripetizioni.
+ * @param {import('../types').LabChemistry} ctx
+ * @param {import('../types').Recipe} recipe
+ */
 function recipeHazards(ctx, recipe) {
   const ghs = new Set();
   for (const x of recipe.ingredients) {
@@ -360,12 +373,22 @@ function recipeHazards(ctx, recipe) {
  *   {type: 'has', sid, mol} un recipiente contiene almeno mol di sid · {type: 'temp', T} il recipiente della ricetta
  *   è arrivato a T · {type: 'rx'} la reazione è avvenuta · {type: 'hood'} la cappa è accesa · {type: 'waste'} il
  *   contenuto è finito in un rifiuto · {type: 'auto'} si spunta quando si spunta un passo successivo.
+ * @param {import('../types').LabChemistry} ctx
+ * @param {import('../types').Recipe} r la ricetta, ancora senza passi
+ * @returns {import('../types').RecipeStep[]}
  */
 function recipeSteps(ctx, r) {
+  /** @type {import('../types').RecipeStep[]} */
   const steps = [];
+  /**
+   * @param {string} kind
+   * @param {Record<string, unknown>} [params]
+   * @param {import('../types').StepCheck} [check]
+   */
   const push = (kind, params = {}, check = { type: 'auto' }) => steps.push({ kind, params, check });
   if (r.hood) push('hood', {}, { type: 'hood' });
   push('vessel', { vessel: r.vessel });
+  /** @returns {import('../types').StepCheck} */
   const has = (x, f = 0.7) => ({ type: 'has', sid: x.sid, mol: (x.mol ?? 0) * f });
   const ing = r.ingredients;
   for (const x of ing.filter((y) => y.role === 'reactant' && y.form === 'solid'))
@@ -414,6 +437,9 @@ const vesselEnv = (kind) => ({ heatC: DEFS[kind].heatC, area: DEFS[kind].area })
  * aspetta finché la reazione non ha consumato almeno il 5 % del reagente limitante (o, per quelle lentissime, finché
  * non è cominciata). Una combustione è il fuoco nel recipiente, come nel gioco: quando il combustibile prende fuoco
  * brucia (Mixture.burn) finché non finisce. Il tempo è quello del gioco.
+ * @param {import('../types').LabChemistry} ctx
+ * @param {import('../types').Recipe} recipe
+ * @param {{maxSeconds?: number, dt?: number}} [opts]
  * @returns {{ok: boolean, seconds: number, extent: number, xiMax: number, mix: Mixture, waste: string|null, others: string[]}}
  */
 export function runRecipe(ctx, recipe, { maxSeconds = 600, dt = 0.2 } = {}) {
@@ -439,6 +465,7 @@ export function runRecipe(ctx, recipe, { maxSeconds = 600, dt = 0.2 } = {}) {
   let fire = 0;
   const others = new Set();
   for (; t < maxSeconds && extent < goal; t += dt) {
+    /** @type {import('../types').TickEnv} */
     const env = {
       lossWK: 0.3 + area * 0.03,
       containerC: heatC,
@@ -485,7 +512,9 @@ export function runRecipe(ctx, recipe, { maxSeconds = 600, dt = 0.2 } = {}) {
  * Tutte le ricette che il laboratorio sa preparare (ctx.rxs) e i motivi di quelle che non sa. verified: gli id delle
  * ricette che il motore esegue davvero (book-verified.js), con i secondi di gioco e il rifiuto: solo quelle entrano
  * nel libro; senza, entrano tutte quelle costruite.
- * @returns {{recipes: object[], byId: Map<string, object>, failed: Map<string, object>}}
+ * @param {import('../types').LabChemistry} ctx
+ * @param {Record<string, [number, string|null]> | null} [verified]
+ * @returns {{recipes: import('../types').Recipe[], byId: Map<string, import('../types').Recipe>, failed: Map<string, import('../types').RecipeFailure>}}
  */
 export function bookRecipes(ctx, verified = null) {
   const store = storeIndex(ctx);
@@ -527,7 +556,9 @@ export const recipeMinutes = (r) => Math.max(1, Math.round((r.steps.length * 30 
 /**
  * Pagine dei 118 elementi: come si ottengono davvero (element-production.js) e le ricette del libro che li liberano,
  * più le reazioni del catalogo che li liberano ma che il laboratorio non sa fare, con il motivo.
- * @returns {{z: number, sid: number, recipes: object[], other: {id: string, why: string}[]}[]}
+ * @param {import('../types').LabChemistry} ctx
+ * @param {ReturnType<typeof bookRecipes>} book
+ * @returns {{z: number, sid: number, recipes: import('../types').Recipe[], other: {id: string, why: string}[]}[]}
  */
 export function elementPages(ctx, book) {
   const out = [];

@@ -1285,7 +1285,7 @@ function makeCompound(id, entry, data, elements, lab) {
 
 /**
  * Tabella completa delle sostanze: `list[id]` (oggetti descrittivi) e array tipizzati per il motore.
- * @param {object[]} elements elementi di elements.json
+ * @param {import('../types').Element[]} elements elementi di elements.json
  */
 export function createSubstances(elements) {
   const lab = createLabElements(elements);

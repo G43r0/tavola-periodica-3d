@@ -1,3 +1,4 @@
+// @ts-check
 // Le 1349 reazioni del catalogo del laboratorio tradotte per la sandbox: specie → sostanze della griglia, condizioni
 // (temperatura, acqua, catalizzatori, corrente, luce, innesco), calore liberato da ΔH°. Il motore (world.js) le esegue
 // quando le celle dei reagenti si toccano e le condizioni sono soddisfatte. Modulo puro.
@@ -29,7 +30,7 @@ const LIVING = /enzim|batteri|lievit|ribosoma|muscoli|archei|anammox|clorofill|p
 
 /**
  * Prepara le reazioni per il motore.
- * @param {ReturnType<import('./substances.js').createSubstances>} subs
+ * @param {import('../types').SubstanceTable} subs
  */
 export function buildChemistry(subs) {
   const { lab, library, elements, libraryId, P } = subs;

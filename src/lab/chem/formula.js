@@ -1,3 +1,4 @@
+// @ts-check
 // Lettura delle formule chimiche scritte o incollate dall'utente.
 // Accetta: H2SO4, Ca(OH)2, K4[Fe(CN)6], CuSO4·5H2O (idrati con · • * .), coefficienti (2H2O),
 // più specie separate da + (2 H2 + O2), cariche (NH4+, SO4^2-, SO4(2-), SO4 2-, Fe3+, O2-),

@@ -1,3 +1,4 @@
+// @ts-check
 // Formattazione numeri e grandezze nella lingua dell'interfaccia (virgola decimale in italiano, punto in inglese).
 import { createT, locale, isItalian } from '../i18n/index.js';
 

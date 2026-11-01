@@ -1,3 +1,4 @@
+// @ts-check
 // "Combina": dagli atomi scelti costruisce la struttura più plausibile.
 // 1. Se la formula corrisponde a una molecola della libreria, usa quella (tra più isomeri sceglie
 //    quello con l'energia di legame totale maggiore e propone gli altri).
@@ -176,10 +177,10 @@ function partitions(g, parts, maxEach) {
 }
 
 /**
- * @param {object} lab elementi del laboratorio
- * @param {object|null} library indice della libreria (createLibraryIndex)
+ * @param {import('../../types').LabElements} lab elementi del laboratorio
+ * @param {import('../../types').LibraryIndex|null} library indice della libreria (createLibraryIndex)
  * @param {number[]} zs numeri atomici degli atomi da combinare
- * @returns {{ok:boolean, bonds?:object[], source?:string, entry?:object, alternatives?:object[], unpaired?:number, message?:string}}
+ * @returns {import('../../types').CombineResult}
  */
 export function combine(lab, library, zs) {
   const n = zs.length;
@@ -436,6 +437,7 @@ function skeletonSearch(lab, info, atoms, t, k, metalCharges, ionicMetals, limit
     const unpaired = heavy.reduce((s, h) => s + cap[h], 0) + left.length - paired.size;
 
     // converte gli indici locali in indici degli atomi di partenza e aggiunge i legami ionici
+    /** @type {import('../../types').BenchBond[]} */
     const out = bonds.map((b) => ({ i: atoms[b.i], j: atoms[b.j], order: b.order }));
     const donors = ionicMetals.map((i, m) => ({ i, q: metalCharges[m] }));
     const acceptors = atoms.map((a, idx) => ({ i: a, k: k[idx] })).filter((a) => a.k > 0);
@@ -515,7 +517,10 @@ const MONO_ANIONS = new Set([1, 6, 7, 8, 9, 15, 16, 17, 33, 34, 35, 52, 53]);
  * Scompone una formula in cationi (metalli, NH₄⁺) e anioni noti (ioni poliatomici della libreria o
  * anioni monoatomici) con le cariche bilanciate: Fe₂(SO₄)₃ → 2 Fe³⁺ + 3 SO₄²⁻, KAl(SO₄)₂, FeBr₃.
  * Con i soli alogenuri non usa cariche ≥ 4 se il legame non è ionico (WF₆, PbCl₄ sono molecolari).
- * @returns {{graph:{atoms:object[], bonds:object[]}, ionic:true, charge:0} | null}
+ * @param {import('../../types').LabElements} lab
+ * @param {import('../../types').LibraryIndex} library
+ * @param {number[]} zs
+ * @returns {import('../../types').IonicSalt | null}
  */
 export function ionicDecomposition(lab, library, zs) {
   const counts = countByZ(zs);

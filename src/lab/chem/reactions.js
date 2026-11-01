@@ -1,3 +1,4 @@
+// @ts-check
 // Reazioni chimiche: specie, bilanciamento algebrico, entalpia di reazione.
 // Specie: una voce della libreria (id, es. "h2o") oppure un elemento nel suo stato standard ("el:Na").
 // ΔH° = Σ ν·ΔHf°(prodotti) − Σ ν·ΔHf°(reagenti) con le entalpie di formazione standard a 25 °C;
@@ -22,7 +23,11 @@ const STATE_MARK = { gas: 'g', liquido: 'l', solido: 's', liquid: 'l', solid: 's
 
 /**
  * Informazioni su una specie.
- * @returns {{ key:string, formula:string, name:string, state:string|null, mark:string, hf:number|null, atoms:{z:number}[], bonds:object[], ionic:boolean, element:boolean, entry?:object }}
+ * @param {import('../../types').LabElements} lab
+ * @param {import('../../types').LibraryIndex} library
+ * @param {import('../../types').Element[]} elements
+ * @param {string} key id della libreria oppure «el:Simbolo»
+ * @returns {import('../../types').Species}
  */
 export function speciesInfo(lab, library, elements, key) {
   if (key.startsWith('el:')) {
@@ -198,7 +203,12 @@ function bondKinds(lab, s) {
 
 /**
  * Entalpia di reazione.
- * @returns {{ formation: {value:number|null, missing:string[]}, bonds: {value:number, broken:Map, formed:Map, brokenKj:number, formedKj:number}|null }}
+ * @param {import('../../types').LabElements} lab
+ * @param {import('../../types').Species[]} reactants
+ * @param {import('../../types').Species[]} products
+ * @param {number[]} rc coefficienti dei reagenti
+ * @param {number[]} pc coefficienti dei prodotti
+ * @returns {import('../../types').ReactionEnthalpy}
  */
 export function reactionEnthalpy(lab, reactants, products, rc, pc) {
   const missing = [];

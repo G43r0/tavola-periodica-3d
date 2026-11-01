@@ -1,3 +1,4 @@
+// @ts-check
 // Motore chimico dei contenitori del simulatore di laboratorio. Ogni contenitore ha una miscela: moli di ogni sostanza
 // (le stesse della sandbox: elementi, acqua e le 558 sostanze della libreria), quanto ne è sciolto in acqua, la
 // temperatura. Da qui: volume, massa, pH, colore, scioglimento e cristallizzazione (anche come idrati), ebollizione ed
@@ -37,6 +38,7 @@ const TINY = 1e-10;
 const MOLAR_FALLBACK = { water: WATER_MOLAR, co2: 44.009, so2: 64.066, smoke: 12, ash: 60, oxide: 60 };
 const DIATOMIC = new Set(['H', 'N', 'O', 'F', 'Cl', 'Br', 'I']);
 // colore in acqua degli ioni dei metalli di transizione (come nella sandbox) e soglia di concentrazione (mol/L)
+/** @type {[z: number, rgb: number[], k: number][]} */
 const ION_COLOR = [
   [29, [40, 125, 235], 0.05], // Cu²⁺ azzurro
   [28, [70, 175, 95], 0.08], // Ni²⁺ verde
@@ -49,7 +51,7 @@ const PINK = [232, 46, 170];
 
 /**
  * Prepara le sostanze, le reazioni e i dati del gioco (una volta sola).
- * @param {object[]} elements elementi di elements.json (localizzati o no)
+ * @param {import('../types').Element[]} elements elementi di elements.json (localizzati o no)
  */
 export function createLabChemistry(elements) {
   const subs = createSubstances(elements);
@@ -160,7 +162,9 @@ export function createLabChemistry(elements) {
       return null;
     }
   };
+  /** @type {import('../types').LabReaction[]} */
   const rxs = [];
+  /** @type {import('../types').OfflineReaction[]} */
   const offline = [];
   for (const entry of chem.list) {
     const r = entry.r;
@@ -673,8 +677,7 @@ export class Mixture {
   /**
    * Un passo della miscela.
    * @param {number} dt secondi di gioco
-   * @param {{heatW?: number, lossWK?: number, Tenv?: number, containerC?: number, area?: number, stir?: number,
-   *          open?: boolean, flame?: boolean, light?: boolean, volts?: number}} env potenza ricevuta (W), dispersione
+   * @param {import('../types').TickEnv} env potenza ricevuta (W), dispersione
    *          (W/K), temperatura dell'ambiente, capacità termica del contenitore (J/K), superficie libera (cm²),
    *          agitazione (0–1), aperto, nella fiamma, sotto la lampada, tensione degli elettrodi (V)
    * @returns {{gases: [number, number][], reactions: Set<string>, extent: Map<string, number>, heatK: number, ignite: number,
@@ -1066,6 +1069,7 @@ export class Mixture {
         });
       }
     }
+    // @ts-expect-error differenza tra booleani: true − false = 1, l'acqua va in fondo
     return out.sort((a, b) => (a.sid === WATER) - (b.sid === WATER) || b.grams - a.grams);
   }
 
