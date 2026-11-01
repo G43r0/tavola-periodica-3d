@@ -9,6 +9,7 @@
 // Versione 1 (fino alla G5): { career: { index, money, stars[] }, chemMode, legend, fov, notebook }, con le cinque
 //   esercitazioni di allora in ordine.
 import { newCareer, chapterExercises, PASS_STARS } from './career.js';
+import { prefersReducedMotion } from '../ui/motion.js';
 
 export const SAVE_VERSION = 2;
 /** Volume dell'audio per chi non l'ha mai cambiato (0–1). */
@@ -35,9 +36,17 @@ const newId = (profiles) => {
 /** Nome predefinito del profilo n (la vista lo passa tradotto). */
 const defaultName = (n) => `Studente ${n}`;
 
+/** Il primo nome predefinito che nessun profilo usa («Studente 2» dopo aver eliminato il secondo, non «Studente 3» doppio). */
+export function freeProfileName(profiles, name = defaultName) {
+  const used = new Set(profiles.map((p) => p.name));
+  let n = 1;
+  while (used.has(name(n))) n++;
+  return name(n);
+}
+
 /** Profilo nuovo con la Carriera vuota. */
 export function newProfile(profiles, name, now = new Date().toISOString(), fallback = defaultName) {
-  return { id: newId(profiles), name: cleanName(name, fallback(profiles.length + 1)), created: now, career: newCareer(), notebook: null };
+  return { id: newId(profiles), name: cleanName(name, freeProfileName(profiles, fallback)), created: now, career: newCareer(), notebook: null };
 }
 
 /** Carriera della versione 1 nella forma nuova: le stelle per esercitazione, i soldi; il capitolo 0 dato per fatto. */
@@ -67,6 +76,8 @@ function sanitizeCareer(c) {
   for (const [id, r] of Object.entries(c.results ?? {})) {
     if (!r || typeof r !== 'object') continue;
     out.results[id] = { stars: Math.max(0, Math.min(5, Number(r.stars) || 0)), report: Math.max(0, Number(r.report) || 0), tries: Math.max(0, Number(r.tries) || 0), ...(r.migrated ? { migrated: true } : {}) };
+    // incidenti del tentativo più pulito (dalla 1.0.0; prima contavano solo quelli dell'anno)
+    if (Number(r.incidents) > 0) out.results[id].incidents = Math.floor(Number(r.incidents));
     // voto di una verifica (4–10)
     if (Number.isFinite(Number(r.mark)) && r.mark !== null) out.results[id].mark = Math.max(4, Math.min(10, Number(r.mark)));
   }
@@ -100,10 +111,20 @@ export function migrate(raw, now = new Date().toISOString(), name = defaultName)
     fov: Number.isFinite(Number(settings.fov)) ? Number(settings.fov) : undefined,
     volume: settings.volume !== undefined && settings.volume !== null && Number.isFinite(Number(settings.volume)) ? Math.max(0, Math.min(1, Number(settings.volume))) : DEFAULT_VOLUME,
     muted: settings.muted === true,
-    shake: settings.shake !== false,
+    // chi non l'ha mai scelta: spenta se il sistema chiede di ridurre il movimento
+    shake: typeof settings.shake === 'boolean' ? settings.shake : !prefersReducedMotion(),
   };
-  save.profiles = save.profiles.filter((p) => p && typeof p === 'object').slice(0, MAX_PROFILES).map((p, i, all) => ({
-    id: typeof p.id === 'string' && p.id ? p.id : newId(all.slice(0, i)),
+  const list = save.profiles.filter((p) => p && typeof p === 'object').slice(0, MAX_PROFILES);
+  // id: quelli scritti restano (il primo, se è doppio); a chi non ce l'ha uno che nessun altro profilo usa
+  const given = list.map((p) => (typeof p.id === 'string' && p.id ? p.id : null));
+  const taken = [];
+  const ids = list.map((p, i) => {
+    const id = given[i] && !taken.some((t) => t.id === given[i]) ? given[i] : newId([...taken, ...given.filter(Boolean).map((g) => ({ id: g }))]);
+    taken.push({ id });
+    return id;
+  });
+  save.profiles = list.map((p, i) => ({
+    id: ids[i],
     name: cleanName(p.name, name(i + 1)),
     created: typeof p.created === 'string' ? p.created : now,
     career: sanitizeCareer(p.career),

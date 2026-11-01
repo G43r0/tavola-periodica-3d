@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createLabChemistry } from '../../src/game/mixture.js';
 import { SHELF, LIGHT_SENSITIVE } from '../../src/game/reagents.js';
-import { reagentLook, familyOf, FAMILIES, FAMILY_ORDER, STRONG_OXIDIZERS } from '../../src/game/stock.js';
+import { reagentLook, familyOf, FAMILIES, FAMILY_ORDER, STRONG_OXIDIZERS, derivedHazards } from '../../src/game/stock.js';
 import { GHS, GHS_IDS, SIGNAL } from '../../src/game/ghs.js';
 import { DEFS } from '../../src/game/items.js';
 import { GAME_STRINGS } from '../../src/game/game-strings.js';
@@ -129,4 +129,26 @@ test('testi: famiglie, legenda e avvertenze in italiano e in inglese', () => {
     for (const s of Object.keys(SIGNAL)) assert.ok(T[`signal_${s}`], `${lang} signal_${s}`);
     assert.ok(T.capLegendTitle);
   }
+});
+
+test('pericoli dedotti: le sostanze note hanno i pittogrammi del CLP; GHS02 solo ai liquidi che bollono sotto ~175 °C', () => {
+  const ghs = (key, form = 'liquid', molar = 0) => derivedHazards(ctx, ctx.id(key), { form, molar }).ghs;
+  const has = (key, list, form, molar) => {
+    const got = ghs(key, form, molar);
+    for (const g of list) assert.ok(got.includes(g), `${key}: manca ${g} (${got.join(' ')})`);
+  };
+  has('metanolo', ['GHS02', 'GHS06', 'GHS08']);
+  has('fenolo', ['GHS05', 'GHS06', 'GHS08'], 'solid');
+  has('formaldeide', ['GHS05', 'GHS06', 'GHS08'], 'solution', 1);
+  has('benzene', ['GHS02', 'GHS07', 'GHS08']);
+  has('toluene', ['GHS02', 'GHS07', 'GHS08']);
+  has('ccl4', ['GHS06', 'GHS08']);
+  has('anilina', ['GHS05', 'GHS06', 'GHS08']);
+  has('nitrobenzene', ['GHS06', 'GHS08', 'GHS09']);
+  has('acido-acetico', ['GHS02', 'GHS05']);
+  has('acido-ossalico', ['GHS05', 'GHS07'], 'solid');
+  has('nh3', ['GHS07'], 'solution', 1);
+  for (const key of ['glicerolo', 'glicole-etilenico', 'dmso', 'anilina', 'nitrobenzene']) assert.ok(!ghs(key).includes('GHS02'), `${key} non è un liquido infiammabile per il CLP`);
+  assert.deepEqual(ghs('glicerolo'), [], 'il glicerolo non ha pericoli');
+  for (const key of ['etanolo', 'acetone', 'decano']) assert.ok(ghs(key).includes('GHS02'), `${key} è infiammabile`);
 });

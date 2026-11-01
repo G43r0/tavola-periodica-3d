@@ -83,5 +83,8 @@ export function fmtAbundance(iso) {
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESCAPES[c]);
 
-/** Normalizza per la ricerca: minuscolo, senza accenti. */
-export const normalize = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+/**
+ * Normalizza per la ricerca: minuscolo, senza accenti, con pedici e apici come cifre e segni normali (NFKD), così
+ * «CuSO₄» = «CuSO4», «Na⁺» = «Na+» e «SO₄²⁻» = «SO42-».
+ */
+export const normalize = (s) => String(s).normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[−–—]/g, '-').toLowerCase().trim();

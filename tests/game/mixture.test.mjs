@@ -156,3 +156,56 @@ test('rifiuti: ogni miscela ha il suo contenitore', () => {
   assert.ok(!binAccepts('sink', 'heavy'));
   assert.ok(!binAccepts('organic', 'inorganic'));
 });
+
+test('pH: il bicarbonato è anfotero (≈ 8,3 a ogni concentrazione) e va nel lavandino', () => {
+  near(Mixture.solution(ctx, 'nahco3', 0.1, 100).pH(), 8.3, 0.15, 'NaHCO₃ 0,1 M');
+  near(Mixture.of(ctx, [['water', 50 / 18.015], ['nahco3', 2 / 84.007, true]]).pH(), 8.3, 0.15, '2 g in 50 mL');
+  near(Mixture.solution(ctx, 'nahco3', 0.01, 100).pH(), 8.3, 0.2, 'NaHCO₃ 0,01 M');
+  assert.equal(wasteClass(Mixture.solution(ctx, 'nahco3', 0.1, 50)), 'sink');
+});
+
+test('pH: candeggina basica, fosfato trisodico, sali idrolizzabili acidi, fenolo debolmente acido', () => {
+  const pH = (k, M) => Mixture.solution(ctx, k, M, 100).pH();
+  near(pH('naclo', 0.7), 10.7, 0.3, 'candeggina NaClO 0,7 M');
+  near(pH('na3po4', 0.1), 12.6, 0.2, 'Na₃PO₄ 0,1 M');
+  near(pH('cuso4', 0.5), 4.2, 0.4, 'CuSO₄ 0,5 M');
+  near(pH('alcl3', 0.1), 2.9, 0.3, 'AlCl₃ 0,1 M');
+  for (const k of ['znso4', 'feso4', 'niso4']) {
+    const v = pH(k, 0.1);
+    assert.ok(v > 4.5 && v < 6, `${k} 0,1 M: ${v}`);
+  }
+  near(pH('fenolo', 0.1), 5.5, 0.2, 'fenolo 0,1 M');
+});
+
+test('rifiuti: un solvente organico diluito non va in «acidi, basi e sali»; i solidi inerti vanno nei solidi', () => {
+  const inWater = (key, ml) => {
+    const m = Mixture.liquid(ctx, 'water', 100);
+    m.add(Mixture.liquid(ctx, key, ml));
+    return wasteClass(m);
+  };
+  assert.equal(inWater('acetone', 5), 'organic', 'acetone diluito');
+  assert.equal(inWater('etanolo', 5), 'sink', 'etanolo molto diluito');
+  assert.equal(inWater('glicerolo', 5), 'sink', 'glicerolo');
+  assert.equal(wasteClass(Mixture.liquid(ctx, 'etanolo', 20)), 'organic', 'etanolo puro');
+  assert.equal(wasteClass(Mixture.solid(ctx, 'sio2', 2)), 'solid', 'sabbia asciutta');
+  assert.equal(wasteClass(Mixture.solid(ctx, 'caco3', 2)), 'solid', 'carbonato di calcio');
+  assert.equal(wasteClass(Mixture.solid(ctx, 'kclo3', 2)), 'inorganic', 'un ossidante resta nei rifiuti inorganici');
+});
+
+test('calore di soluzione: la soda caustica e il cloruro di calcio scaldano, il nitrato di potassio e il cloruro d\'ammonio raffreddano', () => {
+  // 100 mL d'acqua, agitando, senza dispersione (lossWK 0): ΔT ≈ −n·ΔH_sol / (m·c); prima tutti −0,1 K (evaporazione)
+  const dT = (key, grams) => {
+    const m = Mixture.solid(ctx, key, grams);
+    m.add(Mixture.liquid(ctx, 'water', 100));
+    const T0 = m.T;
+    run(m, 60, { stir: 1, lossWK: 0 });
+    assert.ok(m.dissolved(key) > 0.95 * m.amount(key), `${key} sciolto`);
+    return m.T - T0;
+  };
+  const naoh = dT('naoh', 4);
+  assert.ok(naoh > 8 && naoh < 12, `NaOH 4 g: ${naoh} K`);
+  assert.ok(dT('cacl2', 10) > 8, 'CaCl₂ scalda');
+  assert.ok(dT('kno3', 10) < -5, 'KNO₃ raffredda');
+  assert.ok(dT('nh4cl', 10) < -4, 'NH₄Cl raffredda');
+  assert.ok(Math.abs(dT('nacl', 5)) < 1.5, 'NaCl quasi niente');
+});

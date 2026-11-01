@@ -13,7 +13,7 @@ import {
   pickSamples, answerOptions, answerScore, reportQuestions, reportStars, reputation, repTitle, chapterState, exerciseOpen,
   nextExercise, bookUnlocks, newCareer, recordResult, canBuy, buy, SHOP, gradeExercise, solubilityAt, PASS_STARS,
   EXAMS, EXTRAS, CHALLENGES, CHALLENGE_BY_ID, examMark, reportCard, judgement, extraOpen, challengeOpen, challengeMedal,
-  challengeBonus, recordChallenge, chapterDone, sampleValue,
+  challengeBonus, recordChallenge, chapterDone, sampleValue, lineParams, answerNumber,
 } from '../../src/game/career.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
@@ -160,10 +160,11 @@ test('Carriera: reputazione, capitoli aperti, libro', () => {
   assert.equal(reputation(c), ch0.length);
   assert.equal(chapterState(c, 1), reputation(c) >= CHAPTERS[1].rep ? 'open' : 'locked');
   assert.equal(chapterState(c, 1), 'open');
-  // gli incidenti tolgono reputazione; i risultati migliori restano
+  // i risultati migliori restano, e un tentativo peggiore con incidenti non cancella quello pulito
   const worse = recordResult(c, ch0[0].id, { stars: 1, report: 0, money: 12, incidents: 2 });
   assert.equal(worse.results[ch0[0].id].stars, PASS_STARS);
-  assert.equal(reputation(worse), reputation(c) - 4);
+  assert.equal(reputation(worse), reputation(c));
+  assert.equal(worse.incidents, 2, 'il totale dell\'anno resta per la pagella');
   // libro: sicurezza e pagine dei capitoli aperti; ricette acido-base solo dal capitolo 2
   const u = bookUnlocks(c);
   assert.ok(u.pages.has('safety:ghs') && u.pages.has('tool:balance') && u.pages.has('tech:dilute'));
@@ -367,4 +368,47 @@ test('G7: nelle verifiche il libro non mostra le ricette', () => {
   assert.ok(normal.groups.size > 0 && normal.groups.has('acidi-basi'));
   assert.equal(exam.groups.size, 0);
   assert.deepEqual([...exam.pages].sort(), [...normal.pages].sort(), 'strumenti, tecniche e sicurezza restano');
+});
+
+test('resoconto: i conteggi senza decimali, le misure con i decimali secondo la grandezza', () => {
+  const fmt = (n, d) => n.toFixed(d);
+  // «Disordine rimasto: 1,00», «Rifiuti nel contenitore sbagliato: 0,000», «Recipienti puliti: 0,000 % (obiettivo 100,0 %)»
+  assert.deepEqual(lineParams({ value: 1 }, fmt), { value: '1' });
+  assert.deepEqual(lineParams({ value: 0, target: 2 }, fmt), { value: '0', target: '2' });
+  assert.deepEqual(lineParams({ value: 0, target: 100 }, fmt), { value: '0', target: '100' });
+  assert.deepEqual(lineParams({ value: 0.0123, target: 0.05 }, fmt), { value: '0.012', target: '0.050' });
+  assert.deepEqual(lineParams({ value: 7.25, target: 12.5 }, fmt), { value: '7.25', target: '12.5' });
+  assert.deepEqual(lineParams({ value: Infinity, sample: 'A', i: 2 }, fmt), { value: '—', sample: 'A', i: '2' });
+});
+
+test('risposte numeriche: si legge il numero anche con l\'unità o la virgola, il resto non vale', () => {
+  // «16 mL» diventava NaN: 0 punti e nel resoconto «Hai risposto NaN g/mL»
+  assert.equal(answerNumber('16 mL'), 16);
+  assert.equal(answerNumber('1,09 g/mL'), 1.09);
+  assert.equal(answerNumber('12,5ml'), 12.5);
+  assert.equal(answerNumber(' 0.8 '), 0.8);
+  assert.equal(answerNumber('−0,5 V'), -0.5);
+  assert.equal(answerNumber('1,2e-3'), 0.0012);
+  for (const bad of ['', 'boh', 'mL', undefined, null]) assert.ok(Number.isNaN(answerNumber(bad)), String(bad));
+  const vin = EXERCISE_BY_ID.get('vinegar');
+  assert.equal(answerScore(vin, [], { 0: '0,8 mol/L' }, 0, 'real'), 1);
+  assert.equal(answerScore(vin, [], { 0: 'mol/L' }, 0, 'real'), 0);
+});
+
+test('Carriera: gli incidenti tolgono reputazione finché non si rifà l\'esercitazione senza incidenti', () => {
+  // prima −2 per ogni incidente dell'anno, per sempre: con più di 20 incidenti il capitolo 1 restava chiuso per sempre
+  const ch0 = chapterExercises(0);
+  let c = newCareer();
+  for (const e of ch0) c = recordResult(c, e.id, { stars: 5, report: 0, money: 10, incidents: 0 });
+  const clean = reputation(c);
+  c = recordResult(c, ch0[1].id, { stars: 5, report: 0, money: 10, incidents: 30 });
+  assert.equal(reputation(c), clean, 'il tentativo pulito di prima vale ancora');
+  let d = newCareer();
+  for (const e of ch0) d = recordResult(d, e.id, { stars: 5, report: 0, money: 10, incidents: 15 });
+  assert.equal(reputation(d), 0);
+  assert.equal(chapterState(d, 1), 'locked');
+  for (const e of ch0) d = recordResult(d, e.id, { stars: 5, report: 0, money: 10, incidents: 0 });
+  assert.equal(reputation(d), clean, 'rifatte senza incidenti la reputazione torna');
+  assert.equal(chapterState(d, 1), 'open');
+  assert.equal(d.incidents, 15 * ch0.length);
 });

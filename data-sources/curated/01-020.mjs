@@ -264,7 +264,7 @@ export default {
     occ: "Settimo elemento più abbondante della crosta: si trova in feldspati, miche, silvite e carnallite, e nell'acqua di mare. È indispensabile per la trasmissione degli impulsi nervosi.",
   },
   20: {
-    name: "Calcio", cat: "alkaline-earth", m: "40.078", ox: "+2", cr: 176,
+    name: "Calcio", ea: 0.0246, cat: "alkaline-earth", m: "40.078", ox: "+2", cr: 176,
     iso: "*40:96.941; 42:0.647; 43:0.135; 44:2.086; 48:0.187:6.4e19 a:2β-",
     year: "1808", by: "Humphry Davy",
     orig: "Dal latino calx (genitivo calcis), «calce».",

@@ -3,10 +3,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createLabElements } from '../../src/lab/chem/elements-lab.js';
-import { createLibraryIndex } from '../../src/lab/chem/identify.js';
+import { createLibraryIndex, displayFormula } from '../../src/lab/chem/identify.js';
 import { speciesInfo, balance, reactionEnthalpy, balanceTable } from '../../src/lab/chem/reactions.js';
 import { MOLECULES } from '../../src/lab/data/molecules.js';
 import { REACTIONS, REACTION_GROUPS, BASE_REACTIONS } from '../../src/lab/data/reactions.js';
+import { MAX_COEF } from '../../src/lab/reaction-panel.js';
+import { CATALOG } from '../../src/lab/data/reactions-catalogo.js';
+import { NOTES_EN } from '../../src/i18n/data/reactions-en.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
 const lab = createLabElements(elements);
@@ -105,4 +108,36 @@ test('bilanciamento di equazioni scritte senza coefficienti', () => {
   assert.deepEqual(b(['c2h6', 'o2'], ['co2', 'h2o']), { ok: true, reactants: [2, 7], products: [4, 6] });
   assert.deepEqual(b(['glucosio', 'o2'], ['co2', 'h2o']), { ok: true, reactants: [1, 6], products: [6, 6] });
   assert.equal(b(['h2'], ['h2o']).ok, false, 'manca l\'ossigeno');
+});
+
+test('«Bilancia tu»: ogni reazione del catalogo si può bilanciare con i pulsanti dei coefficienti', () => {
+  // prima il massimo era 20: 2 C₈H₁₈ + 25 O₂ (e altre 33 combustioni, fino a 51 O₂) restavano «non bilanciate»
+  const over = REACTIONS.filter((r) => [...r.reactants, ...r.products].some(([c]) => c > MAX_COEF)).map((r) => r.id);
+  assert.deepEqual(over, []);
+  assert.ok(REACTIONS.some((r) => r.reactants.some(([c]) => c > 20)), 'il catalogo ha coefficienti oltre 20');
+});
+
+test('le note «non in libreria» nominano una sostanza che nella libreria manca davvero', () => {
+  const esc = (f) => f.replace(/[[\]()]/g, '\\$&');
+  const formulas = MOLECULES.map((m) => sp(m.id)).map((s) => s.formula ?? displayFormula(lab, s.atoms, 0, { ionic: s.ionic }));
+  const notes = [
+    ...CATALOG.filter((c) => /in libreria/.test(c.note ?? '')).map((c) => [c.n, c.note]),
+    ...Object.entries(NOTES_EN).filter(([, t]) => /in the library/.test(t)),
+  ];
+  assert.ok(notes.length > 0);
+  for (const [n, note] of notes) {
+    // prima KO₂, U₃O₈, FeS e il complesso del rame erano «non in libreria», ma ci sono (e qualcuno ha la sua reazione)
+    const found = formulas.filter((f) => new RegExp(`(?<![A-Za-z0-9₀-₉([])${esc(f)}(?![A-Za-z0-9₀-₉])`).test(note));
+    assert.deepEqual(found, [], `n. ${n}: ${note}`);
+    assert.match(note, /[A-Z][a-z]?[₀-₉]/, `n. ${n}: la nota non dice quale sostanza manca`);
+  }
+});
+
+test('entalpie di formazione tabulate anche per idrossido di alluminio, alcani, alogenuri organici, ossidi e fluoruri', () => {
+  // prima 418 reazioni su 1349 non avevano il ΔH°: a una specie mancava ΔHf°
+  const ids = ['aloh3', 'ottano', 'but-1-ene', 'anidride-acetica', 'acetonitrile', 'la2o3', 'esano', 'eptano', 'decano',
+    'bromometano', 'iodometano', 'acido-ossalico', 'clorobenzene', 'acetammide', 'n2o4', 'n2o5', 'uf6', 'pocl3', 'h3bo3'];
+  for (const id of ids) assert.ok(Number.isFinite(sp(id).hf), id);
+  const missing = REACTIONS.filter((r) => [...r.reactants, ...r.products].some(([, k]) => sp(k).hf == null)).length;
+  assert.ok(missing < 300, `${missing} reazioni senza ΔH°`);
 });

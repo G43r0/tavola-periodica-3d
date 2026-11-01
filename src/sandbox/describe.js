@@ -247,6 +247,12 @@ export function describeEvent(subs, key) {
       const s = L[Number(a)];
       return { group: t('gDecompositions'), title: t('char', { name: low(s.name) }), equation: `${s.formula} → C + H₂O + …`, note: t('charNote', { T: fmtCelsius(s.bp) }) };
     }
+    case 'dehyd': {
+      const s = L[Number(a)];
+      const anh = L[subs.anhydrousOf(Number(a))];
+      const n = String(s.key).match(/-(\d+)h2o$/)?.[1] ?? '';
+      return { group: t('gDecompositions'), title: t('dehyd', { name: low(s.name) }), equation: `${s.formula} → ${anh?.formula ?? '…'} + ${n} H₂O(g)`, note: t('dehydNote', { T: fmtCelsius(s.bp) }) };
+    }
     case 'boom': {
       const s = L[Number(a)];
       return { group: t('gExplosions'), title: t('boom', { name: low(s.name) }), equation: `${s.formula} → ${t('hotGases')}`, note: t('boomNote') };
@@ -373,10 +379,11 @@ export function substanceNotes(subs, id, ctype = 0) {
   if (f & S.GENERATOR) return t('generator');
   const phase = phaseAt(s, AMBIENT);
   if (s.kind === 'element') notes.push(t('elementAt22', { cat: cap(CATEGORY[s.category]?.singular ?? ''), phase: phase === GAS ? t('aGas') : PHASE_NAME[phase] }));
-  if (s.mp > 0 && Number.isFinite(s.mp)) {
+  // l'elio ha mp = 0: a pressione ambiente non solidifica
+  if (s.kind === 'element' && s.symbol === 'He') notes.push(t('helium', { T: fmtCelsius(s.bp, 2) }));
+  else if (s.mp > 0 && Number.isFinite(s.mp)) {
     const est = s.estimated ? t('estimate') : '';
     if (s.sublimes || s.mp === s.bp) notes.push(t('sublimes', { T: fmtCelsius(s.mp), est }));
-    else if (s.symbol === 'He') notes.push(t('helium', { T: fmtCelsius(s.bp, 2) }));
     else notes.push(t('meltsBoils', { mp: fmtCelsius(s.mp), bp: fmtCelsius(s.bp), est }));
   } else if (s.key === 'wood' || s.key === 'coal') notes.push(t('noMelt'));
   if (s.densS) notes.push(densityText(s, phase));

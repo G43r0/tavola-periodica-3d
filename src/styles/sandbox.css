@@ -205,7 +205,8 @@
 .sbx-mats,
 .sbx-comps {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* colonne larghe almeno quanto «Calcestruzzo»: 2 nella barra stretta, 3 quando c'è spazio */
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 5px;
 }
 .sbx-item {
@@ -272,13 +273,15 @@
   min-width: 0;
   aspect-ratio: 1;
   padding: 0;
-  font-size: 8.5px;
+  /* il bordo è un'ombra interna: i 2 px servono ai simboli larghi (Mg, Pm, Md) */
+  font-size: 8px;
   font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--text-0);
   background: color-mix(in oklab, var(--c) 22%, var(--bg-2));
-  border: 1px solid color-mix(in oklab, var(--c) 40%, transparent);
+  border: 0;
   border-radius: 3px;
-  box-shadow: inset 0 -2px 0 var(--a);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 40%, transparent), inset 0 -2px 0 var(--a);
   cursor: pointer;
   transition: transform var(--t-fast), background var(--t-fast);
 }
@@ -383,13 +386,17 @@
 .sbx-libitem__name {
   flex: 1;
   min-width: 0;
+  /* nomi lunghi («Tetraidrossoalluminato di sodio») su due righe; il nome intero è anche nel title */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 .sbx-libitem__f {
   flex: none;
-  max-width: 45%;
+  max-width: 55%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

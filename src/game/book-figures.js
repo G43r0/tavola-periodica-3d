@@ -3,9 +3,15 @@
 // veri del contenuto, e una per ogni pagina scritta a mano (strumenti, tecniche, sicurezza). Modulo puro (niente
 // DOM): restituisce stringhe SVG con viewBox 320 × 180.
 import { DRAW, TUTORIAL_DRAWINGS } from './tutorial.js';
+import { locale } from '../i18n/index.js';
 
 const { f, path, rect, circle, text, g, beaker, flask, arrow, turn, flame, key, bubbles, ghs, display, bench, bin, INK, GLASS, WATER, OK, HOT } = DRAW;
 const css = (rgb, fallback = WATER) => (rgb ? `rgb(${rgb.map(Math.round).join(',')})` : fallback);
+/** Grammi come li scrive il testo del passo (book-view.js): 2 g, 1,2 g, 0,30 g (le dosi sono arrotondate a 0,05 g). */
+const grams = (x) => {
+  const d = Number.isInteger(x) ? 0 : x < 1 ? 2 : 1;
+  return `${Number(x).toLocaleString(locale(), { minimumFractionDigits: d, maximumFractionDigits: d })} g`;
+};
 const PORCELAIN = '#f4f1ea';
 const BIN_COLORS = { sink: '#8fb7c9', heavy: '#3b4048', inorganic: '#2f6fd1', organic: '#c8161d', glass: '#2f9a4c', solid: '#8a7a5c' };
 
@@ -87,7 +93,7 @@ export function stepFigure(step, look = {}) {
       break;
     case 'weigh':
       s += rect(140, 132, 120, 28, { fill: '#aeb4bb' }) + `<ellipse cx="200" cy="132" rx="44" ry="6" fill="#d7dbe0" stroke="${INK}" stroke-width="2"/>`
-        + display(148, 138, 60, `${String(step.params.g).replace('.', ',')} g`) + vessel(kind, 178, 128, { solid: ing }) + spatula(176, 96, ing);
+        + display(148, 138, 60, grams(step.params.g)) + vessel(kind, 178, 128, { solid: ing }) + spatula(176, 96, ing);
       break;
     case 'measure':
     case 'liquid':

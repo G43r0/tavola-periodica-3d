@@ -91,6 +91,20 @@ const IDEAL_IT = {
   7: '72° e 90°',
 };
 const IDEAL_EN = { ...IDEAL_IT, 4: '109.5°', 5: '90° and 120°', 7: '72° and 90°' };
+// angolo ideale per forma (vicini-coppie solitarie): le coppie occupano i posti equatoriali e chiudono gli angoli
+const IDEAL_SHAPE_IT = {
+  '2-1': '< 120°',
+  '3-1': '< 109,5°',
+  '2-2': '< 109,5°',
+  '4-1': '< 90° e < 120°',
+  '3-2': '< 90°',
+  '2-3': '180°',
+  '5-1': '< 90°',
+  '4-2': '90°',
+  '3-3': '< 90°',
+  '2-4': '180°',
+};
+const IDEAL_SHAPE_EN = { ...IDEAL_SHAPE_IT, '3-1': '< 109.5°', '2-2': '< 109.5°', '4-1': '< 90° and < 120°' };
 
 /**
  * Classificazione VSEPR di ogni atomo con almeno 2 vicini.
@@ -112,9 +126,8 @@ export function vsepr(lab, desc, lewis) {
     const it = isItalian();
     const shape = (it ? SHAPES_IT : SHAPES_EN)[`${X}-${E}`] ?? (it ? `${X + E} domini` : `${X + E} domains`);
     const steric = X + E;
-    const IDEAL = it ? IDEAL_IT : IDEAL_EN;
-    let ideal = IDEAL[steric] ?? null;
-    if (E > 0 && (steric === 3 || steric === 4)) ideal = `< ${IDEAL[steric]}`;
+    // senza coppie solitarie l'angolo del numero sterico; con le coppie quello della forma (6-1: nessun angolo unico)
+    const ideal = E === 0 ? (it ? IDEAL_IT : IDEAL_EN)[steric] ?? null : (it ? IDEAL_SHAPE_IT : IDEAL_SHAPE_EN)[`${X}-${E}`] ?? null;
     return {
       notation: `AX${X}${E ? `E${E}` : ''}`,
       X,

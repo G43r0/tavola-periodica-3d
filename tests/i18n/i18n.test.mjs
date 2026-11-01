@@ -151,3 +151,19 @@ test('scorciatoie: i tasti si spiegano con cosa fanno in ogni parte dell\'app', 
   assert.equal(shortcut('F').title, 'F key');
   _setLangForTests('it');
 });
+
+test('inglese: nessuna condizione del catalogo resta in italiano', async () => {
+  const { conditionEn } = await import('../../src/i18n/data/reactions-en.js');
+  const { CATALOG } = await import('../../src/lab/data/reactions-catalogo.js');
+  // parole italiane che non devono restare nel testo tradotto (non «acid», «base», le formule, i numeri)
+  const IT = /\b(calda|caldo|pressione|soluzione|catalizzatore|acqua|aria|fusione|luce|riscaldamento|eccesso|lenta|vapore|diluito|concentrato|fumante|spontanea|anni|mesi|senza|con|poi|oppure)\b/i;
+  const left = new Set();
+  for (const r of CATALOG) for (const text of [r.cond, r.needs]) if (text && IT.test(conditionEn(text))) left.add(`${text} → ${conditionEn(text)}`);
+  assert.deepEqual([...left], []);
+});
+
+test('laboratorio molecolare: l\'etichetta sopra il titolo non lo chiama «Simulatore» (è il nome del gioco)', () => {
+  for (const lang of Object.keys(LAB_STRINGS)) {
+    if (LAB_STRINGS[lang].eyebrow) assert.doesNotMatch(LAB_STRINGS[lang].eyebrow, /simulat/i, lang);
+  }
+});

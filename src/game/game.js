@@ -27,6 +27,7 @@ import { nextLevel } from './apparatus-logic.js';
 import { bookRecipes, elementPages, reagentOf } from './book.js';
 import BOOK_VERIFIED from './data/book-verified.js';
 import { pourSound, tapLevel, fireLevel, fizzLevel, impactGain, nearest, shakeAt } from './audio/sound-levels.js';
+import { explosionFlash } from '../ui/motion.js';
 import { TRICKLE_HOLD_MS, SPOON_EMPTY_G, scoopGrams, tapGrams, trickleRate, spoonHeap } from './spatula.js';
 
 const WATER = 123;
@@ -2479,7 +2480,7 @@ export class LabGame {
 
   explode(pos, power, source) {
     this.flash.position.copy(pos).y += 0.15;
-    this.flash.intensity = 6 + power * 6;
+    this.flash.intensity = explosionFlash(power);
     this.sfx('explosion', pos, { gain: Math.min(1.4, 0.6 + power * 0.3), rate: 1.15 - Math.min(0.3, power * 0.1) });
     // la scossa è più forte vicino al giocatore
     this.shakeCamera(Math.min(1.2, power * 0.5) * Math.max(0.15, 1 - this.camera.position.distanceTo(pos) / 6));

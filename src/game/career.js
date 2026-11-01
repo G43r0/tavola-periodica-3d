@@ -315,14 +315,23 @@ export function rightAnswer(ex, unknowns, i) {
   return u?.answer;
 }
 
+/**
+ * Numero scritto in una risposta: con la virgola o il punto, anche seguito dall'unità («1,09 g/mL», «16 mL»);
+ * NaN se non c'è un numero.
+ */
+export function answerNumber(text) {
+  const m = /[-−]?\d+(?:[.,]\d+)?(?:e[-−+]?\d+)?/i.exec(String(text ?? ''));
+  return m ? Number(m[0].replace(',', '.').replace(/−/g, '-')) : NaN;
+}
+
 /** Punteggio di una risposta: 1 o 0 a scelta, con la tolleranza (relativa) per un numero. */
 export function answerScore(ex, unknowns, answers, i, mode) {
   const a = ex.answers;
   const right = rightAnswer(ex, unknowns, i);
   const given = answers?.[i];
   if (a.type === 'number') {
-    const v = Number(String(given ?? '').replace(',', '.'));
-    if (!Number.isFinite(v) || given === '' || given === undefined) return 0;
+    const v = answerNumber(given);
+    if (!Number.isFinite(v)) return 0;
     const [full, zero] = pickMode(a.tol, mode);
     return score(Math.abs(v - right) / Math.abs(right), full, zero);
   }
@@ -351,6 +360,22 @@ function goalScore(g, v, mode) {
     return score(over / den, tol.over[0], tol.over[1]);
   }
   return score((under + over) / den, tol[0], tol[1]);
+}
+
+/**
+ * Parametri di una riga del resoconto pronti da scrivere: i numeri interi (conteggi come il disordine o i fuochi
+ * spenti, percentuali tonde) senza decimali, le misure con 3, 2 o 1 decimali secondo la grandezza. fmt(n, cifre)
+ * scrive il numero nella lingua dell'interfaccia.
+ */
+export function lineParams(p = {}, fmt) {
+  const out = {};
+  for (const [k, v] of Object.entries(p)) {
+    if (typeof v !== 'number') out[k] = v;
+    else if (!Number.isFinite(v)) out[k] = '—';
+    else if ((k === 'value' || k === 'target') && !Number.isInteger(v)) out[k] = fmt(v, Math.abs(v) < 1 ? 3 : Math.abs(v) < 10 ? 2 : 1);
+    else out[k] = fmt(v, 0);
+  }
+  return out;
 }
 
 /**
@@ -431,13 +456,14 @@ export function reportStars(right, total) {
 /**
  * Reputazione con l'insegnante (0–100), calcolata dai risultati migliori di ogni esercitazione: 2 punti per stella meno
  * 3 (sotto 1,5 stelle si perde), +1 per ogni risposta giusta della relazione, −2 per ogni incidente (fuoco, gas, schizzi,
- * esplosioni) di tutto l'anno. Calcolata e non accumulata: rifare un'esercitazione conta solo se si migliora.
+ * esplosioni) del tentativo più pulito di ogni esercitazione. Calcolata e non accumulata: rifare un'esercitazione conta
+ * solo se si migliora, e rifarla senza incidenti li recupera (prima contavano tutti quelli dell'anno, per sempre, e
+ * potevano chiudere i capitoli senza via d'uscita).
  */
 export function reputation(career) {
   let r = 0;
-  for (const res of Object.values(career?.results ?? {})) r += 2 * (res.stars ?? 0) - 3 + (res.report ?? 0);
+  for (const res of Object.values(career?.results ?? {})) r += 2 * (res.stars ?? 0) - 3 + (res.report ?? 0) - 2 * (res.incidents ?? 0);
   for (const c of Object.values(career?.challenges ?? {})) r += c.medal ?? 0;
-  r -= 2 * (career?.incidents ?? 0);
   return Math.max(0, Math.min(100, Math.round(r)));
 }
 
@@ -606,7 +632,8 @@ export function buy(career, id) {
 }
 
 /**
- * Registra il risultato di un'esercitazione nella Carriera (nuovo oggetto): tiene il migliore, somma soldi e incidenti.
+ * Registra il risultato di un'esercitazione nella Carriera (nuovo oggetto): tiene il migliore e il minor numero di
+ * incidenti di un tentativo; somma soldi e incidenti dell'anno (per la pagella).
  * r: { stars, report (risposte giuste), money (soldi dopo l'esercitazione), incidents }.
  */
 export function recordResult(career, id, r) {
@@ -619,6 +646,7 @@ export function recordResult(career, id, r) {
     const mark = examMark(r.quality);
     results[id].mark = Math.max(mark, old?.mark ?? 0);
   } else if (old?.mark !== undefined) results[id].mark = old.mark;
+  results[id].incidents = Math.min(r.incidents ?? 0, old?.incidents ?? Infinity);
   return { ...career, results, money: r.money, incidents: (career.incidents ?? 0) + (r.incidents ?? 0), last: id };
 }
 

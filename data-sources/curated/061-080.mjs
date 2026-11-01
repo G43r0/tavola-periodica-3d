@@ -2,7 +2,7 @@
 
 export default {
   61: {
-    name: "Promezio", cat: "lanthanide", m: "[145]", ox: "+3", cr: 199,
+    name: "Promezio", en: 1.13, estimated: ["en"], cat: "lanthanide", m: "[145]", ox: "+3", cr: 199,
     ie: 5.582,
     iso: "*145:-:17.7 a:CE; 146:-:5.53 a:CE/β-; 147:-:2.62 a:β-",
     year: "1945", by: "Jacob A. Marinsky, Lawrence E. Glendenin e Charles D. Coryell (Oak Ridge)",
@@ -28,7 +28,7 @@ export default {
     occ: "Presente in monazite, bastnäsite e samarskite.",
   },
   63: {
-    name: "Europio", cat: "lanthanide", m: "151.96", ox: "+2, +3", cr: 198,
+    name: "Europio", en: 1.2, estimated: ["en"], cat: "lanthanide", m: "151.96", ox: "+2, +3", cr: 198,
     iso: "151:47.81:5e18 a:α; *153:52.19",
     year: "1901", by: "Eugène-Anatole Demarçay",
     orig: "Dal continente Europa.",
@@ -41,7 +41,7 @@ export default {
   },
   64: {
     name: "Gadolinio", cat: "lanthanide", m: "157.25", ox: "+3", cr: 196,
-    iso: "152:0.20; 154:2.18; 155:14.80; 156:20.47; 157:15.65; *158:24.84; 160:21.86",
+    iso: "152:0.20:1.08e14 a:α; 154:2.18; 155:14.80; 156:20.47; 157:15.65; *158:24.84; 160:21.86",
     year: "1880", by: "Jean Charles Galissard de Marignac",
     orig: "Dal minerale gadolinite, intitolato al chimico finlandese Johan Gadolin, scopritore dell'ittrio.",
     uses: [
@@ -53,7 +53,7 @@ export default {
     occ: "Si trova in monazite e bastnäsite. È ferromagnetico appena sotto la temperatura ambiente (temperatura di Curie: 20 °C).",
   },
   65: {
-    name: "Terbio", cat: "lanthanide", m: "158.93", ox: "+3, +4", cr: 194,
+    name: "Terbio", en: 1.2, estimated: ["en"], cat: "lanthanide", m: "158.93", ox: "+3, +4", cr: 194,
     iso: "*159:100",
     year: "1843", by: "Carl Gustaf Mosander",
     orig: "Da Ytterby, il villaggio svedese della cava da cui proveniva il minerale.",
@@ -115,7 +115,7 @@ export default {
     occ: "Uno dei lantanidi meno abbondanti, ma più comune di oro e argento; si estrae dalla monazite.",
   },
   70: {
-    name: "Itterbio", cat: "lanthanide", m: "173.05", ox: "+2, +3", cr: 187,
+    name: "Itterbio", en: 1.1, estimated: ["en"], cat: "lanthanide", m: "173.05", ox: "+2, +3", cr: 187,
     iso: "168:0.123; 170:2.982; 171:14.09; 172:21.68; 173:16.103; *174:32.026; 176:12.996",
     year: "1878", by: "Jean Charles Galissard de Marignac",
     orig: "Da Ytterby, villaggio svedese.",
@@ -127,7 +127,7 @@ export default {
     occ: "Si trova in monazite, xenotime ed euxenite.",
   },
   71: {
-    name: "Lutezio", cat: "lanthanide", m: "174.97", ox: "+3", cr: 187,
+    name: "Lutezio", ea: 0.24, cat: "lanthanide", m: "174.97", ox: "+3", cr: 187,
     iso: "*175:97.401; 176:2.599:3.76e10 a:β-",
     year: "1907", by: "Georges Urbain; indipendentemente Carl Auer von Welsbach e Charles James",
     orig: "Da Lutetia, antico nome latino di Parigi.",
@@ -140,8 +140,8 @@ export default {
     occ: "Uno dei lantanidi più rari e costosi; si ottiene da monazite e xenotime.",
   },
   72: {
-    name: "Afnio", cat: "transition", m: "178.49", ox: "+4", cr: 175,
-    iso: "174:0.16; 176:5.26; 177:18.60; 178:27.28; 179:13.62; *180:35.08",
+    name: "Afnio", ea: 0.178, cat: "transition", m: "178.49", ox: "+4", cr: 175,
+    iso: "174:0.16:7.0e16 a:α; 176:5.26; 177:18.60; 178:27.28; 179:13.62; *180:35.08",
     year: "1923", by: "Dirk Coster e George de Hevesy (Copenaghen)",
     orig: "Da Hafnia, nome latino di Copenaghen, dove fu scoperto nell'istituto di Niels Bohr.",
     uses: [

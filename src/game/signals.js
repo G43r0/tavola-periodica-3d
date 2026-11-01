@@ -23,7 +23,8 @@ export const aqueousOf = (rx, ctx = null) => Boolean(
   rx.cond?.water || rx.reactants.some((r) => r.sid === WATER) || AQUEOUS_GROUPS.has(rx.group)
   || (ctx && rx.reactants.some((r) => {
     const ab = ctx.acidBase.get(r.sid);
-    return ab && (ab.sa || ab.sb || ab.ka) && ctx.solubility(r.sid, AMBIENT) > 0;
+    // phOnly (idrolisi dei sali metallici, fenolo, Ka₂ del bicarbonato): conta per il pH, ma non ne fa un acido da usare in soluzione
+    return ab && (ab.sa || ab.sb || (ab.ka && !ab.phOnly)) && ctx.solubility(r.sid, AMBIENT) > 0;
   })),
 );
 
@@ -172,9 +173,14 @@ function activityHints(mix) {
   const metals = present.filter((sid) => ctx.sub(sid)?.kind === 'element' && REDUCTION_POTENTIALS[ctx.sub(sid).symbol] !== undefined);
   if (!metals.length) return out;
   const dissolved = present.filter((sid) => (mix.d.get(sid) ?? 0) > 1e-10);
+  // un sale di un metallo un po' acido per idrolisi (ZnSO₄, CuSO₄) non è l'acido da cui spostare l'idrogeno
+  const metalSalt = (sid) => Object.keys(ctx.counts(sid)).some((z) => {
+    const sym = ctx.sub(Number(z))?.symbol;
+    return sym !== 'H' && REDUCTION_POTENTIALS[sym] !== undefined;
+  });
   const acid = dissolved.find((sid) => {
     const ab = ctx.acidBase.get(sid);
-    return ab?.sa || ab?.ka;
+    return (ab?.sa || ab?.ka) && !metalSalt(sid);
   });
   for (const m of metals) {
     const E = REDUCTION_POTENTIALS[ctx.sub(m).symbol];

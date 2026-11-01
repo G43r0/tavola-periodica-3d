@@ -2,6 +2,7 @@
 import { icons } from './icons.js';
 import { createT } from '../i18n/index.js';
 import { createUpdateSection } from './updater.js';
+import { esc } from '../chem/format.js';
 
 const t = createT({
   it: {
@@ -14,13 +15,15 @@ const t = createT({
       'CODATA 2022 (NIST) — masse, cariche e momenti magnetici di protone, neutrone ed elettrone',
       'Particle Data Group 2024 — masse dei quark, vita media del neutrone libero',
       'X-ray Data Booklet (LBNL), tab. 1-1 — energie di legame degli elettroni interni (Z = 1–92)',
-      'AME2020 (Atomic Mass Evaluation) — energie di legame dei nuclei leggeri',
+      'AME2020 (Atomic Mass Evaluation) — energie di legame dei 2548 nuclei misurati',
       'NIST CCCBDB e CRC Handbook — geometrie e momenti dipolari sperimentali delle molecole del laboratorio',
       'Shannon (1976) — raggi ionici; energie di legame medie dai testi di chimica generale (Housecroft & Sharpe, CRC)',
       'NIST Chemistry WebBook e CRC Handbook — entalpie di formazione standard ΔHf° (25 °C) per le reazioni del laboratorio',
     ],
     title: 'Fonti dei dati e convenzioni',
     close: 'Chiudi',
+    version: 'Tavola Periodica 3D {v}',
+    releaseNotes: 'Novità di questa versione',
     hSources: 'Fonti',
     hConventions: 'Convenzioni',
     conventions: [
@@ -62,13 +65,15 @@ const t = createT({
       'CODATA 2022 (NIST) — masses, charges and magnetic moments of the proton, neutron and electron',
       'Particle Data Group 2024 — quark masses, lifetime of the free neutron',
       'X-ray Data Booklet (LBNL), table 1-1 — binding energies of inner electrons (Z = 1–92)',
-      'AME2020 (Atomic Mass Evaluation) — binding energies of light nuclei',
+      'AME2020 (Atomic Mass Evaluation) — binding energies of the 2,548 measured nuclei',
       'NIST CCCBDB and CRC Handbook — experimental geometries and dipole moments of the laboratory molecules',
       'Shannon (1976) — ionic radii; average bond energies from general chemistry textbooks (Housecroft & Sharpe, CRC)',
       'NIST Chemistry WebBook and CRC Handbook — standard enthalpies of formation ΔHf° (25 °C) for the laboratory reactions',
     ],
     title: 'Data sources and conventions',
     close: 'Close',
+    version: 'Tavola Periodica 3D {v}',
+    releaseNotes: 'What\'s new in this version',
     hSources: 'Sources',
     hConventions: 'Conventions',
     conventions: [
@@ -121,6 +126,18 @@ const t = createT({
   },
 });
 
+// definiti da vite.config.js (assenti nei test con node)
+const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : null;
+const RELEASES = typeof __RELEASES_URL__ === 'string' ? __RELEASES_URL__ : 'https://github.com/G43r0/tavola-periodica-3d/releases';
+
+/** Riga in fondo alla finestra: versione dell'app (con Electron e Chrome nell'app desktop) e note di rilascio. */
+export function versionFooter(version, versions) {
+  if (!version) return '';
+  const engines = versions?.electron ? ` · Electron ${esc(versions.electron)} · Chrome ${esc(versions.chrome)}` : '';
+  return `<p class="info-dialog__version">${t('version', { v: esc(version) })}${engines} ·
+    <a href="${RELEASES}/tag/v${esc(version)}" target="_blank" rel="noopener">${t('releaseNotes')}</a></p>`;
+}
+
 export function createInfoDialog() {
   const dlg = document.createElement('dialog');
   dlg.className = 'info-dialog';
@@ -145,6 +162,7 @@ export function createInfoDialog() {
       <p class="keys">${t('keysSandbox')}</p>
       <h3>${t('hModels')}</h3>
       ${list(t('models'))}
+      ${versionFooter(APP_VERSION, window.desktop?.versions)}
     </form>`;
   const updates = createUpdateSection();
   if (updates) dlg.querySelector('.info-dialog__inner header').after(updates.el);

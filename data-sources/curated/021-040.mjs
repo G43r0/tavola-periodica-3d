@@ -208,7 +208,7 @@ export default {
   },
   36: {
     name: "Kripton", cat: "noble-gas", m: "83.798", ox: "0, +2", cr: 116,
-    iso: "78:0.355; 80:2.286; 82:11.593; 83:11.500; *84:56.987; 85:-:10.76 a:β-; 86:17.279",
+    iso: "78:0.355:9.2e21 a:2CE; 80:2.286; 82:11.593; 83:11.500; *84:56.987; 85:-:10.76 a:β-; 86:17.279",
     year: "1898", by: "William Ramsay e Morris Travers",
     orig: "Dal greco kryptós, «nascosto».",
     uses: [
@@ -233,7 +233,7 @@ export default {
     occ: "Non ha minerali propri: è disperso in lepidolite, pollucite e carnallite. Nella crosta è più abbondante di rame e zinco.",
   },
   38: {
-    name: "Stronzio", cat: "alkaline-earth", m: "87.62", ox: "+2", cr: 195,
+    name: "Stronzio", ea: 0.048, cat: "alkaline-earth", m: "87.62", ox: "+2", cr: 195,
     iso: "84:0.56; 86:9.86; 87:7.00; *88:82.58; 90:-:28.79 a:β-",
     year: "1790", by: "Adair Crawford e William Cruickshank; isolato da Humphry Davy nel 1808",
     orig: "Da Strontian, villaggio scozzese dove fu scoperta la stronzianite.",

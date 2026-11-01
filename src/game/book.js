@@ -26,6 +26,8 @@ const MAX_LIQUID_ML = 20;
 const PLATE_MAX_T = 595.15;
 /** Tensione dell'elettrolisi nelle ricette (V). */
 export const RECIPE_VOLTS = 6;
+/** Prodotti troppo pericolosi per una ricetta della scuola, anche sotto la cappa. */
+const DANGEROUS_PRODUCTS = new Set(['fosgene']);
 /** Sopra questa temperatura (K) il recipiente si prende con la pinza (apparatus-logic HOT_T). */
 const HOT = 333.15;
 
@@ -98,14 +100,17 @@ const CYLINDER = (ctx) => new Map(CYLINDER_GASES.map((k) => [ctx.id(k), k]));
  *   light: boolean, volts: number, gas: string|null, hood: boolean, steps: object[], tags: string[], signals: object,
  *   main: number, from: number[], difficulty: number, shelfOnly: boolean, ghs: string[], products: object[]}
  *   | {ok: false, id: string, why: string, sid?: number, T?: number}}
- *   why: 'shock' (esplosivi), 'molten' (sale fuso, elettrolisi ignea), 'lowO2' (senz'aria), 'tooHot' (forno oltre i
- *   1000 K), 'unavailable' (un reagente che il magazzino non ha), 'catalyst' (manca il catalizzatore), 'gasOnly' (solo
- *   gas: non si fa in un becher)
+ *   why: 'shock' (esplosivi), 'danger' (miscele esplosive o vietate, fosgene), 'molten' (sale fuso, elettrolisi
+ *   ignea), 'lowO2' (senz'aria), 'tooHot' (forno oltre i 1000 K), 'unavailable' (un reagente che il magazzino non ha),
+ *   'catalyst' (manca il catalizzatore), 'gasOnly' (solo gas: non si fa in un becher)
  */
 export function buildRecipe(ctx, rx, store = storeIndex(ctx), shelf = shelfIndex(ctx), cylinders = CYLINDER(ctx)) {
   const fail = (why, extra = {}) => ({ ok: false, id: rx.id, why, ...extra });
   const c = rx.cond;
   if (c.shock) return fail('shock');
+  // il libro è per il laboratorio della scuola: niente pirotecnica ed esplosivi, miscele vietate, gas come il fosgene
+  const warning = `${rx.r?.sub ?? ''} ${rx.r?.desc ?? ''} ${rx.r?.note ?? ''} ${c.text ?? ''}`;
+  if (/esplosiv|vietat/i.test(warning) || rx.products.some((p) => DANGEROUS_PRODUCTS.has(ctx.sub(p.sid)?.key))) return fail('danger');
   if (c.molten) return fail('molten');
   if (c.lowO2) return fail('lowO2');
   const minT = c.hot ? Math.max(c.minT, 450) : c.minT;

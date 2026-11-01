@@ -479,6 +479,11 @@ export const COMPOUND_DATA = {
   tetrationato: [null, null, null, null, 'a'],
   tiocianatoferro: [null, null, null, '#a01a1a', 'a'],
   tetraamminorame: [null, null, null, '#1a3ad8', 'a'],
+  esacianoferrato3: [null, null, null, '#d8b428', 'a'],
+  esacianoferrato2: [null, null, null, '#ece4a0', 'a'],
+  // si decompongono prima di fondere (temperature indicative: per questo «e»)
+  k3fecn6: [300, 300, 1.89, '#c8341c', 'sde'],
+  k4fecn6: [400, 400, 1.85, '#f0d840', 'sde'],
   diamminoargento: [null, null, null, null, 'a'],
   ditiosolfatoargentato: [null, null, null, null, 'a'],
   // ossidi e acidi aggiunti per il catalogo

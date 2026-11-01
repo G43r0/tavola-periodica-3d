@@ -246,3 +246,22 @@ export function lewisSvg(lab, unit) {
   const h = maxY - minY + 2 * m;
   return `<svg class="lewis" viewBox="${(minX - m).toFixed(1)} ${(minY - m).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}" width="${Math.min(Math.max(w * 1.5, 130), 300).toFixed(0)}" role="img" aria-label="${isItalian() ? 'Struttura di Lewis' : 'Lewis structure'}">${out.join('')}</svg>`;
 }
+
+// colori del disegno salvato (per relazioni e stampe, su fondo bianco): nell'app vengono dalle variabili del tema scuro
+const FILE_STYLE = [
+  '.lw-bond{stroke:#1f2937;stroke-width:1.7;stroke-linecap:round}',
+  '.lw-atom{font-family:"IBM Plex Sans",Arial,sans-serif;font-size:17px;font-weight:600;text-anchor:middle;fill:#111827}',
+  '.lw-e{fill:#0e7490}',
+  '.lw-e--single{fill:#b45309}',
+  '.lw-fc{font-family:"IBM Plex Sans",Arial,sans-serif;font-size:11px;font-weight:600;text-anchor:middle;fill:#b45309}',
+  '.lw-bracket{fill:none;stroke:#1f2937;stroke-width:1.5}',
+  '.lw-ion{font-family:"IBM Plex Sans",Arial,sans-serif;font-size:13px;font-weight:600;fill:#b45309}',
+].join('');
+
+/** Il disegno di Lewis come file .svg autonomo: dichiarazione XML, xmlns, stile proprio e sfondo bianco. */
+export function standaloneSvg(svg) {
+  const view = svg.match(/viewBox="([^"]+)"/)?.[1].split(' ') ?? ['0', '0', '100', '100'];
+  return `<?xml version="1.0" encoding="UTF-8"?>\n${svg
+    .replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')
+    .replace(/(<svg[^>]*>)/, `$1<style>${FILE_STYLE}</style><rect x="${view[0]}" y="${view[1]}" width="${view[2]}" height="${view[3]}" fill="#ffffff"/>`)}\n`;
+}

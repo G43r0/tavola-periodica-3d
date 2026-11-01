@@ -6,6 +6,7 @@ import { bondEnergy } from './chem/bond-energy.js';
 import { angleAt } from './chem/geometry.js';
 import { subscript, chargeText } from './chem/identify.js';
 import { lewisSvg } from './lewis-svg.js';
+import { writeSmiles } from './chem/smiles.js';
 import { icons } from '../ui/icons.js';
 import { createT } from '../i18n/index.js';
 
@@ -68,6 +69,10 @@ const t = createT({
     generated: ' · nome generato',
     deselect: 'Deseleziona (Esc)',
     lewis: 'Struttura di Lewis',
+    export: 'Copia ed esporta',
+    copySmiles: 'Copia SMILES',
+    copyFormula: 'Copia formula',
+    saveSvg: 'Salva il disegno (SVG)',
     atom: 'Atomo',
     data: 'Dati',
     molarMass: 'Massa molare',
@@ -150,6 +155,10 @@ const t = createT({
     generated: ' · generated name',
     deselect: 'Deselect (Esc)',
     lewis: 'Lewis structure',
+    export: 'Copy and export',
+    copySmiles: 'Copy SMILES',
+    copyFormula: 'Copy formula',
+    saveSvg: 'Save the drawing (SVG)',
     atom: 'Atom',
     data: 'Data',
     molarMass: 'Molar mass',
@@ -401,6 +410,25 @@ export function compositionHtml(lab, u, mass) {
   );
 }
 
+/** Formula in testo semplice, da copiare: «C₉H₈O₄» → «C9H8O4», «NH₄⁺» → «NH4+». */
+export const plainFormula = (formula) => String(formula).normalize('NFKD').replace(/[−–]/g, '-');
+
+/** SMILES della molecola selezionata (lo scrittore di chem/smiles.js: incollata torna uguale). */
+export const unitSmiles = (lab, u) => writeSmiles(u.desc, (z) => lab.get(z).symbol);
+
+/** Copia della molecola: SMILES e formula negli appunti, disegno di Lewis come file SVG. */
+function exportHtml(lab, u, svg) {
+  return sectionHtml(
+    t('export'),
+    `<p class="mp-smiles"><code>${esc(unitSmiles(lab, u))}</code></p>
+     <div class="mp-alts">
+       <button type="button" class="chip-btn" data-act="copy-smiles">${t('copySmiles')}</button>
+       <button type="button" class="chip-btn" data-act="copy-formula">${t('copyFormula')}</button>
+       ${svg ? `<button type="button" class="chip-btn" data-act="save-svg">${t('saveSvg')}</button>` : ''}
+     </div>`,
+  );
+}
+
 /** HTML della scheda di un'unità selezionata. */
 export function unitPanelHtml(lab, u, { alternatives = [] } = {}) {
   const ti = title(lab, u);
@@ -437,6 +465,7 @@ export function unitPanelHtml(lab, u, { alternatives = [] } = {}) {
     ${u.desc.atoms.length > 2 ? geometryHtml(lab, u) : ''}
     ${bondsHtml(lab, u)}
     ${entry ? sectionHtml(t('sheet'), `<p>${esc(entry.desc)}</p>${entry.note ? `<p class="mp-callout">${esc(entry.note)}</p>` : ''}${entry.uses ? `<p><b>${t('usesLabel')}</b> ${esc(entry.uses)}</p>` : ''}`) : ''}
+    ${exportHtml(lab, u, svg)}
     ${alternatives.length ? sectionHtml(t('isomers'), `<div class="mp-alts">${alternatives.map((e) => `<button type="button" class="chip-btn" data-alt="${e.id}">${esc(e.name)}</button>`).join('')}</div><p class="mp-note">${t('isomersNote')}</p>`) : ''}`;
 }
 

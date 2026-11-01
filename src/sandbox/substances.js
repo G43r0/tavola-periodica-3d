@@ -1,5 +1,5 @@
 // Sostanze della sandbox: i 118 elementi con i dati reali di elements.json (fusione, ebollizione, densità,
-// radioattività, elettronegatività), i materiali di base, i prodotti delle reazioni e le 554 sostanze della libreria
+// radioattività, elettronegatività), i materiali di base, i prodotti delle reazioni e le 558 sostanze della libreria
 // del laboratorio (dati fisici in data/compounds.js).
 // Modulo puro (niente DOM): lo usano il motore (world.js), il disegno e i test.
 import { MOLECULES, MOLECULE_GROUPS } from '../lab/data/molecules.js';
@@ -267,7 +267,7 @@ function makeElement(el) {
   let mp = el.meltingPointK;
   let bp = el.boilingPointK;
   if (el.sublimationPointK) mp = bp = el.sublimationPointK;
-  if (sym === 'He') mp = 0.95; // a 1 atm non solidifica
+  if (sym === 'He') mp = 0; // a 1 atm resta liquido fino allo zero assoluto (solidifica solo sopra ~25 atm)
   if (mp == null) {
     mp = est.mp ?? 2000;
     estimated = true;
@@ -651,7 +651,7 @@ export function createSubstances(elements) {
   for (const s of makeOthers()) list[s.id] = s;
 
   const byKey = new Map(list.map((s) => [s.key, s]));
-  // le 554 voci della libreria: alcune sono già sostanze (H₂ → idrogeno, H₂O → acqua), le altre diventano composti
+  // le 558 voci della libreria: alcune sono già sostanze (H₂ → idrogeno, H₂O → acqua), le altre diventano composti
   const libraryId = new Map();
   for (const entry of library.entries) {
     const alias = LIBRARY_ALIASES[entry.id];
@@ -790,6 +790,8 @@ export function createSubstances(elements) {
     hydroxideFor: (z) => cached(`h${z}`, () => byAtoms([atom(z), ...rep(8, list[z].charge || 1), ...rep(1, list[z].charge || 1)])),
     /** Gas di scarico di un composto, dagli atomi ([[id, probabilità], …] o null): combustioni e detonazioni fuori catalogo. */
     exhaustFor: (id) => cached(`x${id}`, () => P.burnGases[id] ?? (list[id].counts ? idShares(exhaustOf(list[id].counts)) : null)),
+    /** Sale anidro di un idrato della libreria («cuso4-5h2o» → «cuso4»), o 0. */
+    anhydrousOf: (id) => cached(`a${id}`, () => byKey.get(String(list[id].key).match(/^(.+)-\d+h2o$/)?.[1])?.id ?? 0),
   };
 
   return { list, byKey, P, elements, lab, library, libraryId, groups: MOLECULE_GROUPS, firstCompound: FIRST_COMPOUND, ...lookups };
@@ -798,7 +800,11 @@ export function createSubstances(elements) {
 /** Stato fisico di una sostanza alla temperatura T (K). */
 export function phaseAt(sub, T) {
   if (sub.flags & S.FIRE) return GAS;
-  return T < sub.mp ? SOLID : T < sub.bp ? LIQUID : GAS;
+  if (T < sub.mp) return SOLID;
+  if (T < sub.bp) return LIQUID;
+  // chi si decompone non bolle (World.phaseOf fa lo stesso)
+  if (sub.flags & S.DECOMPOSES) return sub.mp < sub.bp ? LIQUID : SOLID;
+  return GAS;
 }
 
 /** Densità (g/cm³) nello stato dato; per i gas dipende dalla temperatura (gas ideale). */

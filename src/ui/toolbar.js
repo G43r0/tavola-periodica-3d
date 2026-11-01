@@ -285,8 +285,8 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
     count.textContent = active ? t('countOf', { n, total: elements.length }) : t('countAll', { total: elements.length });
     count.classList.toggle('is-empty', active && n === 0);
 
-    if (s.query && best) hint.innerHTML = `<kbd>${t('enter')}</kbd> ${esc(best.symbol)} · ${esc(best.name)}`;
-    else if (s.query) hint.textContent = t('noResults');
+    if (s.query.trim() && best) hint.innerHTML = `<kbd>${t('enter')}</kbd> ${esc(best.symbol)} · ${esc(best.name)}`;
+    else if (s.query.trim()) hint.textContent = t('noResults');
     else hint.textContent = '';
     if (input.value !== s.query) input.value = s.query;
   }

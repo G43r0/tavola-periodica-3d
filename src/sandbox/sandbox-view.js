@@ -12,6 +12,7 @@ import {
   phaseAt,
 } from './substances.js';
 import { World } from './world.js';
+import { encodeScene, decodeScene, autosaveScene, restoreAutosave } from './scene-file.js';
 import { createRenderer, heatScale } from './render.js';
 import { describeEvent, substanceLabel, ALIAS_FORMULA, substanceNotes, fmtCelsius, PHASE_NAME } from './describe.js';
 import { PRESETS } from './presets.js';
@@ -104,6 +105,12 @@ const TEMPLATE = () => `
       <div class="sbx-history" role="group" aria-label="${t('history')}" data-help="sandbox.undo">
         <button type="button" class="sbx-icon-btn" data-act="undo" title="${t('undoTitle')}" aria-label="${t('undo')}" disabled>${icons.undo(16)}</button>
         <button type="button" class="sbx-icon-btn" data-act="redo" title="${t('redoTitle')}" aria-label="${t('redo')}" disabled>${icons.redo(16)}</button>
+      </div>
+      <div class="sbx-history" role="group" aria-label="${t('scene')}">
+        <button type="button" class="sbx-icon-btn" data-act="scene-save" title="${t('sceneSave')}" aria-label="${t('sceneSave')}">${icons.download(16)}</button>
+        <button type="button" class="sbx-icon-btn" data-act="scene-open" title="${t('sceneOpen')}" aria-label="${t('sceneOpen')}">${icons.upload(16)}</button>
+        <button type="button" class="sbx-icon-btn" data-act="scene-png" title="${t('scenePng')}" aria-label="${t('scenePng')}">${icons.image(16)}</button>
+        <input type="file" class="sbx-scene-file" accept=".json,application/json" hidden />
       </div>
       <button type="button" class="btn-ghost" data-act="examples" data-help="sandbox.examples" aria-expanded="false">${icons.book(16)}<span>${t('examples')}</span></button>
       <button type="button" class="btn-ghost" data-act="clear" data-help="sandbox.clear" title="${t('clearTitle')}">${icons.broom(16)}<span>${t('clear')}</span></button>
@@ -243,12 +250,12 @@ export function createSandbox(elements, { onClose } = {}) {
   $('.sbx-tools--util').innerHTML = UTILITIES.map(toolButton).join('');
   $('.sbx-mats').innerHTML = MATERIALS.map((m) => swatch(m.id, m.ctype)).join('');
   $('.sbx-comps').innerHTML = COMPOUNDS(subs).map((m) => swatch(m.id, m.ctype, m.label)).join('');
-  // le 554 sostanze della libreria del laboratorio, per gruppi (alcune sono elementi o sostanze già presenti: H₂, H₂O…)
+  // le 558 sostanze della libreria del laboratorio, per gruppi (alcune sono elementi o sostanze già presenti: H₂, H₂O…)
   const libItems = subs.library.entries.map((e) => {
     const id = subs.libraryId.get(e.id);
     const s = L[id];
     const formula = ALIAS_FORMULA[e.id] ?? (s.formula || substanceLabel(subs, id).formula || '');
-    return { e, id, name: e.name, formula, search: normalize(`${e.name} ${e.aka ?? ''} ${formula} ${formula.replace(/[₀-₉]/g, (d) => '₀₁₂₃₄₅₆₇₈₉'.indexOf(d))}`) };
+    return { e, id, name: e.name, formula, search: normalize(`${e.name} ${e.aka ?? ''} ${formula}`) };
   });
   $('.sbx-sec__count').textContent = `(${libItems.length})`;
   $('.sbx-lib').innerHTML = subs.groups
@@ -389,7 +396,7 @@ export function createSandbox(elements, { onClose } = {}) {
     const cat = s.kind === 'element' ? CATEGORY[s.category] ?? CATEGORY.unknown : null;
     const phase = phaseAt(s, state.place.temp);
     const canSolid = Number.isFinite(s.mp) ? s.mp > 2 : true;
-    const canLiquid = Number.isFinite(s.mp) && s.mp > 0 && s.bp > s.mp;
+    const canLiquid = Number.isFinite(s.mp) && s.mp >= 0 && s.bp > s.mp; // l'elio ha mp = 0
     const canGas = Number.isFinite(s.bp) && s.bp > 0;
     const blockOnly = s.flags & S.BLOCK_ONLY;
     const groupLabel = s.kind === 'compound' ? subs.groups.find((g) => g.key === s.group)?.label : null;
@@ -408,7 +415,7 @@ export function createSandbox(elements, { onClose } = {}) {
           ? ''
           : aqueous
             ? `<div class="sbx-place"><p class="sbx-label">${t('placeAs')}</p><p class="sbx-place__aq">${t('aqueousOnly')}</p>
-               <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="-273" max="99" value="${Math.round(state.place.temp - 273.15)}" /> °C</label></div>`
+               <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="0" max="99" value="${Math.round(state.place.temp - 273.15)}" /> °C</label></div>`
             : `<div class="sbx-place">
         <p class="sbx-label">${t('placeAs')}</p>
         <div class="segmented sbx-phase" role="group" aria-label="${t('phase')}" data-help="term.state">
@@ -421,7 +428,7 @@ export function createSandbox(elements, { onClose } = {}) {
           <button type="button" class="segmented__btn" data-form="powder" aria-pressed="${state.place.form === 'powder'}">${t('powder')}</button>
           <button type="button" class="segmented__btn" data-form="block" aria-pressed="${state.place.form === 'block'}">${t('block')}</button>
         </div>
-        <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="-273" max="${Math.round(T_MAX - 273.15)}" value="${Math.round(state.place.temp - 273.15)}" /> °C</label>
+        <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="${dissolved ? 0 : -273}" max="${dissolved ? 99 : Math.round(T_MAX - 273.15)}" value="${Math.round(state.place.temp - 273.15)}" /> °C</label>
       </div>`
       }
       <ul class="sbx-notes">${substanceNotes(subs, sel.id, sel.ctype).map((n) => `<li>${esc(n)}</li>`).join('')}</ul>`;
@@ -447,8 +454,12 @@ export function createSandbox(elements, { onClose } = {}) {
   });
   $('.sbx-card').addEventListener('change', (ev) => {
     if (!ev.target.matches('.sbx-temp input')) return;
-    const c = Number(ev.target.value);
-    if (Number.isFinite(c)) state.place.temp = Math.min(T_MAX, Math.max(0, c + 273.15));
+    // campo vuoto: resta la temperatura di prima (Number('') sarebbe 0 °C); i limiti sono quelli del campo (le
+    // soluzioni tra 0 e 99 °C)
+    const c = ev.target.value.trim() === '' ? NaN : Number(ev.target.value);
+    const lo = Number(ev.target.min);
+    const hi = Number(ev.target.max);
+    if (Number.isFinite(c)) state.place.temp = Math.min(T_MAX, Math.max(0, Math.min(hi, Math.max(lo, c)) + 273.15));
     renderSelection();
   });
   $('.sbx-card').addEventListener('keydown', (ev) => ev.stopPropagation());
@@ -642,23 +653,26 @@ export function createSandbox(elements, { onClose } = {}) {
     $('[data-act="undo"]').disabled = !history.undo.length;
     $('[data-act="redo"]').disabled = !history.redo.length;
   }
-  /** Da chiamare prima di ogni modifica fatta dall'utente. */
-  function remember() {
-    history.undo.push(world.snapshot());
+  /** Stato da annullare: la griglia e le etichette degli esempi, che vanno e vengono con il loro disegno. */
+  const snapshot = () => ({ world: world.snapshot(), labels: state.labels });
+  /** Da chiamare prima di ogni modifica fatta dall'utente (o dopo, con la copia presa prima). */
+  function remember(snap = snapshot()) {
+    history.undo.push(snap);
     if (history.undo.length > UNDO_MAX) history.undo.shift();
-    history.redo.length = 0;
-    syncHistory();
-  }
-  function resetHistory() {
-    history.undo.length = 0;
     history.redo.length = 0;
     syncHistory();
   }
   function travel(from, to, label) {
     const snap = from.pop();
     if (!snap) return;
-    to.push(world.snapshot());
-    world.restore(snap);
+    to.push(snapshot());
+    // un passo fatto su un'altra griglia (cambio di griglia annullato): prima si torna a quella dimensione
+    if (snap.world.W !== world.W || snap.world.H !== world.H) {
+      world.resizeKeeping(snap.world.W, snap.world.H);
+      gridChanged();
+    }
+    world.restore(snap.world);
+    state.labels = snap.labels;
     syncHistory();
     message(label, 1500);
   }
@@ -679,9 +693,10 @@ export function createSandbox(elements, { onClose } = {}) {
   }
 
   function bucket(x, y, mode) {
+    // niente da riempire (o da cancellare): nessun passo da annullare, e Ripeti resta com'era
     if (mode === 'erase') {
-      remember();
-      world.fill(x, y, 0);
+      const snap = snapshot();
+      if (world.fill(x, y, 0)) remember(snap);
       return;
     }
     const sel = state.sel;
@@ -689,13 +704,9 @@ export function createSandbox(elements, { onClose } = {}) {
       message(t('bucketNeedsSubstance'), 3000);
       return;
     }
-    remember();
+    const snap = snapshot();
     const temp = state.place.dissolved ? Math.min(state.place.temp, 372) : state.place.temp;
-    const n = world.fill(x, y, sel.id, { temp, powder: state.place.form === 'powder', ctype: sel.ctype, dissolved: state.place.dissolved });
-    if (!n) {
-      history.undo.pop(); // niente da riempire: non c'è nulla da annullare
-      syncHistory();
-    }
+    if (world.fill(x, y, sel.id, { temp, powder: state.place.form === 'powder', ctype: sel.ctype, dissolved: state.place.dissolved })) remember(snap);
   }
 
   function setMode(key) {
@@ -912,6 +923,9 @@ export function createSandbox(elements, { onClose } = {}) {
       case 'clear': clearAll(); message(t('cleared'), 2500); break;
       case 'undo': undo(); break;
       case 'redo': redo(); break;
+      case 'scene-save': download(new Blob([JSON.stringify(encodeScene(world, subs))], { type: 'application/json' }), `sandbox-${stamp()}.json`); break;
+      case 'scene-open': $('.sbx-scene-file').click(); break;
+      case 'scene-png': canvas.toBlob((blob) => blob && download(blob, `sandbox-${stamp()}.png`), 'image/png'); break;
       case 'log-clear': world.events.clear(); state.logKeys = []; state.logSeen = -1; renderLog(); break;
       case 'brush-': setBrush(state.brush - 1); break;
       case 'brush+': setBrush(state.brush + 1); break;
@@ -925,18 +939,68 @@ export function createSandbox(elements, { onClose } = {}) {
     if (opt === 'edges') world.openEdges = ev.target.checked;
     if (opt === 'filled') state.filled = ev.target.checked;
     if (ev.target.matches('.sbx-gridsize select')) {
+      // il disegno resta (centrato e appoggiato in basso) e il cambio si annulla come ogni altra modifica
       const [W, H] = GRIDS[ev.target.value];
-      world.resize(W, H);
-      resetHistory();
-      world.openEdges = $('[data-opt="edges"]').checked;
-      state.labels = [];
-      state.logKeys = [];
-      state.logSeen = -1;
-      allocBuffers();
-      layout();
-      renderLog();
+      remember();
+      const { dx, dy } = world.resizeKeeping(W, H);
+      state.labels = state.labels.map((l) => ({ ...l, x: l.x + dx, y: l.y + dy }));
+      gridChanged();
     }
   });
+
+  // ---------------------------------------------------------------- scene su file e salvataggio automatico (scene-file.js)
+  const stamp = () => new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+  function download(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  /** Mette nel mondo una scena letta (da file o dal salvataggio automatico), sulla sua griglia. */
+  function loadScene(snap) {
+    if (snap.W !== world.W || snap.H !== world.H) world.resize(snap.W, snap.H);
+    world.restore(snap);
+    state.labels = [];
+    gridChanged();
+    hideIntro();
+  }
+  $('.sbx-scene-file').addEventListener('change', async (ev) => {
+    const file = ev.target.files?.[0];
+    ev.target.value = '';
+    if (!file) return;
+    let snap;
+    try {
+      snap = decodeScene(JSON.parse(await file.text()), subs);
+    } catch (err) {
+      message(t(err.message === 'table' ? 'sceneOld' : err.message === 'kind' ? 'sceneNotScene' : 'sceneBroken'), 6000);
+      return;
+    }
+    remember();
+    loadScene(snap);
+    message(t('sceneOpened'), 3500);
+  });
+  const storage = (() => {
+    try {
+      return globalThis.localStorage ?? null;
+    } catch {
+      return null;
+    }
+  })();
+  // la scena resta chiudendo la sandbox, ricaricando o cambiando lingua o grafica (che ricaricano l'app)
+  const autosave = () => opened && storage && autosaveScene(storage, world, subs);
+  addEventListener('pagehide', autosave);
+
+  /** Dopo un cambio di dimensione del mondo: buffer, misure della vista e la voce scelta nel menu Griglia. */
+  function gridChanged() {
+    world.openEdges = $('[data-opt="edges"]').checked;
+    allocBuffers();
+    layout();
+    const key = Object.keys(GRIDS).find((k) => GRIDS[k][0] === world.W && GRIDS[k][1] === world.H);
+    if (key) $('.sbx-gridsize select').value = key;
+    renderLog();
+  }
 
   // ---------------------------------------------------------------- introduzione
   const FEATURED = ['alcalini', 'fiamma', 'termite', 'fissione', 'neon', 'idrogeno'];
@@ -1099,7 +1163,9 @@ export function createSandbox(elements, { onClose } = {}) {
   // ---------------------------------------------------------------- apertura / chiusura
   let lastFocus = null;
   let opened = false;
+  let closing = 0; // timer della chiusura animata: riaprendo subito non deve più nascondere la sandbox
   function open(z) {
+    clearTimeout(closing);
     lastFocus = document.activeElement;
     root.hidden = false;
     root.classList.remove('is-leaving');
@@ -1111,6 +1177,11 @@ export function createSandbox(elements, { onClose } = {}) {
       opened = true;
       if (!z) selectSubstance(subs.byKey.get('Fe').id, 0);
       $('.sbx-intro').hidden = false;
+      const last = restoreAutosave(storage, subs);
+      if (last?.type.some((id) => id !== 0)) {
+        loadScene(last);
+        message(t('sceneRestored'), 4000);
+      }
       setRunning(true);
       renderLog();
     }
@@ -1122,8 +1193,10 @@ export function createSandbox(elements, { onClose } = {}) {
 
   function close() {
     if (root.hidden) return;
+    autosave();
     root.classList.add('is-leaving');
-    setTimeout(() => {
+    clearTimeout(closing);
+    closing = setTimeout(() => {
       root.hidden = true;
       root.classList.remove('is-leaving');
       cancelAnimationFrame(raf);

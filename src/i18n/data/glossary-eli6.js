@@ -116,7 +116,7 @@ export const GLOSSARY_ELI6 = {
     d: 'Una colonna della tavola periodica. Gli elementi della stessa colonna sono come una famiglia: si comportano in modo simile perché hanno lo stesso numero di elettroni all\'ultimo piano.',
   },
   'term.period': {
-    d: 'Una riga della tavola periodica. Il numero della riga dice quanti piani di elettroni ha l\'atomo: in prima riga uno solo, in settima riga sette.',
+    d: 'Una riga della tavola periodica. Il numero della riga dice quanti piani di elettroni ha l\'atomo: in prima riga uno solo, in settima riga sette. C\'è un solo furbetto, il palladio: è nella riga 5 ma ha 4 piani, perché il quinto lo lascia vuoto.',
   },
   'term.block': {
     d: 'Una zona della tavola dove gli atomi mettono l\'ultimo elettrone nello stesso tipo di «stanza». Le stanze si chiamano s, p, d e f e hanno forme diverse.',

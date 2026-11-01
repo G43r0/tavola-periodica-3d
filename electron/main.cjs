@@ -1,8 +1,10 @@
 // Processo principale Electron: crea la finestra e carica l'interfaccia (offline).
-const { app, BrowserWindow, Menu, shell, ipcMain, net } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, net, session } = require('electron');
 const { setupUpdater } = require('./updater.cjs');
+const { createSaveFile } = require('./save-file.cjs');
+const { menuTemplate } = require('./menu.cjs');
+const { lockDownSession } = require('./security.cjs');
 const path = require('node:path');
-const fs = require('node:fs');
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 const isDev = Boolean(DEV_URL);
@@ -47,63 +49,19 @@ function createWindow() {
   else mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
 }
 
-// Voci del menu nella lingua scelta nell'app («eli6» usa l'italiano).
-const MENU_TEXT = {
-  it: { quit: 'Esci', view: 'Visualizza', reload: 'Ricarica', resetZoom: 'Zoom predefinito', zoomIn: 'Aumenta zoom', zoomOut: 'Riduci zoom', fullscreen: 'Schermo intero', devTools: 'Strumenti per sviluppatori' },
-  en: { quit: 'Quit', view: 'View', reload: 'Reload', resetZoom: 'Actual size', zoomIn: 'Zoom in', zoomOut: 'Zoom out', fullscreen: 'Full screen', devTools: 'Developer tools' },
-};
-
+// Voci del menu nella lingua scelta nell'app (electron/menu.cjs).
 function buildMenu(lang = 'it') {
-  const m = MENU_TEXT[lang] ?? MENU_TEXT.it;
-  const template = [
-    {
-      label: 'File',
-      submenu: [{ role: 'quit', label: m.quit }],
-    },
-    {
-      label: m.view,
-      submenu: [
-        { role: 'reload', label: m.reload },
-        { type: 'separator' },
-        { role: 'resetZoom', label: m.resetZoom },
-        { role: 'zoomIn', label: m.zoomIn },
-        { role: 'zoomOut', label: m.zoomOut },
-        { type: 'separator' },
-        { role: 'togglefullscreen', label: m.fullscreen },
-        ...(isDev ? [{ type: 'separator' }, { role: 'toggleDevTools', label: m.devTools }] : []),
-      ],
-    },
-  ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate(lang, { isDev })));
 }
 
 ipcMain.on('set-language', (_event, code) => buildMenu(code === 'en' ? 'en' : 'it'));
 
-// Salvataggi del simulatore: un file JSON nella cartella dei dati dell'utente (accanto, la copia precedente). Si accetta
-// solo JSON valido fino a 5 MB; la scrittura passa da un file temporaneo, così un'interruzione non lascia il file a metà.
-const SAVE_MAX = 5 * 1024 * 1024;
-const saveFile = () => path.join(app.getPath('userData'), 'simulatore-salvataggio.json');
-ipcMain.handle('game-save:read', async () => {
-  try {
-    const text = await fs.promises.readFile(saveFile(), 'utf8');
-    return text.length <= SAVE_MAX ? text : null;
-  } catch {
-    return null;
-  }
-});
+// Salvataggi del simulatore (electron/save-file.cjs): un file JSON nella cartella dei dati dell'utente.
+let saves = null;
+const saveStore = () => (saves ??= createSaveFile(path.join(app.getPath('userData'), 'simulatore-salvataggio.json')));
+ipcMain.handle('game-save:read', () => saveStore().read());
 ipcMain.on('game-save:write', (_event, json) => {
-  if (typeof json !== 'string' || json.length > SAVE_MAX) return;
-  try {
-    JSON.parse(json);
-  } catch {
-    return;
-  }
-  const file = saveFile();
-  const tmp = `${file}.tmp`;
-  fs.promises.writeFile(tmp, json, 'utf8')
-    .then(() => fs.promises.copyFile(file, `${file}.bak`).catch(() => {}))
-    .then(() => fs.promises.rename(tmp, file))
-    .catch(() => {});
+  saveStore().write(json);
 });
 
 if (!app.requestSingleInstanceLock()) {
@@ -117,6 +75,13 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
+    lockDownSession(session.defaultSession);
+    app.setAboutPanelOptions({
+      applicationName: 'Tavola Periodica 3D',
+      applicationVersion: app.getVersion(),
+      version: `Electron ${process.versions.electron} · Chrome ${process.versions.chrome}`,
+      credits: `Electron ${process.versions.electron} · Chrome ${process.versions.chrome} · Node.js ${process.versions.node}`,
+    });
     buildMenu();
     createWindow();
     setupUpdater({ app, ipcMain, shell, net, getWindow: () => mainWindow, isDev }).schedule();

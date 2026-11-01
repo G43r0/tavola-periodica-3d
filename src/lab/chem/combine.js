@@ -41,7 +41,10 @@ const tx = createT({
 });
 
 const MAX_HEAVY = 8;
+// strutture provate in tutto (per tutte le cariche dei metalli e le valenze) e tempo massimo: Combina gira sul thread
+// principale e con 24 atomi diversi prima arrivava a 10 secondi senza che la finestra rispondesse
 const BUDGET = 160000;
+const TIME_LIMIT_MS = 1500;
 
 const cmpScore = (a, b) => a.unpaired - b.unpaired || a.units - b.units || b.energy - a.energy;
 
@@ -182,18 +185,23 @@ export function combine(lab, library, zs) {
         unpaired: 0,
       };
     }
-    // più unità uguali della libreria (4 H + 2 O → 2 H₂O, 2 Na + 2 Cl → 2 NaCl)
+    // più unità uguali della libreria (4 H + 2 O → 2 H₂O, 2 Na + 2 Cl → 2 NaCl, 4 N → 2 N₂): si provano tutti i
+    // numeri di copie che dividono la formula e si tiene il più stabile (6 O → 3 O₂, non 2 O₃)
     const counts = countByZ(zs);
     const g = [...counts.values()].reduce(gcd);
-    if (g > 1) {
-      const unit = [...counts].flatMap(([z, c]) => Array.from({ length: c / g }, () => ({ z })));
-      const same = library.byFormula(formulaKey(lab, unit, 0));
-      if (same.length) {
-        const best = same.map((e) => ({ e, energy: entryEnergy(lab, e) })).sort((a, b) => b.energy - a.energy)[0].e;
-        const pools = poolsOf(zs);
-        const bonds = Array.from({ length: g }, () => mapEntry(lab, best, zs, pools)).flat();
-        return { ok: true, source: 'library', entry: best, copies: g, alternatives: [], bonds, unpaired: 0 };
+    let multi = null;
+    for (let copies = 2; copies <= g; copies++) {
+      if (g % copies) continue;
+      const unit = [...counts].flatMap(([z, c]) => Array.from({ length: c / copies }, () => ({ z })));
+      for (const e of library.byFormula(formulaKey(lab, unit, 0))) {
+        const energy = entryEnergy(lab, e) * copies;
+        if (!multi || energy > multi.energy) multi = { e, copies, energy };
       }
+    }
+    if (multi) {
+      const pools = poolsOf(zs);
+      const bonds = Array.from({ length: multi.copies }, () => mapEntry(lab, multi.e, zs, pools)).flat();
+      return { ok: true, source: 'library', entry: multi.e, copies: multi.copies, alternatives: [], bonds, unpaired: 0 };
     }
     // 2. sale di un metallo con ioni noti (Fe₂(SO₄)₃ = 2 Fe³⁺ + 3 SO₄²⁻)
     const salt = ionicDecomposition(lab, library, zs);
@@ -229,6 +237,7 @@ export function combine(lab, library, zs) {
   let best = null;
   let explored = 0;
   let aborted = false;
+  const limit = { left: BUDGET, deadline: performance.now() + TIME_LIMIT_MS };
 
   const combos = [[]];
   for (const opts of metalOptions) {
@@ -239,10 +248,11 @@ export function combine(lab, library, zs) {
 
   for (const charges of combos) {
     const G = charges.reduce((s, q) => s + q, 0);
-    const result = covalentSearch(lab, info, covalentAtoms, G, charges, ionicMetals);
+    const result = covalentSearch(lab, info, covalentAtoms, G, charges, ionicMetals, limit);
     explored += result.explored;
     if (result.aborted) aborted = true;
     if (result.best && (!best || cmpScore(result.best, best) < 0)) best = result.best;
+    if (outOf(limit)) break;
   }
 
   if (!best) {
@@ -253,7 +263,10 @@ export function combine(lab, library, zs) {
   return { ok: true, source: 'search', bonds: best.bonds, unpaired: best.unpaired, units: best.units, energy: best.energy, explored };
 }
 
-function covalentSearch(lab, info, atoms, G, metalCharges, ionicMetals) {
+/** Budget o tempo finiti? */
+const outOf = (limit) => limit.left <= 0 || performance.now() > limit.deadline;
+
+function covalentSearch(lab, info, atoms, G, metalCharges, ionicMetals, limit) {
   const maxEn = Math.max(...atoms.map((i) => info[i].en ?? 0));
   // valenze ammesse: quelle superiori alla minima solo se c'è un atomo più elettronegativo (ottetto espanso)
   const options = atoms.map((i) => {
@@ -277,11 +290,11 @@ function covalentSearch(lab, info, atoms, G, metalCharges, ionicMetals) {
     // distribuzioni delle cariche negative (elettroni ricevuti dai metalli), per gruppi di atomi uguali
     for (const k of chargeDistributions(info, atoms, vals, G)) {
       const t = vals.map((v, idx) => v - k[idx]);
-      const r = skeletonSearch(lab, info, atoms, t, k, metalCharges, ionicMetals, BUDGET - explored);
+      const r = skeletonSearch(lab, info, atoms, t, k, metalCharges, ionicMetals, limit);
       explored += r.explored;
       if (r.aborted) aborted = true;
       if (r.best && (!best || cmpScore(r.best, best) < 0)) best = r.best;
-      if (explored > BUDGET) return { best, explored, aborted: true };
+      if (outOf(limit)) return { best, explored, aborted: true };
     }
   }
   return { best, explored, aborted };
@@ -298,8 +311,19 @@ function chargeDistributions(info, atoms, vals, G) {
   });
   const list = [...groups.values()].filter((g) => g.max > 0 && !info[atoms[g.members[0]]].metal).sort((a, b) => b.en - a.en);
   const out = [];
+  // capacità dei gruppi da gi in poi: se non basta per gli elettroni rimasti il ramo è inutile (prima con 30-40 atomi
+  // diversi si esploravano milioni di rami senza risultato)
+  const capFrom = list.map(() => 0).concat(0);
+  for (let gi = list.length - 1; gi >= 0; gi--) capFrom[gi] = capFrom[gi + 1] + list[gi].members.length * list[gi].max;
+  const memo = new Map();
+  const parts = (take, members, max) => {
+    const key = `${take}:${members}:${max}`;
+    if (!memo.has(key)) memo.set(key, partitions(take, members, max));
+    return memo.get(key);
+  };
+  let steps = 0;
   const rec = (gi, left, acc) => {
-    if (out.length > 60) return;
+    if (out.length > 60 || ++steps > 20000 || left > capFrom[gi]) return;
     if (gi === list.length) {
       if (left === 0) out.push([...acc]);
       return;
@@ -307,7 +331,7 @@ function chargeDistributions(info, atoms, vals, G) {
     const g = list[gi];
     const cap = Math.min(left, g.members.length * g.max);
     for (let take = cap; take >= 0; take--) {
-      const pats = take === 0 ? [[]] : partitions(take, g.members.length, g.max);
+      const pats = take === 0 ? [[]] : parts(take, g.members.length, g.max);
       for (const p of pats) {
         const next = [...acc];
         p.forEach((v, m) => (next[g.members[m]] = v));
@@ -319,7 +343,7 @@ function chargeDistributions(info, atoms, vals, G) {
   return out;
 }
 
-function skeletonSearch(lab, info, atoms, t, k, metalCharges, ionicMetals, budget) {
+function skeletonSearch(lab, info, atoms, t, k, metalCharges, ionicMetals, limit) {
   const heavy = atoms.map((a, idx) => idx).filter((idx) => t[idx] >= 2).sort((a, b) => t[b] - t[a]);
   const terminals = atoms.map((a, idx) => idx).filter((idx) => t[idx] === 1);
   if (heavy.length > MAX_HEAVY) return { best: null, explored: 0, aborted: true };
@@ -381,7 +405,9 @@ function skeletonSearch(lab, info, atoms, t, k, metalCharges, ionicMetals, budge
   };
 
   const dfs = (pi, energy) => {
-    if (++explored > budget) {
+    explored++;
+    // il tempo si guarda ogni 1024 strutture: performance.now() costa più di un passo della ricerca
+    if (--limit.left < 0 || ((explored & 1023) === 0 && performance.now() > limit.deadline)) {
       aborted = true;
       return;
     }
@@ -471,8 +497,11 @@ export function ionicDecomposition(lab, library, zs) {
   };
   const maxTimes = (from, what) => Math.min(...[...what].map(([z, c]) => Math.floor((from.get(z) || 0) / c)));
 
-  /** Cationi per ciò che resta: gruppi NH₄ e atomi di metallo con cariche che sommano a `total`. */
-  const cations = (rest, total, usedAnions) => {
+  /**
+   * Cationi per ciò che resta: gruppi NH₄ e atomi di metallo con cariche che sommano a `total` (meno `extra`, la
+   * carica dei cationi complessi già tolti).
+   */
+  const cations = (rest, total, usedAnions, extra = 0) => {
     let r = new Map(rest);
     let nNH4 = 0;
     if (nh4 && r.get(7) && r.get(1) === 4 * r.get(7)) {
@@ -481,8 +510,8 @@ export function ionicDecomposition(lab, library, zs) {
       r.delete(1);
     }
     if ([...r.keys()].some((z) => !lab.get(z).metal)) return null;
-    if (!r.size && !nNH4) return null;
-    const need = total - nNH4;
+    if (!r.size && !nNH4 && !extra) return null;
+    const need = total - nNH4 - extra;
     const els = [...r];
     const options = els.map(([z]) => lab.get(z).valences.filter((v) => v > 0));
     // alogenuri con cariche ≥ 4 e legame non ionico: sono molecole (WF₆, PbCl₄), non sali
@@ -515,11 +544,11 @@ export function ionicDecomposition(lab, library, zs) {
     return { metals: assigned, nNH4 };
   };
 
-  const solve = () => {
+  const solve = (counts, extra) => {
     // prima con un solo tipo di anione, poi con due (es. idrossido e cloruro)
     for (const A of anions) {
       for (let ka = maxTimes(counts, A.counts); ka >= 1; ka--) {
-        const one = cations(minus(counts, A.counts, ka), -A.charge * ka, [A]);
+        const one = cations(minus(counts, A.counts, ka), -A.charge * ka, [A], extra);
         if (one) return { ...one, parts: [[A, ka]] };
       }
     }
@@ -532,7 +561,7 @@ export function ionicDecomposition(lab, library, zs) {
           if (rankAnion(A) === 2 || rankAnion(B) === 2) continue; // perossido & co. solo da soli
           for (let kb = maxTimes(rest, B.counts); kb >= 1; kb--) {
             const rest2 = minus(rest, B.counts, kb);
-            const two = cations(rest2, -A.charge * ka - B.charge * kb, [A, B]);
+            const two = cations(rest2, -A.charge * ka - B.charge * kb, [A, B], extra);
             if (two) return { ...two, parts: [[A, ka], [B, kb]] };
           }
         }
@@ -540,7 +569,21 @@ export function ionicDecomposition(lab, library, zs) {
     }
     return null;
   };
-  const sol = solve();
+  // cationi complessi con leganti neutri ([Cu(NH₃)₄]²⁺, [Ag(NH₃)₂]⁺): prima di loro, perché altrimenti l'ammoniaca
+  // legata al metallo diventerebbe «ammiduro e ammonio»
+  const complexes = library.entries
+    .filter((e) => !e.ionic && e.charge > 0 && e.graph.atoms.length > 1 && e.graph.atoms.some((a) => lab.get(a.z).metal) && e.graph.atoms.every((a) => counts.has(a.z) && (a.charge === 0 || lab.get(a.z).metal)))
+    .map((e) => ({ entry: e, charge: e.charge, counts: countByZ(e.graph.atoms.map((a) => a.z)) }))
+    .sort((a, b) => sizeOf(b.counts) - sizeOf(a.counts));
+  let sol = null;
+  for (const C of complexes) {
+    for (let kc = maxTimes(counts, C.counts); kc >= 1 && !sol; kc--) {
+      const found = solve(minus(counts, C.counts, kc), C.charge * kc);
+      if (found) sol = { ...found, complex: [C, kc] };
+    }
+    if (sol) break;
+  }
+  sol ??= solve(counts, 0);
   if (!sol) return null;
 
   const atoms = [];
@@ -552,6 +595,7 @@ export function ionicDecomposition(lab, library, zs) {
   };
   for (const [z, q] of sol.metals) atoms.push({ z, charge: q });
   for (let k = 0; k < sol.nNH4; k++) addGraph(nh4.graph);
+  if (sol.complex) for (let k = 0; k < sol.complex[1]; k++) addGraph(sol.complex[0].entry.graph);
   for (const [A, k] of sol.parts) {
     for (let c = 0; c < k; c++) {
       if (A.mono) atoms.push({ z: A.mono, charge: A.charge });

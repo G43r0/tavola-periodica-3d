@@ -19,9 +19,13 @@ const DECAY_EN = {
   'β+': 'β⁺ decay',
   '2β-': 'double β⁻ decay',
   CE: 'electron capture',
+  '2CE': 'double electron capture',
   FS: 'spontaneous fission',
   TI: 'isomeric transition',
 };
+
+// sigle inglesi dei modi di decadimento (in italiano CE, TI, FS)
+const DECAY_SYMBOL_EN = { CE: 'EC', '2CE': '2EC', TI: 'IT', FS: 'SF' };
 
 const DECAY_ELI6 = {
   'α': 'il nucleo sputa un pezzetto fatto di 2 protoni e 2 neutroni',
@@ -29,6 +33,7 @@ const DECAY_ELI6 = {
   'β+': 'un protone si trasforma in neutrone',
   '2β-': 'due neutroni si trasformano in protoni insieme',
   CE: 'il nucleo «mangia» un elettrone',
+  '2CE': 'il nucleo «mangia» due elettroni insieme',
   FS: 'il nucleo si spezza in due',
   TI: 'il nucleo si calma e manda fuori un lampo di energia',
 };
@@ -71,7 +76,10 @@ export function localizeElements(elements) {
       if (x.sp) el.statePredicted = x.sp;
       for (const iso of el.isotopes) {
         if (iso.halfLife) iso.halfLife.text = halfLifeTextEn(iso.halfLife);
-        for (const d of iso.decay) d.label = DECAY_EN[d.code] ?? d.label;
+        for (const d of iso.decay) {
+          d.label = DECAY_EN[d.code] ?? d.label;
+          d.symbol = DECAY_SYMBOL_EN[d.code] ?? d.symbol;
+        }
       }
     } else if (lang === 'eli6') {
       const x = ELEMENTS_ELI6[el.z];

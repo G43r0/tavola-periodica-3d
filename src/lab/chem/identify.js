@@ -67,12 +67,55 @@ export function displayFormula(lab, atoms, charge = 0, { ionic = false } = {}) {
   return order.map((s) => `${s}${counts.get(s) > 1 ? subscript(counts.get(s)) : ''}`).join('') + chargeText(charge);
 }
 
+/** Indici dei legami che stanno in un anello (non sono ponti del grafo). */
+function ringBondIndices(n, bonds) {
+  const adj = Array.from({ length: n }, () => []);
+  bonds.forEach((b, k) => {
+    adj[b.i].push([b.j, k]);
+    adj[b.j].push([b.i, k]);
+  });
+  const disc = new Array(n).fill(-1);
+  const low = new Array(n).fill(0);
+  const bridges = new Set();
+  let time = 0;
+  const dfs = (u, via) => {
+    disc[u] = low[u] = time++;
+    for (const [v, k] of adj[u]) {
+      if (k === via) continue;
+      if (disc[v] < 0) {
+        dfs(v, k);
+        low[u] = Math.min(low[u], low[v]);
+        if (low[v] > disc[u]) bridges.add(k);
+      } else low[u] = Math.min(low[u], disc[v]);
+    }
+  };
+  for (let u = 0; u < n; u++) if (disc[u] < 0) dfs(u, -1);
+  return new Set(bonds.map((_, k) => k).filter((k) => !bridges.has(k)));
+}
+
+/**
+ * Ordini di legame uguali per tutte le strutture di Kekulé: negli anelli, i legami tra atomi che hanno ciascuno
+ * esattamente un doppio legame nell'anello valgono 1,5 (aspirina con i doppi legami da una parte o dall'altra).
+ */
+function resonanceOrders(n, bonds) {
+  const ring = ringBondIndices(n, bonds);
+  const ringDoubles = new Array(n).fill(0);
+  bonds.forEach((b, k) => {
+    if (ring.has(k) && b.order === 2) {
+      ringDoubles[b.i]++;
+      ringDoubles[b.j]++;
+    }
+  });
+  return bonds.map((b, k) => (ring.has(k) && b.order <= 2 && ringDoubles[b.i] === 1 && ringDoubles[b.j] === 1 ? 1.5 : b.order));
+}
+
 /** Impronta di un frammento covalente. */
 export function signature(atoms, bonds, { orders = true, charge = 0 } = {}) {
   const n = atoms.length;
   const adj = atoms.map(() => []);
-  for (const b of bonds) {
-    const o = orders ? b.order : 1;
+  const resonant = orders ? resonanceOrders(n, bonds) : null;
+  for (const [k, b] of bonds.entries()) {
+    const o = orders ? resonant[k] : 1;
     adj[b.i].push([b.j, o]);
     adj[b.j].push([b.i, o]);
   }
@@ -181,6 +224,13 @@ export function createLibraryIndex(lab, entries) {
   };
 }
 
-/** Nome per la ricerca: minuscolo, senza accenti, apostrofi e spazi doppi. */
+/** Nome per la ricerca: minuscolo, senza accenti, apostrofi e spazi doppi; pedici e apici come cifre e segni (NFKD). */
 export const normalizeName = (s) =>
-  String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’']/g, ' ').replace(/\s+/g, ' ').trim();
+  String(s).normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[−–—]/g, '-').toLowerCase().replace(/[’']/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** Testo in cui si cerca una voce della libreria: nomi e formule, quelle degli ioni con la carica (Na⁺, [Cu(NH₃)₄]²⁺). */
+export function librarySearchText(lab, e) {
+  const q = e.charge ?? 0;
+  const formulas = `${e.formula ? e.formula + chargeText(q) : ''} ${displayFormula(lab, e.graph.atoms, q, { ionic: e.ionic })} ${formulaKey(lab, e.graph.atoms, 0)}`;
+  return normalizeName(`${e.name} ${e.aka ?? ''} ${formulas}`);
+}

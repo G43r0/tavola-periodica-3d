@@ -83,10 +83,15 @@ const DECAY = {
   'β+': 'decadimento β⁺',
   '2β-': 'doppio decadimento β⁻',
   CE: 'cattura elettronica',
+  '2CE': 'doppia cattura elettronica',
   FS: 'fissione spontanea',
   TI: 'transizione isomerica',
 };
-const DECAY_SHORT = { 'α': 'α', 'β-': 'β⁻', 'β+': 'β⁺', '2β-': '2β⁻', CE: 'CE', FS: 'FS', TI: 'TI' };
+const DECAY_SHORT = { 'α': 'α', 'β-': 'β⁻', 'β+': 'β⁺', '2β-': '2β⁻', CE: 'CE', '2CE': '2CE', FS: 'FS', TI: 'TI' };
+// nomi inglesi IUPAC (aluminium, caesium) al posto di quelli americani di PubChem
+const IUPAC_EN = { Aluminum: 'Aluminium', Cesium: 'Caesium' };
+// elementi il cui anione non è legato (affinità elettronica negativa): Be, N, Mg, Mn, Zn, Cd, Hg e i gas nobili
+const UNBOUND_ANION = new Set([2, 4, 7, 10, 12, 18, 25, 30, 36, 48, 54, 80, 86]);
 
 function halfLifeText(value, unit, approx) {
   const u = UNIT[unit];
@@ -168,7 +173,8 @@ for (let z = 1; z <= 118; z++) {
   const natural = isotopes.filter((i) => i.abundance !== null);
   if (natural.length) {
     const sum = natural.reduce((s, i) => s + i.abundance, 0);
-    if (sum < 98.5 || sum > 100.5) warnings.push(`Z=${z}: somma abbondanze ${sum.toFixed(3)}%`);
+    // ±0,1 %: prima con 98,5–100,5 % non si vedeva che al tellurio mancavano ¹²⁰Te e ¹²³Te (99,02 %)
+    if (Math.abs(sum - 100) > 0.1) warnings.push(`Z=${z}: somma abbondanze ${sum.toFixed(3)}%`);
   }
 
   const shellList = shells(z);
@@ -195,7 +201,9 @@ for (let z = 1; z <= 118; z++) {
     z,
     symbol: pc.Symbol,
     name: c.name,
-    nameEn: pc.Name,
+    nameEn: IUPAC_EN[pc.Name] ?? pc.Name,
+    // la variante americana resta per la ricerca («aluminum» trova l'alluminio)
+    ...(IUPAC_EN[pc.Name] ? { nameEnAlt: pc.Name } : {}),
     atomicMass: {
       text: massText,
       value: isMassNumber ? Number(massText.slice(1, -1)) : Number(massText),
@@ -226,7 +234,9 @@ for (let z = 1; z <= 118; z++) {
     vdwRadiusPm: num(pc.AtomicRadius),
     covalentRadiusPm: c.cr ?? null,
     ionizationEnergyEv: pick(c, 'ie', num(pc.IonizationEnergy)),
-    electronAffinityEv: num(pc.ElectronAffinity),
+    electronAffinityEv: pick(c, 'ea', num(pc.ElectronAffinity)),
+    // anione non legato (affinità elettronica negativa): la scheda lo dice invece di lasciare il vuoto
+    ...(UNBOUND_ANION.has(z) ? { anionUnbound: true } : {}),
     oxidationStates: c.ox.split(',').map((s) => s.trim()).filter(Boolean),
     isotopes,
     discovery: { year: c.year, by: c.by },

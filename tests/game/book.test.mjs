@@ -11,6 +11,7 @@ import { TOOL_PAGES, TECHNIQUE_PAGES, SAFETY_PAGES } from '../../src/game/data/b
 import { PRODUCTION, PRODUCTION_WAYS } from '../../src/game/data/element-production.js';
 import VERIFIED from '../../src/game/data/book-verified.js';
 import { colorName } from '../../src/game/book-view.js';
+import { _setLangForTests } from '../../src/i18n/index.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
 const ctx = createLabChemistry(elements);
@@ -134,6 +135,31 @@ test('libro: vignette dei passi di ogni ricetta, senza valori mancanti', () => {
   }
 });
 
+test('libro: la bilancia delle vignette mostra la dose arrotondata, con il separatore decimale della lingua', () => {
+  const weigh = (g) => {
+    const svg = stepFigure({ kind: 'weigh', params: { g } }, {});
+    return /<text[^>]*>([^<]*g)<\/text>/.exec(svg)?.[1];
+  };
+  try {
+    // 0,30000000000000004 è quello che danno i calcoli delle dosi (0,05 × 6)
+    assert.equal(weigh(0.30000000000000004), '0,30 g');
+    assert.equal(weigh(1.2000000000000002), '1,2 g');
+    assert.equal(weigh(2), '2 g');
+    _setLangForTests('en');
+    assert.equal(weigh(0.30000000000000004), '0.30 g');
+    assert.equal(weigh(5.800000000000001), '5.8 g');
+  } finally {
+    _setLangForTests('it');
+  }
+  // nessuna vignetta del libro con un numero lungo (errori di arrotondamento)
+  for (const r of book.recipes) {
+    for (const s of r.steps) {
+      const svg = stepFigure(s, { vessel: r.vessel, tags: r.tags, bin: r.waste ?? 'inorganic' });
+      assert.ok(!/\d[.,]\d{4,}/.test(svg.replace(/<path[^>]*>|d="[^"]*"|points="[^"]*"/g, '')), `${r.id} ${s.kind}`);
+    }
+  }
+});
+
 test('magazzino: le sostanze della libreria e i metalli in pezzi (come il catalogo del gioco)', () => {
   const store = storeIndex(ctx);
   for (const sym of ['Zn', 'Fe', 'Cu', 'Mg', 'Al']) assert.equal(store.get(ctx.id(sym))?.st, 'solid', sym);
@@ -149,4 +175,15 @@ test('libro: nomi dei colori per le osservazioni', () => {
   assert.equal(colorName([240, 220, 40]), 'yellow');
   assert.equal(colorName([120, 70, 30]), 'brown');
   assert.equal(colorName(null), 'none');
+});
+
+test('libro: niente miscele esplosive o vietate e niente fosgene tra le ricette', () => {
+  const book = bookRecipes(ctx, VERIFIED);
+  for (const n of [990, 991, 993, 994, 1002, 370, 454, 455, 840, 841, 941]) {
+    const id = `cat-${n}`;
+    assert.ok(!book.byId.has(id), `${id} è nel libro`);
+    assert.ok(['danger', 'shock'].includes(book.failed.get(id)?.why), `${id}: ${book.failed.get(id)?.why}`);
+  }
+  // le ricette che riuscivano solo perché le condizioni erano ignorate non ci sono più
+  for (const n of [366, 995, 1109, 1110, 206]) assert.ok(!(`cat-${n}` in VERIFIED), `cat-${n}`);
 });
