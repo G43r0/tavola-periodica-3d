@@ -26,6 +26,13 @@ npm run dev        # app desktop con ricaricamento automatico
 npm run dev:web    # solo l'interfaccia, nel browser
 ```
 
+Il commit che ha riformattato tutto il codice con Prettier non cambia il comportamento, ma `git blame` lo mostrerebbe
+come autore di quasi ogni riga. Per fargli saltare quel commit, una volta sola dopo aver clonato il progetto:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 ## Comandi
 
 | Comando                | Che cosa fa                                                                  |
