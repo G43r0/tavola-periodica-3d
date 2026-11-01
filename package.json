@@ -31,7 +31,9 @@
       "dist/**/*",
       "electron/**/*",
       "build/icon.png",
-      "package.json"
+      "package.json",
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md"
     ],
     "win": {
       "target": [

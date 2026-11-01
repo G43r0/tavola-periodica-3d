@@ -75,3 +75,11 @@ test('la sezione «Licenze» della finestra elenca ogni voce con licenza e colle
   assert.ok(!/&(?!amp;|lt;|gt;|quot;|#39;)/.test(html), 'il testo va protetto con esc()');
   assert.ok(html.includes('Housecroft &amp; Sharpe'));
 });
+
+test('LICENSE e gli avvisi di terze parti entrano nell\'app impacchettata', () => {
+  // MIT, OFL e Apache-2.0 chiedono che l'avviso viaggi con le copie distribuite (font e WASM sono dentro l'app)
+  const { files } = JSON.parse(read('package.json')).build;
+  for (const f of ['LICENSE', 'THIRD_PARTY_NOTICES.md']) {
+    assert.ok(files.includes(f), `package.json: build.files deve includere ${f}`);
+  }
+});
