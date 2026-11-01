@@ -1,0 +1,81 @@
+name: Errore dell'app
+description: Qualcosa non funziona, si blocca o mostra un risultato sbagliato
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Grazie per la segnalazione. Nel titolo scrivi prima la parte dell'app e poi il problema, per esempio
+        «Sandbox: l'acqua attraversa il vetro».
+
+        Se a essere sbagliato è un dato scientifico (un valore, un nome, una reazione, una ricetta), usa invece il
+        modulo «Errore nei contenuti».
+  - type: input
+    id: version
+    attributes:
+      label: Versione dell'app
+      description: Si legge in fondo alla finestra «Fonti dei dati e guida» (il pulsante con la «i», in alto).
+      placeholder: '0.9.2'
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Sistema operativo
+      description: Il sistema e la versione, e se usi l'app desktop o il browser.
+      placeholder: 'Windows 11 24H2, app desktop'
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: Scheda grafica
+      description: Su Windows si legge in Gestione attività, scheda Prestazioni, voce GPU.
+      placeholder: 'NVIDIA GeForce GTX 1650, oppure Intel UHD 620'
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Dove succede
+      options:
+        - Tavola periodica e schede degli elementi
+        - Visualizzatore 3D (atomo, nucleo, particelle)
+        - Laboratorio molecolare (legami, formule, reazioni)
+        - Sandbox degli elementi
+        - Simulatore di laboratorio (in prima persona)
+        - App desktop (installazione, aggiornamenti)
+        - Altro
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passi per riprodurlo
+      description: Che cosa hai fatto, in ordine, a partire dall'avvio dell'app.
+      placeholder: |
+        1. Apro la sandbox
+        2. Scelgo «Acqua» e disegno un lago
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Che cosa ti aspettavi
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Che cosa è successo invece
+      description: Aggiungi uno screenshot se aiuta (puoi trascinarlo qui) e l'eventuale messaggio d'errore.
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Altro
+      description: Il preset grafico (Semplice, Medio, Professionale), la lingua, se succede sempre o ogni tanto.
+    validations:
+      required: false

@@ -1,0 +1,44 @@
+name: Proposta
+description: Un'idea per migliorare l'app o aggiungere qualcosa
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Grazie per l'idea. Nel titolo scrivi prima la parte dell'app e poi la proposta, per esempio
+        «Sandbox: una gomma a forma di cerchio».
+  - type: textarea
+    id: idea
+    attributes:
+      label: Che cosa vorresti
+      description: Descrivi la proposta con parole tue.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Perché
+      description: Quale problema risolve o che cosa renderebbe possibile, e a chi serve (a scuola, a casa, per studiare…).
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Dove
+      options:
+        - Tavola periodica e schede degli elementi
+        - Visualizzatore 3D (atomo, nucleo, particelle)
+        - Laboratorio molecolare (legami, formule, reazioni)
+        - Sandbox degli elementi
+        - Simulatore di laboratorio (in prima persona)
+        - App desktop (installazione, aggiornamenti)
+        - Altro
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative
+      description: Altri modi in cui si potrebbe fare, o app che lo fanno già bene.
+    validations:
+      required: false

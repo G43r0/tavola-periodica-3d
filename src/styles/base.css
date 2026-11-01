@@ -283,6 +283,9 @@ kbd {
   color: var(--text-0);
   font-weight: 600;
 }
+.info-dialog li a {
+  color: var(--accent);
+}
 .info-dialog .keys {
   color: var(--text-1);
   line-height: 2;

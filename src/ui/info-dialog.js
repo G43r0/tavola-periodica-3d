@@ -1,8 +1,9 @@
 // Finestra "Fonti e guida": provenienza dei dati e convenzioni usate.
 import { icons } from './icons.js';
-import { createT } from '../i18n/index.js';
+import { createT, pick } from '../i18n/index.js';
 import { createUpdateSection } from './updater.js';
 import { esc } from '../chem/format.js';
+import { THIRD_PARTY } from '../data/third-party.js';
 
 const t = createT({
   it: {
@@ -54,6 +55,8 @@ const t = createT({
       '<b>Sandbox degli elementi</b>: ogni cella è un granello di sostanza con la sua temperatura. Fusione, ebollizione e densità sono quelle reali (elements.json); la radioattività usa l\'isotopo principale con il tempo accelerato in scala logaritmica. Reazioni, conducibilità e velocità sono semplificate per il gioco.',
       '<b>Scala</b>: nessun modello è in scala. Il nucleo reale è da decine a centinaia di migliaia di volte più piccolo dell\'atomo.',
     ],
+    hLicenses: 'Licenze',
+    licenses: 'Tavola Periodica 3D è software libero con licenza MIT. Usa i componenti qui sotto, ciascuno con la propria licenza.',
   },
   en: {
     sources: [
@@ -104,6 +107,8 @@ const t = createT({
       '<b>Element sandbox</b>: each cell is a grain of substance with its own temperature. Melting, boiling and density are the real values (elements.json); radioactivity follows the main isotope with time sped up on a logarithmic scale. Reactions, conductivity and speeds are simplified for the game.',
       '<b>Scale</b>: no model is to scale. A real nucleus is tens to hundreds of thousands of times smaller than the atom.',
     ],
+    hLicenses: 'Licenses',
+    licenses: 'Tavola Periodica 3D is free software under the MIT license. It uses the components below, each with its own license.',
   },
   eli6: {
     title: 'Da dove vengono i dati, e come si usa',
@@ -123,6 +128,8 @@ const t = createT({
       '<b>La sabbiera</b>: ogni quadratino è un granello di una sostanza, con la sua temperatura. Il ghiaccio si scioglie, il ferro brucia, l\'acqua bolle: come nella realtà, ma più semplice e più veloce.',
       '<b>Attenzione</b>: nessun disegno ha le misure vere. Se un atomo fosse grande come uno stadio, il nucleo sarebbe una formica in mezzo al campo!',
     ],
+    hLicenses: 'Le licenze: chi ci ha dato il permesso',
+    licenses: 'Questa app è libera: puoi usarla e copiarla. Dentro ci sono anche cose fatte da altre persone, e ognuna ha il suo permesso, scritto qui sotto.',
   },
 });
 
@@ -136,6 +143,15 @@ export function versionFooter(version, versions) {
   const engines = versions?.electron ? ` · Electron ${esc(versions.electron)} · Chrome ${esc(versions.chrome)}` : '';
   return `<p class="info-dialog__version">${t('version', { v: esc(version) })}${engines} ·
     <a href="${RELEASES}/tag/v${esc(version)}" target="_blank" rel="noopener">${t('releaseNotes')}</a></p>`;
+}
+
+/** Elenco delle licenze di terze parti: nome (con il collegamento), licenza e a che cosa serve, nella lingua attiva. */
+export function licensesList(items = THIRD_PARTY) {
+  const rows = items.map(
+    (x) =>
+      `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a> — <b>${esc(x.license)}</b> — ${esc(pick(x.use))}</li>`,
+  );
+  return `<ul>${rows.join('')}</ul>`;
 }
 
 export function createInfoDialog() {
@@ -162,6 +178,9 @@ export function createInfoDialog() {
       <p class="keys">${t('keysSandbox')}</p>
       <h3>${t('hModels')}</h3>
       ${list(t('models'))}
+      <h3>${t('hLicenses')}</h3>
+      <p class="keys">${t('licenses')}</p>
+      ${licensesList()}
       ${versionFooter(APP_VERSION, window.desktop?.versions)}
     </form>`;
   const updates = createUpdateSection();
