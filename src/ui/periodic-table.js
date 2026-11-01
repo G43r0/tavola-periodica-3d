@@ -294,7 +294,7 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
     const cell = ev.target.closest('.cell[data-z]');
     if (!cell) return;
     const el = byZ.get(Number(cell.dataset.z));
-    let target = null;
+    let target;
     if (DIRS[ev.key]) target = neighbour(el, DIRS[ev.key]);
     else if (ev.key === 'Home') target = byZ.get(1);
     else if (ev.key === 'End') target = byZ.get(118);

@@ -591,7 +591,7 @@ export function createLab(elements, { onClose }) {
       area.style.cssText = 'position:fixed;opacity:0';
       document.body.append(area);
       area.select();
-      let ok = false;
+      let ok;
       try {
         ok = document.execCommand('copy');
       } catch {

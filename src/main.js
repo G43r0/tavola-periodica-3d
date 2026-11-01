@@ -178,7 +178,7 @@ const explain = createExplain(elements, {
   },
 });
 
-const sparks = initSparks({ elements, store, table, explain });
+const sparks = initSparks({ elements, store, explain });
 
 try {
   const resume = JSON.parse(sessionStorage.getItem(RESUME_KEY) || 'null');

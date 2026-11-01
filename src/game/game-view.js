@@ -453,7 +453,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     const chapters = CHAPTERS.map((ch) => {
       const stt = chapterState(c, ch.id);
       const list = chapterExercises(ch.id);
-      let note = '';
+      let note;
       if (stt === 'soon') note = t('chSoon');
       else if (stt === 'locked') {
         let prev = ch.id - 1;

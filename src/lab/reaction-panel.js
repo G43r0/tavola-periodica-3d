@@ -260,7 +260,7 @@ export function simulationReportHtml(sim) {
     })
     .join('');
 
-  let body = '';
+  let body;
   if (sim.status === 'none' && sim.diag) {
     const { missing, endothermic, needs } = sim.diag;
     const hints = [

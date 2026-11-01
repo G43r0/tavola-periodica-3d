@@ -58,7 +58,7 @@ const STATE = /\s*\((?:aq|s|l|g|cr)\)(?=$|[\s+·•∙⋅*])/g;
 export function normalizeFormulaText(text) {
   let s = String(text)
     .replace(/[−–—]/g, '-')
-    .replace(/[ \t\r\n]+/g, ' ')
+    .replace(/[\u00a0\t\r\n]+/g, ' ')
     .replace(/[₀-₉]/g, (c) => String(SUB.indexOf(c)))
     .trim();
   // apici: ²⁻ → ^2-, ⁺ → ^+

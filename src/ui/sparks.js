@@ -217,7 +217,7 @@ function spell(word, symbols) {
   return best[s.length];
 }
 
-export function initSparks({ elements, store, table, explain }) {
+export function initSparks({ elements, store, explain }) {
   const found = loadFound();
   const ids = () => T().ids;
   const symbols = new Map(elements.map((el) => [el.symbol.toLowerCase(), el]));

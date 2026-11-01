@@ -33,7 +33,7 @@ test('andata e ritorno: tutte le sostanze della libreria tornano uguali dalla SM
   for (const m of MOLECULES) {
     const g = library.get(m.id).graph;
     const smiles = writeSmiles(g, symbolOf);
-    let back = null;
+    let back;
     try {
       back = parseSmiles(smiles, lab.bySymbol);
     } catch (err) {

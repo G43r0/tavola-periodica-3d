@@ -254,7 +254,6 @@ export function createRelaxer(lab, desc, lewisAtoms, positions, geo = null) {
     const X = nb.length;
     if (X < 2) continue;
     const pairs = lone[c].filter((d) => d.kind === 'pair').length;
-    const singles = lone[c].length - pairs;
     const SN = X + lone[c].length;
     let t = null;
     if (SN === 2) t = 180;

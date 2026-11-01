@@ -24,6 +24,7 @@ const NAME_MAX = 24;
 /** Nome di un profilo ripulito: senza spazi in eccesso né caratteri di controllo, al massimo 24 caratteri. */
 export function cleanName(name, fallback) {
   const s = String(name ?? '')
+    // eslint-disable-next-line no-control-regex -- i caratteri di controllo (U+0000-U+001F, U+007F) vanno tolti di proposito
     .replace(/[\u0000-\u001f\u007f]/g, '')
     .replace(/\s+/g, ' ')
     .trim()

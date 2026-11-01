@@ -338,6 +338,7 @@ export function conditionEn(text) {
     out = out.split(it).join(`\u0000${marks.length}\u0000`);
     marks.push(en);
   }
+  // eslint-disable-next-line no-control-regex -- U+0000 è il delimitatore voluto dei segnaposto messi sopra
   out = out.replace(/\u0000(\d+)\u0000/g, (_, i) => marks[Number(i)]);
   cache.set(text, out);
   return out;

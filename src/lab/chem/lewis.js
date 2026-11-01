@@ -53,10 +53,8 @@ export function analyzeLewis(lab, atoms, bonds) {
 
   if (R < 0) {
     result.invalid = t('notEnough');
-    R = 0;
   } else if (n === 1) {
     L[0] = R;
-    R = 0;
   } else {
     // atomi che non seguono l'ottetto (gruppi 1, 2, 13 e metalli d/f): tengono i propri elettroni non impegnati,
     // meno quelli ceduti come ione (Fe³⁺ nel complesso [Fe(SCN)]²⁺ non ha elettroni da mettere nel legame)
@@ -95,7 +93,6 @@ export function analyzeLewis(lab, atoms, bonds) {
         .sort((a, b) => (info[a].en ?? 0) - (info[b].en ?? 0));
       const i = room[0] ?? [...Array(n).keys()].filter((k) => canExpand(info[k]))[0] ?? 0;
       L[i] += 1;
-      R = 0;
     }
   }
 

@@ -1,17 +1,13 @@
 // Test della fisica (Rapier), dei liquidi nei contenitori e della valutazione delle esercitazioni: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import * as THREE from 'three';
 import { loadPhysics, Physics } from '../../src/game/physics.js';
 import { interiorSamples, rimPoints, liquidLevel, profileVolume } from '../../src/game/liquid.js';
 import { grade, score } from '../../src/game/orders.js';
-import { createLabChemistry, Mixture } from '../../src/game/mixture.js';
 import { LAYOUT, BENCH_Y, STOOL } from '../../src/game/room.js';
 
 const R = await loadPhysics();
-const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
-const ctx = createLabChemistry(elements);
 
 /** Un becher da 250 mL lasciato cadere da un'altezza: velocità d'urto registrata dalla fisica. */
 function drop(height) {

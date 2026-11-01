@@ -89,7 +89,7 @@ export function buildChemistry(subs) {
       skip(r, hand);
       continue;
     }
-    let dH = null;
+    let dH;
     try {
       const re = reactants.map((x) => info(x.key));
       const pr = products.map((x) => info(x.key));

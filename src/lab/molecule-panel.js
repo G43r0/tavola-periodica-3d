@@ -420,7 +420,7 @@ function polarity(lab, u) {
     for (let a = 0; a < 3; a++) v[a] += (u.positions[b.j][a] - u.positions[b.i][a]) * k;
   }
   // coppie solitarie dell'atomo centrale (es. NH₃, H₂O): contribuiscono al dipolo
-  u.lone?.forEach((list, i) => {
+  u.lone?.forEach((list) => {
     for (const d of list ?? []) if (d.kind === 'pair') for (let a = 0; a < 3; a++) v[a] += d.dir[a] * 0.35;
   });
   const m = Math.hypot(...v);

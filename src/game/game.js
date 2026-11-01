@@ -36,7 +36,7 @@ import {
 import { Player } from './player.js';
 import { createLabChemistry, Mixture, wasteClass, binAccepts, AMBIENT } from './mixture.js';
 import { S } from '../sandbox/substances.js';
-import { SHELF, CABINET, OIL, PRICES, UNIVERSAL_SCALE, FLAME_SALTS, AQUEOUS_NAMES } from './reagents.js';
+import { SHELF, CABINET, OIL, PRICES, UNIVERSAL_SCALE, AQUEOUS_NAMES } from './reagents.js';
 import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
 import { reactionSignals, signalTags, equation, whyNot } from './signals.js';
 import { emptyNotebook, recordReaction } from './notebook.js';
@@ -3317,7 +3317,7 @@ export class LabGame {
     // pH-metro immerso con una lettura: il campione conta come misurato
     if (this.order && this.held?.kind === 'phmeter' && this.probing && this.held.data.reading !== null)
       this.order.phRead.add(this.probing.id);
-    for (const [it, st] of this.streams) if (st.shown !== this.time) st.hide();
+    for (const st of this.streams.values()) if (st.shown !== this.time) st.hide();
     this.deliverStreams();
     // acqua del rubinetto nei contenitori sotto il getto
     const sink = this.fx.sink;

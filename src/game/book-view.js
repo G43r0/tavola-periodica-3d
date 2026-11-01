@@ -36,7 +36,7 @@ export function colorName(rgb) {
   const l = (max + min) / 2;
   const s = max === min ? 0 : (max - min) / (1 - Math.abs(2 * l - 1));
   if (s < 0.18 || max - min < 0.08) return l > 0.78 ? 'white' : l < 0.2 ? 'black' : 'grey';
-  let h = 0;
+  let h;
   if (max === r) h = ((g - b) / (max - min)) % 6;
   else if (max === g) h = (b - r) / (max - min) + 2;
   else h = (r - g) / (max - min) + 4;

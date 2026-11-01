@@ -523,7 +523,7 @@ export class Mixture {
     const v = this.liquidVolume / 1000;
     if (this.water < 0.05 || v <= 0) return null;
     const acc = { sa: 0, sb: 0, weakA: [], weakB: [] };
-    for (const [sid, mol] of this.n) {
+    for (const sid of this.n.keys()) {
       const ab = this.ctx.acidBase.get(sid);
       if (!ab) continue;
       const c = (this.d.get(sid) ?? 0) / v;
