@@ -22,7 +22,7 @@ test('menu: «Informazioni su Tavola Periodica 3D» (ruolo about) in italiano e 
   assert.ok(items(menuTemplate('it', { isDev: true })).some((i) => i.role === 'toggleDevTools'));
 });
 
-test('sessione: la pagina non ottiene nessun permesso (fotocamera, microfono, posizione, notifiche…)', () => {
+test('sessione: la pagina non ottiene permessi (fotocamera, microfono, posizione, notifiche…) tranne quelli che usa', () => {
   const session = {
     setPermissionRequestHandler(fn) { this.request = fn; },
     setPermissionCheckHandler(fn) { this.check = fn; },
@@ -33,6 +33,13 @@ test('sessione: la pagina non ottiene nessun permesso (fotocamera, microfono, po
     session.request({}, perm, (ok) => (granted = ok));
     assert.equal(granted, false, perm);
     assert.equal(session.check({}, perm), false, perm);
+  }
+  // il simulatore blocca il puntatore per guardarsi intorno; copiare la SMILES scrive negli appunti
+  for (const perm of ['pointerLock', 'fullscreen', 'clipboard-sanitized-write']) {
+    let granted = null;
+    session.request({}, perm, (ok) => (granted = ok));
+    assert.equal(granted, true, perm);
+    assert.equal(session.check({}, perm), true, perm);
   }
 });
 

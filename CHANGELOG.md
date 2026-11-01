@@ -35,6 +35,13 @@ Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
 - **Entalpie di formazione di altre 42 sostanze** (NBS, CRC, NIST): Al(OH)₃, alcani, alcheni, alogenuri organici,
   anidride acetica, acetonitrile, acidi ossalico, salicilico e benzoico, ossidi, ossiacidi e fluoruri: il ΔH° c'è per 1089
   reazioni del catalogo invece di 931, in laboratorio, nel simulatore, nella sandbox e nel libro (#46).
+- **Laboratorio, copia ed esporta.** Nella scheda della molecola: la SMILES della molecola costruita (un nuovo scrittore
+  SMILES: incollata con Ctrl+V torna la stessa molecola, provato su tutte le 558 sostanze), la formula in testo semplice
+  e il disegno di Lewis come file SVG con i colori per la stampa. Il banco resta ricaricando l'app o cambiando lingua o
+  grafica (#64).
+- **Sandbox, scene.** Salva e Apri una scena su file `.json` (le celle uguali vicine compresse; si apre solo con la
+  stessa tabella di sostanze, altrimenti un avviso), Esporta un'immagine PNG, e l'ultima scena si salva da sola e
+  torna alla prossima apertura (#63).
 
 ### Corretto
 - **Laboratorio, Formula.** La carica dopo una parentesi quadra è una carica (`[Fe(CN)6]3-` non è più Fe₃C₁₈N₁₈⁻) e
@@ -88,7 +95,8 @@ Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
   potevano lasciare un file JSON rotto o vecchio) e se il file è rotto si legge la copia `.bak` (#26).
 - **App desktop, sicurezza.** La Content-Security-Policy dell'eseguibile non contiene più l'indirizzo del server di
   sviluppo (`ws://127.0.0.1:5173` si aggiunge solo con `vite`, sulla porta del server) e la pagina non ottiene nessun
-  permesso (fotocamera, microfono, posizione, notifiche…), che Electron altrimenti concede (#62).
+  permesso (fotocamera, microfono, posizione, notifiche…), che Electron altrimenti concede, tranne il blocco del
+  puntatore del simulatore, lo schermo intero e la scrittura negli appunti (#62).
 - **Finestra minima (1024 × 640).** La barra in alto si compatta davvero (prima la colonna della pagina si allargava
   ai pulsanti e la barra adattiva non scattava): Grafica, Lingua, Fonti e la ✕ della scheda restano sullo schermo (#32).
 - **Laboratorio molecolare.** L'etichetta sopra il titolo è «Molecole e reazioni» invece di «Simulatore», che è il

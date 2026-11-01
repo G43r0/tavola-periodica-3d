@@ -232,3 +232,86 @@ function kekulize(atoms, bonds, smiles) {
     if (arom[k]) b.order = doubles.has(k) ? 2 : 1;
   });
 }
+
+/**
+ * Scrive la SMILES di un grafo con gli idrogeni espliciti (quello di parseSmiles e del banco): gli idrogeni legati a un
+ * solo atomo diventano impliciti o si contano tra parentesi quadre ([NH4+]), i componenti separati da «.», gli anelli
+ * con le cifre (%10 oltre il 9), i doppi legami di Kekulé scritti. Incollata nel laboratorio torna la stessa molecola.
+ * @param {{atoms:{z:number,charge:number}[], bonds:{i:number,j:number,order:number}[]}} graph
+ * @param {(z:number) => string} symbolOf
+ */
+export function writeSmiles({ atoms, bonds }, symbolOf) {
+  const n = atoms.length;
+  const adj = atoms.map(() => []);
+  bonds.forEach((b, k) => {
+    adj[b.i].push([b.j, k]);
+    adj[b.j].push([b.i, k]);
+  });
+  // idrogeni neutri con un solo legame semplice verso un atomo che non è idrogeno: si scrivono insieme a quell'atomo
+  const folded = atoms.map((a, i) => a.z === 1 && !a.charge && adj[i].length === 1 && bonds[adj[i][0][1]].order === 1 && atoms[adj[i][0][0]].z !== 1);
+  const hCount = atoms.map((_, i) => adj[i].filter(([j]) => folded[j]).length);
+  const valence = atoms.map((_, i) => adj[i].reduce((t, [j, k]) => t + (folded[j] ? 0 : bonds[k].order), 0));
+
+  const atomText = (i) => {
+    const { z, charge } = atoms[i];
+    const sym = symbolOf(z);
+    if (ORGANIC[sym] && !charge) {
+      const target = ORGANIC[sym].find((v) => v >= valence[i]) ?? valence[i];
+      if (target - valence[i] === hCount[i]) return sym;
+    }
+    const h = hCount[i] ? `H${hCount[i] > 1 ? hCount[i] : ''}` : '';
+    const q = charge ? `${charge > 0 ? '+' : '-'}${Math.abs(charge) > 1 ? Math.abs(charge) : ''}` : '';
+    return `[${sym}${h}${q}]`;
+  };
+  const bondText = (k) => ({ 2: '=', 3: '#' })[bonds[k].order] ?? '';
+
+  // visita in profondità: legami dell'albero (rami) e legami che chiudono un anello (cifre)
+  const seen = new Array(n).fill(false);
+  const used = new Set();
+  const children = atoms.map(() => []);
+  const opens = atoms.map(() => []);
+  const closes = atoms.map(() => []);
+  const visit = (a) => {
+    seen[a] = true;
+    for (const [b, k] of adj[a]) {
+      if (folded[b] || used.has(k)) continue;
+      used.add(k);
+      if (seen[b]) {
+        opens[b].push(k);
+        closes[a].push(k);
+      } else {
+        children[a].push([b, k]);
+        visit(b);
+      }
+    }
+  };
+  const digit = new Map();
+  const free = [];
+  let next = 1;
+  const label = (d) => (d < 10 ? String(d) : `%${d}`);
+  const emit = (a) => {
+    let s = atomText(a);
+    for (const k of opens[a]) {
+      free.sort((x, y) => x - y);
+      const d = free.length ? free.shift() : next++;
+      digit.set(k, d);
+      s += bondText(k) + label(d);
+    }
+    for (const k of closes[a]) {
+      s += label(digit.get(k));
+      free.push(digit.get(k));
+    }
+    children[a].forEach(([b, k], idx) => {
+      const branch = bondText(k) + emit(b);
+      s += idx < children[a].length - 1 ? `(${branch})` : branch;
+    });
+    return s;
+  };
+  const parts = [];
+  for (let i = 0; i < n; i++) {
+    if (seen[i] || folded[i]) continue;
+    visit(i);
+    parts.push(emit(i));
+  }
+  return parts.join('.');
+}

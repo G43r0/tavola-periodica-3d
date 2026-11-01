@@ -217,6 +217,9 @@ Si apre dal pulsante con la beuta nella barra in alto, oppure con «Usa nel labo
   `CuSO4·5H2O`, `NH4+`, `SO4^2-`, `SO₄²⁻`), più sostanze (`2 H2 + O2`, anche mescolando nomi: `P4O10 + 2 acqua`),
   nomi italiani (`acqua`, `aspirina`) e SMILES (`CCO`). L'anteprima mostra cosa verrà costruito, la massa molare e la
   composizione percentuale in massa; «Solo atomi» mette gli atomi senza legami, da collegare a mano.
+- **Copia ed esporta** (nella scheda della molecola selezionata): la SMILES della molecola costruita (incollata con
+  `Ctrl+V` torna uguale), la formula in testo semplice (`C9H8O4`) e il disegno di Lewis come file SVG per le relazioni.
+  Il banco resta tra una sessione e l'altra (anche ricaricando o cambiando lingua o grafica).
 
 | Cosa calcola | Come |
 |---|---|
@@ -367,7 +370,9 @@ gas) e il **Pozzo** cancella tutto ciò che lo tocca, per svuotare vasche e smal
 tocca con la sostanza scelta; il clic destro la svuota), *Linea*, *Rettangolo* ed *Ellisse* trascinando il mouse (con
 «Pieno» o solo contorno, spesso quanto il pennello: ideale per vasche e contenitori). **Annulla** e **Ripeti**
 (`Ctrl + Z` / `Ctrl + Y`, anche i pulsanti in alto) tornano indietro di 12 modifiche, compreso «Svuota» e il caricamento
-di un esempio.
+di un esempio. **Scena** (in alto): *Salva* la scena su un file `.json` (griglia, sostanze e temperature, compressi),
+*Apri* una scena da file (si annulla come le altre modifiche) ed *Esporta* un'immagine PNG; chiudendo la sandbox o l'app,
+o cambiando lingua o grafica, l'ultima scena si salva da sola e torna alla prossima apertura.
 
 Limiti dichiarati: una cella è un «granello», non un atomo; le reazioni, le conducibilità e le velocità sono semplificate
 e scelte per il gioco (una cella di prodotto per ogni cella di reagente, in proporzione ai coefficienti); i prodotti

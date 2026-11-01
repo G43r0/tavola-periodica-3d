@@ -15,7 +15,9 @@ import { parseSmiles } from './chem/smiles.js';
 import { ionName, ionicCompoundName, binaryCovalentName, linearAlkaneName } from './chem/naming.js';
 import { createBenchScene } from './bench-scene.js';
 import { createPalette } from './palette.js';
-import { unitPanelHtml, summaryHtml } from './molecule-panel.js';
+import { unitPanelHtml, summaryHtml, plainFormula, unitSmiles } from './molecule-panel.js';
+import { lewisSvg, standaloneSvg } from './lewis-svg.js';
+import { saveBench, loadBench } from './bench-store.js';
 import { REACTIONS } from './data/reactions.js';
 import { speciesInfo, reactionEnthalpy } from './chem/reactions.js';
 import { planReactions, diagnose, modelReaction, graphBondEnergy, reactionDH } from './chem/simulate.js';
@@ -186,6 +188,17 @@ export function createLab(elements, { onClose }) {
 
   createPalette($('.lab-palette'), elements, lab, { onPick: (z) => addAtom(z) });
 
+  // il banco della volta scorsa (ricaricando l'app, o cambiando lingua o grafica, non si perde)
+  const storage = (() => {
+    try {
+      return globalThis.localStorage ?? null;
+    } catch {
+      return null;
+    }
+  })();
+  const saved = loadBench(storage);
+  if (saved) bench.restore(saved);
+
   // ---------------------------------------------------------------- analisi delle unità
   function radiusOf(id) {
     const a = bench.atoms.get(id);
@@ -316,6 +329,15 @@ export function createLab(elements, { onClose }) {
     scene.setPending(state.pending);
     if (renderP) renderPanel();
     updateDock();
+    scheduleSave();
+  }
+
+  // ---------------------------------------------------------------- banco conservato (bench-store.js)
+  let saving = 0;
+  function scheduleSave() {
+    clearTimeout(saving);
+    // durante una reazione gli atomi si muovono: si salva il banco quando si è fermato
+    saving = setTimeout(() => (busy() ? scheduleSave() : saveBench(storage, bench.snapshot())), 600);
   }
 
   // ---------------------------------------------------------------- rilassamento continuo
@@ -498,6 +520,42 @@ export function createLab(elements, { onClose }) {
 
   // ---------------------------------------------------------------- messaggi
   let msgTimer = null;
+  /** Copia negli appunti (SMILES o formula della molecola selezionata) e lo dice. */
+  function copyText(text) {
+    const done = () => message(tr('copied', { s: esc(text) }), 'ok', 3000);
+    // senza l'API degli appunti (o se la finestra non ha il fuoco) si prova con una casella di testo nascosta
+    const legacy = () => {
+      const area = Object.assign(document.createElement('textarea'), { value: text });
+      area.style.cssText = 'position:fixed;opacity:0';
+      document.body.append(area);
+      area.select();
+      let ok = false;
+      try {
+        ok = document.execCommand('copy');
+      } catch {
+        ok = false;
+      }
+      area.remove();
+      if (ok) done();
+      else message(tr('copyFailed', { s: esc(text) }), 'warn', 6000);
+    };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, legacy);
+    else legacy();
+  }
+
+  /** Salva il disegno di Lewis della molecola selezionata come file .svg (per relazioni e presentazioni). */
+  function saveLewis() {
+    const [u] = selectedUnits();
+    const svg = u && lewisSvg(lab, u);
+    if (!svg) return;
+    const url = URL.createObjectURL(new Blob([standaloneSvg(svg)], { type: 'image/svg+xml' }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: `${plainFormula(u.formula).replace(/[^\w+-]/g, '') || 'molecola'}.svg` });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   function message(html, kind = 'ok', duration = 5200) {
     const el = $('.lab-msg');
     el.innerHTML = html;
@@ -1982,6 +2040,13 @@ export function createLab(elements, { onClose }) {
     switch (t.dataset.act) {
       case 'close': close(); break;
       case 'deselect': select([]); break;
+      case 'copy-smiles':
+      case 'copy-formula': {
+        const [u] = selectedUnits();
+        if (u) copyText(t.dataset.act === 'copy-smiles' ? unitSmiles(lab, u) : plainFormula(u.formula));
+        break;
+      }
+      case 'save-svg': saveLewis(); break;
       case 'combine': combineAction(); break;
       case 'simulate': simulate(); break;
       case 'sim-energy': simulate({ energy: true, atoms: state.sim?.atoms }); break;
