@@ -248,7 +248,7 @@ export function createSandbox(elements, { onClose } = {}) {
     const id = subs.libraryId.get(e.id);
     const s = L[id];
     const formula = ALIAS_FORMULA[e.id] ?? (s.formula || substanceLabel(subs, id).formula || '');
-    return { e, id, name: e.name, formula, search: normalize(`${e.name} ${e.aka ?? ''} ${formula} ${formula.replace(/[₀-₉]/g, (d) => '₀₁₂₃₄₅₆₇₈₉'.indexOf(d))}`) };
+    return { e, id, name: e.name, formula, search: normalize(`${e.name} ${e.aka ?? ''} ${formula}`) };
   });
   $('.sbx-sec__count').textContent = `(${libItems.length})`;
   $('.sbx-lib').innerHTML = subs.groups

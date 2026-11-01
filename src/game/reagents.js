@@ -73,6 +73,18 @@ export const HYDRATES = {
 };
 
 /**
+ * Entalpie di soluzione a diluizione infinita (kJ/mol, 25 °C): sciogliere NaOH o CaCl₂ scalda, KNO₃ e NH₄Cl
+ * raffreddano (la busta del ghiaccio istantaneo); la cristallizzazione restituisce il calore con il segno opposto.
+ * Fonte: CRC Handbook of Chemistry and Physics, «Enthalpy of solution of electrolytes».
+ */
+export const SOLUTION_ENTHALPIES = {
+  naoh: -44.51, koh: -57.61, lioh: -23.56, cacl2: -81.33, mgcl2: -160.0, licl: -37.03, h2so4: -95.28,
+  mgso4: -91.21, cuso4: -73.27, 'cuso4-5h2o': 11.5, na2co3: -26.7, na2so4: -2.43, nabr: -0.6,
+  nacl: 3.88, kcl: 17.22, kbr: 19.87, ki: 20.33, nano3: 20.5, agno3: 22.59, nh4cl: 14.78, nh4no3: 25.69,
+  kno3: 34.89, kmno4: 43.56,
+};
+
+/**
  * Acidi e basi in soluzione (25 °C). sa / sb: protoni o ossidrili ceduti come acido o base forte;
  * ka / kb: costanti di dissociazione (prima costante, poi le successive se servono).
  * Fonti: CRC Handbook (Dissociation constants of inorganic and organic acids in aqueous solution).

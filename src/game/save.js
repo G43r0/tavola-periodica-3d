@@ -76,6 +76,8 @@ function sanitizeCareer(c) {
   for (const [id, r] of Object.entries(c.results ?? {})) {
     if (!r || typeof r !== 'object') continue;
     out.results[id] = { stars: Math.max(0, Math.min(5, Number(r.stars) || 0)), report: Math.max(0, Number(r.report) || 0), tries: Math.max(0, Number(r.tries) || 0), ...(r.migrated ? { migrated: true } : {}) };
+    // incidenti del tentativo più pulito (dalla 1.0.0; prima contavano solo quelli dell'anno)
+    if (Number(r.incidents) > 0) out.results[id].incidents = Math.floor(Number(r.incidents));
     // voto di una verifica (4–10)
     if (Number.isFinite(Number(r.mark)) && r.mark !== null) out.results[id].mark = Math.max(4, Math.min(10, Number(r.mark)));
   }

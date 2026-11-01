@@ -589,8 +589,8 @@ Daniell e contatore del gas.
   la luce, l'acqua o un reagente (KMnO₄ e Fe²⁺ vogliono l'acido solforico), oppure il metallo è meno attivo (il rame non
   sposta l'idrogeno dall'HCl: E° = +0,34 V), serve la corrente dell'alimentatore, la soluzione non conduce, o la reazione
   chiede una scarica, raggi UV o vapore. La temperatura accelera le
-  reazioni lente (fattore di Arrhenius, circa il doppio ogni 10 °C). Le entalpie di formazione di 176 sostanze comuni
-  (tabelle NBS e CRC) danno il ΔH° a 931 reazioni del catalogo invece di 315, anche nel laboratorio molecolare e nella
+  reazioni lente (fattore di Arrhenius, circa il doppio ogni 10 °C). Le entalpie di formazione di 218 sostanze comuni
+  (tabelle NBS e CRC) danno il ΔH° a 1089 reazioni del catalogo invece di 315, anche nel laboratorio molecolare e nella
   sandbox.
 - **Quaderno di laboratorio**: è un oggetto sul bancone, davanti a sinistra (un clic lo apre; anche `N`, la pausa e il
   menu). Ha due schede. Il **tutorial** ha 18 pagine illustrate, dai comandi alle tecniche: il libro, muoversi, prendere e girare,

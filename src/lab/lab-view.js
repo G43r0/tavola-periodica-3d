@@ -8,7 +8,7 @@ import { Bench } from './chem/molecule.js';
 import { analyzeLewis } from './chem/lewis.js';
 import { checkBond, checkOrder, bondCharacter, ORDER_NAME, Art } from './chem/bonding.js';
 import { createRelaxer, initialLayout, vsepr } from './chem/geometry.js';
-import { createLibraryIndex, covalentParts, displayFormula, chargeText, formulaKey, normalizeName, subscript, signature } from './chem/identify.js';
+import { createLibraryIndex, covalentParts, displayFormula, chargeText, formulaKey, normalizeName, librarySearchText, subscript, signature } from './chem/identify.js';
 import { combine, entryBonds, entryEnergy, ionicDecomposition } from './chem/combine.js';
 import { parseFormula, looksLikeSmiles, splitFormulaList, speciesAtoms, speciesAtomCount } from './chem/formula.js';
 import { parseSmiles } from './chem/smiles.js';
@@ -2054,9 +2054,7 @@ export function createLab(elements, { onClose }) {
     const box = $('.lab-examples');
     let any = false;
     box.querySelectorAll('[data-example]').forEach((b) => {
-      const e = library.get(b.dataset.example);
-      const f = (e.formula ?? '') + ' ' + formulaKey(lab, e.graph.atoms, 0);
-      const hit = !q || normalizeName(`${e.name} ${e.aka ?? ''}`).includes(q) || normalizeName(f.replace(/[₀-₉]/g, (c) => '₀₁₂₃₄₅₆₇₈₉'.indexOf(c))).includes(q);
+      const hit = !q || librarySearchText(lab, library.get(b.dataset.example)).includes(q);
       b.hidden = !hit;
       any ||= hit;
     });

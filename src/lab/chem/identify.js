@@ -224,6 +224,13 @@ export function createLibraryIndex(lab, entries) {
   };
 }
 
-/** Nome per la ricerca: minuscolo, senza accenti, apostrofi e spazi doppi. */
+/** Nome per la ricerca: minuscolo, senza accenti, apostrofi e spazi doppi; pedici e apici come cifre e segni (NFKD). */
 export const normalizeName = (s) =>
-  String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’']/g, ' ').replace(/\s+/g, ' ').trim();
+  String(s).normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[−–—]/g, '-').toLowerCase().replace(/[’']/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** Testo in cui si cerca una voce della libreria: nomi e formule, quelle degli ioni con la carica (Na⁺, [Cu(NH₃)₄]²⁺). */
+export function librarySearchText(lab, e) {
+  const q = e.charge ?? 0;
+  const formulas = `${e.formula ? e.formula + chargeText(q) : ''} ${displayFormula(lab, e.graph.atoms, q, { ionic: e.ionic })} ${formulaKey(lab, e.graph.atoms, 0)}`;
+  return normalizeName(`${e.name} ${e.aka ?? ''} ${formulas}`);
+}

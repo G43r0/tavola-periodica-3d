@@ -25,6 +25,10 @@ export const FORMATION_ENTHALPIES = {
   cr2o3: -1139.7, nio: -239.7, hgo: -90.8, tio2: -944.7, moo3: -745.1, sno2: -580.7, wo3: -842.9, bi2o3: -573.9,
   v2o5: -1550.6, ceo2: -1088.7, zro2: -1100.6, tho2: -1226.4, uo2: -1084.9, na2o2: -510.9, p4o10: -2984.0,
   mgoh2: -924.5, cuoh2: -449.8, lioh: -484.9, baoh2: -944.7,
+  aloh3: -1276.0, la2o3: -1793.7, h3bo3: -1094.3, h3po3: -964.4, hio3: -230.1, n2o5: -43.1, xeo3: 402.0,
+  // alogenuri e ossialogenuri
+  uf6: -2197.0, pocl3: -597.1, socl2: -245.6, ncl3: 230.0, pf5: -1594.4, clf: -50.3, if5: -864.8, if7: -943.9,
+  xef2: -164.0, xef4: -261.5, nocl: 51.7,
   // solfuri, nitruri, idruri, carburi, cianuri, azoturi
   na2s: -364.8, zns: -206.0, ag2s: -32.6, pbs: -100.4, hgs: -58.2, cds: -161.9, fes2: -178.2, mos2: -235.1,
   li3n: -164.6, mg3n2: -461.1, lih: -90.5, nah: -56.3, cah2: -186.2, cac2: -59.8, nacn: -87.5, kcn: -113.0, nan3: 21.7,
@@ -32,7 +36,8 @@ export const FORMATION_ENTHALPIES = {
   s8: 0, p4: 0,
   // gas e liquidi inorganici
   clo2: 102.5, cl2o: 80.3, cos: -142.0, h2se: 29.7, h2te: 99.6, ash3: 66.4, sbh3: 145.1, geh4: 90.8, cf4: -925.0,
-  sif4: -1614.9, brcl: 14.6, sef6: -1117.0, tef6: -1318.0, cs2: 89.7, hclo4: -40.6,
+  sif4: -1614.9, brcl: 14.6, sef6: -1117.0, tef6: -1318.0, cs2: 89.7, hclo4: -40.6, n2o4: 11.1,
+  hclo3: -104.0,
   // in acqua
   h3o: -285.8, oh: -230.0, nh4: -132.5, so4: -909.3, idrogenosolfato: -887.3, co3: -677.1, hco3: -692.0,
   ipoclorito: -107.1, cn: 150.6, po4: -1277.4, idrogenofosfato: -1292.1, diidrogenofosfato: -1296.3,
@@ -45,4 +50,9 @@ export const FORMATION_ENTHALPIES = {
   cumene: -41.1, isopropanolo: -318.1, 'glicole-etilenico': -460.0, benzaldeide: -87.0, 'acido-butanoico': -533.8,
   toluene: 12.4, 'p-xilene': -24.4, 'o-xilene': -24.4, 'm-xilene': -25.4, pentano: -173.5,
   cloroetano: -112.1, propene: 20.0, isobutene: -16.9, butadiene: 110.0, metantiolo: -22.9, fosgene: -219.1,
+  esano: -198.7, eptano: -224.2, ottano: -250.1, decano: -300.9, isopentano: -178.4, isoottano: -259.2,
+  'but-1-ene': -0.6, isoprene: 48.2, cicloesene: -38.5, propino: 184.9, 'ossido-di-etilene': -52.6,
+  bromometano: -35.4, iodometano: -13.6, clorobenzene: 11.1, 'anidride-acetica': -624.4, acetonitrile: 40.6,
+  acetammide: -317.0, 'acido-ossalico': -829.9, 'acido-salicilico': -589.9, 'acido-benzoico': -385.2,
+  etilammina: -47.5, anilina: 31.6,
 };

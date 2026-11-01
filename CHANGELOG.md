@@ -28,6 +28,13 @@ Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
 - **«Riduci movimento» del sistema** (`prefers-reduced-motion`): nel simulatore la scossa della camera parte spenta
   (si riaccende dal menu) e il lampo delle esplosioni è attenuato, il campione 3D dell'aspetto reale sta fermo (si
   gira trascinando) e il visualizzatore dell'atomo si apre con l'animazione in pausa (#48).
+- **Calore di soluzione nel simulatore**: sciogliere la soda caustica, la potassa, il cloruro di calcio o l'acido
+  solforico scalda (4 g di NaOH in 100 mL: circa +10 °C), il nitrato di potassio, il nitrato e il cloruro d'ammonio
+  raffreddano (la busta del ghiaccio istantaneo); la cristallizzazione restituisce il calore. Entalpie di soluzione di
+  23 sali, acidi e basi dal CRC Handbook (#42).
+- **Entalpie di formazione di altre 42 sostanze** (NBS, CRC, NIST): Al(OH)₃, alcani, alcheni, alogenuri organici,
+  anidride acetica, acetonitrile, acidi ossalico, salicilico e benzoico, ossidi, ossiacidi e fluoruri: il ΔH° c'è per 1089
+  reazioni del catalogo invece di 931, in laboratorio, nel simulatore, nella sandbox e nel libro (#46).
 
 ### Corretto
 - **Laboratorio, Formula.** La carica dopo una parentesi quadra è una carica (`[Fe(CN)6]3-` non è più Fe₃C₁₈N₁₈⁻) e
@@ -98,9 +105,14 @@ Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
 - **Scheda e glossario.** Il periodo non è sempre il numero di gusci: il palladio (periodo 5) ne ha 4, e la scheda lo
   spiega (il 5s resta vuoto) (#61).
 - **Documentazione.** I numeri del README sono quelli dei dati (88 termini, 48 reagenti dell'armadio, 501 reazioni del
-  simulatore con scaffale e armadio, 313 con il solo scaffale, ΔH° per 931 reazioni, 1146 reazioni nella sandbox) e un
+  simulatore con scaffale e armadio, 313 con il solo scaffale, 1146 reazioni nella sandbox) e un
   test li controlla (#33); le note «non in libreria» di KO₂, U₃O₈, FeS e [Cu(NH₃)₄]²⁺ rimandano alle reazioni che li
   formano, e un test controlla che una nota così nomini una sostanza che manca davvero (#45).
+- **Ricerca per formula uguale ovunque.** «CuSO4» e «CuSO₄», «Na+» e «Na⁺», «SO42-» e «SO₄²⁻» trovano le stesse cose
+  negli esempi e nelle reazioni del laboratorio, nella sandbox, nel magazzino del simulatore e nel libro (#51).
+- **Carriera, reputazione.** Contano gli incidenti del tentativo più pulito di ogni esercitazione, non tutti quelli
+  dell'anno per sempre: rifacendo un'esercitazione senza incidenti la reputazione torna, e un capitolo non resta chiuso
+  senza via d'uscita. Il totale dell'anno resta nel salvataggio (#49).
 
 ## [0.9.2] — 2026-10-30 — Aggiornamenti automatici e barra che ci sta sempre
 

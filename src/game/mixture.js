@@ -7,7 +7,7 @@ import { createSubstances, AMBIENT, GAS, LIQUID, SOLID, S, WATER, phaseAt } from
 import { buildChemistry, parseConditions, PAIR_K } from '../sandbox/chemistry.js';
 import { speciesInfo, reactionEnthalpy } from '../lab/chem/reactions.js';
 import { pick } from '../i18n/index.js';
-import { SOLUBILITY, HYDRATES, ACID_BASE, TOXIC_GASES, HEAVY_METALS, SINK_SAFE, INERT_SOLIDS, INDICATORS } from './reagents.js';
+import { SOLUBILITY, HYDRATES, ACID_BASE, TOXIC_GASES, HEAVY_METALS, SINK_SAFE, INERT_SOLIDS, INDICATORS, SOLUTION_ENTHALPIES } from './reagents.js';
 
 /** Il tempo termico (riscaldamento, raffreddamento, evaporazione) scorre 4 volte più veloce del reale. */
 export const HEAT_SPEED = 4;
@@ -71,6 +71,8 @@ export function createLabChemistry(elements) {
     hydrate.set(id(anh), { sid: id(hyd), w });
     hydrateOf.set(id(hyd), { sid: id(anh), w });
   }
+  const solutionHeat = new Map(); // sostanza → entalpia di soluzione (kJ/mol)
+  for (const [k, v] of Object.entries(SOLUTION_ENTHALPIES)) if (id(k)) solutionHeat.set(id(k), v);
   const acidBase = new Map();
   for (const [k, v] of Object.entries(ACID_BASE)) if (id(k)) acidBase.set(id(k), v);
   const toxic = new Set(TOXIC_GASES.map(id).filter(Boolean));
@@ -235,7 +237,7 @@ export function createLabChemistry(elements) {
 
   return {
     subs, chem, list, P, id, sub, molar: (sid) => (typeof sid === 'string' ? INDICATORS[sid]?.molar ?? 300 : molarCache[sid]),
-    solubility, hydrate, hydrateOf, acidBase, toxic, sinkSafe, inert, heavy, counts, rxs, pairIdx, singleIdx, airIdx, comb, O2,
+    solubility, hydrate, hydrateOf, solutionHeat, acidBase, toxic, sinkSafe, inert, heavy, counts, rxs, pairIdx, singleIdx, airIdx, comb, O2,
     offline, offPair, offSingle, rxById: new Map([...rxs, ...offline].map((rx) => [rx.id, rx])), electrolyte,
     name, formula,
   };
@@ -659,6 +661,12 @@ export class Mixture {
     return lv > 0 ? (this.amount(sid) * this.ctx.molar(sid)) / lv : 0;
   }
 
+  /** Calore di soluzione di mol moli che si sciolgono (negative: cristallizzano), dalle entalpie di soluzione. */
+  solutionHeat(sid, mol) {
+    const h = this.ctx.solutionHeat.get(sid);
+    if (h !== undefined && mol) this.heat(-h * 1000 * mol, this.vesselC ?? 0);
+  }
+
   /** Scioglimento verso la solubilità (più rapido agitando e a caldo) e cristallizzazione dell'eccesso. */
   dissolve(dt, ev) {
     const { ctx } = this;
@@ -696,6 +704,7 @@ export class Mixture {
             this.n.set(anh, (this.n.get(anh) ?? 0) + x);
             this.d.set(anh, (this.d.get(anh) ?? 0) + x);
             this.n.set(WATER, (this.n.get(WATER) ?? 0) + hyd.w * x);
+            this.solutionHeat(sid, x);
           }
         }
         continue;
@@ -714,7 +723,9 @@ export class Mixture {
       if (d < target) {
         const phase = this.phaseOf(sid);
         const k = phase === GAS || phase === LIQUID ? 20 : kDiss;
-        this.d.set(sid, Math.min(target, d + (target - d) * (1 - Math.exp(-k * dt)) + 0.0002 * dt * (1 + 4 * this.mix)));
+        const next = Math.min(target, d + (target - d) * (1 - Math.exp(-k * dt)) + 0.0002 * dt * (1 + 4 * this.mix));
+        this.d.set(sid, next);
+        this.solutionHeat(sid, next - d);
       } else if (d > cap * 1.002) {
         const x = (d - cap) * (1 - Math.exp(-kCryst * dt));
         this.d.set(sid, d - x);
@@ -727,7 +738,8 @@ export class Mixture {
           this.n.set(sid, mol - x);
           this.n.set(hy.sid, (this.n.get(hy.sid) ?? 0) + x);
           this.n.set(WATER, free - hy.w * x);
-        }
+          this.solutionHeat(hy.sid, -x);
+        } else this.solutionHeat(sid, -x);
       }
     }
     // idrati scaldati oltre la temperatura di decomposizione: perdono l'acqua (CuSO₄·5H₂O azzurro → CuSO₄ bianco)

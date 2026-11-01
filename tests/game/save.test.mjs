@@ -129,3 +129,11 @@ test('profili: il nome predefinito nuovo è il primo libero, gli id non si ripet
   const d = migrate({ version: 2, active: 'p1', profiles: [{ id: 'p1', name: 'A' }, { id: 'p1', name: 'B' }] });
   assert.equal(new Set(d.profiles.map((p) => p.id)).size, 2);
 });
+
+test('salvataggio: gli incidenti del tentativo più pulito di ogni esercitazione restano (reputazione)', () => {
+  const raw = { version: 2, settings: {}, active: 'p1', profiles: [{ id: 'p1', name: 'A', created: NOW, career: { results: { nacl: { stars: 3, report: 1, tries: 2, incidents: 2 }, kno3: { stars: 4, incidents: 'boh' } }, incidents: 5 } }] };
+  const c = migrate(raw, NOW).profiles[0].career;
+  assert.equal(c.results.nacl.incidents, 2);
+  assert.equal(c.results.kno3.incidents, undefined);
+  assert.equal(c.incidents, 5);
+});

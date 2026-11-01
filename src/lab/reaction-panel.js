@@ -280,7 +280,7 @@ function searchText(re) {
   if (!re.search) {
     const names = [...re.reactants, ...re.products].map((x) => x.name).join(' ');
     const text = `${equationText(re)} ${re.r.name ?? ''} ${re.r.cond ?? ''} ${re.r.condText ?? ''} ${re.r.sub ?? ''} ${re.r.desc} ${names} ${[...re.reactants, ...re.products].map((x) => x.nameIt ?? '').join(' ')}`;
-    re.search = normalizeName(text.replace(/[₀-₉]/g, (c) => '₀₁₂₃₄₅₆₇₈₉'.indexOf(c)));
+    re.search = normalizeName(text);
   }
   return re.search;
 }

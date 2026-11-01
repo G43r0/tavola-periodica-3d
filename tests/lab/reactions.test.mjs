@@ -132,3 +132,12 @@ test('le note «non in libreria» nominano una sostanza che nella libreria manca
     assert.match(note, /[A-Z][a-z]?[₀-₉]/, `n. ${n}: la nota non dice quale sostanza manca`);
   }
 });
+
+test('entalpie di formazione tabulate anche per idrossido di alluminio, alcani, alogenuri organici, ossidi e fluoruri', () => {
+  // prima 418 reazioni su 1349 non avevano il ΔH°: a una specie mancava ΔHf°
+  const ids = ['aloh3', 'ottano', 'but-1-ene', 'anidride-acetica', 'acetonitrile', 'la2o3', 'esano', 'eptano', 'decano',
+    'bromometano', 'iodometano', 'acido-ossalico', 'clorobenzene', 'acetammide', 'n2o4', 'n2o5', 'uf6', 'pocl3', 'h3bo3'];
+  for (const id of ids) assert.ok(Number.isFinite(sp(id).hf), id);
+  const missing = REACTIONS.filter((r) => [...r.reactants, ...r.products].some(([, k]) => sp(k).hf == null)).length;
+  assert.ok(missing < 300, `${missing} reazioni senza ΔH°`);
+});

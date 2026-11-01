@@ -141,7 +141,10 @@ test('modello: niente reazione se i prodotti non sono più stabili o la libreria
 test('modello: addizioni con legami di energia nota', () => {
   const dimero = model(species('no2', 2));
   assert.equal(dimero?.product.entry.id, 'n2o4', '2 NO₂ → N₂O₄');
-  assert.equal(dimero.method, 'bonds');
+  // con ΔHf°(N₂O₄, g) = 11,1 kJ/mol tabulato il ΔH° viene dalle entalpie di formazione: 11,1 − 2 × 33,2
+  assert.equal(dimero.method, 'formation');
+  assert.ok(Math.abs(dimero.dH - (11.1 - 2 * lib.get('no2').hf)) < 1e-9, `${dimero.dH}`);
+  assert.ok(dimero.dH < -50 && dimero.dH > -60);
   assert.equal(model(species('co'), species('cl2'))?.product.entry.id, 'fosgene', 'CO + Cl₂ → COCl₂');
 });
 

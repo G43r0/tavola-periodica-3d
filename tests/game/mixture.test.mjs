@@ -191,3 +191,21 @@ test('rifiuti: un solvente organico diluito non va in «acidi, basi e sali»; i 
   assert.equal(wasteClass(Mixture.solid(ctx, 'caco3', 2)), 'solid', 'carbonato di calcio');
   assert.equal(wasteClass(Mixture.solid(ctx, 'kclo3', 2)), 'inorganic', 'un ossidante resta nei rifiuti inorganici');
 });
+
+test('calore di soluzione: la soda caustica e il cloruro di calcio scaldano, il nitrato di potassio e il cloruro d\'ammonio raffreddano', () => {
+  // 100 mL d'acqua, agitando, senza dispersione (lossWK 0): ΔT ≈ −n·ΔH_sol / (m·c); prima tutti −0,1 K (evaporazione)
+  const dT = (key, grams) => {
+    const m = Mixture.solid(ctx, key, grams);
+    m.add(Mixture.liquid(ctx, 'water', 100));
+    const T0 = m.T;
+    run(m, 60, { stir: 1, lossWK: 0 });
+    assert.ok(m.dissolved(key) > 0.95 * m.amount(key), `${key} sciolto`);
+    return m.T - T0;
+  };
+  const naoh = dT('naoh', 4);
+  assert.ok(naoh > 8 && naoh < 12, `NaOH 4 g: ${naoh} K`);
+  assert.ok(dT('cacl2', 10) > 8, 'CaCl₂ scalda');
+  assert.ok(dT('kno3', 10) < -5, 'KNO₃ raffredda');
+  assert.ok(dT('nh4cl', 10) < -4, 'NH₄Cl raffredda');
+  assert.ok(Math.abs(dT('nacl', 5)) < 1.5, 'NaCl quasi niente');
+});

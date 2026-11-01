@@ -160,10 +160,11 @@ test('Carriera: reputazione, capitoli aperti, libro', () => {
   assert.equal(reputation(c), ch0.length);
   assert.equal(chapterState(c, 1), reputation(c) >= CHAPTERS[1].rep ? 'open' : 'locked');
   assert.equal(chapterState(c, 1), 'open');
-  // gli incidenti tolgono reputazione; i risultati migliori restano
+  // i risultati migliori restano, e un tentativo peggiore con incidenti non cancella quello pulito
   const worse = recordResult(c, ch0[0].id, { stars: 1, report: 0, money: 12, incidents: 2 });
   assert.equal(worse.results[ch0[0].id].stars, PASS_STARS);
-  assert.equal(reputation(worse), reputation(c) - 4);
+  assert.equal(reputation(worse), reputation(c));
+  assert.equal(worse.incidents, 2, 'il totale dell\'anno resta per la pagella');
   // libro: sicurezza e pagine dei capitoli aperti; ricette acido-base solo dal capitolo 2
   const u = bookUnlocks(c);
   assert.ok(u.pages.has('safety:ghs') && u.pages.has('tool:balance') && u.pages.has('tech:dilute'));
@@ -392,4 +393,22 @@ test('risposte numeriche: si legge il numero anche con l\'unità o la virgola, i
   const vin = EXERCISE_BY_ID.get('vinegar');
   assert.equal(answerScore(vin, [], { 0: '0,8 mol/L' }, 0, 'real'), 1);
   assert.equal(answerScore(vin, [], { 0: 'mol/L' }, 0, 'real'), 0);
+});
+
+test('Carriera: gli incidenti tolgono reputazione finché non si rifà l\'esercitazione senza incidenti', () => {
+  // prima −2 per ogni incidente dell'anno, per sempre: con più di 20 incidenti il capitolo 1 restava chiuso per sempre
+  const ch0 = chapterExercises(0);
+  let c = newCareer();
+  for (const e of ch0) c = recordResult(c, e.id, { stars: 5, report: 0, money: 10, incidents: 0 });
+  const clean = reputation(c);
+  c = recordResult(c, ch0[1].id, { stars: 5, report: 0, money: 10, incidents: 30 });
+  assert.equal(reputation(c), clean, 'il tentativo pulito di prima vale ancora');
+  let d = newCareer();
+  for (const e of ch0) d = recordResult(d, e.id, { stars: 5, report: 0, money: 10, incidents: 15 });
+  assert.equal(reputation(d), 0);
+  assert.equal(chapterState(d, 1), 'locked');
+  for (const e of ch0) d = recordResult(d, e.id, { stars: 5, report: 0, money: 10, incidents: 0 });
+  assert.equal(reputation(d), clean, 'rifatte senza incidenti la reputazione torna');
+  assert.equal(chapterState(d, 1), 'open');
+  assert.equal(d.incidents, 15 * ch0.length);
 });
