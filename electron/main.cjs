@@ -1,15 +1,33 @@
 // Processo principale Electron: crea la finestra e carica l'interfaccia (offline).
-const { app, BrowserWindow, Menu, shell, ipcMain, net, session } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, net, session, dialog } = require('electron');
 const { setupUpdater } = require('./updater.cjs');
 const { createSaveFile } = require('./save-file.cjs');
 const { menuTemplate } = require('./menu.cjs');
-const { lockDownSession } = require('./security.cjs');
+const { lockDownSession, lockWebContents } = require('./security.cjs');
+const { watchRenderer } = require('./recover.cjs');
 const path = require('node:path');
+
+// Cartella dei dati dell'utente scelta da fuori: serve all'E2E (una cartella temporanea, mai i dati veri di chi sviluppa)
+// ed è la base per l'app su chiavetta. Va impostata prima di `ready` e prima che qualcosa legga userData (blocco
+// dell'istanza unica, salvataggi, impostazioni dell'aggiornatore).
+if (process.env.TP3D_USER_DATA) app.setPath('userData', path.resolve(process.env.TP3D_USER_DATA));
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 const isDev = Boolean(DEV_URL);
 
 let mainWindow = null;
+let uiLang = 'it';
+
+// Ogni webContents creato dall'app (la finestra e qualunque altro) non può agganciare una <webview>.
+app.on('web-contents-created', (_event, contents) => lockWebContents(contents));
+
+// Messaggio quando il renderer si richiude subito dopo il ricaricamento (electron/recover.cjs).
+const GIVE_UP_TEXT = {
+  it: (reason) =>
+    `L'app si è chiusa per un errore (${reason}) e si è richiusa subito dopo il ricaricamento.\nChiudila e riaprila.`,
+  en: (reason) =>
+    `The app closed because of an error (${reason}) and closed again right after being reloaded.\nClose it and open it again.`,
+};
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -27,9 +45,16 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      webviewTag: false,
       spellcheck: false,
     },
   });
+
+  // Se il renderer si chiude (crash, memoria esaurita) la pagina si ricarica una volta; se si richiude subito, errore.
+  const renderer = watchRenderer(mainWindow, {
+    onGiveUp: (details) => dialog.showErrorBox('Tavola Periodica 3D', GIVE_UP_TEXT[uiLang](details.reason)),
+  });
+  mainWindow.webContents.on('render-process-gone', (_event, details) => renderer.handle(details));
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.maximize();
@@ -54,7 +79,10 @@ function buildMenu(lang = 'it') {
   Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate(lang, { isDev })));
 }
 
-ipcMain.on('set-language', (_event, code) => buildMenu(code === 'en' ? 'en' : 'it'));
+ipcMain.on('set-language', (_event, code) => {
+  uiLang = code === 'en' ? 'en' : 'it';
+  buildMenu(uiLang);
+});
 
 // Salvataggi del simulatore (electron/save-file.cjs): un file JSON nella cartella dei dati dell'utente.
 let saves = null;

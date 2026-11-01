@@ -8,7 +8,8 @@ import { versionFooter } from '../../src/ui/info-dialog.js';
 
 const require = createRequire(import.meta.url);
 const { menuTemplate } = require('../../electron/menu.cjs');
-const { lockDownSession } = require('../../electron/security.cjs');
+const { lockDownSession, lockWebContents } = require('../../electron/security.cjs');
+const { watchRenderer } = require('../../electron/recover.cjs');
 
 const items = (tpl) => tpl.flatMap((m) => m.submenu ?? []);
 
@@ -48,6 +49,111 @@ test('sessione: la pagina non ottiene permessi (fotocamera, microfono, posizione
     assert.equal(granted, true, perm);
     assert.equal(session.check({}, perm), true, perm);
   }
+});
+
+test('lockWebContents blocca le webview', () => {
+  const contents = {
+    on(event, fn) {
+      (this.handlers ??= {})[event] = fn;
+    },
+  };
+  lockWebContents(contents);
+  assert.equal(typeof contents.handlers['will-attach-webview'], 'function');
+  let prevented = 0;
+  contents.handlers['will-attach-webview']({ preventDefault: () => prevented++ });
+  assert.equal(prevented, 1);
+});
+
+// Finta finestra: webContents.reload e send si contano, once('did-finish-load') si fa scattare a mano.
+function fakeWindow() {
+  const once = {};
+  const webContents = {
+    reloads: 0,
+    sent: [],
+    reload() {
+      this.reloads++;
+    },
+    once(event, fn) {
+      once[event] = fn;
+    },
+    send(channel, ...args) {
+      this.sent.push([channel, ...args]);
+    },
+  };
+  return { win: { webContents }, webContents, finishLoad: () => once['did-finish-load']?.() };
+}
+
+test('watchRenderer: un crash ricarica e avvisa', () => {
+  const { win, webContents, finishLoad } = fakeWindow();
+  let gaveUp = 0;
+  const watcher = watchRenderer(win, { now: () => 0, onGiveUp: () => gaveUp++ });
+  watcher.handle({ reason: 'crashed', exitCode: 11 });
+  assert.equal(webContents.reloads, 1);
+  assert.deepEqual(webContents.sent, [], "l'avviso parte solo a pagina caricata");
+  finishLoad();
+  assert.deepEqual(webContents.sent, [['app:recovered']]);
+  assert.equal(gaveUp, 0);
+});
+
+test('watchRenderer: secondo crash entro 30 s non ricarica', () => {
+  const { win, webContents } = fakeWindow();
+  let t = 0;
+  const gaveUp = [];
+  const watcher = watchRenderer(win, { now: () => t, onGiveUp: (d) => gaveUp.push(d) });
+  watcher.handle({ reason: 'crashed' });
+  t = 10_000;
+  const second = { reason: 'oom' };
+  watcher.handle(second);
+  assert.equal(webContents.reloads, 1, 'niente ricaricamento infinito');
+  assert.deepEqual(gaveUp, [second], 'onGiveUp riceve i dettagli del secondo crash, una volta sola');
+  // anche un terzo crash, sempre entro 30 s dall'ultimo ricaricamento, resta senza ricaricamento
+  t = 20_000;
+  watcher.handle({ reason: 'crashed' });
+  assert.equal(webContents.reloads, 1);
+  assert.equal(gaveUp.length, 2);
+
+  // a più di 30 s dal ricaricamento precedente il secondo crash è un caso nuovo: si ricarica di nuovo
+  const late = fakeWindow();
+  let later = 0;
+  const lateGaveUp = [];
+  const lateWatcher = watchRenderer(late.win, { now: () => later, onGiveUp: (d) => lateGaveUp.push(d) });
+  lateWatcher.handle({ reason: 'crashed' });
+  later = 31_000;
+  lateWatcher.handle({ reason: 'crashed' });
+  assert.equal(late.webContents.reloads, 2);
+  assert.deepEqual(lateGaveUp, []);
+});
+
+test('watchRenderer: clean-exit non fa nulla', () => {
+  const { win, webContents, finishLoad } = fakeWindow();
+  let gaveUp = 0;
+  const watcher = watchRenderer(win, { now: () => 0, onGiveUp: () => gaveUp++ });
+  watcher.handle({ reason: 'clean-exit', exitCode: 0 });
+  finishLoad();
+  assert.equal(webContents.reloads, 0);
+  assert.deepEqual(webContents.sent, []);
+  assert.equal(gaveUp, 0);
+  // e non conta come ricaricamento: un crash subito dopo ricarica
+  watcher.handle({ reason: 'crashed' });
+  assert.equal(webContents.reloads, 1);
+});
+
+test('fusibili nella configurazione di electron-builder', () => {
+  const pkg = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+  assert.deepEqual(pkg.build.electronFuses, {
+    runAsNode: false,
+    enableNodeOptionsEnvironmentVariable: false,
+    enableNodeCliInspectArguments: false,
+    enableEmbeddedAsarIntegrityValidation: true,
+    onlyLoadAppFromAsar: true,
+  });
+});
+
+test('CSP: object-src e base-uri none (niente plugin né <base> che cambi gli indirizzi)', () => {
+  const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  const csp = html.match(/http-equiv="Content-Security-Policy"\s+content="([^"]*)"/)[1];
+  assert.match(csp, /(^|;\s*)object-src 'none'(;|$)/);
+  assert.match(csp, /(^|;\s*)base-uri 'none'(;|$)/);
 });
 
 test('CSP: in produzione niente indirizzo del server di sviluppo, in sviluppo il WebSocket della porta di Vite', () => {
