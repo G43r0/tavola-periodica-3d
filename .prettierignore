@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-e2e/
+release/
+build/
+test-results/
+playwright-report/
+src/data/
+src/**/data/
+data-sources/
+*.md
+*.json
