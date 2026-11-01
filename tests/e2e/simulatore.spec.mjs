@@ -72,6 +72,8 @@ test('Carriera: measure50 consegnata con la soluzione dei dati', async ({ page }
   });
   expect(result.id).toBe('measure50');
   expect(result.stars).toBeGreaterThanOrEqual(PASS_STARS);
+  // con la stanza pulita e la relazione giusta anche una consegna sbagliata (qualità 0) arriva a PASS_STARS
+  expect(result.quality).toBeGreaterThan(0.9);
   expect(result.right).toBe(result.total);
   expect(await page.evaluate(() => window.__tp3d.lastResult.stars)).toBe(result.stars);
 
