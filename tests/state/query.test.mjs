@@ -23,3 +23,14 @@ test('ricerca: gli spazi attorno al testo non cambiano il risultato', () => {
   assert.equal(count, 1);
   assert.equal(hasActiveFilters(state(' fe ')), true);
 });
+
+test('ricerca: il nome inglese americano trova l\'elemento («aluminum», «cesium»)', async () => {
+  const fs = await import('node:fs');
+  const { searchScore } = await import('../../src/state/query.js');
+  const els = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
+  const al = els.find((e) => e.symbol === 'Al');
+  const cs = els.find((e) => e.symbol === 'Cs');
+  assert.ok(searchScore(al, 'aluminum') > 0);
+  assert.ok(searchScore(al, 'aluminium') > 0);
+  assert.ok(searchScore(cs, 'cesium') > 0);
+});

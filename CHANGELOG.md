@@ -19,6 +19,15 @@ Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
 - **Ferro- e ferricianuro di potassio** e i due ioni esacianoferrato nella libreria (558 sostanze); un sale con uno
   ione complesso ha il nome del complesso: Na₃[Fe(CN)₆] → «Esacianoferrato(III) di sodio», [Cu(NH₃)₄]SO₄ → «Solfato di
   tetraamminorame(II)» (#19).
+- **Energie di legame nucleari misurate (AME2020) per tutti i 2548 nuclei misurati** invece dei 24 nuclei leggeri
+  (A ≤ 22): il ⁵⁶Fe vale 8,790 MeV per nucleone invece della stima di Weizsäcker, e il ⁶²Ni è il più legato.
+  `npm run data` rigenera la tabella dal file dell'IAEA con `scripts/build-ame.mjs` (#53).
+- **Versione dell'app** in fondo alla finestra «Fonti dei dati e guida», con le versioni di Electron e Chrome nell'app
+  desktop e il collegamento alle note di rilascio; nel menu dell'app desktop «Aiuto → Informazioni su Tavola Periodica
+  3D» (#35).
+- **«Riduci movimento» del sistema** (`prefers-reduced-motion`): nel simulatore la scossa della camera parte spenta
+  (si riaccende dal menu) e il lampo delle esplosioni è attenuato, il campione 3D dell'aspetto reale sta fermo (si
+  gira trascinando) e il visualizzatore dell'atomo si apre con l'animazione in pausa (#48).
 
 ### Corretto
 - **Laboratorio, Formula.** La carica dopo una parentesi quadra è una carica (`[Fe(CN)6]3-` non è più Fe₃C₁₈N₁₈⁻) e
@@ -37,6 +46,22 @@ Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
   (centrato e appoggiato in basso) e si annulla come ogni altra modifica (#43); il campo Temperatura rispetta i limiti
   (le soluzioni tra 0 e 99 °C) e vuoto lascia il valore di prima (#44); nella barra laterale non ci sono più etichette
   tagliate a 1280×800 né alla finestra minima (#23).
+- **Condizioni delle reazioni del catalogo** (simulatore, sandbox e libro). «Detonazione» e «sfregamento» chiedono un
+  urto (il nitrato d'ammonio non esplode più da solo nel becher, #37); le sostanze scritte nella condizione sono
+  requisiti anche senza «cat.» (clorato e zucchero vogliono l'acido, l'acetammide il P₄O₁₀, la formaldeide il
+  Ca(OH)₂, #38); «fiamma», «fusione», «caldo» e «anni» diventano vincoli (il CCl₄ non fa più fosgene all'aria, soda e
+  sabbia non fanno il vetro a 22 °C, #59). Un test controlla che ogni condizione scritta del catalogo diventi un vincolo.
+- **Simulatore, chimica.** Il bicarbonato è anfotero (pH ≈ 8,3) e va nel lavandino (#24); la candeggina è basica, e
+  hanno il loro pH anche Na₃PO₄, i sali di rame, zinco, alluminio, ferro(II) e nichel e il fenolo (#25); le reazioni
+  endotermiche rallentano col freddo invece di portare il contenuto a 1 K (#39).
+- **Libro «Come si fa».** Niente più pirotecnica, miscele vietate o reazioni che danno fosgene, e via le ricette che
+  riuscivano solo perché le condizioni erano ignorate: 648 ricette verificate (#60).
+- **Simulatore, rifiuti e pericoli.** Un solvente organico diluito va nei solventi organici (l'etanolo molto diluito e il
+  glicerolo nel lavandino), la sabbia e gli altri solidi inerti nei rifiuti solidi (#57); metanolo, fenolo, formaldeide,
+  benzene, toluene, CCl₄, anilina, acido acetico e ossalico, ammoniaca hanno i pittogrammi del CLP, e il glicerolo e gli
+  altri liquidi che bollono oltre i 175 °C non sono più «infiammabili» (#58).
+- **Simulatore, profili.** Un profilo nuovo prende il primo nome libero (niente «Studente 3» doppio) e gli id dei
+  profili non si ripetono nemmeno in un salvataggio rovinato (#27).
 - **Laboratorio, Formula.** Scrivere `[Cu(NH3)4]2+` a mano non manda più in crash la pagina (ciclo infinito con una «[»
   non ancora chiusa, #66); numeri enormi come `C1000000000` non bloccano più l'anteprima occupando gigabyte (#67).
 - **Laboratorio.** «Simula» su una seconda reazione (o Annulla) subito dopo la prima non si perde più (#75); in
@@ -54,6 +79,28 @@ Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
   tantalio-180m, isotopo naturale (#77).
 - **App desktop.** Le scritture del salvataggio del simulatore vanno una alla volta (prima due salvataggi ravvicinati
   potevano lasciare un file JSON rotto o vecchio) e se il file è rotto si legge la copia `.bak` (#26).
+- **App desktop, sicurezza.** La Content-Security-Policy dell'eseguibile non contiene più l'indirizzo del server di
+  sviluppo (`ws://127.0.0.1:5173` si aggiunge solo con `vite`, sulla porta del server) e la pagina non ottiene nessun
+  permesso (fotocamera, microfono, posizione, notifiche…), che Electron altrimenti concede (#62).
+- **Finestra minima (1024 × 640).** La barra in alto si compatta davvero (prima la colonna della pagina si allargava
+  ai pulsanti e la barra adattiva non scattava): Grafica, Lingua, Fonti e la ✕ della scheda restano sullo schermo (#32).
+- **Laboratorio molecolare.** L'etichetta sopra il titolo è «Molecole e reazioni» invece di «Simulatore», che è il
+  nome del gioco (#34).
+- **Dati degli elementi.** Il tellurio ha tutti gli isotopi naturali (¹²⁰Te e ¹²³Te, somma 100 %, #30); ¹¹⁶Cd, ¹²⁴Xe,
+  ¹³⁰Ba, ¹⁵²Gd, ¹⁷⁴Hf e ⁷⁸Kr sono radionuclidi primordiali con la loro emivita, come ¹²⁸Te e ¹³⁰Te, e c'è la doppia
+  cattura elettronica (#31); elettronegatività stimate per Pm, Eu, Tb e Yb (con l'etichetta «stima»), affinità
+  elettroniche misurate per Ca, Sr, Ba, Lu e Hf e «anione instabile» per He, Be, N, i gas nobili, Mg, Mn, Zn, Cd e Hg
+  invece della riga mancante (#50). `npm run data` avvisa se le abbondanze di un elemento si scostano da 100 % più
+  di 0,1 %.
+- **Inglese.** Le sigle dei decadimenti sono quelle inglesi (EC, IT, SF, 2EC, #28); i nomi IUPAC Aluminium e Caesium,
+  e la ricerca trova anche «aluminum» e «cesium» (#47); «hot solution» e «pressure» nelle condizioni del catalogo (#56).
+- **Visualizzatore 3D.** Le emivite lunghe si abbreviano in «2,6 Ma» e «4,5 Ga» invece di «2,6 milioni di a» (#29).
+- **Scheda e glossario.** Il periodo non è sempre il numero di gusci: il palladio (periodo 5) ne ha 4, e la scheda lo
+  spiega (il 5s resta vuoto) (#61).
+- **Documentazione.** I numeri del README sono quelli dei dati (88 termini, 48 reagenti dell'armadio, 501 reazioni del
+  simulatore con scaffale e armadio, 313 con il solo scaffale, ΔH° per 931 reazioni, 1146 reazioni nella sandbox) e un
+  test li controlla (#33); le note «non in libreria» di KO₂, U₃O₈, FeS e [Cu(NH₃)₄]²⁺ rimandano alle reazioni che li
+  formano, e un test controlla che una nota così nomini una sostanza che manca davvero (#45).
 
 ## [0.9.2] — 2026-10-30 — Aggiornamenti automatici e barra che ci sta sempre
 

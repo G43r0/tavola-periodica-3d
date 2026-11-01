@@ -10,6 +10,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { APPEARANCE } from './appearance.js';
 import { mulberry32 } from '../viewer/orbital-math.js';
+import { specimenSpin } from '../ui/motion.js';
 
 const GROUND_Y = -0.52;
 
@@ -598,7 +599,8 @@ export function createSpecimenView() {
   let raf = 0;
   let last = 0;
   let time = 0;
-  const rot = { yaw: 0.4, pitch: 0, vyaw: 0.35, dragging: false, lastX: 0, lastY: 0, idle: 0 };
+  const spin = specimenSpin();
+  const rot = { yaw: 0.4, pitch: 0, vyaw: spin, dragging: false, lastX: 0, lastY: 0, idle: 0 };
 
   const observer = new IntersectionObserver((entries) => {
     visible = entries.some((e) => e.isIntersecting);
@@ -624,8 +626,8 @@ export function createSpecimenView() {
     time += dt;
     if (!rot.dragging) {
       rot.idle += dt;
-      // dopo un trascinamento riprende piano la rotazione automatica
-      const target = rot.idle > 1.5 ? 0.35 : rot.vyaw;
+      // dopo un trascinamento riprende piano la rotazione automatica (con «riduci movimento» si ferma)
+      const target = rot.idle > 1.5 ? spin : rot.vyaw;
       rot.vyaw += (target - rot.vyaw) * (1 - Math.exp(-dt * 1.5));
       rot.yaw += rot.vyaw * dt;
       rot.pitch *= 1 - Math.min(1, dt * 0.8);

@@ -134,7 +134,7 @@ Il file `src/data/elements.json` è **generato** da `scripts/build-data.mjs` a p
 | `data-sources/curated/*.mjs` | Nomi italiani, pesi atomici standard IUPAC/CIAAW, isotopi (abbondanze IUPAC, emivite NUBASE), raggi covalenti (Cordero 2008), stati di ossidazione, storia, origine del nome, usi, presenza in natura, correzioni NIST/CRC dove PubChem è impreciso |
 | `src/chem/electron-config.js` | Configurazioni elettroniche (regola di Madelung + eccezioni NIST) ed elettroni per guscio |
 | `data-sources/xray-data-booklet/` | X-ray Data Booklet (LBNL), tab. 1-1: energie di legame degli elettroni interni, Z = 1–92 (→ `src/data/binding-energies.json`) |
-| `src/chem/particles.js`, `nuclear.js` | Costanti CODATA 2022 e PDG 2024 (masse, cariche, quark, vita media del neutrone); energie di legame nucleari AME2020 per A ≤ 22 |
+| `src/chem/particles.js`, `nuclear.js` | Costanti CODATA 2022 e PDG 2024 (masse, cariche, quark, vita media del neutrone); energie di legame nucleari AME2020 dei 2548 nuclei misurati (`src/data/ame2020.js`, da `scripts/build-ame.mjs`) |
 
 Dopo aver modificato un file in `data-sources/`, rigenera i JSON (`elements.json` e `binding-energies.json`):
 
@@ -301,10 +301,10 @@ nel pennello). È una «sabbiera» a particelle ispirata a *The Powder Toy*: una
   condizioni scritte (soluzione acquosa, riscaldamento, innesco, luce, scintilla) e il calore dal ΔH°: precipitazioni
   (AgNO₃ + NaCl → AgCl, Pb(NO₃)₂ + KI → PbI₂ giallo), neutralizzazioni, metalli e acidi (lo zinco sviluppa idrogeno,
   il rame no), combustioni dei combustibili (metano, etanolo, benzina…), decomposizioni termiche (CaCO₃ → CaO + CO₂),
-  **catalizzatori** (H₂O₂ si decompone solo vicino a MnO₂) e detonazioni (nitroglicerina, TNT, nitrometano). 1149
+  **catalizzatori** (H₂O₂ si decompone solo vicino a MnO₂) e detonazioni (nitroglicerina, TNT, nitrometano). 1146
   reazioni usano il motore del catalogo, 93 coincidono con le regole «a mano» (combustioni, metallo + alogeno, metallo +
-  acqua); restano escluse, con il motivo, solo 107: equilibri (⇌), reazioni con catalizzatori non specificati o assenti
-  e quelle che richiedono un organismo vivente. Un composto infiammabile senza combustione in catalogo brucia comunque, e
+  acqua); restano escluse, con il motivo, solo 110: equilibri (⇌), reazioni con catalizzatori non specificati o assenti,
+  quelle in due passaggi (serve un intermedio) e quelle che richiedono un organismo vivente. Un composto infiammabile senza combustione in catalogo brucia comunque, e
   quelli organici che si decompongono **carbonizzano** (lo zucchero scaldato lascia carbonio).
 - **Stati fisici reali**: ogni elemento è solido, liquido o gas in base a temperatura di fusione e di ebollizione
   (sublimazione per carbonio e arsenico). Nella scheda «Posa come» si sceglie lo stato (es. azoto liquido, ferro
@@ -398,7 +398,7 @@ una spiegazione in tutte e tre le lingue.
 sandbox). Quando è attiva:
 
 - **evidenzia** una parola o una frase, oppure fai **clic destro** su qualsiasi cosa: si apre una scheda che la spiega;
-- riconosce gli **81 termini** di chimica e fisica del glossario (con sinonimi e plurali), le **famiglie**, i **gruppi** e i
+- riconosce gli **88 termini** di chimica e fisica del glossario (con sinonimi e plurali), le **famiglie**, i **gruppi** e i
   **periodi**, i **118 elementi** (con «Apri la scheda»), le **558 sostanze** del laboratorio (con la formula), le
   **funzioni** dell'interfaccia (ogni pulsante, interruttore e area) e i **tasti**: su un `<kbd>` la scheda dice cosa fa
   quel tasto in ogni parte dell'app;
@@ -537,9 +537,9 @@ Daniell e contatore del gas.
   dai dati (indicativi) per le altre sostanze del magazzino. Barattoli e bottiglie sono un po' più grandi del vero (+15 % e
   +10 %), per riconoscerli e prenderli meglio. Sodio, potassio e litio stanno sotto olio di paraffina (la spatola prende
   il pezzetto di metallo e lascia l'olio). Nel magazzino del Laboratorio libero, oltre alle 558 sostanze, c'è l'**armadio
-  della scuola**: 47 reagenti d'uso (acidi e basi 1 M, sali 0,1 M, candeggina, acqua ossigenata 3 %, metalli, ossidi,
+  della scuola**: 48 reagenti d'uso (acidi e basi 1 M, sali 0,1 M, candeggina, acqua ossigenata 3 %, metalli, ossidi,
   carbonati…) divisi per famiglia con il colore del tappo. Con lo scaffale, l'armadio, l'alimentatore e le bombole si
-  possono fare 504 reazioni del catalogo (317 con il solo scaffale; `node scripts/coverage.mjs` dà la tabella per gruppo,
+  possono fare 501 reazioni del catalogo (313 con il solo scaffale; `node scripts/coverage.mjs` dà la tabella per gruppo,
   un test ne fissa il minimo).
 - **Strumenti di misura e apparecchi**: il **termometro** e il **pH-metro** si immergono nel recipiente guardato e si
   leggono nella finestrella (il termometro sale piano, il pH-metro si stabilizza in un attimo). La **pipetta graduata**
@@ -590,14 +590,14 @@ Daniell e contatore del gas.
   sposta l'idrogeno dall'HCl: E° = +0,34 V), serve la corrente dell'alimentatore, la soluzione non conduce, o la reazione
   chiede una scarica, raggi UV o vapore. La temperatura accelera le
   reazioni lente (fattore di Arrhenius, circa il doppio ogni 10 °C). Le entalpie di formazione di 176 sostanze comuni
-  (tabelle NBS e CRC) danno il ΔH° a 1045 reazioni del catalogo invece di 599, anche nel laboratorio molecolare e nella
+  (tabelle NBS e CRC) danno il ΔH° a 931 reazioni del catalogo invece di 315, anche nel laboratorio molecolare e nella
   sandbox.
 - **Quaderno di laboratorio**: è un oggetto sul bancone, davanti a sinistra (un clic lo apre; anche `N`, la pausa e il
   menu). Ha due schede. Il **tutorial** ha 18 pagine illustrate, dai comandi alle tecniche: il libro, muoversi, prendere e girare,
   versare, pesare, acqua e lavaggio, scaldare, pH e temperatura, pipetta, buretta, filtrare, crogiolo e pinza,
   distillare, elettrolisi, gas dalle bombole, reazioni, sicurezza e rifiuti. Nelle **reazioni scoperte** ogni reazione
   osservata la prima volta resta scritta, tra una partita e l'altra, con l'equazione, il ΔH°, che cosa si è visto e
-  quando; le 1349 pagine sono divise nei 14 gruppi del catalogo con la percentuale scoperta tra le 1231 che il simulatore
+  quando; le 1349 pagine sono divise nei 14 gruppi del catalogo con la percentuale scoperta tra le 1228 che il simulatore
   sa fare, e quelle che non sa fare dicono perché. Ogni pagina si apre nel laboratorio molecolare e, se c'è, nella
   ricetta del libro.
 - **Etichette verso di sé**: un barattolo o una bottiglia preso in mano mostra sempre l'etichetta a chi lo tiene.

@@ -205,8 +205,8 @@ export const SHELF = {
 /**
  * Armadio dei reagenti della scuola: le soluzioni, i solidi e i liquidi di un laboratorio scolastico, con le
  * concentrazioni d'uso. Scelti per coprire le reazioni del catalogo che il simulatore sa fare: con lo scaffale se ne
- * fanno 383, contro le 144 dello scaffale da solo (coverage.js; la tabella per gruppo con node scripts/coverage.mjs);
- * un test ne fissa il minimo per gruppo. Nel Laboratorio libero si prendono dal magazzino; nella Carriera si
+ * fanno molte di più che con lo scaffale da solo (coverage.js; i totali nel README, controllati da tests/docs, e la
+ * tabella per gruppo con node scripts/coverage.mjs); un test ne fissa il minimo per gruppo. Nel Laboratorio libero si prendono dal magazzino; nella Carriera si
  * sbloccheranno capitolo per capitolo. Contenitore, tappo ed etichetta li sceglie stock.js; i pericoli sono dedotti
  * dai dati (indicativi), come per il magazzino.
  */

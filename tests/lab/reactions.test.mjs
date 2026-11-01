@@ -3,11 +3,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createLabElements } from '../../src/lab/chem/elements-lab.js';
-import { createLibraryIndex } from '../../src/lab/chem/identify.js';
+import { createLibraryIndex, displayFormula } from '../../src/lab/chem/identify.js';
 import { speciesInfo, balance, reactionEnthalpy, balanceTable } from '../../src/lab/chem/reactions.js';
 import { MOLECULES } from '../../src/lab/data/molecules.js';
 import { REACTIONS, REACTION_GROUPS, BASE_REACTIONS } from '../../src/lab/data/reactions.js';
 import { MAX_COEF } from '../../src/lab/reaction-panel.js';
+import { CATALOG } from '../../src/lab/data/reactions-catalogo.js';
+import { NOTES_EN } from '../../src/i18n/data/reactions-en.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
 const lab = createLabElements(elements);
@@ -113,4 +115,20 @@ test('«Bilancia tu»: ogni reazione del catalogo si può bilanciare con i pulsa
   const over = REACTIONS.filter((r) => [...r.reactants, ...r.products].some(([c]) => c > MAX_COEF)).map((r) => r.id);
   assert.deepEqual(over, []);
   assert.ok(REACTIONS.some((r) => r.reactants.some(([c]) => c > 20)), 'il catalogo ha coefficienti oltre 20');
+});
+
+test('le note «non in libreria» nominano una sostanza che nella libreria manca davvero', () => {
+  const esc = (f) => f.replace(/[[\]()]/g, '\\$&');
+  const formulas = MOLECULES.map((m) => sp(m.id)).map((s) => s.formula ?? displayFormula(lab, s.atoms, 0, { ionic: s.ionic }));
+  const notes = [
+    ...CATALOG.filter((c) => /in libreria/.test(c.note ?? '')).map((c) => [c.n, c.note]),
+    ...Object.entries(NOTES_EN).filter(([, t]) => /in the library/.test(t)),
+  ];
+  assert.ok(notes.length > 0);
+  for (const [n, note] of notes) {
+    // prima KO₂, U₃O₈, FeS e il complesso del rame erano «non in libreria», ma ci sono (e qualcuno ha la sua reazione)
+    const found = formulas.filter((f) => new RegExp(`(?<![A-Za-z0-9₀-₉([])${esc(f)}(?![A-Za-z0-9₀-₉])`).test(note));
+    assert.deepEqual(found, [], `n. ${n}: ${note}`);
+    assert.match(note, /[A-Z][a-z]?[₀-₉]/, `n. ${n}: la nota non dice quale sostanza manca`);
+  }
 });

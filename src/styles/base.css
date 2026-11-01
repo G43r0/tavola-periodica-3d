@@ -343,3 +343,11 @@ kbd {
   font-size: 13px;
   color: var(--text-1);
 }
+.info-dialog__version {
+  margin-top: 1.5rem;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+}
+.info-dialog__version a {
+  color: var(--accent);
+}

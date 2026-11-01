@@ -13,10 +13,11 @@ import { particleHtml, quarkTooltip } from './particle-panel.js';
 import { nucleusRadius, NUCLEON_R } from './packing.js';
 import { electronList, orbitalOccupancy, isValence, orbitalHtml } from '../chem/quantum-numbers.js';
 import { L_LETTERS } from '../chem/electron-config.js';
-import { viewerIsotopes } from '../chem/nuclear.js';
+import { viewerIsotopes, shortHalfLife } from '../chem/nuclear.js';
 import { CATEGORY } from '../data/categories.js';
 import { esc, fmtNumber, fmtAbundance, isotopeNotation } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
+import { viewerAutoplay } from '../ui/motion.js';
 import { createT } from '../i18n/index.js';
 
 const ORIGIN = new THREE.Vector3();
@@ -311,7 +312,7 @@ export function createAtomViewer(elements, { onClose }) {
     neutrons: 0,
     mode: 'bohr',
     exploded: false,
-    playing: true,
+    playing: viewerAutoplay(), // in pausa con «riduci movimento»
     speed: 1,
     show: { labels: true, shells: true, orbitals: false, axes: false },
     panel: window.innerWidth > 900,
@@ -381,7 +382,7 @@ export function createAtomViewer(elements, { onClose }) {
 
   function isoShort(iso) {
     if (iso.abundance !== null) return fmtAbundance(iso);
-    if (iso.halfLife) return `t½ ${iso.halfLife.text.replace(/ (anni|years)$/, t('yearsShort'))}`;
+    if (iso.halfLife) return `t½ ${shortHalfLife(iso.halfLife.text, t('yearsShort'))}`;
     return '';
   }
 

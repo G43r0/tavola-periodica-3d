@@ -9,6 +9,7 @@
 // Versione 1 (fino alla G5): { career: { index, money, stars[] }, chemMode, legend, fov, notebook }, con le cinque
 //   esercitazioni di allora in ordine.
 import { newCareer, chapterExercises, PASS_STARS } from './career.js';
+import { prefersReducedMotion } from '../ui/motion.js';
 
 export const SAVE_VERSION = 2;
 /** Volume dell'audio per chi non l'ha mai cambiato (0–1). */
@@ -108,7 +109,8 @@ export function migrate(raw, now = new Date().toISOString(), name = defaultName)
     fov: Number.isFinite(Number(settings.fov)) ? Number(settings.fov) : undefined,
     volume: settings.volume !== undefined && settings.volume !== null && Number.isFinite(Number(settings.volume)) ? Math.max(0, Math.min(1, Number(settings.volume))) : DEFAULT_VOLUME,
     muted: settings.muted === true,
-    shake: settings.shake !== false,
+    // chi non l'ha mai scelta: spenta se il sistema chiede di ridurre il movimento
+    shake: typeof settings.shake === 'boolean' ? settings.shake : !prefersReducedMotion(),
   };
   const list = save.profiles.filter((p) => p && typeof p === 'object').slice(0, MAX_PROFILES);
   // id: quelli scritti restano (il primo, se è doppio); a chi non ce l'ha uno che nessun altro profilo usa

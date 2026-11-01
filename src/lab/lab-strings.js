@@ -3,7 +3,7 @@
 export const LAB_STRINGS = {
   it: {
     back: 'Tavola periodica',
-    eyebrow: 'Simulatore',
+    eyebrow: 'Molecole e reazioni',
     title: 'Laboratorio molecolare',
     tool: 'Strumento',
     move: 'Sposta',
@@ -153,7 +153,7 @@ export const LAB_STRINGS = {
   },
   en: {
     back: 'Periodic table',
-    eyebrow: 'Simulator',
+    eyebrow: 'Molecules and reactions',
     title: 'Molecular laboratory',
     tool: 'Tool',
     move: 'Move',

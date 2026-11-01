@@ -218,7 +218,7 @@ export const GLOSSARY_EN = {
   'term.period': {
     t: 'Period',
     w: 'periods|row|rows',
-    d: 'A row of the periodic table (1 to 7). The period number is the number of occupied electron shells. Moving right along a period, atoms get smaller and hold on to their electrons more tightly.',
+    d: 'A row of the periodic table (1 to 7). The period number is the outermost shell that starts to fill: usually it equals the number of occupied shells. The only exception is palladium (period 5): its 5s stays empty, so only 4 shells are occupied. Moving right along a period, atoms get smaller and hold on to their electrons more tightly.',
     s: ['term.group', 'term.shell'],
   },
   'term.block': {

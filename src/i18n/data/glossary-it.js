@@ -220,7 +220,7 @@ export const GLOSSARY_IT = {
   'term.period': {
     t: 'Periodo',
     w: 'periodi|riga|righe',
-    d: 'Una riga della tavola periodica (da 1 a 7). Il numero del periodo è il numero di gusci elettronici occupati. Andando verso destra lungo un periodo gli atomi diventano più piccoli e trattengono meglio i loro elettroni.',
+    d: 'Una riga della tavola periodica (da 1 a 7). Il numero del periodo è il guscio più esterno che comincia a riempirsi: di solito coincide con il numero di gusci occupati. Unica eccezione il palladio (periodo 5): il 5s resta vuoto e i gusci occupati sono 4. Andando verso destra lungo un periodo gli atomi diventano più piccoli e trattengono meglio i loro elettroni.',
     s: ['term.group', 'term.shell'],
   },
   'term.block': {

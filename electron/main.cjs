@@ -1,7 +1,9 @@
 // Processo principale Electron: crea la finestra e carica l'interfaccia (offline).
-const { app, BrowserWindow, Menu, shell, ipcMain, net } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, net, session } = require('electron');
 const { setupUpdater } = require('./updater.cjs');
 const { createSaveFile } = require('./save-file.cjs');
+const { menuTemplate } = require('./menu.cjs');
+const { lockDownSession } = require('./security.cjs');
 const path = require('node:path');
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
@@ -47,34 +49,9 @@ function createWindow() {
   else mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
 }
 
-// Voci del menu nella lingua scelta nell'app («eli6» usa l'italiano).
-const MENU_TEXT = {
-  it: { quit: 'Esci', view: 'Visualizza', reload: 'Ricarica', resetZoom: 'Zoom predefinito', zoomIn: 'Aumenta zoom', zoomOut: 'Riduci zoom', fullscreen: 'Schermo intero', devTools: 'Strumenti per sviluppatori' },
-  en: { quit: 'Quit', view: 'View', reload: 'Reload', resetZoom: 'Actual size', zoomIn: 'Zoom in', zoomOut: 'Zoom out', fullscreen: 'Full screen', devTools: 'Developer tools' },
-};
-
+// Voci del menu nella lingua scelta nell'app (electron/menu.cjs).
 function buildMenu(lang = 'it') {
-  const m = MENU_TEXT[lang] ?? MENU_TEXT.it;
-  const template = [
-    {
-      label: 'File',
-      submenu: [{ role: 'quit', label: m.quit }],
-    },
-    {
-      label: m.view,
-      submenu: [
-        { role: 'reload', label: m.reload },
-        { type: 'separator' },
-        { role: 'resetZoom', label: m.resetZoom },
-        { role: 'zoomIn', label: m.zoomIn },
-        { role: 'zoomOut', label: m.zoomOut },
-        { type: 'separator' },
-        { role: 'togglefullscreen', label: m.fullscreen },
-        ...(isDev ? [{ type: 'separator' }, { role: 'toggleDevTools', label: m.devTools }] : []),
-      ],
-    },
-  ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate(lang, { isDev })));
 }
 
 ipcMain.on('set-language', (_event, code) => buildMenu(code === 'en' ? 'en' : 'it'));
@@ -98,6 +75,13 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
+    lockDownSession(session.defaultSession);
+    app.setAboutPanelOptions({
+      applicationName: 'Tavola Periodica 3D',
+      applicationVersion: app.getVersion(),
+      version: `Electron ${process.versions.electron} · Chrome ${process.versions.chrome}`,
+      credits: `Electron ${process.versions.electron} · Chrome ${process.versions.chrome} · Node.js ${process.versions.node}`,
+    });
     buildMenu();
     createWindow();
     setupUpdater({ app, ipcMain, shell, net, getWindow: () => mainWindow, isDev }).schedule();
