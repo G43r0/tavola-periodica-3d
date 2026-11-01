@@ -8,27 +8,92 @@ export const TIER = {
   UNKNOWN: 3, // Z ≥ 104: chimica sconosciuta (proprietà previste)
 };
 
-const METAL_CATEGORIES = new Set(['alkali', 'alkaline-earth', 'transition', 'post-transition', 'lanthanide', 'actinide']);
+const METAL_CATEGORIES = new Set([
+  'alkali',
+  'alkaline-earth',
+  'transition',
+  'post-transition',
+  'lanthanide',
+  'actinide',
+]);
 
 // Elettronegatività di Pauling assenti in PubChem (CRC Handbook; Rn stima).
 const EN_FALLBACK = { Pm: 1.13, Eu: 1.2, Tb: 1.1, Yb: 1.1, Rn: 2.2 };
 
 // Raggi covalenti singoli (pm) mancanti in Cordero 2008: Pyykkö & Atsumi 2009 (valori teorici).
 const COV_FALLBACK = {
-  97: 168, 98: 168, 99: 165, 100: 167, 101: 173, 102: 176, 103: 161, 104: 157, 105: 149, 106: 143,
-  107: 141, 108: 134, 109: 129, 110: 128, 111: 121, 112: 122, 113: 136, 114: 143, 115: 162, 116: 175,
-  117: 165, 118: 157,
+  97: 168,
+  98: 168,
+  99: 165,
+  100: 167,
+  101: 173,
+  102: 176,
+  103: 161,
+  104: 157,
+  105: 149,
+  106: 143,
+  107: 141,
+  108: 134,
+  109: 129,
+  110: 128,
+  111: 121,
+  112: 122,
+  113: 136,
+  114: 143,
+  115: 162,
+  116: 175,
+  117: 165,
+  118: 157,
 };
 
 // Raggi ionici (pm), Shannon 1976, numero di coordinazione 6 (N³⁻: coordinazione 4).
 const IONIC_RADII = {
-  'Li+1': 76, 'Na+1': 102, 'K+1': 138, 'Rb+1': 152, 'Cs+1': 167, 'Ag+1': 115, 'Tl+1': 150, 'Cu+1': 77,
-  'Be+2': 45, 'Mg+2': 72, 'Ca+2': 100, 'Sr+2': 118, 'Ba+2': 135, 'Ra+2': 148, 'Zn+2': 74, 'Cd+2': 95,
-  'Fe+2': 78, 'Co+2': 74.5, 'Ni+2': 69, 'Cu+2': 73, 'Mn+2': 83, 'Pb+2': 119, 'Hg+2': 102, 'Sn+2': 118,
-  'Al+3': 53.5, 'Ga+3': 62, 'In+3': 80, 'Fe+3': 64.5, 'Cr+3': 61.5, 'Sc+3': 74.5, 'Y+3': 90, 'La+3': 103.2,
-  'Ti+4': 60.5, 'Sn+4': 69, 'Pb+4': 77.5, 'Zr+4': 72,
-  'F-1': 133, 'Cl-1': 181, 'Br-1': 196, 'I-1': 220, 'H-1': 140,
-  'O-2': 140, 'S-2': 184, 'Se-2': 198, 'Te-2': 221, 'N-3': 146,
+  'Li+1': 76,
+  'Na+1': 102,
+  'K+1': 138,
+  'Rb+1': 152,
+  'Cs+1': 167,
+  'Ag+1': 115,
+  'Tl+1': 150,
+  'Cu+1': 77,
+  'Be+2': 45,
+  'Mg+2': 72,
+  'Ca+2': 100,
+  'Sr+2': 118,
+  'Ba+2': 135,
+  'Ra+2': 148,
+  'Zn+2': 74,
+  'Cd+2': 95,
+  'Fe+2': 78,
+  'Co+2': 74.5,
+  'Ni+2': 69,
+  'Cu+2': 73,
+  'Mn+2': 83,
+  'Pb+2': 119,
+  'Hg+2': 102,
+  'Sn+2': 118,
+  'Al+3': 53.5,
+  'Ga+3': 62,
+  'In+3': 80,
+  'Fe+3': 64.5,
+  'Cr+3': 61.5,
+  'Sc+3': 74.5,
+  'Y+3': 90,
+  'La+3': 103.2,
+  'Ti+4': 60.5,
+  'Sn+4': 69,
+  'Pb+4': 77.5,
+  'Zr+4': 72,
+  'F-1': 133,
+  'Cl-1': 181,
+  'Br-1': 196,
+  'I-1': 220,
+  'H-1': 140,
+  'O-2': 140,
+  'S-2': 184,
+  'Se-2': 198,
+  'Te-2': 221,
+  'N-3': 146,
 };
 
 /** Legami massimi (anche come ione) per i gruppi principali. */
@@ -70,7 +135,9 @@ function valenceElectrons(z, group) {
 }
 
 const positiveStates = (el) =>
-  [...new Set((el.oxidationStates || []).map((s) => Number(s.replace('−', '-'))).filter((n) => n > 0))].sort((a, b) => a - b);
+  [...new Set((el.oxidationStates || []).map((s) => Number(s.replace('−', '-'))).filter((n) => n > 0))].sort(
+    (a, b) => a - b,
+  );
 
 /**
  * @param {object[]} elements array di elements.json
@@ -131,7 +198,7 @@ export function createLabElements(elements, categoryColors = {}) {
       rCovEstimated,
       mass: el.atomicMass.value,
       massIsNumber: el.atomicMass.isMassNumber,
-      color: el.cpkColor ? `#${el.cpkColor.replace('#', '')}` : categoryColors[el.category]?.color ?? '#8a96a8',
+      color: el.cpkColor ? `#${el.cpkColor.replace('#', '')}` : (categoryColors[el.category]?.color ?? '#8a96a8'),
     });
   }
   return {
@@ -150,7 +217,8 @@ export function ionicRadius(info, charge) {
 /** Carica tipica dello ione monoatomico di un elemento (es. Na → +1, O → −2), o null. */
 export function typicalIonCharge(info) {
   if (info.tier === 1) {
-    if (info.metal) return info.group <= 2 ? info.group : info.group === 13 ? (info.z === 81 ? 1 : 3) : info.valences[0];
+    if (info.metal)
+      return info.group <= 2 ? info.group : info.group === 13 ? (info.z === 81 ? 1 : 3) : info.valences[0];
     if (info.nobleGas) return null;
     if (info.z === 1) return -1;
     return -(8 - info.V);

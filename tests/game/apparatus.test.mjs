@@ -8,7 +8,19 @@ import { createLabChemistry, Mixture } from '../../src/game/mixture.js';
 import { whyNot } from '../../src/game/signals.js';
 import { DEFS } from '../../src/game/items.js';
 import {
-  STOPCOCK, VOLTS, CYLINDER_GASES, GAS_FLOW, HOT_T, buretteReading, nextStopcock, nextVolts, nextLevel, relax, condensable, splitVapours, displayCurrent,
+  STOPCOCK,
+  VOLTS,
+  CYLINDER_GASES,
+  GAS_FLOW,
+  HOT_T,
+  buretteReading,
+  nextStopcock,
+  nextVolts,
+  nextLevel,
+  relax,
+  condensable,
+  splitVapours,
+  displayCurrent,
 } from '../../src/game/apparatus-logic.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
@@ -25,7 +37,10 @@ const run = (m, seconds, env = {}, feed = null) => {
   }
   return out;
 };
-const gas = (key, mol = GAS_FLOW * 0.05) => (m) => m.addSpecies(ctx.id(key), mol);
+const gas =
+  (key, mol = GAS_FLOW * 0.05) =>
+  (m) =>
+    m.addSpecies(ctx.id(key), mol);
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg ?? ''} ${a} ≠ ${b} ± ${tol}`);
 
 test('buretta: lo 0 in alto, lettura a 0,05 mL, rubinetto chiuso → goccia → filo → aperto', () => {
@@ -33,7 +48,10 @@ test('buretta: lo 0 in alto, lettura a 0,05 mL, rubinetto chiuso → goccia → 
   assert.equal(buretteReading(25.03), 24.95);
   assert.equal(buretteReading(0), 50);
   assert.ok(buretteReading(52) < 0, 'sopra lo zero');
-  assert.deepEqual([0, 1, 2, 3].map((s) => nextStopcock(s, 1)), [1, 2, 3, 0]);
+  assert.deepEqual(
+    [0, 1, 2, 3].map((s) => nextStopcock(s, 1)),
+    [1, 2, 3, 0],
+  );
   assert.equal(nextStopcock(2, -1), 0, 'il clic destro chiude');
   assert.equal(STOPCOCK[0], 0);
   assert.ok(STOPCOCK[1] < STOPCOCK[2] && STOPCOCK[2] < STOPCOCK[3]);
@@ -73,9 +91,19 @@ test('refrigerante: condensano acqua ed etanolo, non CO₂, H₂ né O₂', () =
   assert.ok(condensable(ctx, ctx.id('etanolo')));
   assert.ok(condensable(ctx, ctx.id('acetone')));
   for (const k of ['co2', 'H', 'O', 'nh3']) assert.ok(!condensable(ctx, ctx.id(k)), k);
-  const { liquid, gas: out } = splitVapours(ctx, [[WATER, 0.01], [ctx.id('co2'), 0.002], [ctx.id('etanolo'), 0.003]]);
-  assert.deepEqual(liquid.map(([s]) => s), [WATER, ctx.id('etanolo')]);
-  assert.deepEqual(out.map(([s]) => s), [ctx.id('co2')]);
+  const { liquid, gas: out } = splitVapours(ctx, [
+    [WATER, 0.01],
+    [ctx.id('co2'), 0.002],
+    [ctx.id('etanolo'), 0.003],
+  ]);
+  assert.deepEqual(
+    liquid.map(([s]) => s),
+    [WATER, ctx.id('etanolo')],
+  );
+  assert.deepEqual(
+    out.map(([s]) => s),
+    [ctx.id('co2')],
+  );
 });
 
 test('elettrolisi: corrente solo con un elettrolita; Na₂SO₄ dà H₂ e O₂, HCl dà H₂ e Cl₂, NaCl la soda', () => {
@@ -84,7 +112,7 @@ test('elettrolisi: corrente solo con un elettrolita; Na₂SO₄ dà H₂ e O₂,
   assert.equal(r0.reactions.size, 0);
   assert.ok(r0.current < 0.005, `acqua distillata: ${r0.current} A`);
   assert.equal(whyNot(pure, { volts: 6 })[0]?.why, 'conduct', 'perché non reagisce: non conduce');
-  assert.equal(whyNot(pure, {})[0]?.why, 'electrolysis', 'senza tensione serve l\'alimentatore');
+  assert.equal(whyNot(pure, {})[0]?.why, 'electrolysis', "senza tensione serve l'alimentatore");
   const sulfate = Mixture.solution(ctx, 'na2so4', 0.5, 100);
   const r1 = run(sulfate, 5, { volts: 6 });
   assert.ok(r1.current > 0.3 && r1.current < 1.5, `Na₂SO₄ 0,5 M a 6 V: ${r1.current} A`);
@@ -98,10 +126,16 @@ test('elettrolisi: corrente solo con un elettrolita; Na₂SO₄ dà H₂ e O₂,
   // il cloro al primo minuto resta in buona parte sciolto (è molto più solubile dell'idrogeno)
   const hcl = Mixture.solution(ctx, 'hcl', 1, 100);
   const acid = run(hcl, 5, { volts: 6 });
-  assert.ok(acid.gases.get(ctx.id('H')) > 0 && (acid.gases.get(ctx.id('Cl')) ?? 0) + hcl.amount('Cl') > 1e-4, 'HCl → H₂ + Cl₂');
+  assert.ok(
+    acid.gases.get(ctx.id('H')) > 0 && (acid.gases.get(ctx.id('Cl')) ?? 0) + hcl.amount('Cl') > 1e-4,
+    'HCl → H₂ + Cl₂',
+  );
   const brine = Mixture.solution(ctx, 'nacl', 1, 100);
   run(brine, 10, { volts: 12 });
-  assert.ok(brine.amount('naoh') + brine.amount('naclo') > 1e-4, 'cloro-soda: si forma NaOH (e con il cloro l\'ipoclorito)');
+  assert.ok(
+    brine.amount('naoh') + brine.amount('naclo') > 1e-4,
+    "cloro-soda: si forma NaOH (e con il cloro l'ipoclorito)",
+  );
 });
 
 test('bombole: i gas si sciolgono o reagiscono nel liquido dove gorgogliano', () => {
@@ -109,7 +143,7 @@ test('bombole: i gas si sciolgono o reagiscono nel liquido dove gorgogliano', ()
   for (const k of CYLINDER_GASES) assert.ok(ctx.id(k), k);
   const lime = Mixture.solution(ctx, 'caoh2', 0.02, 100);
   run(lime, 3, {}, gas('co2'));
-  assert.ok(lime.amount('caco3') > 1e-4, 'la CO₂ intorbida l\'acqua di calce');
+  assert.ok(lime.amount('caco3') > 1e-4, "la CO₂ intorbida l'acqua di calce");
   const kbr = Mixture.solution(ctx, 'kbr', 0.1, 100);
   run(kbr, 10, {}, gas('Cl'));
   assert.ok(kbr.amount('Br') > 1e-4, 'il cloro sposta il bromo');
@@ -123,7 +157,7 @@ test('bombole: i gas si sciolgono o reagiscono nel liquido dove gorgogliano', ()
   const cuo = Mixture.solid(ctx, 'cuo', 2);
   cuo.T = 700;
   const hot = run(cuo, 5, { heatW: 60, lossWK: 0.1, open: false }, gas('H'));
-  assert.ok(hot.reactions.has('cat-1070') && cuo.amount('Cu') > 1e-4, 'l\'idrogeno riduce l\'ossido di rame caldo');
+  assert.ok(hot.reactions.has('cat-1070') && cuo.amount('Cu') > 1e-4, "l'idrogeno riduce l'ossido di rame caldo");
 });
 
 test('filtrazione: passa il liquido con i soluti, il precipitato resta sulla carta', () => {

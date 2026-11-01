@@ -17,10 +17,13 @@ const COOL = { lossWK: 2, containerC: 90, area: 30 };
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg ?? ''} ${a} ≠ ${b} ± ${tol}`);
 
 test('dati del gioco: le sostanze citate esistono nella libreria', () => {
-  for (const k of [...Object.keys(SOLUBILITY), ...Object.keys(HYDRATES), ...Object.values(HYDRATES).map(([h]) => h)]) assert.ok(ctx.id(k), `solubilità: ${k}`);
-  for (const k of ['hcl', 'h2so4', 'naoh', 'caoh2', 'acido-acetico', 'nh3', 'na2co3', 'nahco3', 'nh4cl']) assert.ok(ctx.acidBase.has(ctx.id(k)), `acido/base: ${k}`);
+  for (const k of [...Object.keys(SOLUBILITY), ...Object.keys(HYDRATES), ...Object.values(HYDRATES).map(([h]) => h)])
+    assert.ok(ctx.id(k), `solubilità: ${k}`);
+  for (const k of ['hcl', 'h2so4', 'naoh', 'caoh2', 'acido-acetico', 'nh3', 'na2co3', 'nahco3', 'nh4cl'])
+    assert.ok(ctx.acidBase.has(ctx.id(k)), `acido/base: ${k}`);
   for (const k of TOXIC_GASES) assert.ok(ctx.id(k), `gas tossico: ${k}`);
-  for (const r of Object.values(SHELF)) for (const k of [r.solute, r.solid, r.liquid].filter(Boolean)) assert.ok(ctx.id(k), `scaffale: ${k}`);
+  for (const r of Object.values(SHELF))
+    for (const k of [r.solute, r.solid, r.liquid].filter(Boolean)) assert.ok(ctx.id(k), `scaffale: ${k}`);
   for (const k of Object.keys(FLAME_SALTS)) assert.ok(ctx.id(k), `saggio alla fiamma: ${k}`);
   assert.ok(Object.keys(ACID_BASE).filter((k) => ctx.id(k)).length > 40);
   assert.ok(ctx.rxs.length > 1000, 'reazioni del catalogo disponibili');
@@ -33,7 +36,7 @@ test('pH: acqua, acidi e basi forti e deboli', () => {
   near(Mixture.solution(ctx, 'acido-acetico', 0.1, 50).pH(), 2.88, 0.05, 'acido acetico 0,1 M');
   near(Mixture.solution(ctx, 'nh3', 0.1, 50).pH(), 11.13, 0.05, 'ammoniaca 0,1 M');
   near(Mixture.solution(ctx, 'nacl', 0.5, 50).pH(), 7, 0.01, 'NaCl neutro');
-  assert.equal(Mixture.solid(ctx, 'nacl', 1).pH(), null, 'senza acqua non c\'è pH');
+  assert.equal(Mixture.solid(ctx, 'nacl', 1).pH(), null, "senza acqua non c'è pH");
 });
 
 test('scioglimento: il sale si scioglie col tempo, più in fretta agitando, e dà la molarità giusta', () => {
@@ -57,7 +60,12 @@ test('scioglimento: il sale si scioglie col tempo, più in fretta agitando, e d�
 
 test('titolazione: HCl 0,10 M con NaOH 0,10 M e fenolftaleina vira al punto equivalente', () => {
   const flask = Mixture.solution(ctx, 'hcl', 0.1, 25);
-  flask.add(Mixture.of(ctx, [['water', 1.5 / 18], ['php', 1.5e-3 / 318]]));
+  flask.add(
+    Mixture.of(ctx, [
+      ['water', 1.5 / 18],
+      ['php', 1.5e-3 / 318],
+    ]),
+  );
   const naoh = Mixture.solution(ctx, 'naoh', 0.1, 50);
   flask.add(naoh.take(24.8));
   run(flask, 2);
@@ -71,7 +79,7 @@ test('titolazione: HCl 0,10 M con NaOH 0,10 M e fenolftaleina vira al punto equi
   assert.ok(flask.T > AMBIENT + 0.3, 'la neutralizzazione scalda');
 });
 
-test('pioggia d\'oro: Pb(NO₃)₂ + 2 KI → PbI₂ giallo che precipita', () => {
+test("pioggia d'oro: Pb(NO₃)₂ + 2 KI → PbI₂ giallo che precipita", () => {
   const m = Mixture.solution(ctx, 'pbno32', 0.1, 10);
   m.add(Mixture.solution(ctx, 'ki', 0.1, 20));
   const ev = run(m, 2);
@@ -95,7 +103,7 @@ test('cristalli di solfato di rame: a caldo si scioglie, evapora, raffreddando c
   const blue = m.appearance().liquid;
   assert.ok(blue[2] > blue[0] + 100, 'soluzione azzurra');
   run(m, 40, HOT);
-  assert.ok(m.water < 15, 'metà dell\'acqua evaporata');
+  assert.ok(m.water < 15, "metà dell'acqua evaporata");
   run(m, 90, COOL);
   assert.ok(m.T < AMBIENT + 3, 'raffreddata');
   assert.ok(m.grams('cuso4-5h2o') > 5, `cristalli azzurri (${m.grams('cuso4-5h2o')} g)`);
@@ -113,15 +121,18 @@ test('reazioni con solidi, gas e calore: zinco e acido, bicarbonato scaldato, et
   zn.add(Mixture.solid(ctx, 'Zn', 0.5));
   const ev = run(zn, 10);
   assert.ok(zn.grams('Zn') < 0.2, 'lo zinco si consuma');
-  assert.ok(ev.some((e) => e.gases.some(([sid]) => sid === ctx.id('H'))), 'si sviluppa idrogeno');
+  assert.ok(
+    ev.some((e) => e.gases.some(([sid]) => sid === ctx.id('H'))),
+    'si sviluppa idrogeno',
+  );
   const soda = Mixture.solid(ctx, 'nahco3', 5);
   run(soda, 60, { heatW: 500, lossWK: 1, containerC: 40, area: 5 });
   assert.ok(soda.grams('na2co3') > 3, 'NaHCO₃ → Na₂CO₃');
-  assert.equal(soda.amount('water'), 0, 'l\'acqua prodotta a caldo evapora');
+  assert.equal(soda.amount('water'), 0, "l'acqua prodotta a caldo evapora");
   const eth = Mixture.liquid(ctx, 'etanolo', 20);
-  assert.equal(eth.tick(1 / 30, { flame: true }).ignite, ctx.id('etanolo'), 'l\'etanolo prende fuoco nella fiamma');
+  assert.equal(eth.tick(1 / 30, { flame: true }).ignite, ctx.id('etanolo'), "l'etanolo prende fuoco nella fiamma");
   const burnt = eth.burn(5, ctx.id('etanolo'));
-  assert.ok(burnt > 0 && eth.amount('etanolo') < 20 * 0.789 / 46.07);
+  assert.ok(burnt > 0 && eth.amount('etanolo') < (20 * 0.789) / 46.07);
 });
 
 test('acqua: bolle a 100 °C e il calore in eccesso la fa evaporare', () => {
@@ -159,7 +170,15 @@ test('rifiuti: ogni miscela ha il suo contenitore', () => {
 
 test('pH: il bicarbonato è anfotero (≈ 8,3 a ogni concentrazione) e va nel lavandino', () => {
   near(Mixture.solution(ctx, 'nahco3', 0.1, 100).pH(), 8.3, 0.15, 'NaHCO₃ 0,1 M');
-  near(Mixture.of(ctx, [['water', 50 / 18.015], ['nahco3', 2 / 84.007, true]]).pH(), 8.3, 0.15, '2 g in 50 mL');
+  near(
+    Mixture.of(ctx, [
+      ['water', 50 / 18.015],
+      ['nahco3', 2 / 84.007, true],
+    ]).pH(),
+    8.3,
+    0.15,
+    '2 g in 50 mL',
+  );
   near(Mixture.solution(ctx, 'nahco3', 0.01, 100).pH(), 8.3, 0.2, 'NaHCO₃ 0,01 M');
   assert.equal(wasteClass(Mixture.solution(ctx, 'nahco3', 0.1, 50)), 'sink');
 });
@@ -192,7 +211,7 @@ test('rifiuti: un solvente organico diluito non va in «acidi, basi e sali»; i 
   assert.equal(wasteClass(Mixture.solid(ctx, 'kclo3', 2)), 'inorganic', 'un ossidante resta nei rifiuti inorganici');
 });
 
-test('calore di soluzione: la soda caustica e il cloruro di calcio scaldano, il nitrato di potassio e il cloruro d\'ammonio raffreddano', () => {
+test("calore di soluzione: la soda caustica e il cloruro di calcio scaldano, il nitrato di potassio e il cloruro d'ammonio raffreddano", () => {
   // 100 mL d'acqua, agitando, senza dispersione (lossWK 0): ΔT ≈ −n·ΔH_sol / (m·c); prima tutti −0,1 K (evaporazione)
   const dT = (key, grams) => {
     const m = Mixture.solid(ctx, key, grams);

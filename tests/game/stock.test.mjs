@@ -5,7 +5,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createLabChemistry } from '../../src/game/mixture.js';
 import { SHELF, LIGHT_SENSITIVE } from '../../src/game/reagents.js';
-import { reagentLook, familyOf, FAMILIES, FAMILY_ORDER, STRONG_OXIDIZERS, derivedHazards } from '../../src/game/stock.js';
+import {
+  reagentLook,
+  familyOf,
+  FAMILIES,
+  FAMILY_ORDER,
+  STRONG_OXIDIZERS,
+  derivedHazards,
+} from '../../src/game/stock.js';
 import { GHS, GHS_IDS, SIGNAL } from '../../src/game/ghs.js';
 import { DEFS } from '../../src/game/items.js';
 import { GAME_STRINGS } from '../../src/game/game-strings.js';
@@ -47,8 +54,18 @@ test('scaffale: ogni reagente ha i pericoli della scheda di sicurezza (pittogram
 
 test('contenitori: vetro chiaro, ambrato per ciò che la luce decompone, plastica per basi forti e HF, olio per i metalli alcalini', () => {
   const kinds = {
-    water: 'washbottle', php: 'dropper', hcl1: 'bottleClear', naoh1: 'bottlePE', agno3: 'bottle', ki01: 'bottle',
-    nacl: 'jarGlass', cuso4: 'jarGlass', zn: 'jarGlass', ethanol: 'bottleClear', na: 'jarOil', k: 'jarOil',
+    water: 'washbottle',
+    php: 'dropper',
+    hcl1: 'bottleClear',
+    naoh1: 'bottlePE',
+    agno3: 'bottle',
+    ki01: 'bottle',
+    nacl: 'jarGlass',
+    cuso4: 'jarGlass',
+    zn: 'jarGlass',
+    ethanol: 'bottleClear',
+    na: 'jarOil',
+    k: 'jarOil',
   };
   for (const [k, kind] of Object.entries(kinds)) assert.equal(look(SHELF[k]).kind, kind, k);
   assert.equal(look({ solid: 'naoh' }).kind, 'jar');
@@ -148,7 +165,8 @@ test('pericoli dedotti: le sostanze note hanno i pittogrammi del CLP; GHS02 solo
   has('acido-acetico', ['GHS02', 'GHS05']);
   has('acido-ossalico', ['GHS05', 'GHS07'], 'solid');
   has('nh3', ['GHS07'], 'solution', 1);
-  for (const key of ['glicerolo', 'glicole-etilenico', 'dmso', 'anilina', 'nitrobenzene']) assert.ok(!ghs(key).includes('GHS02'), `${key} non è un liquido infiammabile per il CLP`);
+  for (const key of ['glicerolo', 'glicole-etilenico', 'dmso', 'anilina', 'nitrobenzene'])
+    assert.ok(!ghs(key).includes('GHS02'), `${key} non è un liquido infiammabile per il CLP`);
   assert.deepEqual(ghs('glicerolo'), [], 'il glicerolo non ha pericoli');
   for (const key of ['etanolo', 'acetone', 'decano']) assert.ok(ghs(key).includes('GHS02'), `${key} è infiammabile`);
 });

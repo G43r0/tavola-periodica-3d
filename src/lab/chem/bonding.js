@@ -13,17 +13,19 @@ const t = createT({
     hOne: "L'idrogeno ha un solo elettrone: forma un solo legame.",
     noble: '{X} è un gas nobile: il suo guscio esterno è già completo e non forma legami.',
     noCovalent: '{X} non forma legami covalenti in questo modello.',
-    fluorine: 'Il fluoro forma un solo legame (gli manca un solo elettrone per l\'ottetto).',
+    fluorine: "Il fluoro forma un solo legame (gli manca un solo elettrone per l'ottetto).",
     maxBonds: (p) => `${p.X} ha già ${p.cur} legam${p.cur === 1 ? 'e' : 'i'}: al massimo ne può formare ${p.max}.`,
     same: 'Scegli due atomi diversi.',
-    already: 'Questi atomi sono già legati: fai clic sul legame per cambiarne l\'ordine.',
-    metallic: 'Tra due metalli si forma un legame metallico: gli elettroni sono condivisi da tutto il reticolo, non tra due atomi. Il banco non lo simula.',
+    already: "Questi atomi sono già legati: fai clic sul legame per cambiarne l'ordine.",
+    metallic:
+      'Tra due metalli si forma un legame metallico: gli elettroni sono condivisi da tutto il reticolo, non tra due atomi. Il banco non lo simula.',
     gaveAll: '{X} ha già ceduto tutti i suoi elettroni di valenza.',
-    fullOctet: '{X} ha già l\'ottetto completo: non può accettare altri elettroni.',
-    dative: '{X} ha già l\'ottetto completo. Un altro legame è possibile solo se l\'altro atomo arriva senza elettroni e usa una coppia solitaria (legame dativo): ad esempio con lo ione H⁺ — seleziona l\'idrogeno e premi −e⁻ — si forma NH₄⁺.',
+    fullOctet: "{X} ha già l'ottetto completo: non può accettare altri elettroni.",
+    dative:
+      "{X} ha già l'ottetto completo. Un altro legame è possibile solo se l'altro atomo arriva senza elettroni e usa una coppia solitaria (legame dativo): ad esempio con lo ione H⁺ — seleziona l'idrogeno e premi −e⁻ — si forma NH₄⁺.",
     unknownChem: 'Chimica sconosciuta: per gli elementi superpesanti i legami non sono mai stati osservati.',
     unverified: 'Struttura non verificata: per i metalli d e f le regole di valenza semplici non bastano.',
-    ionicOrder: 'Un legame ionico non ha un ordine: è l\'attrazione tra due ioni.',
+    ionicOrder: "Un legame ionico non ha un ordine: è l'attrazione tra due ioni.",
     hSingle: "L'idrogeno forma solo legami singoli.",
     orderMax: '{X} non può avere legami per un totale di {n} (massimo {max}).',
   },
@@ -40,10 +42,12 @@ const t = createT({
     maxBonds: (p) => `${p.X} already has ${p.cur} bond${p.cur === 1 ? '' : 's'}: it can form at most ${p.max}.`,
     same: 'Choose two different atoms.',
     already: 'These atoms are already bonded: click the bond to change its order.',
-    metallic: 'Two metals form a metallic bond: the electrons are shared by the whole lattice, not between two atoms. The bench does not simulate it.',
+    metallic:
+      'Two metals form a metallic bond: the electrons are shared by the whole lattice, not between two atoms. The bench does not simulate it.',
     gaveAll: '{X} has already given away all its valence electrons.',
     fullOctet: '{X} already has a full octet: it cannot accept more electrons.',
-    dative: '{X} already has a full octet. Another bond is possible only if the other atom arrives without electrons and uses a lone pair (dative bond): for example with the H⁺ ion — select the hydrogen and press −e⁻ — NH₄⁺ forms.',
+    dative:
+      '{X} already has a full octet. Another bond is possible only if the other atom arrives without electrons and uses a lone pair (dative bond): for example with the H⁺ ion — select the hydrogen and press −e⁻ — NH₄⁺ forms.',
     unknownChem: 'Unknown chemistry: bonds of superheavy elements have never been observed.',
     unverified: 'Structure not verified: for d and f metals simple valence rules are not enough.',
     ionicOrder: 'An ionic bond has no order: it is the attraction between two ions.',
@@ -54,14 +58,18 @@ const t = createT({
     hOne: "L'idrogeno ha un solo elettrone, quindi può tenere per mano un solo atomo alla volta.",
     noble: '{X} è un gas nobile: è già «completo» e non ha bisogno di legarsi con nessuno.',
     fluorine: 'Il fluoro può fare un solo legame: gli manca un solo elettrone per essere completo.',
-    maxBonds: (p) => `${p.X} ha già ${p.cur} legam${p.cur === 1 ? 'e' : 'i'}, e più di ${p.max} non ne può fare: ha finito le «mani».`,
+    maxBonds: (p) =>
+      `${p.X} ha già ${p.cur} legam${p.cur === 1 ? 'e' : 'i'}, e più di ${p.max} non ne può fare: ha finito le «mani».`,
     already: 'Questi due atomi sono già attaccati. Clicca il legame per renderlo doppio o triplo.',
-    metallic: 'Due metalli non si legano a coppie: nei metalli gli elettroni sono condivisi da tutti gli atomi insieme. Qui non si può fare.',
+    metallic:
+      'Due metalli non si legano a coppie: nei metalli gli elettroni sono condivisi da tutti gli atomi insieme. Qui non si può fare.',
     gaveAll: '{X} ha già regalato tutti gli elettroni che poteva dare.',
     fullOctet: '{X} è già completo (ha 8 elettroni intorno): non ne accetta altri.',
-    unknownChem: 'Nessuno ha mai visto questo elemento legarsi: questo legame è solo un\'ipotesi.',
-    unverified: 'Attenzione: per questi metalli le regole semplici non bastano, la struttura potrebbe non essere quella vera.',
-    ionicOrder: 'Questo legame è diverso: non è una stretta di mano, ma due atomi con cariche opposte che si attirano come calamite.',
+    unknownChem: "Nessuno ha mai visto questo elemento legarsi: questo legame è solo un'ipotesi.",
+    unverified:
+      'Attenzione: per questi metalli le regole semplici non bastano, la struttura potrebbe non essere quella vera.',
+    ionicOrder:
+      'Questo legame è diverso: non è una stretta di mano, ma due atomi con cariche opposte che si attirano come calamite.',
     hSingle: "L'idrogeno ha una sola «mano»: può fare solo legami singoli.",
   },
 });
@@ -155,7 +163,10 @@ export function checkBond(bench, lab, a, b) {
     return { ok: true, kind: 'ionic', transfer, donor, character };
   }
 
-  for (const [X, id] of [[A, a], [B, b]]) {
+  for (const [X, id] of [
+    [A, a],
+    [B, b],
+  ]) {
     const cur = bench.covalentValence(id);
     if (cur + 1 > X.maxBonds) return { ok: false, reason: maxBondsReason(X, cur) };
   }
@@ -163,7 +174,10 @@ export function checkBond(bench, lab, a, b) {
   const lw = lewisAfter(bench, lab, ids, { a, b, order: 1 });
   if (lw.invalid) {
     // ottetto già completo (es. NH₃ + H): serve un legame dativo con uno ione senza elettroni (H⁺)
-    const full = [[A, a], [B, b]].find(([X, id]) => usesOctet(X) && X.period === 2 && fullOctet(bench, lab, id));
+    const full = [
+      [A, a],
+      [B, b],
+    ].find(([X, id]) => usesOctet(X) && X.period === 2 && fullOctet(bench, lab, id));
     if (full) {
       return { ok: false, reason: t('dative', { X: Art(full[0]) }) };
     }
@@ -191,7 +205,10 @@ export function checkOrder(bench, lab, bondId, order) {
   const B = lab.get(bench.atoms.get(bond.b).z);
   if (order > 1 && (A.z === 1 || B.z === 1)) return { ok: false, reason: t('hSingle') };
   const delta = order - bond.order;
-  for (const [X, id] of [[A, bond.a], [B, bond.b]]) {
+  for (const [X, id] of [
+    [A, bond.a],
+    [B, bond.b],
+  ]) {
     const cur = bench.covalentValence(id);
     if (cur + delta > X.maxBonds) {
       return { ok: false, reason: t('orderMax', { X: Art(X), n: cur + delta, max: X.maxBonds }) };

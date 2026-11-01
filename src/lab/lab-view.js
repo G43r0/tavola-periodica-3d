@@ -8,7 +8,17 @@ import { Bench } from './chem/molecule.js';
 import { analyzeLewis } from './chem/lewis.js';
 import { checkBond, checkOrder, bondCharacter, ORDER_NAME, Art } from './chem/bonding.js';
 import { createRelaxer, initialLayout, vsepr } from './chem/geometry.js';
-import { createLibraryIndex, covalentParts, displayFormula, chargeText, formulaKey, normalizeName, librarySearchText, subscript, signature } from './chem/identify.js';
+import {
+  createLibraryIndex,
+  covalentParts,
+  displayFormula,
+  chargeText,
+  formulaKey,
+  normalizeName,
+  librarySearchText,
+  subscript,
+  signature,
+} from './chem/identify.js';
 import { combine, entryBonds, entryEnergy, ionicDecomposition } from './chem/combine.js';
 import { parseFormula, looksLikeSmiles, splitFormulaList, speciesAtoms, speciesAtomCount } from './chem/formula.js';
 import { parseSmiles } from './chem/smiles.js';
@@ -22,7 +32,18 @@ import { REACTIONS } from './data/reactions.js';
 import { speciesInfo, reactionEnthalpy } from './chem/reactions.js';
 import { planReactions, diagnose, modelReaction, graphBondEnergy, reactionDH } from './chem/simulate.js';
 import { bondEnergy } from './chem/bond-energy.js';
-import { reactionListHtml, reactionResultsHtml, reactionGroupBodyHtml, reactionCardHtml, reactionTitle, equationHtml, equationText, stepEquation, simulationReportHtml, MAX_COEF } from './reaction-panel.js';
+import {
+  reactionListHtml,
+  reactionResultsHtml,
+  reactionGroupBodyHtml,
+  reactionCardHtml,
+  reactionTitle,
+  equationHtml,
+  equationText,
+  stepEquation,
+  simulationReportHtml,
+  MAX_COEF,
+} from './reaction-panel.js';
 import { esc, fmtNumber } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
 import { createT } from '../i18n/index.js';
@@ -79,9 +100,10 @@ const TEMPLATE = () => `
   <div class="lab-examples" hidden role="dialog" aria-label="${tr('examplesLabel')}">
     <div class="lex-search"><input type="search" placeholder="${tr('examplesSearch', { n: MOLECULES.length })}" aria-label="${tr('examplesSearchLabel')}" spellcheck="false" /></div>
     ${MOLECULE_GROUPS.map(
-      (g) => `<section data-group="${g.key}"><h4>${g.label}</h4><div>${MOLECULES.filter((m) => m.group === g.key)
-        .map((m) => `<button type="button" class="chip-btn" data-example="${m.id}">${esc(m.name)}</button>`)
-        .join('')}</div></section>`,
+      (g) =>
+        `<section data-group="${g.key}"><h4>${g.label}</h4><div>${MOLECULES.filter((m) => m.group === g.key)
+          .map((m) => `<button type="button" class="chip-btn" data-example="${m.id}">${esc(m.name)}</button>`)
+          .join('')}</div></section>`,
     ).join('')}
     <p class="lex-empty" hidden>${tr('examplesEmpty')}</p>
   </div>
@@ -97,7 +119,18 @@ const TEMPLATE = () => `
     </form>
     <div class="lf-preview" aria-live="polite"></div>
     <div class="lf-foot">
-      <div class="lf-examples">${['H2O', 'H2SO4', 'Ca(OH)2', 'C6H12O6', 'CuSO4·5H2O', 'NH4+', '2 H2 + O2', 'KMnO4', 'C8H10N4O2', 'CCO']
+      <div class="lf-examples">${[
+        'H2O',
+        'H2SO4',
+        'Ca(OH)2',
+        'C6H12O6',
+        'CuSO4·5H2O',
+        'NH4+',
+        '2 H2 + O2',
+        'KMnO4',
+        'C8H10N4O2',
+        'CCO',
+      ]
         .map((f) => `<button type="button" class="chip-btn" data-lf-example="${esc(f)}">${esc(f)}</button>`)
         .join('')}</div>
     </div>
@@ -147,7 +180,13 @@ export function createLab(elements, { onClose }) {
         sp.display = sp.formula ?? (sp.element ? sp.formula : displayFormula(lab, sp.atoms, 0, { ionic: sp.ionic }));
         return sp;
       });
-    const re = { r, reactants: load(r.reactants), products: load(r.products), rc: r.reactants.map(([c]) => c), pc: r.products.map(([c]) => c) };
+    const re = {
+      r,
+      reactants: load(r.reactants),
+      products: load(r.products),
+      rc: r.reactants.map(([c]) => c),
+      pc: r.products.map(([c]) => c),
+    };
     re.enthalpy = reactionEnthalpy(lab, re.reactants, re.products, re.rc, re.pc);
     return re;
   });
@@ -240,9 +279,12 @@ export function createLab(elements, { onClose }) {
       const charge = desc.atoms.reduce((s, a) => s + a.charge, 0);
       const ionic = desc.ionic.length > 0;
       const ident = library.identify(desc.atoms, desc.bonds);
-      const formula = (ident.exact || ident.byFormula) && ident.entry.formula
-        ? ident.entry.formula + chargeText(charge)
-        : ionic ? ionicFormula(frags) + chargeText(charge) : displayFormula(lab, desc.atoms, charge, { ionic });
+      const formula =
+        (ident.exact || ident.byFormula) && ident.entry.formula
+          ? ident.entry.formula + chargeText(charge)
+          : ionic
+            ? ionicFormula(frags) + chargeText(charge)
+            : displayFormula(lab, desc.atoms, charge, { ionic });
       const tier = Math.max(...desc.atoms.map((a) => lab.get(a.z).tier));
       let generatedName = null;
       if (!ident.entry && !ionic && !charge && ids.length > 1 && frags.length === 1) {
@@ -254,7 +296,11 @@ export function createLab(elements, { onClose }) {
         generatedName = ionicCompoundName(
           frags.map((f) => {
             const id = f.atoms.length > 1 ? library.identify(f.atoms, f.bonds) : null;
-            return { info: f.atoms.length === 1 ? lab.get(f.atoms[0].z) : null, charge: f.charge, libraryName: id?.exact ? id.entry.name : null };
+            return {
+              info: f.atoms.length === 1 ? lab.get(f.atoms[0].z) : null,
+              charge: f.charge,
+              libraryName: id?.exact ? id.entry.name : null,
+            };
           }),
         );
       } else if (!ident.exact && ids.length === 1 && charge) {
@@ -282,7 +328,10 @@ export function createLab(elements, { onClose }) {
       };
       u.label = ident.entry
         ? `${ident.entry.name}${ident.exact ? '' : ident.byFormula ? tr('fromFormula') : tr('otherStructure')}`
-        : generatedName ?? (ids.length === 1 ? tr('atomOf', { name: lab.get(desc.atoms[0].z).name.toLowerCase() }) : tr('notInLibrary'));
+        : (generatedName ??
+          (ids.length === 1
+            ? tr('atomOf', { name: lab.get(desc.atoms[0].z).name.toLowerCase() })
+            : tr('notInLibrary')));
       for (const id of ids) state.unitOfAtom.set(id, u);
       return u;
     });
@@ -294,14 +343,22 @@ export function createLab(elements, { onClose }) {
     for (const f of frags) {
       const multi = f.atoms.length > 1;
       const id = multi ? library.identify(f.atoms, f.bonds) : null;
-      const text = multi ? (id?.exact && id.entry.formula) || displayFormula(lab, f.atoms, 0) : lab.get(f.atoms[0].z).symbol;
+      const text = multi
+        ? (id?.exact && id.entry.formula) || displayFormula(lab, f.atoms, 0)
+        : lab.get(f.atoms[0].z).symbol;
       const g = groups.get(text) ?? { text, multi, n: 0, charge: f.charge, z: f.atoms[0].z };
       g.n++;
       groups.set(text, g);
     }
     // prima i cationi (gli ioni poliatomici come NH₄⁺ in testa, poi i metalli per carica crescente), poi gli anioni
-    const list = [...groups.values()].sort((a, b) => (b.charge > 0) - (a.charge > 0) || (a.charge > 0 && b.charge > 0 ? b.multi - a.multi || a.charge - b.charge : 0));
-    return list.map((g) => (g.n === 1 ? g.text : g.multi ? `(${g.text})${subscript(g.n)}` : `${g.text}${subscript(g.n)}`)).join('');
+    const list = [...groups.values()].sort(
+      (a, b) =>
+        (b.charge > 0) - (a.charge > 0) ||
+        (a.charge > 0 && b.charge > 0 ? b.multi - a.multi || a.charge - b.charge : 0),
+    );
+    return list
+      .map((g) => (g.n === 1 ? g.text : g.multi ? `(${g.text})${subscript(g.n)}` : `${g.text}${subscript(g.n)}`))
+      .join('');
   }
 
   /** Un rilassatore per unità; si ricrea quando cambiano legami o cariche. */
@@ -495,7 +552,10 @@ export function createLab(elements, { onClose }) {
         'beforeend',
         `<section class="mp-sec rx-suggest"><h4>${tr('possibleOnBench')}</h4>${ready
           .slice(0, 4)
-          .map((m) => `<button type="button" class="rx-item" data-reaction="${m.re.r.id}">${m.re.r.name ? `<b>${esc(m.re.r.name)}</b>` : ''}${equationHtml(m.re)}</button>`)
+          .map(
+            (m) =>
+              `<button type="button" class="rx-item" data-reaction="${m.re.r.id}">${m.re.r.name ? `<b>${esc(m.re.r.name)}</b>` : ''}${equationHtml(m.re)}</button>`,
+          )
           .join('')}</section>`,
       );
     }
@@ -512,7 +572,9 @@ export function createLab(elements, { onClose }) {
     $('[data-act="simulate"]').disabled = state.units.length < 2;
     $('[data-act="undo"]').disabled = !history.past.length;
     $('[data-act="redo"]').disabled = !history.future.length;
-    root.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
+    root
+      .querySelectorAll('[data-mode]')
+      .forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
     root.classList.toggle('mode-cut', state.mode === 'cut');
     root.classList.toggle('is-reacting', busy());
     root.classList.toggle('mode-bond', state.mode === 'bond');
@@ -549,7 +611,10 @@ export function createLab(elements, { onClose }) {
     const svg = u && lewisSvg(lab, u);
     if (!svg) return;
     const url = URL.createObjectURL(new Blob([standaloneSvg(svg)], { type: 'image/svg+xml' }));
-    const a = Object.assign(document.createElement('a'), { href: url, download: `${plainFormula(u.formula).replace(/[^\w+-]/g, '') || 'molecola'}.svg` });
+    const a = Object.assign(document.createElement('a'), {
+      href: url,
+      download: `${plainFormula(u.formula).replace(/[^\w+-]/g, '') || 'molecola'}.svg`,
+    });
     document.body.append(a);
     a.click();
     a.remove();
@@ -591,7 +656,13 @@ export function createLab(elements, { onClose }) {
     if (r.kind === 'ionic') {
       const D = lab.get(bench.atoms.get(r.donor).z);
       const C = r.donor === a ? B : A;
-      return tr('ionicBond', { donor: esc(Art(D).toLowerCase()), n: r.transfer, toVowel: C.z === 9 || /^[aeiou]/i.test(C.name), acceptor: esc(C.name.toLowerCase()), den: fmtNumber(r.character.dEN, 2, 2) });
+      return tr('ionicBond', {
+        donor: esc(Art(D).toLowerCase()),
+        n: r.transfer,
+        toVowel: C.z === 9 || /^[aeiou]/i.test(C.name),
+        acceptor: esc(C.name.toLowerCase()),
+        den: fmtNumber(r.character.dEN, 2, 2),
+      });
     }
     return `${tr('bondKind', { type: esc(r.character.type) })} ${A.symbol}–${B.symbol}${r.character.dEN != null ? ` (ΔEN ${fmtNumber(r.character.dEN, 2, 2)})` : ''}${r.warning ? `<br><small>${esc(r.warning)}</small>` : ''}`;
   }
@@ -616,7 +687,9 @@ export function createLab(elements, { onClose }) {
     });
     select([a]);
     const u = state.unitOfAtom.get(a);
-    const done = u.ident.exact ? tr('youMade', { name: esc(lowerFirst(u.ident.entry.name)), formula: esc(u.formula) }) : '';
+    const done = u.ident.exact
+      ? tr('youMade', { name: esc(lowerFirst(u.ident.entry.name)), formula: esc(u.formula) })
+      : '';
     if (u.ident.exact) window.dispatchEvent(new CustomEvent('tp3d:molecule', { detail: { id: u.ident.entry.id } }));
     message(`${bondCheckText(r, a, b)}${done}`, r.warning ? 'warn' : 'ok');
     return true;
@@ -704,10 +777,16 @@ export function createLab(elements, { onClose }) {
       const d = [0, 1, 2].map((k) => pb[k] - pa[k]);
       const l = Math.hypot(...d) || 1;
       const unitB = bench.unitOf(b.b);
-      if (!unitB.includes(b.a)) translate(unitB, d.map((x) => (x / l) * 0.9));
+      if (!unitB.includes(b.a))
+        translate(
+          unitB,
+          d.map((x) => (x / l) * 0.9),
+        );
     });
     message(
-      b.ionic ? tr('ionicBroken', { a: A.symbol, b: B.symbol }) : tr('bondBroken', { a: A.symbol, b: B.symbol, single: b.order === 1 }),
+      b.ionic
+        ? tr('ionicBroken', { a: A.symbol, b: B.symbol })
+        : tr('bondBroken', { a: A.symbol, b: B.symbol, single: b.order === 1 }),
       'ok',
     );
   }
@@ -715,7 +794,11 @@ export function createLab(elements, { onClose }) {
   // ---------------------------------------------------------------- Combina, Separa, cariche
   function placeUnits(groups, center) {
     // dispone le nuove unità affiancate attorno al centro, con la geometria iniziale calcolata
-    const right = [engine.camera.matrixWorld.elements[0], engine.camera.matrixWorld.elements[1], engine.camera.matrixWorld.elements[2]];
+    const right = [
+      engine.camera.matrixWorld.elements[0],
+      engine.camera.matrixWorld.elements[1],
+      engine.camera.matrixWorld.elements[2],
+    ];
     const spacing = 3.4;
     groups.forEach((ids, g) => {
       const off = (g - (groups.length - 1) / 2) * spacing;
@@ -740,7 +823,9 @@ export function createLab(elements, { onClose }) {
     const r = combine(lab, library, zs);
     if (!r.ok) return message(esc(r.message), 'bad');
     const center = centroid(ids.map((id) => bench.atoms.get(id).pos));
-    const energyBefore = bondsEnergy(bench.bondsWithin(ids).map((b) => ({ a: b.a, b: b.b, order: b.order, ionic: b.ionic })));
+    const energyBefore = bondsEnergy(
+      bench.bondsWithin(ids).map((b) => ({ a: b.a, b: b.b, order: b.order, ionic: b.ionic })),
+    );
     const energyAfter = bondsEnergy(r.bonds.map((b) => ({ a: ids[b.i], b: ids[b.j], order: b.order, ionic: b.ionic })));
     act(() => {
       for (const b of bench.bondsWithin(ids)) bench.removeBond(b.id);
@@ -762,7 +847,11 @@ export function createLab(elements, { onClose }) {
     updateDock();
     const counts = new Map();
     for (const u of made) {
-      const name = u.ident.exact ? `${lowerFirst(u.ident.entry.name)} (${u.formula})` : u.generatedName ? `${lowerFirst(u.generatedName)} (${u.formula})` : u.formula;
+      const name = u.ident.exact
+        ? `${lowerFirst(u.ident.entry.name)} (${u.formula})`
+        : u.generatedName
+          ? `${lowerFirst(u.generatedName)} (${u.formula})`
+          : u.formula;
       counts.set(name, (counts.get(name) || 0) + 1);
     }
     const list = [...counts].map(([n, c]) => `${c > 1 ? `${c} × ` : ''}<b>${esc(n)}</b>`).join(', ');
@@ -771,12 +860,18 @@ export function createLab(elements, { onClose }) {
     let energy = '';
     if (energyBefore != null && energyAfter != null && Math.abs(energyBefore - energyAfter) > 1) {
       const dH = energyBefore - energyAfter;
-      energy = energyBefore === 0
-        ? `<br><small>${tr('energyFromAtoms', { kj: fmtNumber(Math.round(-dH), 0) })}</small>`
-        : `<br><small>${tr('energyDelta', { sign: dH > 0 ? '+' : '−', kj: fmtNumber(Math.abs(Math.round(dH)), 0), release: dH < 0 })}</small>`;
+      energy =
+        energyBefore === 0
+          ? `<br><small>${tr('energyFromAtoms', { kj: fmtNumber(Math.round(-dH), 0) })}</small>`
+          : `<br><small>${tr('energyDelta', { sign: dH > 0 ? '+' : '−', kj: fmtNumber(Math.abs(Math.round(dH)), 0), release: dH < 0 })}</small>`;
     }
-    message(`${tr('formed', { n: made.length })}: ${list}${radical}${r.alternatives?.length ? tr('seeIsomers') : ''}${energy}`, r.unpaired ? 'warn' : 'ok', 7000);
-    for (const u of made) if (u.ident.exact) window.dispatchEvent(new CustomEvent('tp3d:molecule', { detail: { id: u.ident.entry.id } }));
+    message(
+      `${tr('formed', { n: made.length })}: ${list}${radical}${r.alternatives?.length ? tr('seeIsomers') : ''}${energy}`,
+      r.unpaired ? 'warn' : 'ok',
+      7000,
+    );
+    for (const u of made)
+      if (u.ident.exact) window.dispatchEvent(new CustomEvent('tp3d:molecule', { detail: { id: u.ident.entry.id } }));
   }
 
   function separate({ ions = false } = {}) {
@@ -806,15 +901,15 @@ export function createLab(elements, { onClose }) {
             d = [Math.cos(ang), Math.sin(ang), 0.3];
             l = Math.hypot(...d);
           }
-          translate(p, d.map((x) => (x / l) * (1.4 + 0.25 * pieces.length)));
+          translate(
+            p,
+            d.map((x) => (x / l) * (1.4 + 0.25 * pieces.length)),
+          );
         });
       }
     });
     state.alternatives.clear();
-    message(
-      ions ? tr('ionsSeparated') : tr('atomsSeparated'),
-      'ok',
-    );
+    message(ions ? tr('ionsSeparated') : tr('atomsSeparated'), 'ok');
   }
 
   function changeCharge(delta) {
@@ -826,13 +921,15 @@ export function createLab(elements, { onClose }) {
     const en = (c) => c.info.en ?? 0;
     let pick;
     if (delta > 0) {
-      pick = cand.filter((c) => c.la.unpaired).sort((a, b) => en(b) - en(a))[0]
-        ?? cand.filter((c) => c.la.incomplete).sort((a, b) => en(b) - en(a))[0]
-        ?? [...cand].sort((a, b) => en(b) - en(a))[0];
+      pick =
+        cand.filter((c) => c.la.unpaired).sort((a, b) => en(b) - en(a))[0] ??
+        cand.filter((c) => c.la.incomplete).sort((a, b) => en(b) - en(a))[0] ??
+        [...cand].sort((a, b) => en(b) - en(a))[0];
     } else {
-      pick = cand.filter((c) => c.la.unpaired).sort((a, b) => en(a) - en(b))[0]
-        ?? cand.filter((c) => c.la.lone > 0 && c.info.tier === TIER.MAIN).sort((a, b) => en(a) - en(b))[0]
-        ?? [...cand].sort((a, b) => en(a) - en(b))[0];
+      pick =
+        cand.filter((c) => c.la.unpaired).sort((a, b) => en(a) - en(b))[0] ??
+        cand.filter((c) => c.la.lone > 0 && c.info.tier === TIER.MAIN).sort((a, b) => en(a) - en(b))[0] ??
+        [...cand].sort((a, b) => en(a) - en(b))[0];
     }
     const lw = u.lewisFrags.reduce((s, f) => s + f.electrons, 0);
     if (delta < 0 && lw <= 0) return message(tr('noMoreElectrons'), 'bad');
@@ -841,7 +938,15 @@ export function createLab(elements, { onClose }) {
     });
     const nu = state.unitOfAtom.get(pick.id);
     const name = nu.ident.exact ? ` · <b>${esc(nu.ident.entry.name)}</b>` : '';
-    message(tr('chargeChanged', { add: delta > 0, sym: esc(pick.info.symbol), q: nu.charge ? `${nu.charge > 0 ? '+' : '−'}${Math.abs(nu.charge)}` : '0', name }), 'ok');
+    message(
+      tr('chargeChanged', {
+        add: delta > 0,
+        sym: esc(pick.info.symbol),
+        q: nu.charge ? `${nu.charge > 0 ? '+' : '−'}${Math.abs(nu.charge)}` : '0',
+        name,
+      }),
+      'ok',
+    );
   }
 
   function deleteSelected() {
@@ -956,7 +1061,11 @@ export function createLab(elements, { onClose }) {
         if (!graph.atoms.length) return null;
         const ident = library.identify(graph.atoms, graph.bonds);
         const charge = graph.atoms.reduce((q, a) => q + a.charge, 0);
-        return { kind: 'smiles', item: { graph, ionic: t.includes('.'), charge }, entry: ident.exact ? ident.entry : null };
+        return {
+          kind: 'smiles',
+          item: { graph, ionic: t.includes('.'), charge },
+          entry: ident.exact ? ident.entry : null,
+        };
       } catch {
         return null;
       }
@@ -991,10 +1100,18 @@ export function createLab(elements, { onClose }) {
           const counts = new Map();
           for (const a of g.atoms) counts.set(lab.get(a.z).symbol, (counts.get(lab.get(a.z).symbol) || 0) + 1);
           const pretty = entry.formula ?? displayFormula(lab, g.atoms, 0, { ionic: library.get(entry.id).ionic });
-          return { coef, entry, alternatives: [], atoms: g.atoms.map((a) => ({ z: a.z, charge: 0 })), sp: { coef, counts, charge: 0, pretty } };
+          return {
+            coef,
+            entry,
+            alternatives: [],
+            atoms: g.atoms.map((a) => ({ z: a.z, charge: 0 })),
+            sp: { coef, counts, charge: 0, pretty },
+          };
         }
         const pf = parseFormula(part, isSymbol);
-        return pf.ok && pf.species.length === 1 ? resolveSpecies(pf.species[0]) : { error: `«${part}»: ${pf.ok ? tr('writeOne') : pf.error}` };
+        return pf.ok && pf.species.length === 1
+          ? resolveSpecies(pf.species[0])
+          : { error: `«${part}»: ${pf.ok ? tr('writeOne') : pf.error}` };
       });
       const bad = items.find((x) => x.error);
       if (!bad) return { kind: 'formula', items, note: list.note };
@@ -1019,12 +1136,19 @@ export function createLab(elements, { onClose }) {
       if (atomsOnly) jobs.push({ count: 1, item: library.get(res.entry.id), free: true });
       else jobs.push({ count: 1, entry: res.entry });
     } else if (res.kind === 'smiles') {
-      jobs.push(res.entry && !atomsOnly ? { count: 1, entry: res.entry } : { count: 1, item: res.item, free: atomsOnly });
+      jobs.push(
+        res.entry && !atomsOnly ? { count: 1, entry: res.entry } : { count: 1, item: res.item, free: atomsOnly },
+      );
     } else if (res.kind === 'formula') res.items.forEach((it) => fromItem(it, 1));
     return jobs;
   }
 
-  const jobSize = (j) => (j.entry ? library.get(j.entry.id).graph.atoms.length : j.item ? j.item.graph.atoms.length : j.size ?? j.atoms.length);
+  const jobSize = (j) =>
+    j.entry
+      ? library.get(j.entry.id).graph.atoms.length
+      : j.item
+        ? j.item.graph.atoms.length
+        : (j.size ?? j.atoms.length);
 
   /** Descrizione di una specie letta dalla formula (per l'anteprima). */
   function speciesLabel(x) {
@@ -1035,10 +1159,18 @@ export function createLab(elements, { onClose }) {
     }
     if (n === 1) {
       const info = lab.bySymbol.get([...x.sp.counts.keys()][0]);
-      return x.sp.charge ? tr('ion', { name: esc(ionName(info, x.sp.charge)) }) : tr('atomOf', { name: esc(info.name.toLowerCase()) });
+      return x.sp.charge
+        ? tr('ion', { name: esc(ionName(info, x.sp.charge)) })
+        : tr('atomOf', { name: esc(info.name.toLowerCase()) });
     }
     if (x.sp.charge) return `<span class="lf-warn">${tr('ionNotInLibrary')}</span>`;
-    const salt = x.atoms && ionicDecomposition(lab, library, x.atoms.map((a) => a.z));
+    const salt =
+      x.atoms &&
+      ionicDecomposition(
+        lab,
+        library,
+        x.atoms.map((a) => a.z),
+      );
     if (salt) {
       // es. «Solfato di ferro(III)» (2 Fe³⁺ + 3 SO₄²⁻)
       const parts = covalentParts(salt.graph.atoms, salt.graph.bonds).map((f) => {
@@ -1047,7 +1179,8 @@ export function createLab(elements, { onClose }) {
           info: f.atoms.length === 1 ? lab.get(f.atoms[0].z) : null,
           charge: f.charge,
           libraryName: id?.exact ? id.entry.name : null,
-          text: (id?.exact && id.entry.formula ? id.entry.formula : displayFormula(lab, f.atoms, 0)) + chargeText(f.charge),
+          text:
+            (id?.exact && id.entry.formula ? id.entry.formula : displayFormula(lab, f.atoms, 0)) + chargeText(f.charge),
         };
       });
       const ions = new Map();
@@ -1064,7 +1197,9 @@ export function createLab(elements, { onClose }) {
     const atomsBtn = $('[data-lf="atoms"]');
     const res = interpret(formulaInput.value);
     const chips = (list) =>
-      list.length ? `<div class="lf-suggest">${list.map((e) => `<button type="button" class="chip-btn" data-lf-entry="${e.id}">${esc(e.name)}</button>`).join('')}</div>` : '';
+      list.length
+        ? `<div class="lf-suggest">${list.map((e) => `<button type="button" class="chip-btn" data-lf-entry="${e.id}">${esc(e.name)}</button>`).join('')}</div>`
+        : '';
     const disable = (v) => {
       buildBtn.disabled = v;
       atomsBtn.disabled = v;
@@ -1089,38 +1224,51 @@ export function createLab(elements, { onClose }) {
     let counts = null;
     if (res.kind === 'name') {
       const lib = library.get(res.entry.id);
-      lines.push(`<p class="lf-line"><b>${esc(res.entry.name)}</b> <span class="lf-f">${subHtml(res.entry.formula ?? displayFormula(lab, lib.graph.atoms, 0, { ionic: lib.ionic }))}</span> <small>${tr('inLibrary')}</small></p>`);
-      if (res.suggestions.length) lines.push(`<p class="lf-sub">${tr('similarNames')}</p>${chips(res.suggestions.slice(0, 6))}`);
+      lines.push(
+        `<p class="lf-line"><b>${esc(res.entry.name)}</b> <span class="lf-f">${subHtml(res.entry.formula ?? displayFormula(lab, lib.graph.atoms, 0, { ionic: lib.ionic }))}</span> <small>${tr('inLibrary')}</small></p>`,
+      );
+      if (res.suggestions.length)
+        lines.push(`<p class="lf-sub">${tr('similarNames')}</p>${chips(res.suggestions.slice(0, 6))}`);
       counts = new Map();
       for (const a of lib.graph.atoms) counts.set(lab.get(a.z).symbol, (counts.get(lab.get(a.z).symbol) || 0) + 1);
     } else if (res.kind === 'smiles') {
       const g = res.item.graph;
       const f = displayFormula(lab, g.atoms, res.item.charge, { ionic: res.item.ionic });
-      lines.push(`<p class="lf-line">${tr('smilesLine', { f: subHtml(f), n: g.atoms.length, entry: res.entry ? esc(res.entry.name) : null })}</p>`);
+      lines.push(
+        `<p class="lf-line">${tr('smilesLine', { f: subHtml(f), n: g.atoms.length, entry: res.entry ? esc(res.entry.name) : null })}</p>`,
+      );
       counts = new Map();
       for (const a of g.atoms) counts.set(lab.get(a.z).symbol, (counts.get(lab.get(a.z).symbol) || 0) + 1);
     } else {
       for (const it of res.items) {
-        const descr = it.hydrate ? it.hydrate.map((x) => `${x.coef > 1 ? `${x.coef} × ` : ''}${speciesLabel(x)}`) : [speciesLabel(it)];
+        const descr = it.hydrate
+          ? it.hydrate.map((x) => `${x.coef > 1 ? `${x.coef} × ` : ''}${speciesLabel(x)}`)
+          : [speciesLabel(it)];
         lines.push(`<p class="lf-line">${it.coef > 1 ? `<b class="lf-coef">${it.coef}</b>` : ''}<span class="lf-f">${subHtml(it.sp.pretty)}</span> → ${descr.join(' + ')}
           <small class="lf-mass">${fmtNumber(massOf(it.sp.counts), 3)} g/mol</small></p>`);
       }
       if (res.items.length === 1) counts = res.items[0].sp.counts;
-      if (res.items.some((it) => it.sp.monoGuess || it.sp.chargeGuess)) lines.push(`<p class="lf-sub">${tr('chargeDigits')}</p>`);
+      if (res.items.some((it) => it.sp.monoGuess || it.sp.chargeGuess))
+        lines.push(`<p class="lf-sub">${tr('chargeDigits')}</p>`);
       if (res.note === 'equation') lines.push(`<p class="lf-sub">${tr('equationNote')}</p>`);
       if (res.note === 'incomplete') lines.push(`<p class="lf-sub">${tr('incompleteNote')}</p>`);
     }
     if (counts && counts.size > 1) {
       const mass = massOf(counts);
-      lines.push(`<div class="lf-comp" aria-label="${tr('composition')}">${[...counts]
-        .map(([sym, n]) => {
-          const info = lab.bySymbol.get(sym);
-          const pct = (100 * info.mass * n) / mass;
-          return `<span><b>${sym}</b>${n > 1 ? `<small>×${n}</small>` : ''} ${fmtNumber(pct, 2, 2)} %<i style="--w:${pct.toFixed(1)}%;--c:${info.color}"></i></span>`;
-        })
-        .join('')}</div>`);
+      lines.push(
+        `<div class="lf-comp" aria-label="${tr('composition')}">${[...counts]
+          .map(([sym, n]) => {
+            const info = lab.bySymbol.get(sym);
+            const pct = (100 * info.mass * n) / mass;
+            return `<span><b>${sym}</b>${n > 1 ? `<small>×${n}</small>` : ''} ${fmtNumber(pct, 2, 2)} %<i style="--w:${pct.toFixed(1)}%;--c:${info.color}"></i></span>`;
+          })
+          .join('')}</div>`,
+      );
     }
-    if (over) lines.push(`<p class="lf-line is-bad">${tr('tooManyAtoms', { total, max: MAX_ATOMS, full: bench.atoms.size > 0 })}</p>`);
+    if (over)
+      lines.push(
+        `<p class="lf-line is-bad">${tr('tooManyAtoms', { total, max: MAX_ATOMS, full: bench.atoms.size > 0 })}</p>`,
+      );
     box.innerHTML = lines.join('');
     disable(over);
   }
@@ -1133,7 +1281,10 @@ export function createLab(elements, { onClose }) {
     const r = zs.length === 1 ? 0 : 0.75 + 0.22 * zs.length;
     return zs.map((z, k) => {
       const ang = (k / zs.length) * Math.PI * 2;
-      return bench.addAtom(z, center.map((c, q) => c + (right[q] * Math.cos(ang) + up[q] * Math.sin(ang)) * r));
+      return bench.addAtom(
+        z,
+        center.map((c, q) => c + (right[q] * Math.cos(ang) + up[q] * Math.sin(ang)) * r),
+      );
     });
   }
 
@@ -1156,7 +1307,14 @@ export function createLab(elements, { onClose }) {
             continue;
           }
           if (job.item) {
-            made.push(job.free ? placeFreeAtoms(job.item.graph.atoms.map((a) => a.z), center) : placeGraph(job.item, center));
+            made.push(
+              job.free
+                ? placeFreeAtoms(
+                    job.item.graph.atoms.map((a) => a.z),
+                    center,
+                  )
+                : placeGraph(job.item, center),
+            );
             continue;
           }
           const zs = job.atoms.map((a) => a.z);
@@ -1185,7 +1343,10 @@ export function createLab(elements, { onClose }) {
             else bench.addBond(ids[b.i], ids[b.j], { order: b.order });
           }
           const set = new Set(ids);
-          placeUnits(bench.components(true).filter((c) => set.has(c[0])), center);
+          placeUnits(
+            bench.components(true).filter((c) => set.has(c[0])),
+            center,
+          );
           notes.add(
             r.source === 'ions'
               ? tr('fromIons')
@@ -1222,12 +1383,17 @@ export function createLab(elements, { onClose }) {
       if (!u) continue;
       const name = u.ident.entry ? lowerFirst(u.ident.entry.name) : u.generatedName && lowerFirst(u.generatedName);
       const label = atomsOnly ? tr('atomsToLink', { n: ids.length }) : name ? `${name} (${u.formula})` : u.formula;
-      if (!atomsOnly && u.ident.exact) window.dispatchEvent(new CustomEvent('tp3d:molecule', { detail: { id: u.ident.entry.id } }));
+      if (!atomsOnly && u.ident.exact)
+        window.dispatchEvent(new CustomEvent('tp3d:molecule', { detail: { id: u.ident.entry.id } }));
       counts.set(label, (counts.get(label) || 0) + 1);
     }
     const list = [...counts].map(([k, c]) => `${c > 1 ? `${c} × ` : ''}<b>${esc(k)}</b>`).join(', ');
     notes.delete('');
-    message(`${atomsOnly ? tr('onBench') : tr('builtList')}: ${list}${notes.size ? `<br><small>${[...notes].join(' ')}</small>` : ''}`, notes.size ? 'warn' : 'ok', 7000);
+    message(
+      `${atomsOnly ? tr('onBench') : tr('builtList')}: ${list}${notes.size ? `<br><small>${[...notes].join(' ')}</small>` : ''}`,
+      notes.size ? 'warn' : 'ok',
+      7000,
+    );
     formulaInput.value = '';
   }
 
@@ -1345,7 +1511,13 @@ export function createLab(elements, { onClose }) {
       panel.innerHTML = reactionListHtml(reactions, matchReactions(), { query: state.rx.query, open: state.rx.groups });
     } else {
       const re = reactionById.get(state.rx.current);
-      panel.innerHTML = reactionCardHtml(lab, re, { practice: state.rx.practice, coeffs: state.rx.coeffs, available: Boolean(availableUnits(re)), atoms: reactantAtoms(re), maxAtoms: MAX_ATOMS });
+      panel.innerHTML = reactionCardHtml(lab, re, {
+        practice: state.rx.practice,
+        coeffs: state.rx.coeffs,
+        available: Boolean(availableUnits(re)),
+        atoms: reactantAtoms(re),
+        maxAtoms: MAX_ATOMS,
+      });
     }
     panel.scrollTop = scroll;
     $('[data-act="reactions"]').setAttribute('aria-pressed', String(state.rx.open));
@@ -1372,18 +1544,30 @@ export function createLab(elements, { onClose }) {
     const count = re.r.reactants.reduce((t, [c]) => t + c, 0);
     const size = reactantAtoms(re);
     if (bench.atoms.size + size > MAX_ATOMS) {
-      message(size > MAX_ATOMS ? tr('tooBigBench', { size, max: MAX_ATOMS }) : tr('clearFirst', { max: MAX_ATOMS }), 'bad');
+      message(
+        size > MAX_ATOMS ? tr('tooBigBench', { size, max: MAX_ATOMS }) : tr('clearFirst', { max: MAX_ATOMS }),
+        'bad',
+      );
       return null;
     }
     const groups = [];
     act(() => {
       const center = scene.freeSpot(2.2 + count * 0.9);
-      const right = [engine.camera.matrixWorld.elements[0], engine.camera.matrixWorld.elements[1], engine.camera.matrixWorld.elements[2]];
+      const right = [
+        engine.camera.matrixWorld.elements[0],
+        engine.camera.matrixWorld.elements[1],
+        engine.camera.matrixWorld.elements[2],
+      ];
       let k = 0;
       re.r.reactants.forEach(([c, key]) => {
         for (let n = 0; n < c; n++, k++) {
           const off = (k - (count - 1) / 2) * 2.4;
-          groups.push(placeSpecies(key, center.map((x, q) => x + right[q] * off)));
+          groups.push(
+            placeSpecies(
+              key,
+              center.map((x, q) => x + right[q] * off),
+            ),
+          );
         }
       });
     });
@@ -1509,7 +1693,11 @@ export function createLab(elements, { onClose }) {
       for (const b of p.bonds) {
         const a = p.atomIds[b.i];
         const c = p.atomIds[b.j];
-        newBonds.push(b.ionic ? { a, b: c, ionic: true, transfer: b.transfer, donor: p.atomIds[b.donor] } : { a, b: c, order: b.order });
+        newBonds.push(
+          b.ionic
+            ? { a, b: c, ionic: true, transfer: b.transfer, donor: p.atomIds[b.donor] }
+            : { a, b: c, order: b.order },
+        );
       }
     }
     const targets = new Map();
@@ -1522,7 +1710,9 @@ export function createLab(elements, { onClose }) {
     const ids = groups.flat();
     const center = centroid(ids.map((id) => bench.atoms.get(id).pos));
     const newBonds = bonds.map((b) =>
-      b.ionic ? { a: ids[b.i], b: ids[b.j], ionic: true, transfer: b.transfer, donor: ids[b.donor] } : { a: ids[b.i], b: ids[b.j], order: b.order },
+      b.ionic
+        ? { a: ids[b.i], b: ids[b.j], ionic: true, transfer: b.transfer, donor: ids[b.donor] }
+        : { a: ids[b.i], b: ids[b.j], order: b.order },
     );
     // molecole dei prodotti (componenti connesse) disposte attorno al centro
     const parent = ids.map((_, i) => i);
@@ -1544,7 +1734,9 @@ export function createLab(elements, { onClose }) {
       const desc = {
         atoms: idx.map((i, n) => ({ z: bench.atoms.get(ids[i]).z, charge: charge[n] })),
         bonds: inner.filter((b) => !b.ionic).map((b) => ({ i: local.get(b.i), j: local.get(b.j), order: b.order })),
-        ionic: inner.filter((b) => b.ionic).map((b) => ({ i: local.get(b.i), j: local.get(b.j), transfer: b.transfer, donor: local.get(b.donor) })),
+        ionic: inner
+          .filter((b) => b.ionic)
+          .map((b) => ({ i: local.get(b.i), j: local.get(b.j), transfer: b.transfer, donor: local.get(b.donor) })),
       };
       const layout = idx.length > 1 ? initialLayout(lab, desc, places[k], k + 1) : [places[k]];
       idx.forEach((i, n) => targets.set(ids[i], layout[n]));
@@ -1615,7 +1807,10 @@ export function createLab(elements, { onClose }) {
         state.selected = new Set(ev.ids.slice(0, 1));
         refresh();
         const dH = re.enthalpy.formation.value;
-        const energy = dH == null ? '' : ` · ΔH° = <b>${dH > 0 ? '+' : '−'}${fmtNumber(Math.abs(dH), 1, 1)} kJ</b> (${dH < 0 ? tr('exoShort') : tr('endoShort')})`;
+        const energy =
+          dH == null
+            ? ''
+            : ` · ΔH° = <b>${dH > 0 ? '+' : '−'}${fmtNumber(Math.abs(dH), 1, 1)} kJ</b> (${dH < 0 ? tr('exoShort') : tr('endoShort')})`;
         message(tr('done', { title: esc(reactionTitle(re)), energy }), 'ok', 7000);
         window.dispatchEvent(new CustomEvent('tp3d:reaction', { detail: { id: re.r.id } }));
       },
@@ -1643,7 +1838,11 @@ export function createLab(elements, { onClose }) {
         const k = Math.sin(Math.PI * Math.min(1, t / T_BOUNCE));
         ev.groups.forEach((g, gi) => {
           const w = wobbleAt(ev.wobble[gi], t, 0.1 * (1 - k));
-          placeGroup(ev, gi, ev.shifts[gi].map((x, q) => x * k * 0.9 + w[q]));
+          placeGroup(
+            ev,
+            gi,
+            ev.shifts[gi].map((x, q) => x * k * 0.9 + w[q]),
+          );
         });
         if (t >= T_BOUNCE / 2 && ev.phase === 'approach') {
           ev.phase = 'hit';
@@ -1660,7 +1859,11 @@ export function createLab(elements, { onClose }) {
         const k = ease(t / T_BREAK);
         ev.groups.forEach((g, gi) => {
           const w = wobbleAt(ev.wobble[gi], t, 0.12 * (1 - k));
-          placeGroup(ev, gi, ev.shifts[gi].map((x, q) => x * k + w[q]));
+          placeGroup(
+            ev,
+            gi,
+            ev.shifts[gi].map((x, q) => x * k + w[q]),
+          );
         });
         continue;
       }
@@ -1681,7 +1884,9 @@ export function createLab(elements, { onClose }) {
         }
         for (const id of ev.ids) bench.atoms.get(id).extra = 0;
         for (const b of ev.newBonds) {
-          const id = b.ionic ? bench.addBond(b.a, b.b, { ionic: true, transfer: b.transfer, donor: b.donor }) : bench.addBond(b.a, b.b, { order: b.order });
+          const id = b.ionic
+            ? bench.addBond(b.a, b.b, { ionic: true, transfer: b.transfer, donor: b.donor })
+            : bench.addBond(b.a, b.b, { order: b.order });
           if (!ev.oldKeys.has(bondKey(b))) A.highlight.set(id, 'form');
         }
         ev.from = new Map(ev.ids.map((id) => [id, [...bench.atoms.get(id).pos]]));
@@ -1693,7 +1898,11 @@ export function createLab(elements, { onClose }) {
           // sopra le molecole, nella direzione «su» della vista
           const m = engine.camera.matrixWorld.elements;
           const at = ev.center.map((c, q) => c + m[4 + q] * 1.4);
-          scene.floatText(at, `${ev.dH < 0 ? '−' : '+'}${fmtNumber(Math.abs(Math.round(ev.dH)), 0)} kJ`, exo ? 'is-exo' : 'is-endo');
+          scene.floatText(
+            at,
+            `${ev.dH < 0 ? '−' : '+'}${fmtNumber(Math.abs(Math.round(ev.dH)), 0)} kJ`,
+            exo ? 'is-exo' : 'is-endo',
+          );
         }
         if (ev === A.events[0] && A.say.form) message(A.say.form, 'ok', 2200);
       }
@@ -1766,7 +1975,17 @@ export function createLab(elements, { onClose }) {
     state.rx.current = null;
     state.selected.clear();
     scene.setSelection([]);
-    const sim = { energy, atoms: new Set(units.flatMap((u) => u.ids)), rounds: 0, steps: [], executed: [], reacted: new Set(), status: 'running', leftover: [], diag: null };
+    const sim = {
+      energy,
+      atoms: new Set(units.flatMap((u) => u.ids)),
+      rounds: 0,
+      steps: [],
+      executed: [],
+      reacted: new Set(),
+      status: 'running',
+      leftover: [],
+      diag: null,
+    };
     state.sim = sim;
     renderPanel();
     updateDock();
@@ -1829,12 +2048,18 @@ export function createLab(elements, { onClose }) {
     const species = speciesOf(units);
     if (!species.size) return false;
     const inventory = new Map([...species].map(([k, list]) => [k, list.length]));
-    const now = planReactions(inventory, reactions, { energy: sim.energy, exclude: sim.executed }).steps.filter((s) => s.onlyOrig);
+    const now = planReactions(inventory, reactions, { energy: sim.energy, exclude: sim.executed }).steps.filter(
+      (s) => s.onlyOrig,
+    );
     const pool = new Map([...species].map(([k, list]) => [k, [...list]]));
     const events = [];
     const records = [];
     for (const { re, times } of now) {
-      const list = assignGroups(re.r.reactants.map(([c, k]) => [k, c]), pool, times)
+      const list = assignGroups(
+        re.r.reactants.map(([c, k]) => [k, c]),
+        pool,
+        times,
+      )
         .map((groups) => libraryEvent(re, groups))
         .filter(Boolean);
       if (!list.length) continue;
@@ -1848,9 +2073,10 @@ export function createLab(elements, { onClose }) {
       records,
       executed: records.map((r) => r.re),
       say: {
-        start: records.length === 1
-          ? `${tr('step', { n: sim.rounds + 1 })} · <b>${esc(reactionTitle(first.re))}</b>${first.times > 1 ? tr('timesN', { n: first.times }) : ''}: ${esc(equationText(first.re))}`
-          : `${tr('step', { n: sim.rounds + 1 })} · ${tr('together', { n: records.length })}: ${records.map((r) => `<b>${esc(reactionTitle(r.re))}</b>`).join(', ')}`,
+        start:
+          records.length === 1
+            ? `${tr('step', { n: sim.rounds + 1 })} · <b>${esc(reactionTitle(first.re))}</b>${first.times > 1 ? tr('timesN', { n: first.times }) : ''}: ${esc(equationText(first.re))}`
+            : `${tr('step', { n: sim.rounds + 1 })} · ${tr('together', { n: records.length })}: ${records.map((r) => `<b>${esc(reactionTitle(r.re))}</b>`).join(', ')}`,
         break: tr('effectiveBreak'),
         form: tr('formRelease', { exo }),
       },
@@ -1883,14 +2109,27 @@ export function createLab(elements, { onClose }) {
     const instances = assignGroups(req, new Map([...groups].map(([k, g]) => [k, [...g.units]])), times);
     const events = [];
     for (const g of instances) {
-      const r = combine(lab, library, g.flat().map((id) => bench.atoms.get(id).z));
-      if (r.ok && r.source === 'library' && r.entry.id === best.product.entry.id) events.push(modelEvent(g, r.bonds, best.dH));
+      const r = combine(
+        lab,
+        library,
+        g.flat().map((id) => bench.atoms.get(id).z),
+      );
+      if (r.ok && r.source === 'library' && r.entry.id === best.product.entry.id)
+        events.push(modelEvent(g, r.bonds, best.dH));
     }
     if (!events.length) return false;
     const entry = best.product.entry;
     const productFormula = entry.formula ?? displayFormula(lab, entry.graph.atoms, 0, { ionic: entry.ionic });
     const reactants = countList(instances[0].map((g) => state.unitOfAtom.get(g[0]).formula));
-    const record = { kind: 'model', product: best.product, productFormula, reactants, dH: best.dH, method: best.method, times: events.length };
+    const record = {
+      kind: 'model',
+      product: best.product,
+      productFormula,
+      reactants,
+      dH: best.dH,
+      method: best.method,
+      times: events.length,
+    };
     runRound(sim, events, {
       records: [record],
       say: {
@@ -1925,7 +2164,9 @@ export function createLab(elements, { onClose }) {
   function finishSimulation(sim, units) {
     if (!sim.steps.length) {
       // nessuna reazione: urti non efficaci, le molecole rimbalzano
-      sim.diag = diagnose(new Map([...speciesOf(units)].map(([k, list]) => [k, list.length])), reactions, { energy: sim.energy });
+      sim.diag = diagnose(new Map([...speciesOf(units)].map(([k, list]) => [k, list.length])), reactions, {
+        energy: sim.energy,
+      });
       startAnim([bounceEvent(units.map((u) => u.ids))], {
         say: { start: tr('collide') },
         onDone: () => {
@@ -1935,7 +2176,11 @@ export function createLab(elements, { onClose }) {
           renderPanel();
           const hint = sim.diag.missing[0];
           const text = hint
-            ? tr('lacks', { title: esc(reactionTitle(hint.re)), n: hint.lack.reduce((t, x) => t + x.count, 0), list: esc(hint.lack.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', ')) })
+            ? tr('lacks', {
+                title: esc(reactionTitle(hint.re)),
+                n: hint.lack.reduce((t, x) => t + x.count, 0),
+                list: esc(hint.lack.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', ')),
+              })
             : sim.diag.endothermic.length
               ? tr('endoPossible')
               : '';
@@ -1949,11 +2194,27 @@ export function createLab(elements, { onClose }) {
     state.selected.clear();
     refresh();
     if (bench.atoms.size <= 60) scene.frameAll(1);
-    const eq = sim.steps.map((s) => `${esc(equationText(stepEquation(s)))}${s.times > 1 ? ` (× ${s.times})` : ''}`).join(' · ');
+    const eq = sim.steps
+      .map((s) => `${esc(equationText(stepEquation(s)))}${s.times > 1 ? ` (× ${s.times})` : ''}`)
+      .join(' · ');
     const dH = sim.steps.reduce((t, s) => t + s.dH * s.times, 0);
-    const left = sim.leftover.length ? `<br><small>${tr('didNotReact', { list: esc(sim.leftover.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', ')) })}</small>` : '';
-    message(tr('simDone', { rounds: sim.rounds, eq, sign: dH < 0 ? '≈ −' : '≈ +', kj: fmtNumber(Math.abs(Math.round(dH)), 0), exo: dH < 0, left }), 'ok', 9000);
-    for (const s of sim.steps) if (s.kind === 'library') window.dispatchEvent(new CustomEvent('tp3d:reaction', { detail: { id: s.re.r.id } }));
+    const left = sim.leftover.length
+      ? `<br><small>${tr('didNotReact', { list: esc(sim.leftover.map((x) => `${x.count > 1 ? `${x.count} ` : ''}${x.display}`).join(', ')) })}</small>`
+      : '';
+    message(
+      tr('simDone', {
+        rounds: sim.rounds,
+        eq,
+        sign: dH < 0 ? '≈ −' : '≈ +',
+        kj: fmtNumber(Math.abs(Math.round(dH)), 0),
+        exo: dH < 0,
+        left,
+      }),
+      'ok',
+      9000,
+    );
+    for (const s of sim.steps)
+      if (s.kind === 'library') window.dispatchEvent(new CustomEvent('tp3d:reaction', { detail: { id: s.re.r.id } }));
   }
 
   /** Aggiunge i reagenti che mancano a una reazione «quasi pronta» e ripete la simulazione. */
@@ -1961,7 +2222,10 @@ export function createLab(elements, { onClose }) {
     const prev = state.sim;
     const m = prev?.diag?.missing.find((x) => x.re.r.id === id);
     if (!m) return;
-    const size = m.lack.reduce((t, x) => t + x.count * (x.key.startsWith('el:') ? 1 : library.get(x.key).graph.atoms.length), 0);
+    const size = m.lack.reduce(
+      (t, x) => t + x.count * (x.key.startsWith('el:') ? 1 : library.get(x.key).graph.atoms.length),
+      0,
+    );
     if (bench.atoms.size + size > MAX_ATOMS) return message(tr('maxAtoms', { max: MAX_ATOMS }), 'bad');
     const atoms = new Set(prev.atoms);
     const ok = act(() => {
@@ -2001,8 +2265,14 @@ export function createLab(elements, { onClose }) {
   root.addEventListener('click', (ev) => {
     const t = ev.target.closest('button');
     if (!t) {
-      if (!ev.target.closest('.lab-examples') && !$('.lab-examples').hidden && !ev.target.closest('[data-act="examples"]')) toggleExamples(false);
-      if (!ev.target.closest('.lab-formula') && !formulaBox.hidden && !ev.target.closest('[data-act="formula"]')) toggleFormula(false);
+      if (
+        !ev.target.closest('.lab-examples') &&
+        !$('.lab-examples').hidden &&
+        !ev.target.closest('[data-act="examples"]')
+      )
+        toggleExamples(false);
+      if (!ev.target.closest('.lab-formula') && !formulaBox.hidden && !ev.target.closest('[data-act="formula"]'))
+        toggleFormula(false);
       return;
     }
     if (t.dataset.mode) setMode(t.dataset.mode);
@@ -2038,32 +2308,74 @@ export function createLab(elements, { onClose }) {
       }
     }
     switch (t.dataset.act) {
-      case 'close': close(); break;
-      case 'deselect': select([]); break;
+      case 'close':
+        close();
+        break;
+      case 'deselect':
+        select([]);
+        break;
       case 'copy-smiles':
       case 'copy-formula': {
         const [u] = selectedUnits();
         if (u) copyText(t.dataset.act === 'copy-smiles' ? unitSmiles(lab, u) : plainFormula(u.formula));
         break;
       }
-      case 'save-svg': saveLewis(); break;
-      case 'combine': combineAction(); break;
-      case 'simulate': simulate(); break;
-      case 'sim-energy': simulate({ energy: true, atoms: state.sim?.atoms }); break;
-      case 'sim-close': state.sim = null; renderPanel(); break;
-      case 'separate': separate(); break;
-      case 'ions': separate({ ions: true }); break;
-      case 'add-e': changeCharge(+1); break;
-      case 'remove-e': changeCharge(-1); break;
-      case 'delete': deleteSelected(); break;
-      case 'clear': clearBench(); break;
-      case 'undo': undo(); break;
-      case 'redo': redo(); break;
-      case 'examples': toggleExamples(); break;
-      case 'formula': toggleFormula(); break;
-      case 'reactions': toggleReactions(); break;
-      case 'rx-list': state.rx.current = null; renderPanel(); break;
-      case 'rx-run': runReaction(state.rx.current); break;
+      case 'save-svg':
+        saveLewis();
+        break;
+      case 'combine':
+        combineAction();
+        break;
+      case 'simulate':
+        simulate();
+        break;
+      case 'sim-energy':
+        simulate({ energy: true, atoms: state.sim?.atoms });
+        break;
+      case 'sim-close':
+        state.sim = null;
+        renderPanel();
+        break;
+      case 'separate':
+        separate();
+        break;
+      case 'ions':
+        separate({ ions: true });
+        break;
+      case 'add-e':
+        changeCharge(+1);
+        break;
+      case 'remove-e':
+        changeCharge(-1);
+        break;
+      case 'delete':
+        deleteSelected();
+        break;
+      case 'clear':
+        clearBench();
+        break;
+      case 'undo':
+        undo();
+        break;
+      case 'redo':
+        redo();
+        break;
+      case 'examples':
+        toggleExamples();
+        break;
+      case 'formula':
+        toggleFormula();
+        break;
+      case 'reactions':
+        toggleReactions();
+        break;
+      case 'rx-list':
+        state.rx.current = null;
+        renderPanel();
+        break;
+      case 'rx-run':
+        runReaction(state.rx.current);
+        break;
       case 'rx-prepare': {
         const re = reactionById.get(state.rx.current);
         if (re && prepareReactants(re)) message(tr('reactantsOnBench'), 'info', 3000);
@@ -2084,16 +2396,24 @@ export function createLab(elements, { onClose }) {
     state.rx.query = ev.target.value;
     const searching = ev.target.value.trim() !== '';
     panel.querySelectorAll('.rx-group--bench, .rx-group--near').forEach((el) => (el.hidden = searching));
-    panel.querySelector('.rx-results').innerHTML = reactionResultsHtml(reactions, { query: state.rx.query, open: state.rx.groups });
+    panel.querySelector('.rx-results').innerHTML = reactionResultsHtml(reactions, {
+      query: state.rx.query,
+      open: state.rx.groups,
+    });
   });
-  panel.addEventListener('toggle', (ev) => {
-    const key = ev.target.dataset?.rxGroup;
-    if (!key) return;
-    if (ev.target.open) state.rx.groups.add(key);
-    else state.rx.groups.delete(key);
-    const body = ev.target.querySelector('.rx-fold__body');
-    if (ev.target.open && !body.children.length) body.innerHTML = reactionGroupBodyHtml(reactions.filter((re) => re.r.group === key));
-  }, true);
+  panel.addEventListener(
+    'toggle',
+    (ev) => {
+      const key = ev.target.dataset?.rxGroup;
+      if (!key) return;
+      if (ev.target.open) state.rx.groups.add(key);
+      else state.rx.groups.delete(key);
+      const body = ev.target.querySelector('.rx-fold__body');
+      if (ev.target.open && !body.children.length)
+        body.innerHTML = reactionGroupBodyHtml(reactions.filter((re) => re.r.group === key));
+    },
+    true,
+  );
 
   root.addEventListener('change', (ev) => {
     const k = ev.target.dataset.opt;
@@ -2123,7 +2443,9 @@ export function createLab(elements, { onClose }) {
       b.hidden = !hit;
       any ||= hit;
     });
-    box.querySelectorAll('section[data-group]').forEach((sec) => (sec.hidden = !sec.querySelector('[data-example]:not([hidden])')));
+    box
+      .querySelectorAll('section[data-group]')
+      .forEach((sec) => (sec.hidden = !sec.querySelector('[data-example]:not([hidden])')));
     box.querySelector('.lex-empty').hidden = any;
   });
   $('.lex-search input').addEventListener('keydown', (ev) => {
@@ -2143,7 +2465,8 @@ export function createLab(elements, { onClose }) {
 
   function onKey(ev) {
     if (root.hidden) return;
-    const typing = ev.target instanceof HTMLElement && ev.target.matches('input[type="search"], input[type="text"], textarea');
+    const typing =
+      ev.target instanceof HTMLElement && ev.target.matches('input[type="search"], input[type="text"], textarea');
     const key = ev.key.toLowerCase();
     if ((ev.ctrlKey || ev.metaKey) && key === 'z') {
       ev.preventDefault();
@@ -2194,7 +2517,33 @@ export function createLab(elements, { onClose }) {
   window.addEventListener('resize', () => !root.hidden && layout());
 
   // solo in sviluppo: accesso dalla console per i test
-  if (import.meta.env.DEV) window.__lab = { bench, lab, library, state, scene, addAtom, bond, combineAction, buildEntry, select, separate, cycleOrder, breakBond, changeCharge, undo, redo, reactions, openReaction, runReaction, matchReactions, interpret, buildFromFormula, toggleFormula, simulate };
+  if (import.meta.env.DEV)
+    window.__lab = {
+      bench,
+      lab,
+      library,
+      state,
+      scene,
+      addAtom,
+      bond,
+      combineAction,
+      buildEntry,
+      select,
+      separate,
+      cycleOrder,
+      breakBond,
+      changeCharge,
+      undo,
+      redo,
+      reactions,
+      openReaction,
+      runReaction,
+      matchReactions,
+      interpret,
+      buildFromFormula,
+      toggleFormula,
+      simulate,
+    };
 
   // ---------------------------------------------------------------- apertura / chiusura
   let lastFocus = null;

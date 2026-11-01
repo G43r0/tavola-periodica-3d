@@ -20,7 +20,9 @@
 }
 @keyframes spark-glow {
   50% {
-    box-shadow: 0 0 0 2px rgba(255, 212, 121, 0.75), 0 0 28px rgba(255, 212, 121, 0.55);
+    box-shadow:
+      0 0 0 2px rgba(255, 212, 121, 0.75),
+      0 0 28px rgba(255, 212, 121, 0.55);
     transform: translateY(-3px);
   }
 }
@@ -38,7 +40,9 @@
   color: #fff3d6;
   font-family: var(--font-sans);
   pointer-events: none;
-  animation: spark-ghost-in 900ms var(--ease-out) both, spark-ghost-pulse 2.4s ease-in-out 900ms infinite;
+  animation:
+    spark-ghost-in 900ms var(--ease-out) both,
+    spark-ghost-pulse 2.4s ease-in-out 900ms infinite;
 }
 .spark-ghost i {
   font: 500 11px var(--font-mono);

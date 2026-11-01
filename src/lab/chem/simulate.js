@@ -19,9 +19,14 @@ export function reactionDH(re) {
   return re.enthalpy.formation.value ?? re.enthalpy.bonds?.value ?? null;
 }
 
-const sideKey = (list) => list.map(([, k]) => k).sort().join('+');
+const sideKey = (list) =>
+  list
+    .map(([, k]) => k)
+    .sort()
+    .join('+');
 /** b è la reazione inversa di a (stesse specie con i lati scambiati). */
-const isReverse = (a, b) => sideKey(a.r.reactants) === sideKey(b.r.products) && sideKey(a.r.products) === sideKey(b.r.reactants);
+const isReverse = (a, b) =>
+  sideKey(a.r.reactants) === sideKey(b.r.products) && sideKey(a.r.products) === sideKey(b.r.reactants);
 const sum = (m) => [...m.values()].reduce((t, v) => t + v, 0);
 
 /**
@@ -42,7 +47,7 @@ export function planReactions(inventory, reactions, { energy = false, exclude = 
   });
   // solo le reazioni i cui reagenti sono presenti o si possono formare
   const reachable = new Set(inventory.keys());
-  for (let grew = true; grew; ) {
+  for (let grew = true; grew;) {
     grew = false;
     for (const re of usable) {
       if (!re.r.reactants.every(([, k]) => reachable.has(k))) continue;
@@ -58,7 +63,8 @@ export function planReactions(inventory, reactions, { energy = false, exclude = 
 
   // orig: molecole di partenza, made: prodotti dei passi precedenti (si consumano prima le prime)
   const available = (k, orig, made) => (orig.get(k) || 0) + (made.get(k) || 0);
-  const maxTimes = (re, orig, made) => Math.min(...re.r.reactants.map(([c, k]) => Math.floor(available(k, orig, made) / c)));
+  const maxTimes = (re, orig, made) =>
+    Math.min(...re.r.reactants.map(([c, k]) => Math.floor(available(k, orig, made) / c)));
   const apply = (re, times, orig, made) => {
     const o = new Map(orig);
     const m = new Map(made);
@@ -90,7 +96,13 @@ export function planReactions(inventory, reactions, { energy = false, exclude = 
       .filter((o) => o.times >= 1);
   const step = (st, { re, times }) => {
     const [orig, made, onlyOrig] = apply(re, times, st.orig, st.made);
-    return { orig, made, path: [...st.path, re], steps: [...st.steps, { re, times, onlyOrig }], dH: st.dH + reactionDH(re) * times };
+    return {
+      orig,
+      made,
+      path: [...st.path, re],
+      steps: [...st.steps, { re, times, onlyOrig }],
+      dH: st.dH + reactionDH(re) * times,
+    };
   };
 
   /** Completa in modo goloso: ogni volta il passo che consuma più molecole di partenza, poi il più esotermico. */
@@ -177,10 +189,16 @@ const gcd = (a, b) => (b ? gcd(b, a % b) : a);
  */
 export function libraryProduct(lab, library, zs) {
   const pick = (list) =>
-    list
-      .map((e) => ({ e, energy: entryEnergy(lab, e) }))
-      .sort((a, b) => b.energy - a.energy)[0]?.e ?? null;
-  const direct = pick(library.byFormula(formulaKey(lab, zs.map((z) => ({ z })), 0)));
+    list.map((e) => ({ e, energy: entryEnergy(lab, e) })).sort((a, b) => b.energy - a.energy)[0]?.e ?? null;
+  const direct = pick(
+    library.byFormula(
+      formulaKey(
+        lab,
+        zs.map((z) => ({ z })),
+        0,
+      ),
+    ),
+  );
   if (direct) return { entry: direct, copies: 1 };
   const counts = new Map();
   for (const z of zs) counts.set(z, (counts.get(z) || 0) + 1);
@@ -215,7 +233,9 @@ export function modelReaction(lab, library, species, reactions) {
   const reactantSets = reactions.map((re) => new Set(re.r.reactants.map(([, k]) => k)));
   const blocked = (keys) => {
     const distinct = [...new Set(keys)];
-    return reactantSets.some((set) => (distinct.length === 1 ? set.size === 1 && set.has(distinct[0]) : distinct.every((k) => set.has(k))));
+    return reactantSets.some((set) =>
+      distinct.length === 1 ? set.size === 1 && set.has(distinct[0]) : distinct.every((k) => set.has(k)),
+    );
   };
   for (const size of [2, 3]) {
     let best = null;
@@ -224,7 +244,11 @@ export function modelReaction(lab, library, species, reactions) {
         const members = picked.map((i) => species[i]);
         const keys = members.map((s) => s.key);
         if (blocked(keys)) return;
-        const product = libraryProduct(lab, library, members.flatMap((s) => s.zs));
+        const product = libraryProduct(
+          lab,
+          library,
+          members.flatMap((s) => s.zs),
+        );
         if (!product) return;
         const dH = modelEnthalpy(lab, members, product);
         if (!dH || dH.value > MODEL_MIN_DH) return;

@@ -58,7 +58,8 @@ export function ellipseCells(x0, y0, x1, y1, filled) {
     for (let x = xa; x <= xb; x++) {
       if (!inside(x, y)) continue;
       // il contorno: le celle interne che toccano l'esterno
-      if (filled || !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1)) cells.push([x, y]);
+      if (filled || !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1))
+        cells.push([x, y]);
     }
   }
   return cells;

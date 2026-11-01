@@ -3,8 +3,27 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
-  createSubstances, phaseAt, gameHalfLife, AMBIENT, AIR_DENSITY, SOLID, LIQUID, GAS, S,
-  WOOD, COAL, CONCRETE, WALL, WATER, SALT, OXIDE, SOLUTION, GENERATOR, ASH, SMOKE, saltCtype,
+  createSubstances,
+  phaseAt,
+  gameHalfLife,
+  AMBIENT,
+  AIR_DENSITY,
+  SOLID,
+  LIQUID,
+  GAS,
+  S,
+  WOOD,
+  COAL,
+  CONCRETE,
+  WALL,
+  WATER,
+  SALT,
+  OXIDE,
+  SOLUTION,
+  GENERATOR,
+  ASH,
+  SMOKE,
+  saltCtype,
 } from '../../src/sandbox/substances.js';
 import { World, C_POWDER, C_FUME, SPARK_ACTIVE, NEUTRON } from '../../src/sandbox/world.js';
 import { describeEvent, substanceLabel, substanceNotes } from '../../src/sandbox/describe.js';
@@ -58,7 +77,11 @@ test('sostanze: i 118 elementi con gli stati reali a 22 °C, più i materiali di
 });
 
 test('radioattività: tempo di dimezzamento accelerato in scala logaritmica e catene di decadimento', () => {
-  assert.ok(gameHalfLife(1e-3) < gameHalfLife(1) && gameHalfLife(1) < gameHalfLife(3e7) && gameHalfLife(3e7) < gameHalfLife(1.4e17));
+  assert.ok(
+    gameHalfLife(1e-3) < gameHalfLife(1) &&
+      gameHalfLife(1) < gameHalfLife(3e7) &&
+      gameHalfLife(3e7) < gameHalfLife(1.4e17),
+  );
   assert.ok(gameHalfLife(1.4e17) < 3600); // l'uranio-238 dimezza in meno di un'ora di gioco
   const po = subs.list[Z('Po')].decay;
   assert.equal(po.daughter, Z('Pb'));
@@ -78,7 +101,7 @@ test('le polveri cadono e si ammucchiano; i blocchi restano sospesi', () => {
   assert.equal(w.type[5 * w.W + 10], Z('Fe'), 'il blocco non cade');
 });
 
-test('i liquidi si stratificano per densità: il mercurio va sotto l\'acqua, il piombo galleggia sul mercurio', () => {
+test("i liquidi si stratificano per densità: il mercurio va sotto l'acqua, il piombo galleggia sul mercurio", () => {
   const w = world();
   for (let y = 15; y < 39; y++) {
     w.paint(0, y, 0, WALL);
@@ -88,14 +111,14 @@ test('i liquidi si stratificano per densità: il mercurio va sotto l\'acqua, il 
   // il mercurio versato sopra l'acqua affonda
   for (let y = 20; y < 23; y++) for (let x = 10; x < 50; x++) w.paint(x, y, 0, Z('Hg'));
   run(w, 500);
-  assert.ok(meanY(w, Z('Hg')) > meanY(w, WATER) + 3, 'il mercurio sta sotto l\'acqua');
+  assert.ok(meanY(w, Z('Hg')) > meanY(w, WATER) + 3, "il mercurio sta sotto l'acqua");
 
   const v = world();
   for (let y = 30; y < 39; y++) for (let x = 0; x < 60; x++) v.paint(x, y, 0, Z('Hg'));
   v.paint(20, 10, 2, Z('Pb'), { powder: true });
   v.paint(40, 10, 2, Z('Au'), { powder: true });
   run(v, 300);
-  assert.ok(meanY(v, Z('Au')) > meanY(v, Z('Pb')) + 3, 'l\'oro affonda, il piombo galleggia');
+  assert.ok(meanY(v, Z('Au')) > meanY(v, Z('Pb')) + 3, "l'oro affonda, il piombo galleggia");
 });
 
 test('i gas salgono o scendono secondo la densità', () => {
@@ -126,7 +149,7 @@ test('cambiare griglia conserva il disegno, centrato e appoggiato in basso', () 
   run(w, 5);
 });
 
-test('un composto che si decompone non diventa vapore di sé stesso; gli idrati perdono l\'acqua', () => {
+test("un composto che si decompone non diventa vapore di sé stesso; gli idrati perdono l'acqua", () => {
   const gassy = [];
   for (const s of subs.list) {
     if (!(s.flags & S.DECOMPOSES) || s.flags & S.EXPLOSIVE || !Number.isFinite(s.bp)) continue;
@@ -145,7 +168,7 @@ test('un composto che si decompone non diventa vapore di sé stesso; gli idrati 
     w.step();
   }
   assert.ok(count(w, Z('cuso4')) > 0, 'resta il sale anidro');
-  assert.ok(count(w, WATER) > 0, 'e l\'acqua se ne va come vapore');
+  assert.ok(count(w, WATER) > 0, "e l'acqua se ne va come vapore");
   const ev = [...w.events.keys()].find((k) => k.startsWith('dehyd:'));
   assert.ok(ev, 'nel registro');
   assert.match(describeEvent(subs, ev).title, /solfato di rame/i);
@@ -157,10 +180,13 @@ test('elio: a pressione atmosferica resta liquido fino allo zero assoluto', () =
   assert.equal(phaseAt(he, 4.3), GAS);
   const w = world(20, 10);
   for (const T of [0, 0.5, 2]) assert.equal(w.phaseOf(Z('He'), T), LIQUID, `motore a ${T} K`);
-  assert.ok(substanceNotes(subs, Z('He')).some((n) => /2[,.]?17|superflu|non solidifica/i.test(n)), 'la scheda lo dice');
+  assert.ok(
+    substanceNotes(subs, Z('He')).some((n) => /2[,.]?17|superflu|non solidifica/i.test(n)),
+    'la scheda lo dice',
+  );
 });
 
-test('cambiamenti di stato: il ferro fonde a 1538 °C, l\'acqua gela e bolle', () => {
+test("cambiamenti di stato: il ferro fonde a 1538 °C, l'acqua gela e bolle", () => {
   const w = world();
   w.paint(30, 30, 3, Z('Fe'), { powder: false });
   w.heat(30, 30, 3, 1700);
@@ -172,7 +198,7 @@ test('cambiamenti di stato: il ferro fonde a 1538 °C, l\'acqua gela e bolle', (
   v.paint(30, 30, 3, WATER);
   v.heat(30, 30, 3, -60);
   run(v, 5);
-  assert.ok(events(v, `phase:${WATER}:21`) > 0, 'l\'acqua gela');
+  assert.ok(events(v, `phase:${WATER}:21`) > 0, "l'acqua gela");
   assert.equal(phaseAt(subs.list[WATER], 380), GAS);
 });
 
@@ -195,11 +221,14 @@ test('metallo + alogeno → sale (2 Na + Cl₂ → 2 NaCl)', () => {
   assert.ok(count(w, subs.byKey.get('nacl').id) > 5, 'si forma il cloruro di sodio della libreria');
   const c = saltCtype(Z('Na'), Z('Cl'));
   assert.deepEqual(substanceLabel(subs, SALT, c), { name: 'Cloruro di sodio', formula: 'NaCl' });
-  assert.deepEqual(substanceLabel(subs, SALT, saltCtype(Z('Fe'), Z('Cl'))), { name: 'Cloruro di ferro(III)', formula: 'FeCl₃' });
+  assert.deepEqual(substanceLabel(subs, SALT, saltCtype(Z('Fe'), Z('Cl'))), {
+    name: 'Cloruro di ferro(III)',
+    formula: 'FeCl₃',
+  });
   assert.deepEqual(substanceLabel(subs, OXIDE, Z('Al')), { name: 'Ossido di alluminio', formula: 'Al₂O₃' });
 });
 
-test('combustione: il legno brucia all\'aria (fumo, cenere); senza ossigeno si carbonizza', () => {
+test("combustione: il legno brucia all'aria (fumo, cenere); senza ossigeno si carbonizza", () => {
   const w = world();
   for (let y = 30; y < 39; y++) for (let x = 20; x < 40; x++) w.paint(x, y, 0, WOOD);
   w.ignite(30, 29, 3);
@@ -233,7 +262,7 @@ test('gas di combustione: il legno libera CO₂ e vapore acqueo, non solo fumo; 
   const seen = fumes(w, 900);
   assert.ok(seen.get(Z('co2')) > 50, 'anidride carbonica');
   assert.ok(seen.get(WATER) > 50, 'vapore acqueo');
-  assert.ok(seen.get(Z('co')) > 0, 'monossido di carbonio dove l\'aria scarseggia');
+  assert.ok(seen.get(Z('co')) > 0, "monossido di carbonio dove l'aria scarseggia");
   assert.ok(count(w, SMOKE) + events(w, `burn:${WOOD}`) > 0);
   assert.equal(subs.list[SMOKE].name, 'Fumo nero (fuliggine)');
   // i gas di scarico si disperdono: senza più fiamme, dopo qualche secondo non ne resta nessuno
@@ -279,7 +308,8 @@ test('idrogeno e ossigeno: una scintilla e diventano acqua', () => {
 
 test('alluminotermia: alluminio + ruggine ad alta temperatura danno ferro fuso', () => {
   const w = world();
-  for (let y = 28; y < 39; y++) for (let x = 20; x < 40; x++) w.paint(x, y, 0, (x + y) % 2 ? Z('Al') : OXIDE, { ctype: (x + y) % 2 ? 0 : Z('Fe') });
+  for (let y = 28; y < 39; y++)
+    for (let x = 20; x < 40; x++) w.paint(x, y, 0, (x + y) % 2 ? Z('Al') : OXIDE, { ctype: (x + y) % 2 ? 0 : Z('Fe') });
   w.heat(30, 28, 3, 1200);
   run(w, 300);
   assert.ok(events(w, `thermite:${Z('Al')}:${Z('Fe')}`) > 20);
@@ -339,7 +369,7 @@ test('elettricità: il generatore manda impulsi nel rame e il neon si illumina',
   assert.ok(lit > 200, `celle di neon illuminate: ${lit}`);
 });
 
-test('elettrolisi: la corrente scompone l\'acqua in idrogeno e ossigeno', () => {
+test("elettrolisi: la corrente scompone l'acqua in idrogeno e ossigeno", () => {
   const w = world();
   for (let y = 25; y < 39; y++) for (let x = 0; x < 60; x++) w.paint(x, y, 0, WATER);
   for (let y = 15; y < 38; y++) w.paint(20, y, 0, Z('Cu'), { powder: false });
@@ -363,7 +393,7 @@ test('esplosioni: il muro è indistruttibile, il calcestruzzo resiste, il legno 
   for (let y = 10; y < 30; y++) assert.equal(w.type[y * w.W + 20], WALL);
   let concrete = 0;
   for (let y = 10; y < 30; y++) concrete += w.type[y * w.W + 30] === CONCRETE ? 1 : 0;
-  assert.equal(concrete, 20, 'il calcestruzzo regge un\'esplosione media');
+  assert.equal(concrete, 20, "il calcestruzzo regge un'esplosione media");
   let wood = 0;
   for (let y = 10; y < 30; y++) wood += w.type[y * w.W + 40] === WOOD && !(w.flags[y * w.W + 40] & C_POWDER) ? 1 : 0;
   assert.ok(wood < 20, 'il legno si frantuma');
@@ -437,7 +467,8 @@ test('le equazioni del registro sono bilanciate (combustioni, sali, alluminoterm
   const metals = subs.list.filter((s) => s?.kind === 'element' && s.flags & S.METAL && s.z < 104);
   const halogens = ['F', 'Cl', 'Br', 'I'].map(Z);
   for (const m of metals) for (const x of halogens) keys.push(`salt:${m.id}:${x}`, `electrolysis:salt:${m.id}:${x}`);
-  for (const a of ['Al', 'Mg', 'Ca', 'Na']) for (const b of ['Fe', 'Cu', 'Cr', 'Ni', 'Pb']) keys.push(`thermite:${Z(a)}:${Z(b)}`);
+  for (const a of ['Al', 'Mg', 'Ca', 'Na'])
+    for (const b of ['Fe', 'Cu', 'Cr', 'Ni', 'Pb']) keys.push(`thermite:${Z(a)}:${Z(b)}`);
   keys.push('electrolysis:water');
   for (const k of keys) {
     const d = describeEvent(subs, k);
@@ -450,7 +481,9 @@ test('decadimenti e fissioni conservano il numero di massa e la carica', () => {
   for (const s of subs.list) {
     if (!s?.decay || s.decay.mode === 5) continue;
     const d = describeEvent(subs, `decay:${s.id}`);
-    const nums = [...d.equation.matchAll(/([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g)].map((m) => Number([...m[1]].map((c) => '⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(c)).join('')));
+    const nums = [...d.equation.matchAll(/([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g)].map((m) =>
+      Number([...m[1]].map((c) => '⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(c)).join('')),
+    );
     const [lhs, rhs] = d.equation.split(' → ');
     const massL = [...lhs.matchAll(/([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g)].length;
     const sum = (arr) => arr.reduce((a, b) => a + b, 0);
@@ -467,12 +500,17 @@ test('ogni sostanza ha note descrittive', () => {
 });
 
 test('gli esempi si costruiscono e girano su tutte le griglie', () => {
-  for (const [W, H] of [[240, 135], [320, 180], [400, 225]]) {
+  for (const [W, H] of [
+    [240, 135],
+    [320, 180],
+    [400, 225],
+  ]) {
     for (const p of PRESETS) {
       const w = new World(subs, W, H, { seed: 5 });
       const out = p.build(w, subs);
       assert.ok(w.census().size > 0, p.id);
-      for (const l of out.labels ?? []) assert.ok(l.x >= 0 && l.x < W && l.y >= 0 && l.y < H, `${p.id}: etichetta fuori griglia`);
+      for (const l of out.labels ?? [])
+        assert.ok(l.x >= 0 && l.x < W && l.y >= 0 && l.y < H, `${p.id}: etichetta fuori griglia`);
       run(w, 60);
     }
   }

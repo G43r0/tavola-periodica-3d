@@ -151,7 +151,9 @@ function openGame() {
   gameLoading ??= import('./game/game-view.js')
     .then((m) => {
       // dal quaderno del simulatore una reazione si apre nel laboratorio molecolare, sopra il gioco
-      game = m.createGame(elements, { onOpenLab: (reaction, onClose) => openLab(null, { reaction, above: true, onClose }) });
+      game = m.createGame(elements, {
+        onOpenLab: (reaction, onClose) => openLab(null, { reaction, above: true, onClose }),
+      });
       return game;
     })
     .catch((err) => {
@@ -191,7 +193,14 @@ try {
 const isTyping = (t) => t instanceof HTMLElement && (t.matches('input, textarea, select') || t.isContentEditable);
 
 window.addEventListener('keydown', (ev) => {
-  if (document.querySelector('dialog[open]') || viewer?.isOpen() || lab?.isOpen() || sandbox?.isOpen() || game?.isOpen()) return;
+  if (
+    document.querySelector('dialog[open]') ||
+    viewer?.isOpen() ||
+    lab?.isOpen() ||
+    sandbox?.isOpen() ||
+    game?.isOpen()
+  )
+    return;
   const typing = isTyping(ev.target);
 
   if ((ev.key === '/' && !typing) || ((ev.ctrlKey || ev.metaKey) && ['f', 'k'].includes(ev.key.toLowerCase()))) {

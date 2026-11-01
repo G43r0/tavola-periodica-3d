@@ -1,8 +1,30 @@
 // Menu dell'app nella lingua scelta nell'app («eli6» usa l'italiano). Logica pura, si prova con npm test.
 
 const MENU_TEXT = {
-  it: { quit: 'Esci', view: 'Visualizza', reload: 'Ricarica', resetZoom: 'Zoom predefinito', zoomIn: 'Aumenta zoom', zoomOut: 'Riduci zoom', fullscreen: 'Schermo intero', devTools: 'Strumenti per sviluppatori', help: 'Aiuto', about: 'Informazioni su Tavola Periodica 3D' },
-  en: { quit: 'Quit', view: 'View', reload: 'Reload', resetZoom: 'Actual size', zoomIn: 'Zoom in', zoomOut: 'Zoom out', fullscreen: 'Full screen', devTools: 'Developer tools', help: 'Help', about: 'About Tavola Periodica 3D' },
+  it: {
+    quit: 'Esci',
+    view: 'Visualizza',
+    reload: 'Ricarica',
+    resetZoom: 'Zoom predefinito',
+    zoomIn: 'Aumenta zoom',
+    zoomOut: 'Riduci zoom',
+    fullscreen: 'Schermo intero',
+    devTools: 'Strumenti per sviluppatori',
+    help: 'Aiuto',
+    about: 'Informazioni su Tavola Periodica 3D',
+  },
+  en: {
+    quit: 'Quit',
+    view: 'View',
+    reload: 'Reload',
+    resetZoom: 'Actual size',
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    fullscreen: 'Full screen',
+    devTools: 'Developer tools',
+    help: 'Help',
+    about: 'About Tavola Periodica 3D',
+  },
 };
 
 function menuTemplate(lang = 'it', { isDev = false } = {}) {

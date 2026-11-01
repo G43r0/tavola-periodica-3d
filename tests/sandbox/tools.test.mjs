@@ -90,7 +90,7 @@ test('Vento: spinge le polveri nella direzione del cursore, o via dal centro', (
   const meanX = () => {
     let sum = 0;
     let n = 0;
-    for (let i = 0; i < w.N; i++) if (w.type[i] === FE) (sum += i % w.W, n++);
+    for (let i = 0; i < w.N; i++) if (w.type[i] === FE) ((sum += i % w.W), n++);
     return sum / n;
   };
   const x0 = meanX();

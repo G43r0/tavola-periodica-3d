@@ -42,7 +42,10 @@ test('precipitazioni: AgCl bianco, PbI₂ giallo, Cu(OH)₂ azzurro (e la soluzi
   assert.equal(equation(ctx, rx, { aqueous: true }), 'AgNO₃(aq) + NaCl(aq) → AgCl(s) + NaNO₃(aq)');
   let sig = sigOf(rx);
   assert.deepEqual(formulas(sig.solids), ['AgCl']);
-  assert.ok(sig.solids[0].rgb.every((c) => c > 220), 'AgCl bianco');
+  assert.ok(
+    sig.solids[0].rgb.every((c) => c > 220),
+    'AgCl bianco',
+  );
 
   mix = solution('pbno32', 0.1, 10);
   mix.add(solution('ki', 0.1, 20));
@@ -70,7 +73,7 @@ test('spostamento: lo zinco nel solfato di rame si ricopre di rame (metallo che 
   assert.deepEqual(signalTags(sig).slice(0, 3), ['deposit', 'dissolves', 'colorChange']);
 });
 
-test('gas colorati e calore: NO₂ bruno dal rame con l\'acido nitrico; aceto e bicarbonato raffreddano', () => {
+test("gas colorati e calore: NO₂ bruno dal rame con l'acido nitrico; aceto e bicarbonato raffreddano", () => {
   const mix = solution('hno3', 6, 20);
   mix.addSpecies(ctx.id('Cu'), 0.01);
   const rxs = run(mix);
@@ -134,7 +137,7 @@ test('perché non reagisce: rame e HCl, rame e solfato di zinco, magnesio in acq
   assert.deepEqual(formulas(sigOf(rx).gases), ['O₂']);
 });
 
-test('perché non reagisce: con un solo reagente che manca lo dice (KMnO₄ e Fe²⁺ vogliono l\'acido solforico)', () => {
+test("perché non reagisce: con un solo reagente che manca lo dice (KMnO₄ e Fe²⁺ vogliono l'acido solforico)", () => {
   const mix = solution('kmno4', 0.02, 50);
   mix.add(solution('feso4', 0.1, 20));
   run(mix, 3);
@@ -143,7 +146,7 @@ test('perché non reagisce: con un solo reagente che manca lo dice (KMnO₄ e Fe
   assert.equal(ctx.formula(w.sid), 'H₂SO₄');
 });
 
-test('luce: il cloruro d\'argento si decompone solo sotto la lampada, lentamente', () => {
+test("luce: il cloruro d'argento si decompone solo sotto la lampada, lentamente", () => {
   const dark = Mixture.solid(ctx, 'agcl', 1);
   assert.deepEqual(run(dark, 5), []);
   assert.equal(whyNot(dark)[0].why, 'light');
@@ -155,7 +158,7 @@ test('luce: il cloruro d\'argento si decompone solo sotto la lampada, lentamente
   assert.equal(reactionSignals(ctx, rx).light, true);
 });
 
-test('velocità: a caldo lo zinco reagisce con l\'acido più in fretta che a temperatura ambiente', () => {
+test("velocità: a caldo lo zinco reagisce con l'acido più in fretta che a temperatura ambiente", () => {
   const left = (T) => {
     const mix = solution('hcl', 1, 50);
     mix.T = T;
@@ -183,6 +186,10 @@ test('ogni reazione del simulatore ha segnali ed equazione, e quelle fuori dal s
     assert.match(equation(ctx, rx), / → /, rx.id);
   }
   const whys = new Set(ctx.offline.map((rx) => rx.why));
-  for (const w of whys) assert.ok(['equilibrium', 'living', 'catalyst', 'electrolysis', 'discharge', 'steam'].includes(w), w);
-  assert.ok(ctx.rxs.some((rx) => rx.cond.light), 'nessuna reazione con la luce');
+  for (const w of whys)
+    assert.ok(['equilibrium', 'living', 'catalyst', 'electrolysis', 'discharge', 'steam'].includes(w), w);
+  assert.ok(
+    ctx.rxs.some((rx) => rx.cond.light),
+    'nessuna reazione con la luce',
+  );
 });

@@ -8,7 +8,7 @@ import { createT } from '../../i18n/index.js';
 const t = createT({
   it: {
     none: 'Non esiste un bilanciamento: gli stessi atomi non compaiono in entrambi i lati nelle giuste proporzioni.',
-    several: 'L\'equazione ammette più bilanciamenti indipendenti: in realtà descrive più reazioni insieme.',
+    several: "L'equazione ammette più bilanciamenti indipendenti: in realtà descrive più reazioni insieme.",
     positive: 'Non esiste un bilanciamento con tutti i coefficienti positivi: controlla reagenti e prodotti.',
   },
   en: {
@@ -128,7 +128,8 @@ export function balance(reactants, products) {
     }),
   );
   // conservazione della carica (per gli ioni)
-  if (species.some((s) => charge(s) !== 0)) rows.push(species.map((s, j) => new Frac(j < reactants.length ? charge(s) : -charge(s))));
+  if (species.some((s) => charge(s) !== 0))
+    rows.push(species.map((s, j) => new Frac(j < reactants.length ? charge(s) : -charge(s))));
 
   // forma a scala ridotta
   const m = rows.length;
@@ -224,7 +225,13 @@ export function reactionEnthalpy(lab, reactants, products, rc, pc) {
       });
       return m;
     };
-    bonds = { value: brokenKj - formedKj, brokenKj, formedKj, broken: collect(reactants, rc), formed: collect(products, pc) };
+    bonds = {
+      value: brokenKj - formedKj,
+      brokenKj,
+      formedKj,
+      broken: collect(reactants, rc),
+      formed: collect(products, pc),
+    };
   }
   return { formation, bonds };
 }

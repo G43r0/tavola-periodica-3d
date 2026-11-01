@@ -193,7 +193,9 @@ function crystalsGeometry(seed, plates) {
     const w = plates ? 0.24 + rand() * 0.14 : 0.2 + rand() * 0.12;
     g.scale(w, len, plates ? 0.05 + rand() * 0.04 : w * (0.75 + rand() * 0.3));
     const tilt = plates ? 1.6 : 0.9;
-    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler((rand() - 0.5) * tilt, rand() * 6.28, (rand() - 0.5) * tilt));
+    const q = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler((rand() - 0.5) * tilt, rand() * 6.28, (rand() - 0.5) * tilt),
+    );
     g.applyQuaternion(q);
     g.translate((rand() - 0.5) * 0.5, (rand() - 0.5) * 0.18, (rand() - 0.5) * 0.5);
     parts.push(flat(g));
@@ -341,7 +343,16 @@ function halo(color, strength, size = 2.4) {
       { color: true },
     );
   }
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTexture, color, transparent: true, opacity: strength, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: haloTexture,
+      color,
+      transparent: true,
+      opacity: strength,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
   sprite.scale.setScalar(size);
   return sprite;
 }
@@ -374,13 +385,21 @@ export function buildSpecimen(z) {
 
   switch (a.form) {
     case 'cube': {
-      const geo = z === 83 ? cached('hopper', hopperGeometry) : cached('cube', () => new RoundedBoxGeometry(0.86, 0.86, 0.86, 6, 0.045));
+      const geo =
+        z === 83
+          ? cached('hopper', hopperGeometry)
+          : cached('cube', () => new RoundedBoxGeometry(0.86, 0.86, 0.86, 6, 0.045));
       const mesh = solid(geo, metalMaterial(a));
       mesh.rotation.y = 0.55;
       break;
     }
     case 'lump': {
-      const mat = new THREE.MeshPhysicalMaterial({ color: a.c, metalness: a.m, roughness: a.r, flatShading: Boolean(a.facets) });
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: a.c,
+        metalness: a.m,
+        roughness: a.r,
+        flatShading: Boolean(a.facets),
+      });
       if (a.waxy) {
         // fosforo bianco: ceroso e un po' traslucido
         mat.transmission = 0.35;
@@ -413,7 +432,10 @@ export function buildSpecimen(z) {
       ampoule();
       if (a.glow) {
         const mat = glowMaterial(a.glow);
-        const inner = new THREE.Mesh(cached('inner', () => new THREE.SphereGeometry(AMPOULE_R * 0.93, 48, 32)), mat);
+        const inner = new THREE.Mesh(
+          cached('inner', () => new THREE.SphereGeometry(AMPOULE_R * 0.93, 48, 32)),
+          mat,
+        );
         inner.renderOrder = 3;
         group.add(inner);
         // la luce del gas illumina il vetro e il piano d'appoggio
@@ -444,7 +466,18 @@ export function buildSpecimen(z) {
       surf.rotateX(-Math.PI / 2);
       surf.translate(0, level, 0);
       const liquid = mergeGeometries([flat(cap), flat(surf)]);
-      solid(liquid, new THREE.MeshPhysicalMaterial({ color: a.c, roughness: 0.08, metalness: 0, specularIntensity: 0.6, envMapIntensity: 0.55, clearcoat: 0.5, clearcoatRoughness: 0.05 })).castShadow = false;
+      solid(
+        liquid,
+        new THREE.MeshPhysicalMaterial({
+          color: a.c,
+          roughness: 0.08,
+          metalness: 0,
+          specularIntensity: 0.6,
+          envMapIntensity: 0.55,
+          clearcoat: 0.5,
+          clearcoatRoughness: 0.05,
+        }),
+      ).castShadow = false;
       const vapor = new THREE.Mesh(
         cached('inner', () => new THREE.SphereGeometry(AMPOULE_R * 0.93, 48, 32)),
         new THREE.MeshBasicMaterial({ color: a.gas, transparent: true, opacity: 0.26, depthWrite: false }),
@@ -472,7 +505,10 @@ export function buildSpecimen(z) {
     }
     case 'sealed': {
       ampoule();
-      const blob = solid(lumpGeometry(z * 7, false), new THREE.MeshPhysicalMaterial({ color: a.c, metalness: 1, roughness: a.r }));
+      const blob = solid(
+        lumpGeometry(z * 7, false),
+        new THREE.MeshPhysicalMaterial({ color: a.c, metalness: 1, roughness: a.r }),
+      );
       blob.scale.setScalar(0.46);
       blob.position.y = -0.33;
       break;
@@ -481,12 +517,22 @@ export function buildSpecimen(z) {
       // mai visto: cubo di vetro smerigliato con un punto interrogativo
       const cube = new THREE.Mesh(
         cached('cube', () => new RoundedBoxGeometry(0.86, 0.86, 0.86, 6, 0.045)),
-        new THREE.MeshPhysicalMaterial({ color: '#b8c6da', roughness: 0.32, transmission: 1, thickness: 0.8, ior: 1.45, depthWrite: false }),
+        new THREE.MeshPhysicalMaterial({
+          color: '#b8c6da',
+          roughness: 0.32,
+          transmission: 1,
+          thickness: 0.8,
+          ior: 1.45,
+          depthWrite: false,
+        }),
       );
       cube.rotation.y = 0.55;
       cube.renderOrder = 2;
       group.add(cube);
-      const q = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.62), new THREE.MeshBasicMaterial({ map: questionTex(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide }));
+      const q = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.62, 0.62),
+        new THREE.MeshBasicMaterial({ map: questionTex(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide }),
+      );
       q.rotation.y = 0.55;
       group.add(q);
     }
@@ -508,7 +554,10 @@ export function buildSpecimen(z) {
     }
   });
   const height = box.max.y - box.min.y;
-  group.userData.bounds = new THREE.Sphere(new THREE.Vector3(0, GROUND_Y + height / 2, 0), Math.hypot(radial, height / 2));
+  group.userData.bounds = new THREE.Sphere(
+    new THREE.Vector3(0, GROUND_Y + height / 2, 0),
+    Math.hypot(radial, height / 2),
+  );
 
   if (a.glow && a.form === 'cube') {
     const h = halo(a.glow, (a.glowK ?? 0.2) * 1.4);
@@ -702,7 +751,11 @@ export function createSpecimenView() {
  * Alla fine libera il contesto grafico. Restituisce una funzione per interrompere.
  */
 export function renderThumbnails(zs, size, onThumb) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    preserveDrawingBuffer: true,
+    powerPreference: 'high-performance',
+  });
   renderer.setPixelRatio(1);
   renderer.setSize(size, size, false);
   const { scene, camera, holder } = createStudio(renderer);

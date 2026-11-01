@@ -13,7 +13,10 @@ const { lockDownSession } = require('../../electron/security.cjs');
 const items = (tpl) => tpl.flatMap((m) => m.submenu ?? []);
 
 test('menu: «Informazioni su Tavola Periodica 3D» (ruolo about) in italiano e in inglese', () => {
-  for (const [lang, label] of [['it', /Informazioni su Tavola Periodica 3D/], ['en', /About Tavola Periodica 3D/]]) {
+  for (const [lang, label] of [
+    ['it', /Informazioni su Tavola Periodica 3D/],
+    ['en', /About Tavola Periodica 3D/],
+  ]) {
     const about = items(menuTemplate(lang, { isDev: false })).find((i) => i.role === 'about');
     assert.ok(about, lang);
     assert.match(about.label, label);
@@ -24,8 +27,12 @@ test('menu: «Informazioni su Tavola Periodica 3D» (ruolo about) in italiano e 
 
 test('sessione: la pagina non ottiene permessi (fotocamera, microfono, posizione, notifiche…) tranne quelli che usa', () => {
   const session = {
-    setPermissionRequestHandler(fn) { this.request = fn; },
-    setPermissionCheckHandler(fn) { this.check = fn; },
+    setPermissionRequestHandler(fn) {
+      this.request = fn;
+    },
+    setPermissionCheckHandler(fn) {
+      this.check = fn;
+    },
   };
   lockDownSession(session);
   for (const perm of ['media', 'geolocation', 'notifications', 'clipboard-read']) {
@@ -52,7 +59,7 @@ test('CSP: in produzione niente indirizzo del server di sviluppo, in sviluppo il
   assert.equal(csp(devCsp(devCsp(html, 5175), 5175)), dev, 'una volta sola');
 });
 
-test('informazioni: la versione dell\'app (con Electron e Chrome nell\'app desktop) e le note di rilascio', () => {
+test("informazioni: la versione dell'app (con Electron e Chrome nell'app desktop) e le note di rilascio", () => {
   const web = versionFooter('1.0.0', null);
   assert.match(web, /1\.0\.0/);
   assert.match(web, /href="https:\/\/github\.com\/[^"]+\/releases\/tag\/v1\.0\.0"/);

@@ -29,7 +29,9 @@
   border-radius: 999px;
   background: var(--glass);
   backdrop-filter: blur(10px);
-  box-shadow: 0 0 24px rgba(251, 191, 36, 0.18), var(--shadow-lg);
+  box-shadow:
+    0 0 24px rgba(251, 191, 36, 0.18),
+    var(--shadow-lg);
   color: var(--text-1);
   font-size: 13px;
   pointer-events: none;
@@ -78,7 +80,10 @@
   border: 1px solid color-mix(in oklab, var(--xc) 45%, var(--line-2));
   border-radius: var(--r-lg);
   background: rgba(10, 16, 26, 0.97);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 0 32px color-mix(in oklab, var(--xc) 18%, transparent), var(--shadow-lg);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.3),
+    0 0 32px color-mix(in oklab, var(--xc) 18%, transparent),
+    var(--shadow-lg);
   color: var(--text-1);
   font-size: 13.5px;
   line-height: 1.55;

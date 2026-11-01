@@ -22,7 +22,10 @@ function readBytes(url) {
     xhr.open('GET', url);
     xhr.responseType = 'arraybuffer';
     // da file:// lo stato è 0 anche quando la lettura riesce
-    xhr.onload = () => ((xhr.status === 200 || xhr.status === 0) && xhr.response ? resolve(xhr.response) : reject(new Error(`${url}: ${xhr.status}`)));
+    xhr.onload = () =>
+      (xhr.status === 200 || xhr.status === 0) && xhr.response
+        ? resolve(xhr.response)
+        : reject(new Error(`${url}: ${xhr.status}`));
     xhr.onerror = () => reject(new Error(url));
     xhr.send();
   });
@@ -60,16 +63,18 @@ export class GameAudio {
   }
 
   async load() {
-    await Promise.all(SOUNDS.map(async (s) => {
-      const url = URLS[`./sfx/${s.name}.ogg`];
-      if (!url) return;
-      try {
-        const data = await readBytes(new URL(url, document.baseURI).href);
-        this.buffers.set(s.name, await this.ctx.decodeAudioData(data));
-      } catch {
-        /* un suono che non si carica resta muto */
-      }
-    }));
+    await Promise.all(
+      SOUNDS.map(async (s) => {
+        const url = URLS[`./sfx/${s.name}.ogg`];
+        if (!url) return;
+        try {
+          const data = await readBytes(new URL(url, document.baseURI).href);
+          this.buffers.set(s.name, await this.ctx.decodeAudioData(data));
+        } catch {
+          /* un suono che non si carica resta muto */
+        }
+      }),
+    );
   }
 
   setVolume(v) {

@@ -2,7 +2,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { createSubstances, phaseAt, AMBIENT, SOLID, LIQUID, GAS, S, WALL, WATER, CONCRETE } from '../../src/sandbox/substances.js';
+import {
+  createSubstances,
+  phaseAt,
+  AMBIENT,
+  SOLID,
+  LIQUID,
+  GAS,
+  S,
+  WALL,
+  WATER,
+  CONCRETE,
+} from '../../src/sandbox/substances.js';
 import { World, C_DISSOLVED } from '../../src/sandbox/world.js';
 import { describeEvent, substanceNotes } from '../../src/sandbox/describe.js';
 import { MOLECULES } from '../../src/lab/data/molecules.js';
@@ -73,7 +84,7 @@ test('le reazioni del catalogo: ogni specie esiste, quelle escluse hanno un moti
   assert.ok(!chem.list.some((rx) => rx.disabled === 'specie non disponibile'));
 });
 
-test('soluzioni: il sale si scioglie e, facendo bollire l\'acqua, cristallizza di nuovo', () => {
+test("soluzioni: il sale si scioglie e, facendo bollire l'acqua, cristallizza di nuovo", () => {
   const w = world();
   basin(w, 20);
   for (let y = 28; y < 39; y++) for (let x = 1; x < 59; x++) w.paint(x, y, 0, WATER);
@@ -115,7 +126,7 @@ test('combustione del metano (reazione del catalogo): anidride carbonica e acqua
   assert.ok(count(w, K('co2')) > 30 && count(w, WATER) > 30);
 });
 
-test('un catalizzatore cambia tutto: l\'acqua ossigenata si decompone solo con MnO₂', () => {
+test("un catalizzatore cambia tutto: l'acqua ossigenata si decompone solo con MnO₂", () => {
   const make = (withCatalyst) => {
     const w = world();
     basin(w, 20);

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { TUTORIAL, ILLUSTRATION_WORDS, illustration } from '../../src/game/tutorial.js';
 import { GAME_STRINGS } from '../../src/game/game-strings.js';
 
-test('tutorial: ogni pagina ha un\'illustrazione SVG completa', () => {
+test("tutorial: ogni pagina ha un'illustrazione SVG completa", () => {
   assert.ok(TUTORIAL.length >= 15);
   assert.equal(new Set(TUTORIAL).size, TUTORIAL.length, 'pagine ripetute');
   for (const id of TUTORIAL) {

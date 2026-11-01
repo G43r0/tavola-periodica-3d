@@ -199,7 +199,14 @@ function shower(g) {
   g.lineTo(54, 22);
   g.closePath();
   g.fill();
-  for (const [x, y] of [[52, 38], [62, 40], [72, 38], [57, 46], [67, 46]]) g.fillRect(x - 1.5, y, 3, 5);
+  for (const [x, y] of [
+    [52, 38],
+    [62, 40],
+    [72, 38],
+    [57, 46],
+    [67, 46],
+  ])
+    g.fillRect(x - 1.5, y, 3, 5);
   g.beginPath();
   g.arc(62, 56, 7, 0, Math.PI * 2);
   g.fill();
@@ -272,7 +279,15 @@ export function outdoorViews(xs, w) {
   g.fillRect(0, 0, W, H);
   // qualche nuvola
   g.fillStyle = 'rgba(255,255,255,0.75)';
-  for (const [x, y, r] of [[220, 90, 46], [290, 80, 60], [360, 96, 40], [1180, 60, 52], [1250, 72, 38], [1700, 110, 44], [1760, 100, 56]]) {
+  for (const [x, y, r] of [
+    [220, 90, 46],
+    [290, 80, 60],
+    [360, 96, 40],
+    [1180, 60, 52],
+    [1250, 72, 38],
+    [1700, 110, 44],
+    [1760, 100, 56],
+  ]) {
     g.beginPath();
     g.ellipse(x, y, r * 1.6, r * 0.6, 0, 0, Math.PI * 2);
     g.fill();
@@ -300,13 +315,24 @@ export function outdoorViews(xs, w) {
     g.fillStyle = '#5a4630';
     g.fillRect(x - 6, y, 12, r * 1.2);
     g.fillStyle = '#4f7a3a';
-    for (const [dx, dy, k] of [[0, -0.2, 1], [-0.6, 0.2, 0.7], [0.6, 0.2, 0.7]]) {
+    for (const [dx, dy, k] of [
+      [0, -0.2, 1],
+      [-0.6, 0.2, 0.7],
+      [0.6, 0.2, 0.7],
+    ]) {
       g.beginPath();
       g.arc(x + dx * r, y + dy * r, r * k, 0, Math.PI * 2);
       g.fill();
     }
   };
-  for (const [x, r] of [[120, 70], [420, 90], [640, 60], [1620, 80], [1900, 95]]) tree(x, H * 0.62, r);
+  for (const [x, r] of [
+    [120, 70],
+    [420, 90],
+    [640, 60],
+    [1620, 80],
+    [1900, 95],
+  ])
+    tree(x, H * 0.62, r);
   // recinzione
   g.strokeStyle = '#3d4248';
   g.lineWidth = 4;
@@ -335,7 +361,18 @@ export function outdoorViews(xs, w) {
 function decal(parent, draw, w, d, x, y, z, rot = 0, opacity = 1) {
   const c = canvasOf(128, 128);
   draw(c.getContext('2d'), 128);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: texOf(c), transparent: true, opacity, depthWrite: false, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -2 }));
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(w, d),
+    new THREE.MeshStandardMaterial({
+      map: texOf(c),
+      transparent: true,
+      opacity,
+      depthWrite: false,
+      roughness: 0.6,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    }),
+  );
   m.rotation.set(-Math.PI / 2, 0, rot);
   m.position.set(x, y, z);
   m.renderOrder = 1;
@@ -428,10 +465,22 @@ export function buildDetails({ group, physics, box, solid, std, M, ROOM, LAYOUT,
     for (let k = 0, x = rc.x - rc.w / 2 + 0.08; x < rc.x + rc.w / 2 - 0.06; k++, x += 0.1) {
       const n = k + row * 5;
       const tall = (k + row) % 3 === 0;
-      jars.push({ x, y, z: rcZ - 0.04 + ((n * 7) % 3) * 0.04, h: tall ? 0.2 : 0.13, r: tall ? 0.033 : 0.04, cap: FAMILIES[FAMILY_ORDER[(n * 5) % FAMILY_ORDER.length]], amber: n % 4 === 1 });
+      jars.push({
+        x,
+        y,
+        z: rcZ - 0.04 + ((n * 7) % 3) * 0.04,
+        h: tall ? 0.2 : 0.13,
+        r: tall ? 0.033 : 0.04,
+        cap: FAMILIES[FAMILY_ORDER[(n * 5) % FAMILY_ORDER.length]],
+        amber: n % 4 === 1,
+      });
     }
   });
-  const body = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 14), std({ roughness: 0.3, metalness: 0, transparent: true, opacity: 0.75 }), jars.length);
+  const body = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(1, 1, 1, 14),
+    std({ roughness: 0.3, metalness: 0, transparent: true, opacity: 0.75 }),
+    jars.length,
+  );
   const caps = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 14), std({ roughness: 0.5 }), jars.length);
   const mtx = new THREE.Matrix4();
   const col = new THREE.Color();
@@ -446,8 +495,11 @@ export function buildDetails({ group, physics, box, solid, std, M, ROOM, LAYOUT,
   group.add(body, caps);
   // due ante di vetro con le maniglie
   for (const sx of [-1, 1]) {
-    const x = rc.x + sx * rc.w / 4;
-    box(rc.w / 2 - 0.02, rc.h - 0.1, 0.008, M.glassPane, x, rc.h / 2 + 0.02, rcZ + rc.d / 2, { cast: false, receive: false });
+    const x = rc.x + (sx * rc.w) / 4;
+    box(rc.w / 2 - 0.02, rc.h - 0.1, 0.008, M.glassPane, x, rc.h / 2 + 0.02, rcZ + rc.d / 2, {
+      cast: false,
+      receive: false,
+    });
     box(rc.w / 2 - 0.01, 0.03, 0.02, frame, x, 0.08, rcZ + rc.d / 2, { cast: false });
     box(rc.w / 2 - 0.01, 0.03, 0.02, frame, x, rc.h - 0.04, rcZ + rc.d / 2, { cast: false });
     box(0.012, 0.12, 0.02, M.steel, rc.x + sx * 0.04, 1.0, rcZ + rc.d / 2 + 0.015);
@@ -493,16 +545,25 @@ export function buildDetails({ group, physics, box, solid, std, M, ROOM, LAYOUT,
   const clock = new THREE.Group();
   clock.position.set(ck.x, ck.y, north + 0.03);
   group.add(clock);
-  const rim = new THREE.Mesh(new THREE.CylinderGeometry(ck.r + 0.015, ck.r + 0.015, 0.04, 40), std({ color: 0x2b2d31, roughness: 0.4 }));
+  const rim = new THREE.Mesh(
+    new THREE.CylinderGeometry(ck.r + 0.015, ck.r + 0.015, 0.04, 40),
+    std({ color: 0x2b2d31, roughness: 0.4 }),
+  );
   rim.rotation.x = Math.PI / 2;
   clock.add(rim);
-  const dial = new THREE.Mesh(new THREE.CircleGeometry(ck.r, 40), new THREE.MeshStandardMaterial({ map: texOf(face), roughness: 0.7 }));
+  const dial = new THREE.Mesh(
+    new THREE.CircleGeometry(ck.r, 40),
+    new THREE.MeshStandardMaterial({ map: texOf(face), roughness: 0.7 }),
+  );
   dial.position.z = 0.021;
   clock.add(dial);
   const hand = (len, wid, color, z) => {
     const pivot = new THREE.Group();
     pivot.position.z = z;
-    const m = new THREE.Mesh(new THREE.BoxGeometry(wid, len, 0.004), new THREE.MeshStandardMaterial({ color, roughness: 0.5 }));
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(wid, len, 0.004),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.5 }),
+    );
     m.position.y = len / 2 - 0.015;
     pivot.add(m);
     clock.add(pivot);
@@ -528,7 +589,10 @@ export function buildDetails({ group, physics, box, solid, std, M, ROOM, LAYOUT,
     const wide = key === 'reagents';
     const c = canvasOf(256, wide ? 64 : key === 'flammable' ? 300 : 340);
     const tex = texOf(c);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, (w * c.height) / c.width), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 }));
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, (w * c.height) / c.width),
+      new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 }),
+    );
     m.position.set(x, y, z);
     m.rotation.y = rot;
     group.add(m);
@@ -567,7 +631,15 @@ export function buildDetails({ group, physics, box, solid, std, M, ROOM, LAYOUT,
   decal(group, stain('rgba(170,150,90,0.3)'), 0.05, 0.05, B.x + 0.85, top, B.z - 0.28, 1);
   decal(group, scratches, 0.3, 0.12, A.x + 0.1, top, A.z + 0.32, 0.05, 0.8);
   decal(group, scratches, 0.26, 0.1, B.x - 0.4, top, B.z - 0.32, -0.08, 0.7);
-  for (const [x, z, r] of [[-0.6, 0.6, 0.4], [0.9, 0.7, 2.1], [-2.6, -0.4, 1.2], [2.4, 1.0, 0.2], [0.3, -1.6, 2.8], [-3.6, 1.8, 1.9]]) decal(group, scuff, 0.5, 0.5, x, 0.001, z, r, 0.8);
+  for (const [x, z, r] of [
+    [-0.6, 0.6, 0.4],
+    [0.9, 0.7, 2.1],
+    [-2.6, -0.4, 1.2],
+    [2.4, 1.0, 0.2],
+    [0.3, -1.6, 2.8],
+    [-3.6, 1.8, 1.9],
+  ])
+    decal(group, scuff, 0.5, 0.5, x, 0.001, z, r, 0.8);
 
   let shown = -1;
   const update = () => {

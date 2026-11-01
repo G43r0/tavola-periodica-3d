@@ -10,7 +10,10 @@ const { createSaveFile } = createRequire(import.meta.url)('../../electron/save-f
 
 function tempFile() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tp3d-save-'));
-  return { file: path.join(dir, 'simulatore-salvataggio.json'), done: () => fs.rmSync(dir, { recursive: true, force: true }) };
+  return {
+    file: path.join(dir, 'simulatore-salvataggio.json'),
+    done: () => fs.rmSync(dir, { recursive: true, force: true }),
+  };
 }
 const save = (tag, n) => JSON.stringify({ tag, pad: 'x'.repeat(n) });
 

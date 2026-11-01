@@ -23,7 +23,11 @@ const NAME_MAX = 24;
 
 /** Nome di un profilo ripulito: senza spazi in eccesso né caratteri di controllo, al massimo 24 caratteri. */
 export function cleanName(name, fallback) {
-  const s = String(name ?? '').replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim().slice(0, NAME_MAX);
+  const s = String(name ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, NAME_MAX);
   return s || fallback;
 }
 
@@ -46,7 +50,13 @@ export function freeProfileName(profiles, name = defaultName) {
 
 /** Profilo nuovo con la Carriera vuota. */
 export function newProfile(profiles, name, now = new Date().toISOString(), fallback = defaultName) {
-  return { id: newId(profiles), name: cleanName(name, freeProfileName(profiles, fallback)), created: now, career: newCareer(), notebook: null };
+  return {
+    id: newId(profiles),
+    name: cleanName(name, freeProfileName(profiles, fallback)),
+    created: now,
+    career: newCareer(),
+    notebook: null,
+  };
 }
 
 /** Carriera della versione 1 nella forma nuova: le stelle per esercitazione, i soldi; il capitolo 0 dato per fatto. */
@@ -60,7 +70,8 @@ export function migrateCareerV1(old) {
   });
   // chi aveva già cominciato la Carriera sa usare il laboratorio: il tutorial (capitolo 0) risulta superato
   if ((old.index ?? 0) > 0 || Object.keys(career.results).length) {
-    for (const ex of chapterExercises(0)) career.results[ex.id] ??= { stars: PASS_STARS, report: 0, tries: 0, migrated: true };
+    for (const ex of chapterExercises(0))
+      career.results[ex.id] ??= { stars: PASS_STARS, report: 0, tries: 0, migrated: true };
   }
   return career;
 }
@@ -75,16 +86,26 @@ function sanitizeCareer(c) {
   out.last = typeof c.last === 'string' ? c.last : null;
   for (const [id, r] of Object.entries(c.results ?? {})) {
     if (!r || typeof r !== 'object') continue;
-    out.results[id] = { stars: Math.max(0, Math.min(5, Number(r.stars) || 0)), report: Math.max(0, Number(r.report) || 0), tries: Math.max(0, Number(r.tries) || 0), ...(r.migrated ? { migrated: true } : {}) };
+    out.results[id] = {
+      stars: Math.max(0, Math.min(5, Number(r.stars) || 0)),
+      report: Math.max(0, Number(r.report) || 0),
+      tries: Math.max(0, Number(r.tries) || 0),
+      ...(r.migrated ? { migrated: true } : {}),
+    };
     // incidenti del tentativo più pulito (dalla 1.0.0; prima contavano solo quelli dell'anno)
     if (Number(r.incidents) > 0) out.results[id].incidents = Math.floor(Number(r.incidents));
     // voto di una verifica (4–10)
-    if (Number.isFinite(Number(r.mark)) && r.mark !== null) out.results[id].mark = Math.max(4, Math.min(10, Number(r.mark)));
+    if (Number.isFinite(Number(r.mark)) && r.mark !== null)
+      out.results[id].mark = Math.max(4, Math.min(10, Number(r.mark)));
   }
   // sfide a tempo: medaglia (0–3) e miglior tempo
   for (const [id, r] of Object.entries(c.challenges ?? {})) {
     if (!r || typeof r !== 'object') continue;
-    out.challenges[id] = { medal: Math.max(0, Math.min(3, Math.round(Number(r.medal) || 0))), best: Number.isFinite(Number(r.best)) && r.best !== null ? Number(r.best) : null, tries: Math.max(0, Number(r.tries) || 0) };
+    out.challenges[id] = {
+      medal: Math.max(0, Math.min(3, Math.round(Number(r.medal) || 0))),
+      best: Number.isFinite(Number(r.best)) && r.best !== null ? Number(r.best) : null,
+      tries: Math.max(0, Number(r.tries) || 0),
+    };
   }
   return out;
 }
@@ -102,14 +123,22 @@ export function migrate(raw, now = new Date().toISOString(), name = defaultName)
     const p = newProfile([], null, now, name);
     p.career = migrateCareerV1(data.career);
     p.notebook = data.notebook ?? null;
-    save = { version: SAVE_VERSION, settings: { chemMode: data.chemMode, legend: data.legend, fov: data.fov }, active: p.id, profiles: [p] };
+    save = {
+      version: SAVE_VERSION,
+      settings: { chemMode: data.chemMode, legend: data.legend, fov: data.fov },
+      active: p.id,
+      profiles: [p],
+    };
   } else save = { ...data, profiles: Array.isArray(data.profiles) ? data.profiles : [] };
   const settings = save.settings ?? {};
   save.settings = {
     chemMode: settings.chemMode === 'simple' ? 'simple' : 'real',
     legend: settings.legend !== false,
     fov: Number.isFinite(Number(settings.fov)) ? Number(settings.fov) : undefined,
-    volume: settings.volume !== undefined && settings.volume !== null && Number.isFinite(Number(settings.volume)) ? Math.max(0, Math.min(1, Number(settings.volume))) : DEFAULT_VOLUME,
+    volume:
+      settings.volume !== undefined && settings.volume !== null && Number.isFinite(Number(settings.volume))
+        ? Math.max(0, Math.min(1, Number(settings.volume)))
+        : DEFAULT_VOLUME,
     muted: settings.muted === true,
     // chi non l'ha mai scelta: spenta se il sistema chiede di ridurre il movimento
     shake: typeof settings.shake === 'boolean' ? settings.shake : !prefersReducedMotion(),
@@ -119,7 +148,10 @@ export function migrate(raw, now = new Date().toISOString(), name = defaultName)
   const given = list.map((p) => (typeof p.id === 'string' && p.id ? p.id : null));
   const taken = [];
   const ids = list.map((p, i) => {
-    const id = given[i] && !taken.some((t) => t.id === given[i]) ? given[i] : newId([...taken, ...given.filter(Boolean).map((g) => ({ id: g }))]);
+    const id =
+      given[i] && !taken.some((t) => t.id === given[i])
+        ? given[i]
+        : newId([...taken, ...given.filter(Boolean).map((g) => ({ id: g }))]);
     taken.push({ id });
     return id;
   });

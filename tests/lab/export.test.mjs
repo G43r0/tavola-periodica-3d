@@ -4,8 +4,9 @@ import assert from 'node:assert/strict';
 import { standaloneSvg } from '../../src/lab/lewis-svg.js';
 import { plainFormula } from '../../src/lab/molecule-panel.js';
 
-test('SVG da salvare: file autonomo, con i suoi colori (senza le variabili CSS dell\'app) e lo sfondo bianco', () => {
-  const svg = '<svg class="lewis" viewBox="0 0 100 50" width="150" role="img" aria-label="Lewis"><line class="lw-bond" x1="0" y1="0" x2="10" y2="10"/><text class="lw-atom" x="5" y="5">O</text></svg>';
+test("SVG da salvare: file autonomo, con i suoi colori (senza le variabili CSS dell'app) e lo sfondo bianco", () => {
+  const svg =
+    '<svg class="lewis" viewBox="0 0 100 50" width="150" role="img" aria-label="Lewis"><line class="lw-bond" x1="0" y1="0" x2="10" y2="10"/><text class="lw-atom" x="5" y="5">O</text></svg>';
   const file = standaloneSvg(svg);
   assert.match(file, /^<\?xml version="1\.0" encoding="UTF-8"\?>\n<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
   assert.match(file, /<style>[^<]*\.lw-bond\s*\{[^}]*stroke:\s*#/);

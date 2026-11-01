@@ -22,12 +22,19 @@ body {
     radial-gradient(900px 600px at 105% 110%, rgba(155, 140, 255, 0.06), transparent 60%),
     linear-gradient(rgba(150, 180, 220, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(150, 180, 220, 0.035) 1px, transparent 1px);
-  background-size: auto, auto, 28px 28px, 28px 28px;
+  background-size:
+    auto,
+    auto,
+    28px 28px,
+    28px 28px;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
 
-h1, h2, h3, p {
+h1,
+h2,
+h3,
+p {
   margin: 0;
 }
 
@@ -102,7 +109,10 @@ kbd {
   border: 1px solid transparent;
   border-radius: var(--r-sm);
   cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    color var(--t-fast),
+    border-color var(--t-fast);
 }
 .btn-icon:hover {
   color: var(--text-0);
@@ -122,7 +132,10 @@ kbd {
   border: 1px solid var(--line-2);
   border-radius: var(--r-sm);
   cursor: pointer;
-  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+  transition:
+    color var(--t-fast),
+    border-color var(--t-fast),
+    background var(--t-fast);
 }
 .btn-ghost:hover {
   color: var(--text-0);
@@ -146,11 +159,17 @@ kbd {
   border: 0;
   border-radius: var(--r-md);
   cursor: pointer;
-  box-shadow: 0 0 0 1px rgba(154, 239, 255, 0.5), 0 8px 26px rgba(92, 225, 255, 0.25);
-  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-med);
+  box-shadow:
+    0 0 0 1px rgba(154, 239, 255, 0.5),
+    0 8px 26px rgba(92, 225, 255, 0.25);
+  transition:
+    transform var(--t-fast) var(--ease-out),
+    box-shadow var(--t-med);
 }
 .btn-primary:hover {
-  box-shadow: 0 0 0 1px rgba(154, 239, 255, 0.8), 0 10px 34px rgba(92, 225, 255, 0.4);
+  box-shadow:
+    0 0 0 1px rgba(154, 239, 255, 0.8),
+    0 10px 34px rgba(92, 225, 255, 0.4);
 }
 .btn-primary:active {
   transform: translateY(1px) scale(0.99);
@@ -225,7 +244,9 @@ kbd {
   backdrop-filter: blur(12px);
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-out);
+  transition:
+    opacity var(--t-med) var(--ease-out),
+    transform var(--t-med) var(--ease-out);
 }
 .toast.is-in {
   opacity: 1;

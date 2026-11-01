@@ -6,7 +6,10 @@ import { interiorSamples, rimPoints, profileVolume, interiorGeometry, liquidMate
 import { GHS } from './ghs.js';
 
 /** Profilo interno [raggio, altezza] in metri (dal fondo interno al bordo). */
-const cyl = (r, y0, y1) => [[r, y0], [r, y1]];
+const cyl = (r, y0, y1) => [
+  [r, y0],
+  [r, y1],
+];
 
 /**
  * Definizioni. container: ha un contenuto; profile: volume interno; outer: raggio esterno e altezza; grad: tacche
@@ -16,69 +19,294 @@ const cyl = (r, y0, y1) => [[r, y0], [r, y1]];
  * oil: il contenuto sta sotto olio (metalli alcalini), al riparo dall'aria.
  */
 export const DEFS = {
-  beaker100: { container: true, glass: true, profile: cyl(0.024, 0.003, 0.07), outer: [0.0255, 0.07], grad: [10, 20, 100], mass: 0.06, breakable: true, spout: true },
-  beaker250: { container: true, glass: true, profile: cyl(0.033, 0.004, 0.095), outer: [0.0345, 0.095], grad: [25, 50, 250], mass: 0.1, breakable: true, spout: true },
+  beaker100: {
+    container: true,
+    glass: true,
+    profile: cyl(0.024, 0.003, 0.07),
+    outer: [0.0255, 0.07],
+    grad: [10, 20, 100],
+    mass: 0.06,
+    breakable: true,
+    spout: true,
+  },
+  beaker250: {
+    container: true,
+    glass: true,
+    profile: cyl(0.033, 0.004, 0.095),
+    outer: [0.0345, 0.095],
+    grad: [25, 50, 250],
+    mass: 0.1,
+    breakable: true,
+    spout: true,
+  },
   flask250: {
-    container: true, glass: true, mass: 0.12, breakable: true, outer: [0.043, 0.14], grad: [50, 50, 250], flow: 0.7,
-    profile: [[0.04, 0.004], [0.04, 0.014], [0.03, 0.06], [0.016, 0.108], [0.0135, 0.116], [0.0135, 0.14]],
+    container: true,
+    glass: true,
+    mass: 0.12,
+    breakable: true,
+    outer: [0.043, 0.14],
+    grad: [50, 50, 250],
+    flow: 0.7,
+    profile: [
+      [0.04, 0.004],
+      [0.04, 0.014],
+      [0.03, 0.06],
+      [0.016, 0.108],
+      [0.0135, 0.116],
+      [0.0135, 0.14],
+    ],
   },
   cylinder100: {
-    container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0142, 0.25], foot: [0.038, 0.012], grad: [1, 10, 100], spout: true,
+    container: true,
+    glass: true,
+    mass: 0.13,
+    breakable: true,
+    outer: [0.0142, 0.25],
+    foot: [0.038, 0.012],
+    grad: [1, 10, 100],
+    spout: true,
     profile: cyl(0.0128, 0.012, 0.25),
   },
   // bottiglie dei reagenti: vetro ambrato (ciò che la luce decompone), vetro chiaro, plastica per le basi forti e HF
   bottle: {
-    container: true, glass: true, mass: 0.28, breakable: true, outer: [0.04, 0.18], label: true, flow: 0.45, brown: true, stock: true,
-    profile: [[0.038, 0.005], [0.038, 0.128], [0.03, 0.142], [0.0125, 0.152], [0.0115, 0.18]],
+    container: true,
+    glass: true,
+    mass: 0.28,
+    breakable: true,
+    outer: [0.04, 0.18],
+    label: true,
+    flow: 0.45,
+    brown: true,
+    stock: true,
+    profile: [
+      [0.038, 0.005],
+      [0.038, 0.128],
+      [0.03, 0.142],
+      [0.0125, 0.152],
+      [0.0115, 0.18],
+    ],
   },
   bottleClear: {
-    container: true, glass: true, mass: 0.28, breakable: true, outer: [0.04, 0.18], label: true, flow: 0.45, stock: true,
-    profile: [[0.038, 0.005], [0.038, 0.128], [0.03, 0.142], [0.0125, 0.152], [0.0115, 0.18]],
+    container: true,
+    glass: true,
+    mass: 0.28,
+    breakable: true,
+    outer: [0.04, 0.18],
+    label: true,
+    flow: 0.45,
+    stock: true,
+    profile: [
+      [0.038, 0.005],
+      [0.038, 0.128],
+      [0.03, 0.142],
+      [0.0125, 0.152],
+      [0.0115, 0.18],
+    ],
   },
   bottlePE: {
-    container: true, glass: false, mass: 0.05, breakable: false, outer: [0.04, 0.18], label: true, flow: 0.45, plastic: '#e6ecef', opacity: 0.7, stock: true,
-    profile: [[0.038, 0.003], [0.038, 0.13], [0.031, 0.145], [0.0135, 0.153], [0.0125, 0.18]],
+    container: true,
+    glass: false,
+    mass: 0.05,
+    breakable: false,
+    outer: [0.04, 0.18],
+    label: true,
+    flow: 0.45,
+    plastic: '#e6ecef',
+    opacity: 0.7,
+    stock: true,
+    profile: [
+      [0.038, 0.003],
+      [0.038, 0.13],
+      [0.031, 0.145],
+      [0.0135, 0.153],
+      [0.0125, 0.18],
+    ],
   },
   washbottle: {
-    container: true, glass: false, mass: 0.05, breakable: false, outer: [0.038, 0.15], label: true, flow: 0.28, plastic: '#eef4f8', nozzle: true, stock: true,
-    profile: [[0.036, 0.003], [0.036, 0.13], [0.012, 0.145], [0.006, 0.15]],
+    container: true,
+    glass: false,
+    mass: 0.05,
+    breakable: false,
+    outer: [0.038, 0.15],
+    label: true,
+    flow: 0.28,
+    plastic: '#eef4f8',
+    nozzle: true,
+    stock: true,
+    profile: [
+      [0.036, 0.003],
+      [0.036, 0.13],
+      [0.012, 0.145],
+      [0.006, 0.15],
+    ],
   },
   dropper: {
-    container: true, glass: true, mass: 0.04, breakable: true, outer: [0.017, 0.085], label: true, drops: true, brown: true, stock: true,
-    profile: [[0.015, 0.003], [0.015, 0.058], [0.006, 0.068], [0.004, 0.085]],
+    container: true,
+    glass: true,
+    mass: 0.04,
+    breakable: true,
+    outer: [0.017, 0.085],
+    label: true,
+    drops: true,
+    brown: true,
+    stock: true,
+    profile: [
+      [0.015, 0.003],
+      [0.015, 0.058],
+      [0.006, 0.068],
+      [0.004, 0.085],
+    ],
   },
   // barattoli a bocca larga per i solidi: plastica (HDPE, per gli idrossidi), vetro chiaro, vetro ambrato
-  jar: { container: true, glass: false, mass: 0.04, breakable: false, outer: [0.036, 0.085], label: true, flow: 1.2, plastic: '#eef1f2', opacity: 0.62, profile: cyl(0.034, 0.004, 0.085), wide: true, stock: true },
+  jar: {
+    container: true,
+    glass: false,
+    mass: 0.04,
+    breakable: false,
+    outer: [0.036, 0.085],
+    label: true,
+    flow: 1.2,
+    plastic: '#eef1f2',
+    opacity: 0.62,
+    profile: cyl(0.034, 0.004, 0.085),
+    wide: true,
+    stock: true,
+  },
   jarGlass: {
-    container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0376, 0.088], label: true, flow: 1.2, wide: true, stock: true,
-    profile: [[0.036, 0.005], [0.036, 0.07], [0.031, 0.078], [0.031, 0.088]],
+    container: true,
+    glass: true,
+    mass: 0.13,
+    breakable: true,
+    outer: [0.0376, 0.088],
+    label: true,
+    flow: 1.2,
+    wide: true,
+    stock: true,
+    profile: [
+      [0.036, 0.005],
+      [0.036, 0.07],
+      [0.031, 0.078],
+      [0.031, 0.088],
+    ],
   },
   jarAmber: {
-    container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0376, 0.088], label: true, flow: 1.2, wide: true, stock: true, brown: true,
-    profile: [[0.036, 0.005], [0.036, 0.07], [0.031, 0.078], [0.031, 0.088]],
+    container: true,
+    glass: true,
+    mass: 0.13,
+    breakable: true,
+    outer: [0.0376, 0.088],
+    label: true,
+    flow: 1.2,
+    wide: true,
+    stock: true,
+    brown: true,
+    profile: [
+      [0.036, 0.005],
+      [0.036, 0.07],
+      [0.031, 0.078],
+      [0.031, 0.088],
+    ],
   },
   // barattolo di vetro con l'olio di paraffina per i metalli alcalini (Na, K, Li)
   jarOil: {
-    container: true, glass: true, mass: 0.13, breakable: true, outer: [0.0376, 0.088], label: true, flow: 1.2, wide: true, stock: true, oil: true,
-    profile: [[0.036, 0.005], [0.036, 0.07], [0.031, 0.078], [0.031, 0.088]],
+    container: true,
+    glass: true,
+    mass: 0.13,
+    breakable: true,
+    outer: [0.0376, 0.088],
+    label: true,
+    flow: 1.2,
+    wide: true,
+    stock: true,
+    oil: true,
+    profile: [
+      [0.036, 0.005],
+      [0.036, 0.07],
+      [0.031, 0.078],
+      [0.031, 0.088],
+    ],
   },
   // porcellana: crogiolo (sopporta il calore forte del Bunsen) e capsula per evaporare; opachi, il contenuto si vede
   // dall'alto
-  crucible: { container: true, porcelain: true, mass: 0.022, breakable: true, wide: true, outer: [0.021, 0.04], flow: 1.1, profile: [[0.0115, 0.004], [0.0185, 0.04]] },
+  crucible: {
+    container: true,
+    porcelain: true,
+    mass: 0.022,
+    breakable: true,
+    wide: true,
+    outer: [0.021, 0.04],
+    flow: 1.1,
+    profile: [
+      [0.0115, 0.004],
+      [0.0185, 0.04],
+    ],
+  },
   dish: {
-    container: true, porcelain: true, mass: 0.06, breakable: true, wide: true, spout: true, outer: [0.0445, 0.027], flow: 1.2,
-    profile: [[0.012, 0.003], [0.028, 0.012], [0.038, 0.021], [0.042, 0.027]],
+    container: true,
+    porcelain: true,
+    mass: 0.06,
+    breakable: true,
+    wide: true,
+    spout: true,
+    outer: [0.0445, 0.027],
+    flow: 1.2,
+    profile: [
+      [0.012, 0.003],
+      [0.028, 0.012],
+      [0.038, 0.021],
+      [0.042, 0.027],
+    ],
   },
   // apparecchi fissi (rig): non si prendono, si usano con un clic. Buretta da 50 mL (0 in alto, l'origine è la punta
   // sotto il rubinetto), imbuto con la carta da filtro (l'origine è la punta del gambo), pallone da distillazione
   burette: {
-    container: true, glass: true, rig: 'burette', mass: 0.12, outer: [0.0075, 0.65], wallFrom: 0.04, flow: 0.3,
-    profile: [[0.0055, 0.075], [0.0055, 0.61], [0.008, 0.625], [0.014, 0.65]],
+    container: true,
+    glass: true,
+    rig: 'burette',
+    mass: 0.12,
+    outer: [0.0075, 0.65],
+    wallFrom: 0.04,
+    flow: 0.3,
+    profile: [
+      [0.0055, 0.075],
+      [0.0055, 0.61],
+      [0.008, 0.625],
+      [0.014, 0.65],
+    ],
   },
-  funnel: { container: true, glass: true, rig: 'funnel', mass: 0.05, outer: [0.0376, 0.122], wallFrom: 0.066, wide: true, profile: [[0.0035, 0.068], [0.036, 0.122]] },
+  funnel: {
+    container: true,
+    glass: true,
+    rig: 'funnel',
+    mass: 0.05,
+    outer: [0.0376, 0.122],
+    wallFrom: 0.066,
+    wide: true,
+    profile: [
+      [0.0035, 0.068],
+      [0.036, 0.122],
+    ],
+  },
   rbflask: {
-    container: true, glass: true, rig: 'still', mass: 0.1, outer: [0.0406, 0.135], flow: 0.6,
-    profile: [[0.0088, 0.006], [0.0223, 0.012], [0.0322, 0.022], [0.0377, 0.034], [0.039, 0.044], [0.0376, 0.056], [0.0307, 0.068], [0.0223, 0.076], [0.015, 0.08], [0.012, 0.083], [0.012, 0.135]],
+    container: true,
+    glass: true,
+    rig: 'still',
+    mass: 0.1,
+    outer: [0.0406, 0.135],
+    flow: 0.6,
+    profile: [
+      [0.0088, 0.006],
+      [0.0223, 0.012],
+      [0.0322, 0.022],
+      [0.0377, 0.034],
+      [0.039, 0.044],
+      [0.0376, 0.056],
+      [0.0307, 0.068],
+      [0.0223, 0.076],
+      [0.015, 0.08],
+      [0.012, 0.083],
+      [0.012, 0.135],
+    ],
   },
   // ghost: come gli strumenti da immergere, passa sopra e dentro i recipienti senza spostarli
   spatula: { tool: true, ghost: true, mass: 0.03, size: [0.19, 0.006, 0.022] },
@@ -121,26 +349,94 @@ let MATS = null;
 export function itemMaterials(G, envMap) {
   if (MATS) return MATS;
   // vetro sodico-calcico: un filo di verde-azzurro; trasparente al centro, più chiaro e opaco sui bordi (glassEdges)
-  const glass = glassEdges(G.physical
-    ? new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0, roughness: 0.04, transmission: 1, thickness: 0.003, ior: 1.47, attenuationColor: new THREE.Color(0xcfeee6), attenuationDistance: 0.05, transparent: true, opacity: 1, envMapIntensity: 1.2, side: THREE.DoubleSide, depthWrite: false })
-    : new THREE.MeshStandardMaterial({ color: 0xe2f2f0, metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.07, envMapIntensity: 1.4, side: THREE.DoubleSide, depthWrite: false }), G.physical ? { edge: 0, light: 0.28 } : {});
-  const brown = glassEdges(G.physical
-    ? new THREE.MeshPhysicalMaterial({ color: 0x8a4a1a, metalness: 0, roughness: 0.08, transmission: 0.7, thickness: 0.004, ior: 1.5, transparent: true, side: THREE.DoubleSide, depthWrite: false })
-    : new THREE.MeshStandardMaterial({ color: 0x6a3510, metalness: 0.1, roughness: 0.1, transparent: true, opacity: 0.62, side: THREE.DoubleSide, depthWrite: false }), { edge: 0.3, light: 0.16 });
+  const glass = glassEdges(
+    G.physical
+      ? new THREE.MeshPhysicalMaterial({
+          color: 0xffffff,
+          metalness: 0,
+          roughness: 0.04,
+          transmission: 1,
+          thickness: 0.003,
+          ior: 1.47,
+          attenuationColor: new THREE.Color(0xcfeee6),
+          attenuationDistance: 0.05,
+          transparent: true,
+          opacity: 1,
+          envMapIntensity: 1.2,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        })
+      : new THREE.MeshStandardMaterial({
+          color: 0xe2f2f0,
+          metalness: 0.1,
+          roughness: 0.05,
+          transparent: true,
+          opacity: 0.07,
+          envMapIntensity: 1.4,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        }),
+    G.physical ? { edge: 0, light: 0.28 } : {},
+  );
+  const brown = glassEdges(
+    G.physical
+      ? new THREE.MeshPhysicalMaterial({
+          color: 0x8a4a1a,
+          metalness: 0,
+          roughness: 0.08,
+          transmission: 0.7,
+          thickness: 0.004,
+          ior: 1.5,
+          transparent: true,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        })
+      : new THREE.MeshStandardMaterial({
+          color: 0x6a3510,
+          metalness: 0.1,
+          roughness: 0.1,
+          transparent: true,
+          opacity: 0.62,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        }),
+    { edge: 0.3, light: 0.16 },
+  );
   MATS = {
     glass,
     brown,
     steel: new THREE.MeshStandardMaterial({ color: 0xc8ccd2, metalness: 0.9, roughness: 0.28 }),
     // acciaio inox spazzolato (spatola): righe sottili che allungano i riflessi; DoubleSide per l'interno del cucchiaio
-    brushed: new THREE.MeshStandardMaterial({ color: 0xd4d8de, metalness: 0.92, roughness: 0.42, roughnessMap: brushedTexture(), side: THREE.DoubleSide }),
+    brushed: new THREE.MeshStandardMaterial({
+      color: 0xd4d8de,
+      metalness: 0.92,
+      roughness: 0.42,
+      roughnessMap: brushedTexture(),
+      side: THREE.DoubleSide,
+    }),
     wood: new THREE.MeshStandardMaterial({ color: 0x8a5a32, roughness: 0.7 }),
     paper: new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.95 }),
     red: new THREE.MeshStandardMaterial({ color: 0xc8161d, roughness: 0.35, metalness: 0.2 }),
     black: new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: 0.6 }),
     cap: new THREE.MeshStandardMaterial({ color: 0x23395d, roughness: 0.5 }),
-    plastic: (c, opacity = 0.82) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.45, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false }),
+    plastic: (c, opacity = 0.82) =>
+      new THREE.MeshStandardMaterial({
+        color: c,
+        roughness: 0.45,
+        transparent: true,
+        opacity,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
     nichrome: new THREE.MeshStandardMaterial({ color: 0x9a9286, metalness: 0.8, roughness: 0.4 }),
-    probeGlass: new THREE.MeshStandardMaterial({ color: 0xdcecf2, roughness: 0.08, metalness: 0.05, transparent: true, opacity: 0.45, depthWrite: false }),
+    probeGlass: new THREE.MeshStandardMaterial({
+      color: 0xdcecf2,
+      roughness: 0.08,
+      metalness: 0.05,
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false,
+    }),
     rubber: new THREE.MeshStandardMaterial({ color: 0xc23a2a, roughness: 0.55 }),
     darkPlastic: new THREE.MeshStandardMaterial({ color: 0x3a414b, roughness: 0.45 }),
   };
@@ -194,7 +490,19 @@ function contactShadow(item, env) {
   const { def } = item;
   // recipienti: un disco; strumenti: un'ellisse lunga e larga come loro, che gira con l'oggetto
   const r = def.container ? (def.foot ? Math.max(def.foot[0], def.outer[0]) : def.outer[0]) : 0;
-  const blob = new THREE.Mesh(blobGeo, new THREE.MeshBasicMaterial({ map: blobTexture(), transparent: true, depthWrite: false, opacity: 0, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  const blob = new THREE.Mesh(
+    blobGeo,
+    new THREE.MeshBasicMaterial({
+      map: blobTexture(),
+      transparent: true,
+      depthWrite: false,
+      opacity: 0,
+      toneMapped: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    }),
+  );
   blob.renderOrder = 0;
   blob.visible = false;
   item.blob = blob;
@@ -282,7 +590,16 @@ function gradTexture(def) {
  * concentrazione, avvertenza («Pericolo» / «Attenzione») e fino a tre pittogrammi GHS.
  * Il testo è sempre scuro su fondo chiaro pieno: si legge anche sul vetro e sotto luci diverse.
  */
-export function labelTexture({ title, formula = '', sub = '', band = '#1d2733', bandText = '', ghs = [], signal = '', color = '#ffffff' }) {
+export function labelTexture({
+  title,
+  formula = '',
+  sub = '',
+  band = '#1d2733',
+  bandText = '',
+  ghs = [],
+  signal = '',
+  color = '#ffffff',
+}) {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 256;
@@ -310,7 +627,19 @@ export function labelTexture({ title, formula = '', sub = '', band = '#1d2733', 
     fitText(g, signal.toUpperCase(), 22, 240, textW);
   }
   // pittogrammi: uno grande, due affiancati, tre a triangolo
-  const spots = [[[420, 146, 116]], [[372, 146, 92], [460, 146, 92]], [[372, 104, 82], [460, 104, 82], [416, 190, 82]]][pics.length - 1] ?? [];
+  const spots =
+    [
+      [[420, 146, 116]],
+      [
+        [372, 146, 92],
+        [460, 146, 92],
+      ],
+      [
+        [372, 104, 82],
+        [460, 104, 82],
+        [416, 190, 82],
+      ],
+    ][pics.length - 1] ?? [];
   pics.forEach((id, i) => drawGhs(g, id, ...spots[i]));
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -436,8 +765,18 @@ export function createItem(env, kind, opts) {
   const group = new THREE.Group();
   group.name = kind;
   const item = {
-    id: nextId++, kind, def, mesh: group, body: null, mixture: opts.mixture ?? null, name: opts.name ?? kind,
-    label: opts.label ?? null, dirty: false, hits: [], heat: 0, data: {},
+    id: nextId++,
+    kind,
+    def,
+    mesh: group,
+    body: null,
+    mixture: opts.mixture ?? null,
+    name: opts.name ?? kind,
+    label: opts.label ?? null,
+    dirty: false,
+    hits: [],
+    heat: 0,
+    data: {},
   };
   const shadow = (m) => {
     m.castShadow = Boolean(G.shadows);
@@ -449,7 +788,11 @@ export function createItem(env, kind, opts) {
     // porcellana: un materiale per oggetto, perché il crogiolo diventa rosso quando è rovente
     const glassMat = def.porcelain
       ? new THREE.MeshStandardMaterial({ color: 0xf2f0ea, roughness: 0.32, emissive: 0xff3a00, emissiveIntensity: 0 })
-      : def.plastic ? mats.plastic(def.plastic, def.opacity) : def.brown ? mats.brown : mats.glass;
+      : def.plastic
+        ? mats.plastic(def.plastic, def.opacity)
+        : def.brown
+          ? mats.brown
+          : mats.glass;
     const vessel = shadow(new THREE.Mesh(vesselGeometry(def), glassMat));
     vessel.renderOrder = def.porcelain ? 0 : 3;
     group.add(vessel);
@@ -479,7 +822,9 @@ export function createItem(env, kind, opts) {
     item.solidMesh.visible = item.liquidMesh.visible = false;
     group.add(item.solidMesh, item.liquidMesh);
     if (def.foot) {
-      const foot = shadow(new THREE.Mesh(new THREE.CylinderGeometry(def.foot[0], def.foot[0], def.foot[1], 6), glassMat));
+      const foot = shadow(
+        new THREE.Mesh(new THREE.CylinderGeometry(def.foot[0], def.foot[0], def.foot[1], 6), glassMat),
+      );
       foot.position.y = def.foot[1] / 2;
       group.add(foot);
       item.hits.push(foot);
@@ -491,7 +836,12 @@ export function createItem(env, kind, opts) {
       const r = def.outer[0] + 0.0004;
       const gmesh = new THREE.Mesh(
         new THREE.CylinderGeometry(r, r, top, seg(24, 12), 1, true, -Math.PI * 0.45, Math.PI * 0.5),
-        new THREE.MeshBasicMaterial({ map: gradTexture(def), transparent: true, depthWrite: false, side: THREE.DoubleSide }),
+        new THREE.MeshBasicMaterial({
+          map: gradTexture(def),
+          transparent: true,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        }),
       );
       gmesh.position.y = top / 2;
       gmesh.renderOrder = 4;
@@ -504,7 +854,10 @@ export function createItem(env, kind, opts) {
       stem.position.y = 0.034;
       stem.renderOrder = 3;
       group.add(stem);
-      item.paper = new THREE.Mesh(new THREE.CylinderGeometry(0.0335, 0.0035, 0.05, seg(20, 12), 1, true), new THREE.MeshStandardMaterial({ color: 0xf4f2ea, roughness: 0.95, side: THREE.DoubleSide }));
+      item.paper = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.0335, 0.0035, 0.05, seg(20, 12), 1, true),
+        new THREE.MeshStandardMaterial({ color: 0xf4f2ea, roughness: 0.95, side: THREE.DoubleSide }),
+      );
       item.paper.position.y = 0.068 + 0.025 + 0.002;
       group.add(item.paper);
     }
@@ -513,7 +866,16 @@ export function createItem(env, kind, opts) {
       const h = Math.min(0.06, top * 0.42);
       const r = def.outer[0] + 0.0012;
       const lmesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(r, r, kind === 'dropper' ? 0.03 : h, seg(24, 12), 1, true, -Math.PI * 0.45, Math.PI * 0.9),
+        new THREE.CylinderGeometry(
+          r,
+          r,
+          kind === 'dropper' ? 0.03 : h,
+          seg(24, 12),
+          1,
+          true,
+          -Math.PI * 0.45,
+          Math.PI * 0.9,
+        ),
         new THREE.MeshStandardMaterial({ map: labelTexture(opts.label), roughness: 0.7, side: THREE.FrontSide }),
       );
       lmesh.position.y = kind === 'dropper' ? 0.03 : top * 0.42;
@@ -528,7 +890,12 @@ export function createItem(env, kind, opts) {
       group.add(bulb);
       item.hits.push(bulb);
       if (opts.cap) {
-        const collar = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0078, 0.012, seg(16, 10)), new THREE.MeshStandardMaterial({ color: opts.cap, roughness: 0.45 })));
+        const collar = shadow(
+          new THREE.Mesh(
+            new THREE.CylinderGeometry(0.0075, 0.0078, 0.012, seg(16, 10)),
+            new THREE.MeshStandardMaterial({ color: opts.cap, roughness: 0.45 }),
+          ),
+        );
         collar.position.y = 0.08;
         group.add(collar);
       }
@@ -536,7 +903,12 @@ export function createItem(env, kind, opts) {
       // tappo a vite del colore della famiglia: si toglie mentre si usa il reagente (vedi capOpen in game.js)
       const [r, y] = def.profile[def.profile.length - 1];
       const h = def.wide ? 0.014 : 0.02;
-      const cap = shadow(new THREE.Mesh(new THREE.CylinderGeometry(r + 0.0028, r + 0.003, h, seg(24, 12)), new THREE.MeshStandardMaterial({ color: opts.cap, roughness: 0.42 })));
+      const cap = shadow(
+        new THREE.Mesh(
+          new THREE.CylinderGeometry(r + 0.0028, r + 0.003, h, seg(24, 12)),
+          new THREE.MeshStandardMaterial({ color: opts.cap, roughness: 0.42 }),
+        ),
+      );
       cap.position.y = y - h * 0.35 + h / 2;
       group.add(cap);
       item.cap = cap;
@@ -552,11 +924,23 @@ export function createItem(env, kind, opts) {
     // collisore: cilindro esterno (con il piede per il cilindro graduato), scafo convesso per la beuta e le bottiglie
     const [R, H] = def.outer;
     let shapes;
-    if (def.foot) shapes = [{ type: 'cylinder', hh: def.foot[1] / 2, r: def.foot[0] * 0.95, y: def.foot[1] / 2 }, { type: 'cylinder', hh: H / 2, r: R, y: H / 2 }];
+    if (def.foot)
+      shapes = [
+        { type: 'cylinder', hh: def.foot[1] / 2, r: def.foot[0] * 0.95, y: def.foot[1] / 2 },
+        { type: 'cylinder', hh: H / 2, r: R, y: H / 2 },
+      ];
     else if (def.profile.length > 2) shapes = [{ type: 'hull', points: hullPoints(def) }];
     else shapes = [{ type: 'cylinder', hh: H / 2, r: R, y: H / 2 }];
     const mass = def.mass + (item.mixture ? item.mixture.mass / 1000 : 0);
-    item.body = physics.dynamic({ pos: opts.pos, quat: opts.quat, shapes, mass, owner: item, events: true, friction: 0.6 });
+    item.body = physics.dynamic({
+      pos: opts.pos,
+      quat: opts.quat,
+      shapes,
+      mass,
+      owner: item,
+      events: true,
+      friction: 0.6,
+    });
   } else {
     buildTool(item, env, opts);
   }
@@ -572,7 +956,8 @@ function hullPoints(def) {
   const t = 0.0016;
   const pts = [];
   const prof = [[def.profile[0][0] + t, def.wallFrom ?? 0], ...def.profile.slice(1).map(([r, y]) => [r + t, y])];
-  for (const [r, y] of prof) for (let k = 0; k < 8; k++) pts.push(Math.cos((k / 8) * Math.PI * 2) * r, y, Math.sin((k / 8) * Math.PI * 2) * r);
+  for (const [r, y] of prof)
+    for (let k = 0; k < 8; k++) pts.push(Math.cos((k / 8) * Math.PI * 2) * r, y, Math.sin((k / 8) * Math.PI * 2) * r);
   return new Float32Array(pts);
 }
 
@@ -593,13 +978,23 @@ function buildBurette(item, env, shadow) {
   tip.renderOrder = 3;
   const body = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.016, 12), mats.glass));
   body.position.y = 0.029;
-  const key = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.03, 10), new THREE.MeshStandardMaterial({ color: 0xf0f0ee, roughness: 0.5 })));
+  const key = shadow(
+    new THREE.Mesh(
+      new THREE.CylinderGeometry(0.0035, 0.0035, 0.03, 10),
+      new THREE.MeshStandardMaterial({ color: 0xf0f0ee, roughness: 0.5 }),
+    ),
+  );
   key.rotation.z = Math.PI / 2;
   key.position.y = 0.029;
   // levetta: di traverso = chiuso, in verticale = aperto (la gira il gioco)
   const handle = new THREE.Group();
   handle.position.set(0.017, 0.029, 0);
-  const paddle = shadow(new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.026, 0.008), new THREE.MeshStandardMaterial({ color: 0x2f6fd1, roughness: 0.45 })));
+  const paddle = shadow(
+    new THREE.Mesh(
+      new THREE.BoxGeometry(0.004, 0.026, 0.008),
+      new THREE.MeshStandardMaterial({ color: 0x2f6fd1, roughness: 0.45 }),
+    ),
+  );
   handle.add(paddle);
   handle.rotation.x = Math.PI / 2;
   group.add(tube, tip, body, key, handle);
@@ -634,7 +1029,10 @@ function buildBurette(item, env, shadow) {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   const gr = def.outer[0] + 0.0003;
-  const gmesh = new THREE.Mesh(new THREE.CylinderGeometry(gr, gr, top - bottom, 16, 1, true, -Math.PI * 0.45, Math.PI * 0.6), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+  const gmesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(gr, gr, top - bottom, 16, 1, true, -Math.PI * 0.45, Math.PI * 0.6),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide }),
+  );
   gmesh.position.y = (top + bottom) / 2;
   gmesh.renderOrder = 4;
   group.add(gmesh);
@@ -704,14 +1102,23 @@ function buildTool(item, env, opts) {
     for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + 0.095) / 0.19, pos.getZ(i) / 0.009 + 0.5);
     add(flat, mats.brushed, 0, 0.0029, 0);
     // il cucchiaio: mezza sfera schiacciata e allungata, con il bordo all'altezza del manico
-    const bowl = add(new THREE.SphereGeometry(0.0105, seg(24, 14), seg(10, 6), 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), mats.brushed, 0.075, 0.0045, 0);
+    const bowl = add(
+      new THREE.SphereGeometry(0.0105, seg(24, 14), seg(10, 6), 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+      mats.brushed,
+      0.075,
+      0.0045,
+      0,
+    );
     bowl.scale.set(1.35, 0.42, 1);
     const rim = add(new THREE.TorusGeometry(0.0105, 0.0006, 4, seg(24, 14)), mats.brushed, 0.075, 0.0045, 0);
     rim.rotation.x = Math.PI / 2;
     rim.scale.set(1.35, 1, 1);
     // il mucchietto di polvere nel cucchiaio (grandezza da spoonHeap in game.js)
     const powder = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, map: grainTexture() });
-    item.heap = new THREE.Mesh(new THREE.SphereGeometry(0.0095, seg(16, 10), 6, 0, Math.PI * 2, 0, Math.PI / 2), powder);
+    item.heap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.0095, seg(16, 10), 6, 0, Math.PI * 2, 0, Math.PI / 2),
+      powder,
+    );
     item.heap.position.set(0.075, 0.003, 0);
     item.heap.visible = false;
     group.add(item.heap);
@@ -723,13 +1130,25 @@ function buildTool(item, env, opts) {
   } else if (kind === 'towel') {
     const geo = new THREE.IcosahedronGeometry(0.03, 1);
     const p = geo.attributes.position;
-    for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) * (1 + Math.sin(i * 7.1) * 0.15), p.getY(i) * 0.35, p.getZ(i) * (1 + Math.cos(i * 3.7) * 0.15));
+    for (let i = 0; i < p.count; i++)
+      p.setXYZ(
+        i,
+        p.getX(i) * (1 + Math.sin(i * 7.1) * 0.15),
+        p.getY(i) * 0.35,
+        p.getZ(i) * (1 + Math.cos(i * 3.7) * 0.15),
+      );
     geo.computeVertexNormals();
     item.paper = add(geo, mats.paper.clone(), 0, 0.009, 0);
     shapes = [{ type: 'box', hx: 0.028, hy: 0.009, hz: 0.028, y: 0.009 }];
   } else if (kind === 'strip') {
     add(new THREE.BoxGeometry(0.05, 0.0012, 0.006), mats.paper, -0.012, 0.001, 0);
-    item.pad = add(new THREE.BoxGeometry(0.022, 0.0016, 0.0062), new THREE.MeshStandardMaterial({ color: 0xe8a838, roughness: 0.9 }), 0.025, 0.001, 0);
+    item.pad = add(
+      new THREE.BoxGeometry(0.022, 0.0016, 0.0062),
+      new THREE.MeshStandardMaterial({ color: 0xe8a838, roughness: 0.9 }),
+      0.025,
+      0.001,
+      0,
+    );
   } else if (kind === 'extinguisher') {
     add(new THREE.CylinderGeometry(0.075, 0.075, 0.42, seg(20, 12)), mats.red, 0, 0.21, 0);
     add(new THREE.SphereGeometry(0.075, seg(20, 12), 8, 0, Math.PI * 2, 0, Math.PI / 2), mats.red, 0, 0.42, 0);
@@ -739,7 +1158,8 @@ function buildTool(item, env, opts) {
     shapes = [{ type: 'cylinder', hh: 0.25, r: 0.075, y: 0.25 }];
   } else if (kind === 'thermometer') {
     // termometro a liquido: canna di vetro, colonnina rossa (si allunga con la temperatura) e bulbo in punta (+x)
-    add(new THREE.CylinderGeometry(0.0034, 0.0034, 0.19, 10), mats.probeGlass, -0.005, 0.004, 0).rotation.z = Math.PI / 2;
+    add(new THREE.CylinderGeometry(0.0034, 0.0034, 0.19, 10), mats.probeGlass, -0.005, 0.004, 0).rotation.z =
+      Math.PI / 2;
     add(new THREE.SphereGeometry(0.0038, 12, 8), mats.rubber, 0.092, 0.004, 0);
     item.column = new THREE.Mesh(new THREE.CylinderGeometry(0.0011, 0.0011, 1, 6), mats.rubber);
     item.column.rotation.z = Math.PI / 2;
@@ -751,12 +1171,17 @@ function buildTool(item, env, opts) {
   } else if (kind === 'phmeter') {
     // pH-metro tascabile: corpo con il display (item.lcd), elettrodo di vetro in punta (+x)
     const h = sy / 2;
-    add(new THREE.CylinderGeometry(0.011, 0.011, 0.12, seg(16, 10)), mats.darkPlastic, -0.03, h, 0).rotation.z = Math.PI / 2;
-    add(new THREE.CylinderGeometry(0.0085, 0.006, 0.012, seg(16, 10)), mats.black, 0.036, h, 0).rotation.z = Math.PI / 2;
+    add(new THREE.CylinderGeometry(0.011, 0.011, 0.12, seg(16, 10)), mats.darkPlastic, -0.03, h, 0).rotation.z =
+      Math.PI / 2;
+    add(new THREE.CylinderGeometry(0.0085, 0.006, 0.012, seg(16, 10)), mats.black, 0.036, h, 0).rotation.z =
+      Math.PI / 2;
     add(new THREE.CylinderGeometry(0.0042, 0.0042, 0.05, 10), mats.probeGlass, 0.066, h, 0).rotation.z = Math.PI / 2;
     add(new THREE.SphereGeometry(0.0046, 10, 8), mats.probeGlass, 0.09, h, 0);
     item.lcd = lcdTexture(160, 56);
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.017), new THREE.MeshBasicMaterial({ map: item.lcd.tex, toneMapped: false }));
+    const screen = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.05, 0.017),
+      new THREE.MeshBasicMaterial({ map: item.lcd.tex, toneMapped: false }),
+    );
     screen.rotation.x = -Math.PI / 2;
     screen.position.set(-0.035, h + 0.0112, 0);
     group.add(screen);
@@ -764,8 +1189,10 @@ function buildTool(item, env, opts) {
   } else if (kind === 'pipette') {
     // pipetta graduata da 10 mL con la propipetta rossa: la colonna di liquido (item.column) sale con il carico
     const h = 0.013;
-    add(new THREE.CylinderGeometry(0.0035, 0.0035, 0.27, 10, 1, true), mats.probeGlass, 0.015, h, 0).rotation.z = Math.PI / 2;
-    add(new THREE.CylinderGeometry(0.0035, 0.0009, 0.016, 10, 1, true), mats.probeGlass, 0.158, h, 0).rotation.z = Math.PI / 2;
+    add(new THREE.CylinderGeometry(0.0035, 0.0035, 0.27, 10, 1, true), mats.probeGlass, 0.015, h, 0).rotation.z =
+      Math.PI / 2;
+    add(new THREE.CylinderGeometry(0.0035, 0.0009, 0.016, 10, 1, true), mats.probeGlass, 0.158, h, 0).rotation.z =
+      Math.PI / 2;
     const bulb = add(new THREE.SphereGeometry(0.013, 14, 10), mats.rubber, -0.135, h, 0);
     bulb.scale.set(1.35, 1, 1);
     for (let k = 0; k <= 10; k++) {
@@ -774,7 +1201,16 @@ function buildTool(item, env, opts) {
       ring.position.set(0.148 - k * 0.02, h, 0);
       group.add(ring);
     }
-    item.column = new THREE.Mesh(new THREE.CylinderGeometry(0.0027, 0.0027, 1, 8), new THREE.MeshStandardMaterial({ color: 0xcfe6ff, roughness: 0.1, transparent: true, opacity: 0.75, depthWrite: false }));
+    item.column = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.0027, 0.0027, 1, 8),
+      new THREE.MeshStandardMaterial({
+        color: 0xcfe6ff,
+        roughness: 0.1,
+        transparent: true,
+        opacity: 0.75,
+        depthWrite: false,
+      }),
+    );
     item.column.rotation.z = Math.PI / 2;
     item.column.visible = false;
     group.add(item.column);
@@ -783,7 +1219,10 @@ function buildTool(item, env, opts) {
     // carta da filtro tolta dall'imbuto: un disco piegato con sopra il solido raccolto
     const paper = add(new THREE.CylinderGeometry(0.034, 0.03, 0.002, seg(20, 12)), mats.paper, 0, 0.001, 0);
     paper.scale.set(1, 1, 0.8);
-    item.heap = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }));
+    item.heap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.018, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }),
+    );
     item.heap.scale.set(1, 0.25, 0.8);
     item.heap.position.y = 0.002;
     group.add(item.heap);
@@ -792,7 +1231,13 @@ function buildTool(item, env, opts) {
   } else if (kind === 'shards') {
     const geo = new THREE.TetrahedronGeometry(0.018, 0);
     for (let k = 0; k < 8; k++) {
-      const s = add(geo, env.mats.glass, Math.cos(k * 2.4) * 0.025 * (k % 3), 0.006, Math.sin(k * 2.4) * 0.025 * (k % 3));
+      const s = add(
+        geo,
+        env.mats.glass,
+        Math.cos(k * 2.4) * 0.025 * (k % 3),
+        0.006,
+        Math.sin(k * 2.4) * 0.025 * (k % 3),
+      );
       s.scale.set(1 + (k % 2), 0.25, 0.6 + (k % 3) * 0.3);
       s.rotation.set(k, k * 1.7, k * 0.3);
       s.renderOrder = 3;
@@ -809,7 +1254,16 @@ function buildTool(item, env, opts) {
     item.hits.push(pick);
   }
   item.shapes = shapes; // forma del corpo: serve anche per l'ingombro quando lo si posa
-  item.body = physics.dynamic({ pos: opts.pos, quat: opts.quat, shapes, mass: def.mass, owner: item, friction: 0.9, events: kind === 'extinguisher', ghost: Boolean(def.probe || def.ghost) });
+  item.body = physics.dynamic({
+    pos: opts.pos,
+    quat: opts.quat,
+    shapes,
+    mass: def.mass,
+    owner: item,
+    friction: 0.9,
+    events: kind === 'extinguisher',
+    ghost: Boolean(def.probe || def.ghost),
+  });
 }
 
 /** Dopo createItem per gli strumenti la posizione va impostata sul corpo. */
@@ -837,7 +1291,12 @@ export function disposeItem(item, env) {
   item.blob?.material.dispose();
   item.mesh.traverse((o) => {
     o.geometry?.dispose?.();
-    if (o.material && o.material !== env.mats.glass && o.material !== env.mats.brown && !Object.values(env.mats).includes(o.material)) {
+    if (
+      o.material &&
+      o.material !== env.mats.glass &&
+      o.material !== env.mats.brown &&
+      !Object.values(env.mats).includes(o.material)
+    ) {
       if (!o.material.map?.userData.shared) o.material.map?.dispose?.();
       o.material.dispose?.();
     }

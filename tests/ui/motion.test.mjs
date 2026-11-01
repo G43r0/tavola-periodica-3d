@@ -23,7 +23,11 @@ test('con «riduci movimento»: scossa spenta di default, campione fermo, lampo 
   reduce(true);
   assert.equal(prefersReducedMotion(), true);
   assert.equal(migrate(null, NOW).settings.shake, false);
-  assert.equal(migrate({ version: 2, settings: { shake: true }, profiles: [] }, NOW).settings.shake, true, 'la scelta fatta nel menu resta');
+  assert.equal(
+    migrate({ version: 2, settings: { shake: true }, profiles: [] }, NOW).settings.shake,
+    true,
+    'la scelta fatta nel menu resta',
+  );
   assert.equal(specimenSpin(), 0);
   assert.ok(explosionFlash(1) <= 3);
   assert.equal(viewerAutoplay(), false);

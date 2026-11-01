@@ -27,16 +27,25 @@ test('armadio: ogni reagente è una sostanza nota, con contenitore, tappo ed eti
   assert.ok(Object.keys(CABINET).length >= 45);
 });
 
-test('copertura: lo scaffale da solo e con l\'armadio, per gruppo', () => {
+test("copertura: lo scaffale da solo e con l'armadio, per gruppo", () => {
   const shelf = reachable(ctx, keysOf(SHELF));
   const all = reachable(ctx, keysOf(SHELF, CABINET));
   assert.ok(shelf.ids.size >= 130, `scaffale: ${shelf.ids.size}`);
   assert.ok(all.ids.size >= 360, `scaffale e armadio: ${all.ids.size}`);
   const min = {
-    'acidi-basi': 90, precipitazioni: 45, redox: 45, spostamento: 34, decomposizioni: 30, 'sintesi-elementi': 28,
-    acqua: 14, metallurgia: 15, organica: 15, combustioni: 13,
+    'acidi-basi': 90,
+    precipitazioni: 45,
+    redox: 45,
+    spostamento: 34,
+    decomposizioni: 30,
+    'sintesi-elementi': 28,
+    acqua: 14,
+    metallurgia: 15,
+    organica: 15,
+    combustioni: 13,
   };
-  for (const [g, n] of Object.entries(min)) assert.ok((all.byGroup.get(g) ?? 0) >= n, `${g}: ${all.byGroup.get(g) ?? 0} < ${n}`);
+  for (const [g, n] of Object.entries(min))
+    assert.ok((all.byGroup.get(g) ?? 0) >= n, `${g}: ${all.byGroup.get(g) ?? 0} < ${n}`);
   // ogni reazione realizzabile è del simulatore (con il calore, la fiamma e la lampada del laboratorio)
   const doable = new Set(ctx.rxs.map((rx) => rx.id));
   for (const id of all.ids) assert.ok(doable.has(id), id);
@@ -44,11 +53,16 @@ test('copertura: lo scaffale da solo e con l\'armadio, per gruppo', () => {
 
 test('copertura: le reazioni classiche della scuola ci sono', () => {
   const all = reachable(ctx, keysOf(SHELF, CABINET));
-  const has = (re) => [...all.ids].some((id) => {
-    const rx = ctx.rxById.get(id);
-    const side = (l) => l.map((x) => ctx.formula(x.sid)).sort().join('+');
-    return re.test(`${side(rx.reactants)}>${side(rx.products)}`);
-  });
+  const has = (re) =>
+    [...all.ids].some((id) => {
+      const rx = ctx.rxById.get(id);
+      const side = (l) =>
+        l
+          .map((x) => ctx.formula(x.sid))
+          .sort()
+          .join('+');
+      return re.test(`${side(rx.reactants)}>${side(rx.products)}`);
+    });
   assert.ok(has(/^HCl\+Zn>H₂\+ZnCl₂$/), 'Zn + HCl');
   assert.ok(has(/AgNO₃.*NaCl>AgCl/), 'AgNO₃ + NaCl');
   assert.ok(has(/BaCl₂.*>BaSO₄/), 'BaSO₄');
@@ -64,7 +78,7 @@ test('copertura: senza la lampada le reazioni con la luce non si fanno', () => {
   assert.ok(lit.ids.size > dark.ids.size);
 });
 
-test('copertura: l\'alimentatore e le bombole della cappa allargano il laboratorio', () => {
+test("copertura: l'alimentatore e le bombole della cappa allargano il laboratorio", () => {
   const keys = keysOf(SHELF, CABINET);
   const all = reachable(ctx, keys);
   const noElectro = reachable(ctx, keys, { electro: false });

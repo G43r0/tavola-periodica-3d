@@ -49,7 +49,10 @@ export class Physics {
 
   /** Scatola statica (centro e mezze dimensioni, rotazione attorno a y opzionale). */
   box(cx, cy, cz, hx, hy, hz, owner = null, rotY = 0) {
-    const d = this.R.ColliderDesc.cuboid(hx, hy, hz).setTranslation(cx, cy, cz).setFriction(0.8).setCollisionGroups(GROUPS.static);
+    const d = this.R.ColliderDesc.cuboid(hx, hy, hz)
+      .setTranslation(cx, cy, cz)
+      .setFriction(0.8)
+      .setCollisionGroups(GROUPS.static);
     if (rotY) d.setRotation(quatY(rotY));
     const c = this.world.createCollider(d);
     if (owner) this.owners.set(c.handle, owner);
@@ -58,7 +61,10 @@ export class Physics {
 
   /** Cilindro statico verticale. */
   cylinder(cx, cy, cz, halfH, r, owner = null) {
-    const d = this.R.ColliderDesc.cylinder(halfH, r).setTranslation(cx, cy, cz).setFriction(0.8).setCollisionGroups(GROUPS.static);
+    const d = this.R.ColliderDesc.cylinder(halfH, r)
+      .setTranslation(cx, cy, cz)
+      .setFriction(0.8)
+      .setCollisionGroups(GROUPS.static);
     const c = this.world.createCollider(d);
     if (owner) this.owners.set(c.handle, owner);
     return c;
@@ -70,9 +76,18 @@ export class Physics {
    */
   prop({ x, z, hh, r, mass, owner = null }) {
     const { R } = this;
-    const desc = R.RigidBodyDesc.dynamic().setTranslation(x, 0, z).setLinearDamping(2).setAngularDamping(4).enabledRotations(false, true, false);
+    const desc = R.RigidBodyDesc.dynamic()
+      .setTranslation(x, 0, z)
+      .setLinearDamping(2)
+      .setAngularDamping(4)
+      .enabledRotations(false, true, false);
     const body = this.world.createRigidBody(desc);
-    const cd = R.ColliderDesc.cylinder(hh, r).setTranslation(0, hh, 0).setMass(mass).setFriction(0.5).setRestitution(0).setCollisionGroups(GROUPS.prop);
+    const cd = R.ColliderDesc.cylinder(hh, r)
+      .setTranslation(0, hh, 0)
+      .setMass(mass)
+      .setFriction(0.5)
+      .setRestitution(0)
+      .setCollisionGroups(GROUPS.prop);
     const c = this.world.createCollider(cd, body);
     if (owner) this.owners.set(c.handle, owner);
     return body;
@@ -82,9 +97,25 @@ export class Physics {
    * Corpo dinamico. shapes: [{ type: 'cylinder'|'box'|'ball'|'hull', y, hh, r, hx, hy, hz, points }], posizione
    * dell'origine (in basso al centro dell'oggetto) e rotazione; mass: massa totale in kg.
    */
-  dynamic({ pos, quat, shapes, mass, owner, ccd = true, debris = false, ghost = false, friction = 0.7, restitution = 0.05, events = false }) {
+  dynamic({
+    pos,
+    quat,
+    shapes,
+    mass,
+    owner,
+    ccd = true,
+    debris = false,
+    ghost = false,
+    friction = 0.7,
+    restitution = 0.05,
+    events = false,
+  }) {
     const { R } = this;
-    const desc = R.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setCcdEnabled(ccd).setLinearDamping(0.05).setAngularDamping(0.3);
+    const desc = R.RigidBodyDesc.dynamic()
+      .setTranslation(pos.x, pos.y, pos.z)
+      .setCcdEnabled(ccd)
+      .setLinearDamping(0.05)
+      .setAngularDamping(0.3);
     if (quat) desc.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w });
     const body = this.world.createRigidBody(desc);
     const volume = shapes.reduce((t, s) => t + shapeVolume(s), 0) || 1e-6;
@@ -94,7 +125,10 @@ export class Physics {
       else if (s.type === 'ball') cd = R.ColliderDesc.ball(s.r);
       else if (s.type === 'hull') cd = R.ColliderDesc.convexHull(s.points);
       else cd = R.ColliderDesc.cuboid(s.hx, s.hy, s.hz);
-      cd.setTranslation(s.x ?? 0, s.y ?? 0, s.z ?? 0).setDensity(mass / volume).setFriction(friction).setRestitution(restitution);
+      cd.setTranslation(s.x ?? 0, s.y ?? 0, s.z ?? 0)
+        .setDensity(mass / volume)
+        .setFriction(friction)
+        .setRestitution(restitution);
       cd.setCollisionGroups(ghost ? GROUPS.ghost : debris ? GROUPS.debris : GROUPS.item);
       if (events) {
         cd.setActiveEvents(R.ActiveEvents.CONTACT_FORCE_EVENTS);
@@ -109,8 +143,13 @@ export class Physics {
   /** Corpo cinematico del giocatore (capsula) e controllore del personaggio. */
   player(pos, radius, halfHeight) {
     const { R } = this;
-    const body = this.world.createRigidBody(R.RigidBodyDesc.kinematicPositionBased().setTranslation(pos.x, pos.y, pos.z));
-    const collider = this.world.createCollider(R.ColliderDesc.capsule(halfHeight, radius).setCollisionGroups(GROUPS.player), body);
+    const body = this.world.createRigidBody(
+      R.RigidBodyDesc.kinematicPositionBased().setTranslation(pos.x, pos.y, pos.z),
+    );
+    const collider = this.world.createCollider(
+      R.ColliderDesc.capsule(halfHeight, radius).setCollisionGroups(GROUPS.player),
+      body,
+    );
     const controller = this.world.createCharacterController(0.02);
     controller.setUp({ x: 0, y: 1, z: 0 });
     controller.setMaxSlopeClimbAngle((45 * Math.PI) / 180);
@@ -146,7 +185,7 @@ export class Physics {
   }
 
   ownerOf(collider) {
-    return collider ? this.owners.get(collider.handle) ?? null : null;
+    return collider ? (this.owners.get(collider.handle) ?? null) : null;
   }
 
   /** Avanza la simulazione di dt secondi a passo fisso. */
@@ -166,8 +205,8 @@ export class Physics {
         const o1 = this.ownerOf(c1);
         const o2 = this.ownerOf(c2);
         const f = e.totalForceMagnitude();
-        const v1 = c1?.parent() ? this.speeds.get(c1.parent()) ?? 0 : 0;
-        const v2 = c2?.parent() ? this.speeds.get(c2.parent()) ?? 0 : 0;
+        const v1 = c1?.parent() ? (this.speeds.get(c1.parent()) ?? 0) : 0;
+        const v2 = c2?.parent() ? (this.speeds.get(c2.parent()) ?? 0) : 0;
         // la velocità dell'urto è quella relativa: conta il più veloce dei due (l'altro di solito è fermo)
         const v = Math.max(v1, v2);
         if (o1) this.onImpact?.(o1, f, o2, v);
@@ -184,17 +223,36 @@ export class Physics {
   ray(origin, dir, maxToi, { solidOnly = false, exclude = null, predicate = null } = {}) {
     const { R } = this;
     const ray = new R.Ray(origin, dir);
-    const flags = solidOnly ? R.QueryFilterFlags.EXCLUDE_DYNAMIC | R.QueryFilterFlags.EXCLUDE_KINEMATIC : R.QueryFilterFlags.EXCLUDE_KINEMATIC;
-    const hit = this.world.castRayAndGetNormal(ray, maxToi, true, flags, undefined, undefined, exclude ?? undefined, predicate ?? undefined);
+    const flags = solidOnly
+      ? R.QueryFilterFlags.EXCLUDE_DYNAMIC | R.QueryFilterFlags.EXCLUDE_KINEMATIC
+      : R.QueryFilterFlags.EXCLUDE_KINEMATIC;
+    const hit = this.world.castRayAndGetNormal(
+      ray,
+      maxToi,
+      true,
+      flags,
+      undefined,
+      undefined,
+      exclude ?? undefined,
+      predicate ?? undefined,
+    );
     if (!hit) return null;
     const p = ray.pointAt(hit.timeOfImpact);
-    return { toi: hit.timeOfImpact, point: { x: p.x, y: p.y, z: p.z }, normal: hit.normal, collider: hit.collider, owner: this.ownerOf(hit.collider) };
+    return {
+      toi: hit.timeOfImpact,
+      point: { x: p.x, y: p.y, z: p.z },
+      normal: hit.normal,
+      collider: hit.collider,
+      owner: this.ownerOf(hit.collider),
+    };
   }
 
   /** Forma di Rapier per un ingombro: cilindro verticale { r, hh } o scatola { hx, hh, hz }, scalata di `k`. */
   footShape(foot, k = 1) {
     const { R } = this;
-    return foot.r !== undefined ? new R.Cylinder(foot.hh * k, foot.r * k) : new R.Cuboid(foot.hx * k, foot.hh * k, foot.hz * k);
+    return foot.r !== undefined
+      ? new R.Cylinder(foot.hh * k, foot.r * k)
+      : new R.Cuboid(foot.hx * k, foot.hh * k, foot.hz * k);
   }
 
   /**
@@ -206,7 +264,19 @@ export class Physics {
    */
   restHeight(foot, x, z, fromY, { rot = IDENTITY, exclude = null, maxDrop = 1.5 } = {}) {
     const { R } = this;
-    const hit = this.world.castShape({ x, y: fromY, z }, rot, { x: 0, y: -1, z: 0 }, this.footShape(foot), 0, maxDrop, true, R.QueryFilterFlags.EXCLUDE_KINEMATIC, GROUPS.item, undefined, exclude ?? undefined);
+    const hit = this.world.castShape(
+      { x, y: fromY, z },
+      rot,
+      { x: 0, y: -1, z: 0 },
+      this.footShape(foot),
+      0,
+      maxDrop,
+      true,
+      R.QueryFilterFlags.EXCLUDE_KINEMATIC,
+      GROUPS.item,
+      undefined,
+      exclude ?? undefined,
+    );
     if (!hit) return null;
     // la normale della superficie su cui appoggia, girata verso l'alto
     const n = hit.normal2;
@@ -221,10 +291,20 @@ export class Physics {
   overlaps(foot, pos, { rot = IDENTITY, exclude = null, predicate = null } = {}) {
     const { R } = this;
     let found = false;
-    this.world.intersectionsWithShape(pos, rot, this.footShape(foot, 0.95), () => {
-      found = true;
-      return false;
-    }, R.QueryFilterFlags.EXCLUDE_KINEMATIC, GROUPS.item, undefined, exclude ?? undefined, predicate ?? undefined);
+    this.world.intersectionsWithShape(
+      pos,
+      rot,
+      this.footShape(foot, 0.95),
+      () => {
+        found = true;
+        return false;
+      },
+      R.QueryFilterFlags.EXCLUDE_KINEMATIC,
+      GROUPS.item,
+      undefined,
+      exclude ?? undefined,
+      predicate ?? undefined,
+    );
     return found;
   }
 }

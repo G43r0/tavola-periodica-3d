@@ -1,8 +1,15 @@
 // Scheda informativa dell'elemento (pannello laterale).
 import { CATEGORY, STATE_LABEL, SHELL_NAMES } from '../data/categories.js';
 import {
-  esc, fmtMass, fmtNumber, fmtTemperature, fmtDensity, fmtIonization,
-  fmtAbundance, isotopeNotation, isotopeName,
+  esc,
+  fmtMass,
+  fmtNumber,
+  fmtTemperature,
+  fmtDensity,
+  fmtIonization,
+  fmtAbundance,
+  isotopeNotation,
+  isotopeName,
 } from '../chem/format.js';
 import { createT, isSimple } from '../i18n/index.js';
 import { gfx } from '../gfx/preset.js';
@@ -35,14 +42,16 @@ const t = createT({
     close: 'Chiudi (Esc)',
     sources: 'Fonti: IUPAC/CIAAW, NIST, PubChem. «~» indica un valore stimato o previsto.',
     sourcesLink: 'Dettagli sulle fonti',
-    predictedBanner: '<b>Elemento superpesante, dati in gran parte previsti.</b> Ne sono stati prodotti solo pochi atomi, che decadono in tempi brevissimi: configurazione elettronica, stato fisico, densità, energia di ionizzazione e chimica derivano da calcoli teorici, non da misure.',
+    predictedBanner:
+      '<b>Elemento superpesante, dati in gran parte previsti.</b> Ne sono stati prodotti solo pochi atomi, che decadono in tempi brevissimi: configurazione elettronica, stato fisico, densità, energia di ionizzazione e chimica derivano da calcoli teorici, non da misure.',
     neverSeen: '<b>Mai osservato in quantità visibili.</b> ',
     partialBanner: 'Alcuni valori sono stime e non misure dirette: {fields}.',
-    view3d: 'Visualizza l\'atomo in 3D',
+    view3d: "Visualizza l'atomo in 3D",
     protons: 'protoni',
     neutrons: 'neutroni',
     electrons: 'elettroni',
-    heroNote: (p) => `Neutroni dell'isotopo ${p.abundant ? 'più abbondante' : 'più stabile'}, <b>${p.iso}</b> (A = ${p.A}). Nell'atomo neutro gli elettroni sono pari ai protoni.`,
+    heroNote: (p) =>
+      `Neutroni dell'isotopo ${p.abundant ? 'più abbondante' : 'più stabile'}, <b>${p.iso}</b> (A = ${p.A}). Nell'atomo neutro gli elettroni sono pari ai protoni.`,
     cta3d: 'Visualizza atomo in 3D',
     ctaLab: 'Usa nel laboratorio',
     ctaLabTitle: 'Apri il laboratorio molecolare con questo atomo sul banco',
@@ -50,7 +59,7 @@ const t = createT({
     ctaSandboxTitle: 'Apri la sandbox degli elementi con questo elemento nel pennello',
     simpleTitle: 'In parole semplici',
     basic: 'Dati di base',
-    massNumberSub: 'numero di massa dell\'isotopo più stabile',
+    massNumberSub: "numero di massa dell'isotopo più stabile",
     massSub: 'massa atomica standard (u)',
     atomicNumber: 'Numero atomico',
     atomicNumberSub: 'Z = numero di protoni',
@@ -67,7 +76,8 @@ const t = createT({
     config: 'Configurazione elettronica',
     configShort: 'Configurazione abbreviata',
     shells: 'Elettroni per guscio',
-    emptyOuterShell: 'Il {s} resta vuoto: gli elettroni esterni stanno tutti nel sottolivello d più interno, così i gusci occupati sono {n} anche se l\'elemento è nel periodo {p}.',
+    emptyOuterShell:
+      "Il {s} resta vuoto: gli elettroni esterni stanno tutti nel sottolivello d più interno, così i gusci occupati sono {n} anche se l'elemento è nel periodo {p}.",
     notAvailable: 'non disponibile',
     physical: 'Proprietà fisiche',
     state25: 'Stato a 25 °C',
@@ -95,7 +105,7 @@ const t = createT({
     neutronsCol: 'Neutroni',
     abundance: 'Abbondanza naturale',
     stability: 'Stabilità',
-    noStable: 'Nessun isotopo stabile: in natura l\'elemento è assente o presente solo in tracce.',
+    noStable: "Nessun isotopo stabile: in natura l'elemento è assente o presente solo in tracce.",
     history: 'Storia',
     discoveryYear: 'anno di scoperta',
     discovery: 'scoperta',
@@ -129,14 +139,16 @@ const t = createT({
     close: 'Close (Esc)',
     sources: 'Sources: IUPAC/CIAAW, NIST, PubChem. «~» marks an estimated or predicted value.',
     sourcesLink: 'About the sources',
-    predictedBanner: '<b>Superheavy element, data largely predicted.</b> Only a few atoms have ever been made, and they decay almost instantly: electron configuration, physical state, density, ionisation energy and chemistry come from theoretical calculations, not measurements.',
+    predictedBanner:
+      '<b>Superheavy element, data largely predicted.</b> Only a few atoms have ever been made, and they decay almost instantly: electron configuration, physical state, density, ionisation energy and chemistry come from theoretical calculations, not measurements.',
     neverSeen: '<b>Never seen in visible amounts.</b> ',
     partialBanner: 'Some values are estimates rather than direct measurements: {fields}.',
     view3d: 'View the atom in 3D',
     protons: 'protons',
     neutrons: 'neutrons',
     electrons: 'electrons',
-    heroNote: (p) => `Neutrons of the ${p.abundant ? 'most abundant' : 'most stable'} isotope, <b>${p.iso}</b> (A = ${p.A}). In the neutral atom the electrons equal the protons.`,
+    heroNote: (p) =>
+      `Neutrons of the ${p.abundant ? 'most abundant' : 'most stable'} isotope, <b>${p.iso}</b> (A = ${p.A}). In the neutral atom the electrons equal the protons.`,
     cta3d: 'View atom in 3D',
     ctaLab: 'Use in the laboratory',
     ctaLabTitle: 'Open the molecular laboratory with this atom on the bench',
@@ -161,7 +173,8 @@ const t = createT({
     config: 'Electron configuration',
     configShort: 'Short configuration',
     shells: 'Electrons per shell',
-    emptyOuterShell: 'The {s} subshell stays empty: the outer electrons all sit in the inner d subshell, so only {n} shells are occupied although the element is in period {p}.',
+    emptyOuterShell:
+      'The {s} subshell stays empty: the outer electrons all sit in the inner d subshell, so only {n} shells are occupied although the element is in period {p}.',
     notAvailable: 'not available',
     physical: 'Physical properties',
     state25: 'State at 25 °C',
@@ -202,13 +215,15 @@ const t = createT({
   eli6: {
     tagPredicted: 'ipotesi',
     tagEstimate: 'stima',
-    predictedBanner: '<b>Di questo elemento sappiamo pochissimo.</b> Gli scienziati ne hanno costruiti solo pochi atomi, che si sono rotti quasi subito. Per questo molti numeri qui sotto sono calcoli e ipotesi, non misure.',
+    predictedBanner:
+      '<b>Di questo elemento sappiamo pochissimo.</b> Gli scienziati ne hanno costruiti solo pochi atomi, che si sono rotti quasi subito. Per questo molti numeri qui sotto sono calcoli e ipotesi, non misure.',
     neverSeen: '<b>Nessuno ne ha mai visto un pezzetto.</b> ',
     partialBanner: 'Alcuni numeri sono stime, cioè ipotesi ragionate, e non misure: {fields}.',
-    heroNote: (p) => `I <b>protoni</b> (rossi) e i <b>neutroni</b> (grigi) stanno nel centro dell'atomo, il nucleo. Gli <b>elettroni</b> girano intorno e sono tanti quanti i protoni. Qui contiamo i neutroni di ${p.iso}.`,
+    heroNote: (p) =>
+      `I <b>protoni</b> (rossi) e i <b>neutroni</b> (grigi) stanno nel centro dell'atomo, il nucleo. Gli <b>elettroni</b> girano intorno e sono tanti quanti i protoni. Qui contiamo i neutroni di ${p.iso}.`,
     ctaLab: 'Costruisci molecole',
     simpleTitle: 'In parole semplici',
-    basic: 'La carta d\'identità',
+    basic: "La carta d'identità",
     atomicNumberSub: 'quanti protoni ha: è il suo numero di riconoscimento',
     massSub: 'quanto pesa un atomo (in unità piccolissime)',
     massNumberSub: 'quanti protoni e neutroni ha la sua versione più duratura',
@@ -219,8 +234,9 @@ const t = createT({
     config: 'Dove stanno gli elettroni',
     configShort: 'Lo stesso, in breve',
     shells: 'Elettroni in ogni strato',
-    emptyOuterShell: 'Il suo strato numero {p} è vuoto: gli elettroni preferiscono stare tutti nello strato di sotto. Per questo ha {n} strati anche se è nella riga {p}.',
-    physical: 'Com\'è al tatto e alla vista',
+    emptyOuterShell:
+      'Il suo strato numero {p} è vuoto: gli elettroni preferiscono stare tutti nello strato di sotto. Per questo ha {n} strati anche se è nella riga {p}.',
+    physical: "Com'è al tatto e alla vista",
     state25: 'A temperatura di casa è',
     sublimation: 'Diventa gas (senza sciogliersi) a',
     melting: 'Si scioglie a',
@@ -230,7 +246,7 @@ const t = createT({
     electronegativity: 'Quanto tira a sé gli elettroni',
     paulingScale: 'Da 0,7 (tira pochissimo, il francio) a 3,98 (tira fortissimo, il fluoro)',
     enUndefined: 'non si misura: non si lega con nessuno',
-    atomicRadius: 'Grandezza dell\'atomo',
+    atomicRadius: "Grandezza dell'atomo",
     covalentRadius: 'Grandezza quando si lega',
     ionization: 'Fatica per strappargli un elettrone',
     affinity: 'Energia che libera se riceve un elettrone',
@@ -244,7 +260,7 @@ const t = createT({
     radioactive: 'No, è radioattivo',
     noStable: 'Nessuna versione dura per sempre: tutte, piano piano, si trasformano in altri elementi.',
     history: 'La sua storia',
-    discoverer: 'Chi l\'ha scoperto',
+    discoverer: "Chi l'ha scoperto",
     nameOrigin: 'Da dove viene il nome',
     uses: 'A cosa serve e dove si trova',
     usesCommon: 'A cosa serve',
@@ -269,13 +285,27 @@ export function createElementPanel(host, elements, store, { onOpen3D, onOpenLab,
     if (!a) return;
     const z = store.get().selectedZ;
     switch (a.dataset.action) {
-      case 'close': store.set({ selectedZ: null }); break;
-      case 'prev': store.set({ selectedZ: z === 1 ? 118 : z - 1 }); break;
-      case 'next': store.set({ selectedZ: z === 118 ? 1 : z + 1 }); break;
-      case 'open-3d': onOpen3D(z); break;
-      case 'open-lab': onOpenLab?.(z); break;
-      case 'open-sandbox': onOpenSandbox?.(z); break;
-      case 'info': onInfo(); break;
+      case 'close':
+        store.set({ selectedZ: null });
+        break;
+      case 'prev':
+        store.set({ selectedZ: z === 1 ? 118 : z - 1 });
+        break;
+      case 'next':
+        store.set({ selectedZ: z === 118 ? 1 : z + 1 });
+        break;
+      case 'open-3d':
+        onOpen3D(z);
+        break;
+      case 'open-lab':
+        onOpenLab?.(z);
+        break;
+      case 'open-sandbox':
+        onOpenSandbox?.(z);
+        break;
+      case 'info':
+        onInfo();
+        break;
     }
   });
 
@@ -294,7 +324,7 @@ export function createElementPanel(host, elements, store, { onOpen3D, onOpenLab,
       <div class="panel__title">
         <p class="eyebrow">${esc(cat.singular)}${el.predictedCategory ? ` · ${esc(t('predictedCat', { cat: CATEGORY[el.predictedCategory].singular.toLowerCase() }))}` : ''}</p>
         <h2 id="panel-title">${esc(el.name)}</h2>
-        <p class="panel__sub">${esc(el.name === el.nameEn ? el.nameIt ?? el.nameEn : el.nameEn)} · ${el.group ? t('groupN', { n: el.group }) : series[el.period]} · ${t('periodN', { n: el.period })} · ${t('blockN', { b: el.block })}</p>
+        <p class="panel__sub">${esc(el.name === el.nameEn ? (el.nameIt ?? el.nameEn) : el.nameEn)} · ${el.group ? t('groupN', { n: el.group }) : series[el.period]} · ${t('periodN', { n: el.period })} · ${t('blockN', { b: el.block })}</p>
       </div>
       <nav class="panel__nav" aria-label="${esc(t('nav'))}">
         <button type="button" class="btn-icon" data-action="prev" title="${esc(t('prev', { z: el.z === 1 ? 118 : el.z - 1 }))}">${icons.prev(18)}</button>
@@ -432,22 +462,40 @@ export function basicSection(el, cat, series) {
   const tiles = [
     [t('atomicNumber'), `${el.z}`, t('atomicNumberSub'), 'term.atomicNumber'],
     [t('atomicMass'), esc(fmtMass(el.atomicMass)), massSub, 'term.atomicMass'],
-    [t('category'), esc(cat.singular), el.predictedCategory ? esc(t('predictedSub', { cat: CATEGORY[el.predictedCategory].singular.toLowerCase() })) : '', `cat.${el.category}`],
+    [
+      t('category'),
+      esc(cat.singular),
+      el.predictedCategory
+        ? esc(t('predictedSub', { cat: CATEGORY[el.predictedCategory].singular.toLowerCase() }))
+        : '',
+      `cat.${el.category}`,
+    ],
     [t('group'), el.group ? `${el.group}` : '—', el.group ? '' : series[el.period], 'term.group'],
-    [t('period'), `${el.period}`, el.shells.length === el.period ? t('periodSub') : t('periodSubFewer', { n: el.shells.length }), 'term.period'],
+    [
+      t('period'),
+      `${el.period}`,
+      el.shells.length === el.period ? t('periodSub') : t('periodSubFewer', { n: el.shells.length }),
+      'term.period',
+    ],
     [t('block'), el.block, t('blockSub', { b: el.block }), 'term.block'],
   ];
   return section(
     t('basic'),
     `<div class="tiles">${tiles
-      .map(([k, v, sub, help]) => `<div class="tile" data-help="${help}"><span class="tile__k">${k}</span><span class="tile__v">${v}</span>${sub ? `<span class="tile__sub">${sub}</span>` : ''}</div>`)
+      .map(
+        ([k, v, sub, help]) =>
+          `<div class="tile" data-help="${help}"><span class="tile__k">${k}</span><span class="tile__v">${v}</span>${sub ? `<span class="tile__sub">${sub}</span>` : ''}</div>`,
+      )
       .join('')}</div>`,
   );
 }
 
 export function structureSection(el, est) {
   const shells = el.shells
-    .map((n, i) => `<li class="shell"><span class="shell__name">${SHELL_NAMES[i]}</span><span class="shell__n">${n}</span><span class="shell__idx">n=${i + 1}</span></li>`)
+    .map(
+      (n, i) =>
+        `<li class="shell"><span class="shell__name">${SHELL_NAMES[i]}</span><span class="shell__n">${n}</span><span class="shell__idx">n=${i + 1}</span></li>`,
+    )
     .join('');
   return section(
     t('structure'),
@@ -472,9 +520,10 @@ function tempRow(label, k, note, estTag, approx, help) {
 }
 
 function physicalSection(el, est, approx) {
-  const stateText = el.state === 'unknown'
-    ? `${esc(el.statePredicted)} <span class="tag tag--est">${t('tagPredicted')}</span>`
-    : `${STATE_LABEL[el.state]}${est('state')}`;
+  const stateText =
+    el.state === 'unknown'
+      ? `${esc(el.statePredicted)} <span class="tag tag--est">${t('tagPredicted')}</span>`
+      : `${STATE_LABEL[el.state]}${est('state')}`;
   const stateIcon = { solid: 'solid', liquid: 'liquid', gas: 'gas', unknown: 'unknown' }[el.state];
   const dens = fmtDensity(el);
   const sub = el.sublimationPointK ? fmtTemperature(el.sublimationPointK) : null;
@@ -484,9 +533,11 @@ function physicalSection(el, est, approx) {
     t('physical'),
     `<dl class="rows">
        <div class="row" data-help="term.state"><dt>${t('state25')}</dt><dd><span class="state state--${el.state}">${icons[stateIcon](15)}${stateText}</span></dd></div>
-       ${sub
-         ? `<div class="row" data-help="term.sublimation"><dt>${t('sublimation')}</dt><dd><span class="v">${sub.c} °C</span><span class="u">${sub.k} K</span><span class="row__note">${esc(meltNote)}</span></dd></div>`
-         : tempRow(t('melting'), el.meltingPointK, meltNote, est('mp'), approx('mp'), 'term.meltingPoint')}
+       ${
+         sub
+           ? `<div class="row" data-help="term.sublimation"><dt>${t('sublimation')}</dt><dd><span class="v">${sub.c} °C</span><span class="u">${sub.k} K</span><span class="row__note">${esc(meltNote)}</span></dd></div>`
+           : tempRow(t('melting'), el.meltingPointK, meltNote, est('mp'), approx('mp'), 'term.meltingPoint')
+       }
        ${sub ? '' : tempRow(t('boiling'), el.boilingPointK, '', est('bp'), approx('bp'), 'term.boilingPoint')}
        <div class="row" data-help="term.density"><dt>${t('density')}${est('d')}</dt><dd>${
          dens
@@ -500,10 +551,11 @@ function physicalSection(el, est, approx) {
 export function chemicalSection(el, est, approx) {
   const en = el.electronegativity;
   const na = `<span class="muted">${t('notAvailable')}</span>`;
-  const enBar = en !== null
-    ? `<span class="v">${approx('en')}${fmtNumber(en, 2)}</span>
+  const enBar =
+    en !== null
+      ? `<span class="v">${approx('en')}${fmtNumber(en, 2)}</span>
        <span class="scale" title="${esc(t('paulingScale'))}"><span class="scale__fill" style="--p:${(((en - 0.7) / (3.98 - 0.7)) * 100).toFixed(1)}%"></span></span>`
-    : `<span class="muted">${el.category === 'noble-gas' && el.z <= 18 ? t('enUndefined') : t('notAvailable')}</span>`;
+      : `<span class="muted">${el.category === 'noble-gas' && el.z <= 18 ? t('enUndefined') : t('notAvailable')}</span>`;
   const ie = fmtIonization(el.ionizationEnergyEv);
   const ox = el.oxidationStates.map((o) => `<span class="ox">${esc(o)}</span>`).join('');
 
@@ -518,11 +570,19 @@ export function chemicalSection(el, est, approx) {
          el.covalentRadiusPm ? `<span class="v">${el.covalentRadiusPm} pm</span>` : na
        }</dd></div>
        <div class="row" data-help="term.ionizationEnergy"><dt>${t('ionization')}${est('ie')}</dt><dd>${
-         ie ? `<span class="v">${approx('ie')}${ie.ev} eV</span><span class="u">${approx('ie')}${ie.kj} kJ/mol</span>` : na
+         ie
+           ? `<span class="v">${approx('ie')}${ie.ev} eV</span><span class="u">${approx('ie')}${ie.kj} kJ/mol</span>`
+           : na
        }</dd></div>
-       ${el.electronAffinityEv !== null || el.anionUnbound ? `<div class="row" data-help="term.electronAffinity"><dt>${t('affinity')}</dt><dd>${
-         el.electronAffinityEv !== null ? `<span class="v">${fmtNumber(el.electronAffinityEv, 3)} eV</span>` : `<span class="muted">${t('anionUnbound')}</span>`
-       }</dd></div>` : ''}
+       ${
+         el.electronAffinityEv !== null || el.anionUnbound
+           ? `<div class="row" data-help="term.electronAffinity"><dt>${t('affinity')}</dt><dd>${
+               el.electronAffinityEv !== null
+                 ? `<span class="v">${fmtNumber(el.electronAffinityEv, 3)} eV</span>`
+                 : `<span class="muted">${t('anionUnbound')}</span>`
+             }</dd></div>`
+           : ''
+       }
        <div class="row" data-help="term.oxidationState"><dt>${t('oxidation')}${est('ox')}</dt><dd><span class="oxs">${ox}</span></dd></div>
      </dl>`,
   );

@@ -13,7 +13,11 @@ function project(points) {
   const c = [0, 0, 0];
   for (const p of points) for (let k = 0; k < 3; k++) c[k] += p[k] / n;
   const q = points.map((p) => [p[0] - c[0], p[1] - c[1], p[2] - c[2]]);
-  const C = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  const C = [
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+  ];
   for (const p of q) for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) C[a][b] += p[a] * p[b];
   const power = (avoid) => {
     let v = [0.57, 0.62, 0.53];
@@ -148,7 +152,13 @@ export function lewisSvg(lab, unit) {
     const bracket = ionicUnit && f.charge !== 0;
     const pad = bracket ? 0.35 : 0;
     const shift = cursor - minX + pad;
-    pieces.push({ f, pos: pos.map((p) => [p[0] + shift, p[1]]), lp, bracket, box: [cursor, Math.min(...ys) - 0.55, maxX + shift + pad, Math.max(...ys) + 0.55] });
+    pieces.push({
+      f,
+      pos: pos.map((p) => [p[0] + shift, p[1]]),
+      lp,
+      bracket,
+      box: [cursor, Math.min(...ys) - 0.55, maxX + shift + pad, Math.max(...ys) + 0.55],
+    });
     cursor = maxX + shift + pad + (bracket ? 0.9 : 0.7);
   }
 
@@ -179,7 +189,9 @@ export function lewisSvg(lab, unit) {
       const ny = ux;
       const offsets = b.order === 1 ? [0] : b.order === 2 ? [-3.2, 3.2] : [-5, 0, 5];
       for (const o of offsets) {
-        out.push(`<line class="lw-bond" x1="${(x1 + ux * trim + nx * o).toFixed(1)}" y1="${(y1 + uy * trim + ny * o).toFixed(1)}" x2="${(x2 - ux * trim + nx * o).toFixed(1)}" y2="${(y2 - uy * trim + ny * o).toFixed(1)}"/>`);
+        out.push(
+          `<line class="lw-bond" x1="${(x1 + ux * trim + nx * o).toFixed(1)}" y1="${(y1 + uy * trim + ny * o).toFixed(1)}" x2="${(x2 - ux * trim + nx * o).toFixed(1)}" y2="${(y2 - uy * trim + ny * o).toFixed(1)}"/>`,
+        );
       }
     }
     // atomi, coppie, cariche formali
@@ -198,12 +210,16 @@ export function lewisSvg(lab, unit) {
         const cy = y + Math.sin(a) * 15;
         const px = -Math.sin(a) * 3;
         const py = Math.cos(a) * 3;
-        out.push(`<circle class="lw-e" cx="${(cx + px).toFixed(1)}" cy="${(cy + py).toFixed(1)}" r="1.9"/><circle class="lw-e" cx="${(cx - px).toFixed(1)}" cy="${(cy - py).toFixed(1)}" r="1.9"/>`);
+        out.push(
+          `<circle class="lw-e" cx="${(cx + px).toFixed(1)}" cy="${(cy + py).toFixed(1)}" r="1.9"/><circle class="lw-e" cx="${(cx - px).toFixed(1)}" cy="${(cy - py).toFixed(1)}" r="1.9"/>`,
+        );
         extend(cx, cy);
       }
       for (let s = 0; s < la.unpaired; s++, m++) {
         const a = angles[m] ?? -Math.PI / 2;
-        out.push(`<circle class="lw-e lw-e--single" cx="${(x + Math.cos(a) * 15).toFixed(1)}" cy="${(y + Math.sin(a) * 15).toFixed(1)}" r="2.2"/>`);
+        out.push(
+          `<circle class="lw-e lw-e--single" cx="${(x + Math.cos(a) * 15).toFixed(1)}" cy="${(y + Math.sin(a) * 15).toFixed(1)}" r="2.2"/>`,
+        );
       }
       const singleIon = bracket && f.indices.length === 1;
       if (la.formalCharge && !singleIon) {
@@ -225,7 +241,9 @@ export function lewisSvg(lab, unit) {
             }
           });
         }
-        out.push(`<text class="lw-fc" x="${(x + Math.cos(a) * 17).toFixed(1)}" y="${(y + Math.sin(a) * 17 + 4).toFixed(1)}">${fmtCharge(la.formalCharge)}</text>`);
+        out.push(
+          `<text class="lw-fc" x="${(x + Math.cos(a) * 17).toFixed(1)}" y="${(y + Math.sin(a) * 17 + 4).toFixed(1)}">${fmtCharge(la.formalCharge)}</text>`,
+        );
       }
     });
     if (bracket) {
@@ -234,8 +252,12 @@ export function lewisSvg(lab, unit) {
       const x1 = bx1 - 2;
       const y0 = Math.min(by0, minY) - 2;
       const y1 = Math.max(by1, maxY) + 2;
-      out.push(`<path class="lw-bracket" d="M${x0 + 6},${y0} H${x0} V${y1} H${x0 + 6} M${x1 - 6},${y0} H${x1} V${y1} H${x1 - 6}"/>`);
-      out.push(`<text class="lw-ion" x="${(x1 + 3).toFixed(1)}" y="${(y0 + 9).toFixed(1)}">${chargeText(f.charge)}</text>`);
+      out.push(
+        `<path class="lw-bracket" d="M${x0 + 6},${y0} H${x0} V${y1} H${x0 + 6} M${x1 - 6},${y0} H${x1} V${y1} H${x1 - 6}"/>`,
+      );
+      out.push(
+        `<text class="lw-ion" x="${(x1 + 3).toFixed(1)}" y="${(y0 + 9).toFixed(1)}">${chargeText(f.charge)}</text>`,
+      );
       extend(x0 - 4, y0 - 6);
       extend(x1 + 18, y1 + 4);
     }
@@ -263,5 +285,8 @@ export function standaloneSvg(svg) {
   const view = svg.match(/viewBox="([^"]+)"/)?.[1].split(' ') ?? ['0', '0', '100', '100'];
   return `<?xml version="1.0" encoding="UTF-8"?>\n${svg
     .replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')
-    .replace(/(<svg[^>]*>)/, `$1<style>${FILE_STYLE}</style><rect x="${view[0]}" y="${view[1]}" width="${view[2]}" height="${view[3]}" fill="#ffffff"/>`)}\n`;
+    .replace(
+      /(<svg[^>]*>)/,
+      `$1<style>${FILE_STYLE}</style><rect x="${view[0]}" y="${view[1]}" width="${view[2]}" height="${view[3]}" fill="#ffffff"/>`,
+    )}\n`;
 }

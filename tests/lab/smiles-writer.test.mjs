@@ -12,8 +12,10 @@ const lab = createLabElements(elements);
 const library = createLibraryIndex(lab, MOLECULES);
 const symbolOf = (z) => lab.get(z).symbol;
 const write = (smiles) => writeSmiles(parseSmiles(smiles, lab.bySymbol), symbolOf);
-const same = (a, b) => signature(a.atoms, a.bonds) === signature(b.atoms, b.bonds)
-  && JSON.stringify(a.atoms.map((x) => `${x.z}${x.charge}`).sort()) === JSON.stringify(b.atoms.map((x) => `${x.z}${x.charge}`).sort());
+const same = (a, b) =>
+  signature(a.atoms, a.bonds) === signature(b.atoms, b.bonds) &&
+  JSON.stringify(a.atoms.map((x) => `${x.z}${x.charge}`).sort()) ===
+    JSON.stringify(b.atoms.map((x) => `${x.z}${x.charge}`).sort());
 
 test('SMILES scritte: idrogeni impliciti, legami, rami, anelli, ioni', () => {
   assert.equal(write('O'), 'O');

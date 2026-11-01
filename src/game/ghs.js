@@ -78,10 +78,7 @@ export const GHS = {
   },
   GHS07: {
     name: { it: 'Nocivo, irritante', en: 'Harmful, irritant', eli6: 'Fa male o irrita la pelle e gli occhi' },
-    parts: [
-      { fill: 'M45 25h10l-2 35h-6Z' },
-      { fill: circle(50, 69, 5) },
-    ],
+    parts: [{ fill: 'M45 25h10l-2 35h-6Z' }, { fill: circle(50, 69, 5) }],
   },
   GHS08: {
     name: { it: 'Pericolo per la salute', en: 'Health hazard', eli6: 'Fa male al corpo, anche dopo tanto tempo' },
@@ -92,7 +89,11 @@ export const GHS = {
     ],
   },
   GHS09: {
-    name: { it: 'Pericoloso per l\'ambiente', en: 'Hazardous to the environment', eli6: 'Fa male ai pesci e alle piante' },
+    name: {
+      it: "Pericoloso per l'ambiente",
+      en: 'Hazardous to the environment',
+      eli6: 'Fa male ai pesci e alle piante',
+    },
     parts: [
       { stroke: 3, d: 'M24 75H76' },
       { stroke: 3.5, d: 'M36 73V40M36 50l-8-7M36 57l9-8M36 46l4-9M36 63l-7-5' },

@@ -25,7 +25,13 @@ import { REACTIONS } from '../../src/lab/data/reactions.js';
 // un testo può essere una stringa o una funzione (quando la frase cambia con i numeri)
 const kind = (v) => (Array.isArray(v) ? 'array' : typeof v === 'function' ? 'string' : typeof v);
 
-for (const [name, table] of Object.entries({ LAB_STRINGS, SANDBOX_STRINGS, SANDBOX_DESCRIBE, APPEARANCE_STRINGS, GAME_STRINGS })) {
+for (const [name, table] of Object.entries({
+  LAB_STRINGS,
+  SANDBOX_STRINGS,
+  SANDBOX_DESCRIBE,
+  APPEARANCE_STRINGS,
+  GAME_STRINGS,
+})) {
   test(`${name}: ogni testo italiano ha la sua traduzione inglese dello stesso tipo`, () => {
     for (const [key, value] of Object.entries(table.it)) {
       assert.ok(key in table.en, `${name}.en.${key} mancante`);
@@ -33,25 +39,35 @@ for (const [name, table] of Object.entries({ LAB_STRINGS, SANDBOX_STRINGS, SANDB
     }
   });
   test(`${name}: la versione semplice ridefinisce solo testi che esistono`, () => {
-    for (const key of Object.keys(table.eli6 ?? {})) assert.ok(key in table.it, `${name}.eli6.${key} non esiste in italiano`);
+    for (const key of Object.keys(table.eli6 ?? {}))
+      assert.ok(key in table.it, `${name}.eli6.${key} non esiste in italiano`);
   });
 }
 
-test('le traduzioni usano i segnaposto {x} dell\'italiano', () => {
-  const holes = (s) => [...new Set([...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1].toLowerCase()))].sort().join(',');
-  for (const [name, table] of Object.entries({ LAB_STRINGS, SANDBOX_STRINGS, SANDBOX_DESCRIBE, APPEARANCE_STRINGS, GAME_STRINGS })) {
+test("le traduzioni usano i segnaposto {x} dell'italiano", () => {
+  const holes = (s) =>
+    [...new Set([...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1].toLowerCase()))].sort().join(',');
+  for (const [name, table] of Object.entries({
+    LAB_STRINGS,
+    SANDBOX_STRINGS,
+    SANDBOX_DESCRIBE,
+    APPEARANCE_STRINGS,
+    GAME_STRINGS,
+  })) {
     for (const [key, value] of Object.entries(table.it)) {
       if (typeof value !== 'string') continue;
       const en = table.en[key];
       if (typeof en === 'string') assert.equal(holes(en), holes(value), `${name}.en.${key}`);
       // la versione semplice può tralasciare dei dati, ma non usarne di inesistenti
       const simple = table.eli6?.[key];
-      if (typeof simple === 'string') for (const h of holes(simple).split(',').filter(Boolean)) assert.ok(holes(value).split(',').includes(h), `${name}.eli6.${key}: {${h}}`);
+      if (typeof simple === 'string')
+        for (const h of holes(simple).split(',').filter(Boolean))
+          assert.ok(holes(value).split(',').includes(h), `${name}.eli6.${key}: {${h}}`);
     }
   }
 });
 
-test('createT: la versione semplice ricade sull\'italiano, l\'inglese ha il suo testo', () => {
+test("createT: la versione semplice ricade sull'italiano, l'inglese ha il suo testo", () => {
   const t = createT({ it: { a: 'uno {n}', b: 'due' }, en: { a: 'one {n}', b: 'two' }, eli6: { b: 'due, facile' } });
   _setLangForTests('eli6');
   assert.equal(t('a', { n: 1 }), 'uno 1');
@@ -69,7 +85,8 @@ test('dati tradotti: 118 elementi, tutte le sostanze, reazioni e sottogruppi', (
   for (const m of MOLECULES) assert.ok(MOLECULES_EN[m.id]?.n, `sostanza senza nome inglese: ${m.id}`);
   for (const r of REACTIONS) {
     if (!r.id.startsWith('cat-')) assert.ok(BASE_REACTIONS_EN[r.id], `reazione senza inglese: ${r.id}`);
-    else if (r.desc !== `${r.sub}.`) assert.ok(NOTES_EN[r.catalogo], `nota inglese mancante per la reazione n. ${r.catalogo}`);
+    else if (r.desc !== `${r.sub}.`)
+      assert.ok(NOTES_EN[r.catalogo], `nota inglese mancante per la reazione n. ${r.catalogo}`);
     assert.ok(SUBGROUPS_EN[r.sub], `sottogruppo senza inglese: ${r.sub}`);
   }
 });
@@ -87,12 +104,13 @@ test('glossario: ogni voce italiana ha titolo e testo anche in inglese', () => {
 test('glossario: tutti i «vedi anche» portano a una voce esistente', () => {
   for (const code of ['it', 'en', 'eli6']) {
     _setLangForTests(code);
-    for (const key of allKeys()) for (const s of entry(key).s ?? []) assert.ok(entry(s), `${code}: ${key} → ${s} non esiste`);
+    for (const key of allKeys())
+      for (const s of entry(key).s ?? []) assert.ok(entry(s), `${code}: ${key} → ${s} non esiste`);
   }
   _setLangForTests('it');
 });
 
-test('glossario: ogni data-help usato nell\'interfaccia ha una spiegazione in ogni lingua', () => {
+test("glossario: ogni data-help usato nell'interfaccia ha una spiegazione in ogni lingua", () => {
   const files = [];
   const walk = (dir) => {
     for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -110,7 +128,21 @@ test('glossario: ogni data-help usato nell\'interfaccia ha una spiegazione in og
   // chiavi composte nel codice
   for (const c of CATEGORIES) keys.add(`cat.${c.key}`);
   for (const k of ['proton', 'neutron', 'electron']) keys.add(`term.${k}`);
-  for (const k of ['erase', 'heat', 'cool', 'fire', 'spark', 'neutron', 'bomb', 'stir', 'wind', 'equalize', 'extinguish', 'pick']) keys.add(`sandbox.tool.${k}`);
+  for (const k of [
+    'erase',
+    'heat',
+    'cool',
+    'fire',
+    'spark',
+    'neutron',
+    'bomb',
+    'stir',
+    'wind',
+    'equalize',
+    'extinguish',
+    'pick',
+  ])
+    keys.add(`sandbox.tool.${k}`);
   for (const k of ['brush', 'fill', 'line', 'rect', 'ellipse']) keys.add(`sandbox.mode.${k}`);
   assert.ok(keys.size > 100);
   for (const code of ['it', 'en', 'eli6']) {
@@ -126,7 +158,10 @@ test('glossario: ogni data-help usato nell\'interfaccia ha una spiegazione in og
 test('glossario: riconosce parole, plurali e frasi nella lingua scelta', () => {
   _setLangForTests('it');
   const it = wordIndex();
-  const find = (w) => variants(w).map((v) => it.get(v)).find(Boolean);
+  const find = (w) =>
+    variants(w)
+      .map((v) => it.get(v))
+      .find(Boolean);
   assert.equal(find('neutroni'), 'term.neutron');
   assert.equal(it.get('gas nobili'), 'cat.noble-gas');
   assert.equal(it.get('punto di fusione'), 'term.meltingPoint');
@@ -134,15 +169,23 @@ test('glossario: riconosce parole, plurali e frasi nella lingua scelta', () => {
   _setLangForTests('en');
   const en = wordIndex();
   assert.equal(en.get('noble gases'), 'cat.noble-gas');
-  assert.equal(variants('isotopes').map((v) => en.get(v)).find(Boolean), 'term.isotope');
+  assert.equal(
+    variants('isotopes')
+      .map((v) => en.get(v))
+      .find(Boolean),
+    'term.isotope',
+  );
   assert.equal(en.get('half-life'), 'term.halfLife');
   _setLangForTests('it');
 });
 
-test('scorciatoie: i tasti si spiegano con cosa fanno in ogni parte dell\'app', () => {
+test("scorciatoie: i tasti si spiegano con cosa fanno in ogni parte dell'app", () => {
   _setLangForTests('it');
   assert.ok(shortcut('F1').rows.length >= 1);
-  assert.deepEqual(shortcut('Ctrl + Z').rows.map((r) => r[0]), ['Laboratorio', 'Sandbox']);
+  assert.deepEqual(
+    shortcut('Ctrl + Z').rows.map((r) => r[0]),
+    ['Laboratorio', 'Sandbox'],
+  );
   assert.ok(shortcut('[').rows[0][1].includes('pennello'));
   assert.ok(shortcut('Spazio') && shortcut('Esc'));
   assert.equal(shortcut('Ж'), null);
@@ -156,13 +199,16 @@ test('inglese: nessuna condizione del catalogo resta in italiano', async () => {
   const { conditionEn } = await import('../../src/i18n/data/reactions-en.js');
   const { CATALOG } = await import('../../src/lab/data/reactions-catalogo.js');
   // parole italiane che non devono restare nel testo tradotto (non «acid», «base», le formule, i numeri)
-  const IT = /\b(calda|caldo|pressione|soluzione|catalizzatore|acqua|aria|fusione|luce|riscaldamento|eccesso|lenta|vapore|diluito|concentrato|fumante|spontanea|anni|mesi|senza|con|poi|oppure)\b/i;
+  const IT =
+    /\b(calda|caldo|pressione|soluzione|catalizzatore|acqua|aria|fusione|luce|riscaldamento|eccesso|lenta|vapore|diluito|concentrato|fumante|spontanea|anni|mesi|senza|con|poi|oppure)\b/i;
   const left = new Set();
-  for (const r of CATALOG) for (const text of [r.cond, r.needs]) if (text && IT.test(conditionEn(text))) left.add(`${text} → ${conditionEn(text)}`);
+  for (const r of CATALOG)
+    for (const text of [r.cond, r.needs])
+      if (text && IT.test(conditionEn(text))) left.add(`${text} → ${conditionEn(text)}`);
   assert.deepEqual([...left], []);
 });
 
-test('laboratorio molecolare: l\'etichetta sopra il titolo non lo chiama «Simulatore» (è il nome del gioco)', () => {
+test("laboratorio molecolare: l'etichetta sopra il titolo non lo chiama «Simulatore» (è il nome del gioco)", () => {
   for (const lang of Object.keys(LAB_STRINGS)) {
     if (LAB_STRINGS[lang].eyebrow) assert.doesNotMatch(LAB_STRINGS[lang].eyebrow, /simulat/i, lang);
   }

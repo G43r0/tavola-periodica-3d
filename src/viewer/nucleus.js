@@ -15,13 +15,27 @@ const geometry = new THREE.SphereGeometry(NUCLEON_R, seg(28), seg(20));
 // quelli convenzionali: protoni e neutroni sono troppo piccoli per avere un colore visibile)
 const nucleonMaterial = (params) =>
   gfx().physical
-    ? new THREE.MeshPhysicalMaterial({ ...params, roughness: params.roughness - 0.04, emissiveIntensity: params.emissiveIntensity * 0.5, clearcoat: 0.6, clearcoatRoughness: 0.18 })
+    ? new THREE.MeshPhysicalMaterial({
+        ...params,
+        roughness: params.roughness - 0.04,
+        emissiveIntensity: params.emissiveIntensity * 0.5,
+        clearcoat: 0.6,
+        clearcoatRoughness: 0.18,
+      })
     : new THREE.MeshStandardMaterial(params);
 const protonMaterial = nucleonMaterial({
-  color: 0xff4d5e, roughness: 0.36, metalness: 0.05, emissive: 0x4a0812, emissiveIntensity: 0.55,
+  color: 0xff4d5e,
+  roughness: 0.36,
+  metalness: 0.05,
+  emissive: 0x4a0812,
+  emissiveIntensity: 0.55,
 });
 const neutronMaterial = nucleonMaterial({
-  color: 0xa3b6d3, roughness: 0.42, metalness: 0.08, emissive: 0x0d1626, emissiveIntensity: 0.5,
+  color: 0xa3b6d3,
+  roughness: 0.42,
+  metalness: 0.08,
+  emissive: 0x0d1626,
+  emissiveIntensity: 0.5,
 });
 
 const _m = new THREE.Matrix4();
@@ -144,7 +158,10 @@ export class Nucleus {
       const out = new Set(sorted.slice(0, current - n));
       for (const p of out) {
         p.targetScale = 0;
-        p.home = p.home.clone().normalize().multiplyScalar(nucleusRadius(this.z + current) * 3 + 10);
+        p.home = p.home
+          .clone()
+          .normalize()
+          .multiplyScalar(nucleusRadius(this.z + current) * 3 + 10);
         this.leaving.push(p);
       }
       this.neutrons = this.neutrons.filter((p) => !out.has(p));
@@ -170,7 +187,10 @@ export class Nucleus {
 
   #syncCounts() {
     this.protonMesh.count = this.protons.length;
-    this.neutronMesh.count = Math.min(this.neutrons.length + this.leaving.length, this.neutronMesh.instanceMatrix.count);
+    this.neutronMesh.count = Math.min(
+      this.neutrons.length + this.leaving.length,
+      this.neutronMesh.instanceMatrix.count,
+    );
   }
 
   #updateBounds() {

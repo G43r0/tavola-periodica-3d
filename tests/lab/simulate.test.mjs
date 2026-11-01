@@ -5,7 +5,13 @@ import fs from 'node:fs';
 import { createLabElements } from '../../src/lab/chem/elements-lab.js';
 import { createLibraryIndex, displayFormula } from '../../src/lab/chem/identify.js';
 import { speciesInfo, reactionEnthalpy } from '../../src/lab/chem/reactions.js';
-import { planReactions, diagnose, modelReaction, graphBondEnergy, libraryProduct } from '../../src/lab/chem/simulate.js';
+import {
+  planReactions,
+  diagnose,
+  modelReaction,
+  graphBondEnergy,
+  libraryProduct,
+} from '../../src/lab/chem/simulate.js';
 import { MOLECULES } from '../../src/lab/data/molecules.js';
 import { REACTIONS, BASE_REACTIONS } from '../../src/lab/data/reactions.js';
 
@@ -21,7 +27,13 @@ const reactions = REACTIONS.map((r) => {
       sp.display = sp.formula ?? displayFormula(lab, sp.atoms, 0, { ionic: sp.ionic });
       return sp;
     });
-  const re = { r, reactants: load(r.reactants), products: load(r.products), rc: r.reactants.map(([c]) => c), pc: r.products.map(([c]) => c) };
+  const re = {
+    r,
+    reactants: load(r.reactants),
+    products: load(r.products),
+    rc: r.reactants.map(([c]) => c),
+    pc: r.products.map(([c]) => c),
+  };
   re.enthalpy = reactionEnthalpy(lab, re.reactants, re.products, re.rc, re.pc);
   return re;
 });
@@ -59,7 +71,11 @@ test('reazioni a catena: i prodotti di un passo reagiscono nel successivo', () =
   const p = plan({ n2: 1, h2: 3, hcl: 2 });
   assert.deepEqual(ids(p), ['haber×1', 'nh4cl×2']);
   assert.equal(p.leftover.size, 0);
-  assert.deepEqual(p.steps.map((s) => s.onlyOrig), [true, false], 'NH₄Cl si forma solo dopo l\'ammoniaca');
+  assert.deepEqual(
+    p.steps.map((s) => s.onlyOrig),
+    [true, false],
+    "NH₄Cl si forma solo dopo l'ammoniaca",
+  );
   // reazioni indipendenti: possono avvenire insieme
   const q = plan({ ch4: 1, o2: 3, h2: 2 });
   assert.deepEqual(ids(q).sort(), ['acqua×1', 'metano×1']);
@@ -91,8 +107,11 @@ test('reazioni che richiedono altro: la fermentazione non avviene senza lieviti'
 test('nessuna reazione: indica che cosa manca', () => {
   const d = diagnose(inv({ h2: 1, o2: 1 }), reactions);
   const acqua = d.missing.find((m) => m.re.r.id === 'acqua');
-  assert.ok(acqua, 'la sintesi dell\'acqua è quasi pronta');
-  assert.deepEqual(acqua.lack.map((x) => [x.key, x.count]), [['h2', 1]]);
+  assert.ok(acqua, "la sintesi dell'acqua è quasi pronta");
+  assert.deepEqual(
+    acqua.lack.map((x) => [x.key, x.count]),
+    [['h2', 1]],
+  );
   assert.equal(diagnose(inv({ co2: 1, n2: 1 }), reactions).missing.length, 0);
 });
 
@@ -101,12 +120,24 @@ test('nessuna reazione: indica che cosa manca', () => {
 /** Specie per il modello da una voce della libreria (come fa lab-view.js con le molecole sul banco). */
 function species(id, count = 1) {
   const e = lib.get(id);
-  return { key: id, count, zs: e.graph.atoms.map((a) => a.z), hf: e.hf ?? null, bondKj: e.ionic ? null : graphBondEnergy(lab, e.graph.atoms, e.graph.bonds, { tabulated: true }) };
+  return {
+    key: id,
+    count,
+    zs: e.graph.atoms.map((a) => a.z),
+    hf: e.hf ?? null,
+    bondKj: e.ionic ? null : graphBondEnergy(lab, e.graph.atoms, e.graph.bonds, { tabulated: true }),
+  };
 }
 // il modello prevede ciò che la libreria non sa: con tutto il catalogo molte addizioni sono già reazioni note,
 // quindi gli esempi si provano con le sole reazioni scritte a mano (le altre ricadono nel ramo «la libreria sa già»)
 const handWritten = new Set(BASE_REACTIONS.map((r) => r.id));
-const model = (...list) => modelReaction(lab, lib, list, reactions.filter((re) => handWritten.has(re.r.id)));
+const model = (...list) =>
+  modelReaction(
+    lab,
+    lib,
+    list,
+    reactions.filter((re) => handWritten.has(re.r.id)),
+  );
 const modelAll = (...list) => modelReaction(lab, lib, list, reactions);
 
 test('modello: le reazioni del catalogo hanno la precedenza sul modello', () => {
@@ -132,10 +163,10 @@ test('modello: sintesi per addizione con un prodotto della libreria', () => {
 
 test('modello: niente reazione se i prodotti non sono più stabili o la libreria sa già come reagiscono', () => {
   assert.equal(model(species('co2'), species('h2o')), null, 'CO₂ + H₂O restano tali');
-  assert.equal(model(species('h2o', 2)), null, 'due molecole d\'acqua non reagiscono');
-  assert.equal(model(species('h2'), species('o2')), null, 'H₂ + O₂ non dà H₂O₂: per l\'acqua servono 2 H₂');
-  assert.equal(model(species('c2h4'), species('o2')), null, 'combustione dell\'etilene: servono 3 O₂');
-  assert.equal(model(species('hcl'), species('o2')), null, 'niente HClO₂: l\'energia del legame Cl=O è solo stimata');
+  assert.equal(model(species('h2o', 2)), null, "due molecole d'acqua non reagiscono");
+  assert.equal(model(species('h2'), species('o2')), null, "H₂ + O₂ non dà H₂O₂: per l'acqua servono 2 H₂");
+  assert.equal(model(species('c2h4'), species('o2')), null, "combustione dell'etilene: servono 3 O₂");
+  assert.equal(model(species('hcl'), species('o2')), null, "niente HClO₂: l'energia del legame Cl=O è solo stimata");
 });
 
 test('modello: addizioni con legami di energia nota', () => {

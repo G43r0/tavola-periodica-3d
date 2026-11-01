@@ -21,7 +21,11 @@ export const impactGain = (speed) => clamp((speed - 0.6) / 2.4, 0, 1);
 /** Le k sorgenti più vicine al punto (distanza al quadrato): per non suonare venti getti o bolle insieme. */
 export function nearest(sources, at, k) {
   const d2 = (s) => (s.pos.x - at.x) ** 2 + (s.pos.y - at.y) ** 2 + (s.pos.z - at.z) ** 2;
-  return sources.map((s) => [d2(s), s]).sort((a, b) => a[0] - b[0]).slice(0, k).map((x) => x[1]);
+  return sources
+    .map((s) => [d2(s), s])
+    .sort((a, b) => a[0] - b[0])
+    .slice(0, k)
+    .map((x) => x[1]);
 }
 
 /**

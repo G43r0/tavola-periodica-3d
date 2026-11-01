@@ -110,7 +110,8 @@ export function buildRecipe(ctx, rx, store = storeIndex(ctx), shelf = shelfIndex
   if (c.shock) return fail('shock');
   // il libro è per il laboratorio della scuola: niente pirotecnica ed esplosivi, miscele vietate, gas come il fosgene
   const warning = `${rx.r?.sub ?? ''} ${rx.r?.desc ?? ''} ${rx.r?.note ?? ''} ${c.text ?? ''}`;
-  if (/esplosiv|vietat/i.test(warning) || rx.products.some((p) => DANGEROUS_PRODUCTS.has(ctx.sub(p.sid)?.key))) return fail('danger');
+  if (/esplosiv|vietat/i.test(warning) || rx.products.some((p) => DANGEROUS_PRODUCTS.has(ctx.sub(p.sid)?.key)))
+    return fail('danger');
   if (c.molten) return fail('molten');
   if (c.lowO2) return fail('lowO2');
   const minT = c.hot ? Math.max(c.minT, 450) : c.minT;
@@ -130,9 +131,20 @@ export function buildRecipe(ctx, rx, store = storeIndex(ctx), shelf = shelfIndex
     const s = ctx.sub(r.sid);
     const gas = phaseAt(s, AMBIENT) === GAS;
     // tra le soluzioni dello scaffale la più concentrata (HCl 1 M, non 0,1 M)
-    const shelfSol = shelf.get(r.sid)?.filter((x) => x.form === 'solution').sort((a, b) => b.molar - a.molar)[0];
+    const shelfSol = shelf
+      .get(r.sid)
+      ?.filter((x) => x.form === 'solution')
+      .sort((a, b) => b.molar - a.molar)[0];
     if (shelfSol && (aqueous || gas)) {
-      ingredients.push({ role: 'reactant', sid: r.sid, c: r.c, form: 'solution', molar: shelfSol.molar, key: ctx.sub(r.sid).key, shelf: shelfSol.key });
+      ingredients.push({
+        role: 'reactant',
+        sid: r.sid,
+        c: r.c,
+        form: 'solution',
+        molar: shelfSol.molar,
+        key: ctx.sub(r.sid).key,
+        shelf: shelfSol.key,
+      });
       continue;
     }
     if (gas) {
@@ -167,10 +179,24 @@ export function buildRecipe(ctx, rx, store = storeIndex(ctx), shelf = shelfIndex
       const ab = ctx.acidBase.get(pickSid);
       const sol = sh?.find((x) => x.form === 'solution');
       if (sol || (ab && (ab.sa || ab.sb) && e?.soluble)) {
-        aux = { role: 'aux', sid: pickSid, form: 'solution', molar: sol?.molar ?? 1, key: ctx.sub(pickSid).key, shelf: sol?.key ?? null, ml: 5 };
+        aux = {
+          role: 'aux',
+          sid: pickSid,
+          form: 'solution',
+          molar: sol?.molar ?? 1,
+          key: ctx.sub(pickSid).key,
+          shelf: sol?.key ?? null,
+          ml: 5,
+        };
       } else if (e || sh) {
         const st = e?.st ?? sh[0].form;
-        aux = { role: 'catalyst', sid: pickSid, form: st, key: e?.key ?? ctx.sub(pickSid).key, shelf: sh?.find((x) => x.form === st)?.key ?? null };
+        aux = {
+          role: 'catalyst',
+          sid: pickSid,
+          form: st,
+          key: e?.key ?? ctx.sub(pickSid).key,
+          shelf: sh?.find((x) => x.form === st)?.key ?? null,
+        };
         if (st === 'liquid') aux.ml = 1;
         else aux.g = 0.2;
       } else return fail('catalyst', { sid: pickSid });
@@ -190,11 +216,17 @@ export function buildRecipe(ctx, rx, store = storeIndex(ctx), shelf = shelfIndex
   };
   amounts(DOSE);
   const most = (form, field) => Math.max(0, ...reactants.filter((x) => x.form === form).map((x) => x[field]));
-  const room = () => Math.min(MAX_SOLUTION_ML / Math.max(1e-9, most('solution', 'ml')), MAX_SOLID_G / Math.max(1e-9, most('solid', 'g')), MAX_LIQUID_ML / Math.max(1e-9, most('liquid', 'ml')));
+  const room = () =>
+    Math.min(
+      MAX_SOLUTION_ML / Math.max(1e-9, most('solution', 'ml')),
+      MAX_SOLID_G / Math.max(1e-9, most('solid', 'g')),
+      MAX_LIQUID_ML / Math.max(1e-9, most('liquid', 'ml')),
+    );
   let k = Math.min(1, room());
   amounts(DOSE * k);
   // un liquido puro sotto 1 mL o un solido sotto 0,1 g si arrotonderebbe molto in eccesso: si alza tutta la dose, se c'è posto
-  const least = (form, field, min) => Math.max(1, ...reactants.filter((x) => x.form === form).map((x) => min / x[field]));
+  const least = (form, field, min) =>
+    Math.max(1, ...reactants.filter((x) => x.form === form).map((x) => min / x[field]));
   const up = Math.min(Math.max(least('liquid', 'ml', 0.2), least('solid', 'g', 0.1)), room());
   if (up > 1) {
     k *= up;
@@ -228,7 +260,8 @@ export function buildRecipe(ctx, rx, store = storeIndex(ctx), shelf = shelfIndex
   }
   if (aux) ingredients.push(aux);
 
-  const liquidOf = () => ingredients.reduce((t, x) => t + (x.form === 'solution' || (x.form === 'liquid' && x.ml) ? x.ml ?? 0 : 0), 0);
+  const liquidOf = () =>
+    ingredients.reduce((t, x) => t + (x.form === 'solution' || (x.form === 'liquid' && x.ml) ? (x.ml ?? 0) : 0), 0);
   // l'acqua: reagente o solvente (una reazione in soluzione senza soluzioni, un'elettrolisi da almeno 30 mL)
   if (waterIn) waterIn.ml = Math.max(20, mlOf(waterIn.c * DOSE * k * 18.015 * 3));
   if (!waterIn && aqueous && liquidOf() < 1) ingredients.push({ role: 'solvent', sid: WATER, form: 'liquid', ml: 25 });
@@ -259,23 +292,43 @@ export function buildRecipe(ctx, rx, store = storeIndex(ctx), shelf = shelfIndex
   const tags = signalTags(sig);
   // cappa: un gas tossico che esce (prodotto) o che arriva dalla bombola, o un reagente tossico puro e volatile (il bromo);
   // l'acido cloridrico o l'ammoniaca in soluzione diluita no
-  const toxicGas = sig.gases.some((x) => ctx.toxic.has(x.sid)) || ingredients.some((x) => ctx.toxic.has(x.sid) && (x.form === 'gas' || x.form === 'liquid'));
+  const toxicGas =
+    sig.gases.some((x) => ctx.toxic.has(x.sid)) ||
+    ingredients.some((x) => ctx.toxic.has(x.sid) && (x.form === 'gas' || x.form === 'liquid'));
   const hood = Boolean(toxicGas || rx.electro || gas);
   const light = Boolean(c.light);
   const volts = rx.electro ? RECIPE_VOLTS : 0;
 
   // titolo: l'elemento liberato, il precipitato o il primo prodotto che non sia acqua; da quali reagenti
   const element = rx.products.find((p) => p.sid !== WATER && ctx.sub(p.sid)?.kind === 'element');
-  const main = element?.sid ?? sig.solids[0]?.sid ?? rx.products.find((p) => p.sid !== WATER)?.sid ?? rx.products[0].sid;
+  const main =
+    element?.sid ?? sig.solids[0]?.sid ?? rx.products.find((p) => p.sid !== WATER)?.sid ?? rx.products[0].sid;
   const from = rx.reactants.filter((r) => r.sid !== WATER && !(r.sid === ctx.O2 && rx.air >= 0)).map((r) => r.sid);
 
   const recipe = {
-    ok: true, id: rx.id, rx, ingredients, vessel, heat, flame, light, volts, gas, hood, tags, signals: sig, main, from,
-    aqueous, slow: Boolean(rx.slow || light),
+    ok: true,
+    id: rx.id,
+    rx,
+    ingredients,
+    vessel,
+    heat,
+    flame,
+    light,
+    volts,
+    gas,
+    hood,
+    tags,
+    signals: sig,
+    main,
+    from,
+    aqueous,
+    slow: Boolean(rx.slow || light),
   };
   recipe.steps = recipeSteps(ctx, recipe);
   recipe.difficulty = heat?.how === 'bunsen' || flame || volts || gas || toxicGas ? 3 : heat || aux || light ? 2 : 1;
-  recipe.shelfOnly = ingredients.every((x) => x.role === 'water' || x.role === 'air' || x.role === 'solvent' || x.role === 'gas' || x.shelf);
+  recipe.shelfOnly = ingredients.every(
+    (x) => x.role === 'water' || x.role === 'air' || x.role === 'solvent' || x.role === 'gas' || x.shelf,
+  );
   recipe.ghs = recipeHazards(ctx, recipe);
   return recipe;
 }
@@ -293,7 +346,8 @@ function recipeHazards(ctx, recipe) {
   const ghs = new Set();
   for (const x of recipe.ingredients) {
     if (x.sid === WATER || x.role === 'air') continue;
-    const list = x.role === 'gas' ? derivedHazards(ctx, x.sid, { form: 'gas' }).ghs : reagentLook(ctx, reagentOf(x)).ghs;
+    const list =
+      x.role === 'gas' ? derivedHazards(ctx, x.sid, { form: 'gas' }).ghs : reagentLook(ctx, reagentOf(x)).ghs;
     list.forEach((g) => ghs.add(g));
   }
   if (recipe.gas) ghs.add('GHS04');
@@ -314,17 +368,30 @@ function recipeSteps(ctx, r) {
   push('vessel', { vessel: r.vessel });
   const has = (x, f = 0.7) => ({ type: 'has', sid: x.sid, mol: (x.mol ?? 0) * f });
   const ing = r.ingredients;
-  for (const x of ing.filter((y) => y.role === 'reactant' && y.form === 'solid')) push('weigh', { sid: x.sid, g: x.g, shelf: x.shelf }, has(x));
-  for (const x of ing.filter((y) => (y.role === 'reactant' && y.form !== 'solid') || y.role === 'water' || y.role === 'solvent')) {
+  for (const x of ing.filter((y) => y.role === 'reactant' && y.form === 'solid'))
+    push('weigh', { sid: x.sid, g: x.g, shelf: x.shelf }, has(x));
+  for (const x of ing.filter(
+    (y) => (y.role === 'reactant' && y.form !== 'solid') || y.role === 'water' || y.role === 'solvent',
+  )) {
     if (x.sid === WATER) push('water', { ml: x.ml }, { type: 'auto' });
     else if (x.form === 'solution') push('measure', { sid: x.sid, ml: x.ml, molar: x.molar, shelf: x.shelf }, has(x));
     else push('liquid', { sid: x.sid, ml: x.ml, shelf: x.shelf }, has(x));
   }
   const aux = ing.find((y) => y.role === 'aux' || y.role === 'catalyst');
-  if (aux) push(aux.role === 'aux' ? 'aux' : 'catalyst', { sid: aux.sid, ml: aux.ml, g: aux.g, molar: aux.molar, shelf: aux.shelf }, { type: 'has', sid: aux.sid, mol: 1e-5 });
+  if (aux)
+    push(
+      aux.role === 'aux' ? 'aux' : 'catalyst',
+      { sid: aux.sid, ml: aux.ml, g: aux.g, molar: aux.molar, shelf: aux.shelf },
+      { type: 'has', sid: aux.sid, mol: 1e-5 },
+    );
   if (ing.filter((y) => y.role !== 'air' && y.role !== 'gas').length > 1 && !r.heat) push('stir');
   if (r.heat?.how === 'plate') push('plate', { level: r.heat.level, T: r.heat.T }, { type: 'temp', T: r.heat.T });
-  if (r.heat?.how === 'bunsen') push(r.flame ? 'flame' : 'bunsen', { T: r.heat.T, vessel: r.vessel }, r.flame ? { type: 'rx' } : { type: 'temp', T: r.heat.T });
+  if (r.heat?.how === 'bunsen')
+    push(
+      r.flame ? 'flame' : 'bunsen',
+      { T: r.heat.T, vessel: r.vessel },
+      r.flame ? { type: 'rx' } : { type: 'temp', T: r.heat.T },
+    );
   if (r.light) push('lamp', {}, { type: 'rx' });
   if (r.volts) push('power', { volts: r.volts }, { type: 'rx' });
   if (r.gas) push('gas', { gas: r.gas, sid: ctx.id(r.gas) }, { type: 'rx' });
@@ -359,7 +426,9 @@ export function runRecipe(ctx, recipe, { maxSeconds = 600, dt = 0.2 } = {}) {
     else mix.add(Mixture.solid(ctx, x.key, x.g));
   }
   const rx = recipe.rx;
-  const limiting = recipe.ingredients.filter((x) => x.role === 'reactant' || (x.role === 'water' && !recipe.ingredients.some((y) => y.role === 'reactant')));
+  const limiting = recipe.ingredients.filter(
+    (x) => x.role === 'reactant' || (x.role === 'water' && !recipe.ingredients.some((y) => y.role === 'reactant')),
+  );
   const xiMax = Math.min(...limiting.map((x) => (x.mol ?? 0) / x.c));
   const { heatC, area } = vesselEnv(recipe.vessel);
   const gasSid = recipe.gas ? ctx.id(recipe.gas) : 0;
@@ -370,7 +439,15 @@ export function runRecipe(ctx, recipe, { maxSeconds = 600, dt = 0.2 } = {}) {
   let fire = 0;
   const others = new Set();
   for (; t < maxSeconds && extent < goal; t += dt) {
-    const env = { lossWK: 0.3 + area * 0.03, containerC: heatC, area, open: true, stir: t < 4 ? 1 : 0, light: recipe.light, volts: recipe.volts };
+    const env = {
+      lossWK: 0.3 + area * 0.03,
+      containerC: heatC,
+      area,
+      open: true,
+      stir: t < 4 ? 1 : 0,
+      light: recipe.light,
+      volts: recipe.volts,
+    };
     if (recipe.heat?.how === 'plate') {
       env.heatW = Math.max(0, Math.min(recipe.heat.level * 90, 6 * (hpT - mix.T)));
       env.stir = Math.max(env.stir, 0.5);
@@ -391,7 +468,15 @@ export function runRecipe(ctx, recipe, { maxSeconds = 600, dt = 0.2 } = {}) {
       if (burnt <= 0) fire = 0;
     }
   }
-  return { ok: extent >= goal && extent > 0, seconds: Math.round(t), extent, xiMax, mix, waste: wasteClass(mix), others: [...others] };
+  return {
+    ok: extent >= goal && extent > 0,
+    seconds: Math.round(t),
+    extent,
+    xiMax,
+    mix,
+    waste: wasteClass(mix),
+    others: [...others],
+  };
 }
 
 // ------------------------------------------------------------------ il libro
@@ -424,7 +509,11 @@ export function bookRecipes(ctx, verified = null) {
       // una reazione che nel gioco chiede più di due minuti: un passo «aspetta» prima di osservare
       if (r.seconds > 120 && !r.steps.some((x) => x.kind === 'wait')) {
         r.slow = true;
-        r.steps.splice(r.steps.findIndex((x) => x.kind === 'observe'), 0, { kind: 'wait', params: { light: r.light }, check: { type: 'auto' } });
+        r.steps.splice(
+          r.steps.findIndex((x) => x.kind === 'observe'),
+          0,
+          { kind: 'wait', params: { light: r.light }, check: { type: 'auto' } },
+        );
       }
     }
     recipes.push(r);

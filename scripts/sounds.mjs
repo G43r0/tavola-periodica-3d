@@ -26,7 +26,8 @@ async function download(s) {
   if (fs.existsSync(file)) return file;
   const page = await (await fetch(soundPage(s), { headers: UA })).text();
   const license = (page.match(/full license text" href="([^"]+)"/) || [])[1] || '';
-  if (!license.includes('publicdomain/zero')) throw new Error(`${s.name}: licenza non CC0 (${license || 'non trovata'})`);
+  if (!license.includes('publicdomain/zero'))
+    throw new Error(`${s.name}: licenza non CC0 (${license || 'non trovata'})`);
   const url = (page.match(new RegExp(`https://cdn\\.freesound\\.org/previews/\\d+/${s.id}_\\d+-hq\\.mp3`)) || [])[0];
   if (!url) throw new Error(`${s.name}: anteprima non trovata`);
   fs.writeFileSync(file, Buffer.from(await (await fetch(url, { headers: UA })).arrayBuffer()));
@@ -36,7 +37,9 @@ async function download(s) {
 
 // volumedetect scrive il risultato su stderr
 function maxVolume(file) {
-  const r = spawnSync('ffmpeg', ['-hide_banner', '-i', file, '-af', 'volumedetect', '-f', 'null', '-'], { encoding: 'utf8' });
+  const r = spawnSync('ffmpeg', ['-hide_banner', '-i', file, '-af', 'volumedetect', '-f', 'null', '-'], {
+    encoding: 'utf8',
+  });
   const m = r.stderr.match(/max_volume: (-?[\d.]+) dB/);
   return m ? Number(m[1]) : 0;
 }
@@ -57,7 +60,13 @@ for (const s of SOUNDS) {
     ffmpeg(['-i', raw, '-filter_complex', graph, tmp]);
   } else {
     const d = b - a;
-    ffmpeg(['-i', raw, '-af', `aformat=channel_layouts=mono,atrim=${a}:${b},asetpts=PTS-STARTPTS,afade=t=in:d=0.005,afade=t=out:st=${(d - 0.05).toFixed(3)}:d=0.05,aresample=44100`, tmp]);
+    ffmpeg([
+      '-i',
+      raw,
+      '-af',
+      `aformat=channel_layouts=mono,atrim=${a}:${b},asetpts=PTS-STARTPTS,afade=t=in:d=0.005,afade=t=out:st=${(d - 0.05).toFixed(3)}:d=0.05,aresample=44100`,
+      tmp,
+    ]);
   }
   const gain = -1 - maxVolume(tmp);
   const out = path.join(OUT, `${s.name}.ogg`);

@@ -43,11 +43,13 @@ export const SANDBOX_STRINGS = {
     canvas: 'Sandbox: area di disegno',
     paused: 'In pausa',
     introTitle: 'Una sandbox con la tavola periodica',
-    introText: 'Scegli un elemento o un materiale a sinistra e disegna. Ogni elemento fonde, bolle, brucia e reagisce secondo i suoi dati reali.',
+    introText:
+      'Scegli un elemento o un materiale a sinistra e disegna. Ogni elemento fonde, bolle, brucia e reagisce secondo i suoi dati reali.',
     introClose: 'Inizia dal foglio bianco',
     logTitle: 'Reazioni osservate',
     logClear: 'Azzera',
-    logEmpty: 'Qui compaiono le reazioni, i decadimenti e i cambiamenti di stato che avvengono nella sandbox, con le loro equazioni.',
+    logEmpty:
+      'Qui compaiono le reazioni, i decadimenti e i cambiamenti di stato che avvengono nella sandbox, con le loro equazioni.',
     logMore: '… e altre {n}',
     brush: 'Pennello',
     brushSmaller: 'Pennello più piccolo ([)',
@@ -66,34 +68,40 @@ export const SANDBOX_STRINGS = {
     cool: 'Freddo',
     coolText: 'Raffredda di 30 K per passo, fino allo zero assoluto: condensa i gas e solidifica i liquidi.',
     fire: 'Fuoco',
-    fireText: 'Fiamme a circa 900 °C: accende ciò che è infiammabile e c\'è aria.',
+    fireText: "Fiamme a circa 900 °C: accende ciò che è infiammabile e c'è aria.",
     spark: 'Scintilla',
-    sparkText: 'Scarica elettrica nei conduttori: metalli, grafite, acqua, sali fusi e gas nobili. Accende l\'idrogeno.',
+    sparkText: "Scarica elettrica nei conduttori: metalli, grafite, acqua, sali fusi e gas nobili. Accende l'idrogeno.",
     neutron: 'Neutroni',
-    neutronText: 'Sorgente di neutroni veloci: spezzano uranio e plutonio (fissione). Acqua e grafite li rallentano, cadmio e boro li assorbono.',
+    neutronText:
+      'Sorgente di neutroni veloci: spezzano uranio e plutonio (fissione). Acqua e grafite li rallentano, cadmio e boro li assorbono.',
     bomb: 'Esplosione',
-    bombText: 'Un clic, un\'esplosione: il calcestruzzo resiste, il muro indistruttibile non si scalfisce.',
+    bombText: "Un clic, un'esplosione: il calcestruzzo resiste, il muro indistruttibile non si scalfisce.",
     stir: 'Mescola',
-    stirText: 'Rimescola polveri, liquidi, gas e soluzioni nel pennello e ne uguaglia in parte la temperatura: forma miscele (zolfo e ferro, polvere nera…) che poi reagiscono. I blocchi non si muovono; i liquidi di densità diversa si separano di nuovo da soli.',
+    stirText:
+      'Rimescola polveri, liquidi, gas e soluzioni nel pennello e ne uguaglia in parte la temperatura: forma miscele (zolfo e ferro, polvere nera…) che poi reagiscono. I blocchi non si muovono; i liquidi di densità diversa si separano di nuovo da soli.',
     wind: 'Vento',
-    windText: 'Soffia: trascina il cursore per spingere gas, polveri e liquidi in quella direzione; tenendolo fermo li spinge via dal centro.',
+    windText:
+      'Soffia: trascina il cursore per spingere gas, polveri e liquidi in quella direzione; tenendolo fermo li spinge via dal centro.',
     equalize: 'Ambiente',
-    equalizeText: 'Riporta le celle alla temperatura dell\'aria (22 °C) e ne spegne le braci: per ripartire da zero dopo un esperimento.',
+    equalizeText:
+      "Riporta le celle alla temperatura dell'aria (22 °C) e ne spegne le braci: per ripartire da zero dopo un esperimento.",
     extinguish: 'Estintore',
-    extinguishText: 'Spegne fiamme e braci e raffredda sotto l\'accensione ciò che è infiammabile.',
+    extinguishText: "Spegne fiamme e braci e raffredda sotto l'accensione ciò che è infiammabile.",
     pick: 'Pipetta',
-    pickText: 'Clicca una sostanza nella sandbox per sceglierla, con la sua temperatura e il suo stato (come il clic centrale o Alt + clic).',
+    pickText:
+      'Clicca una sostanza nella sandbox per sceglierla, con la sua temperatura e il suo stato (come il clic centrale o Alt + clic).',
     // modi di disegno
     modeBrush: 'Pennello',
     modeBrushText: 'A mano libera (Maiusc + clic: linea dal punto precedente)',
     modeFill: 'Riempi',
-    modeFillText: 'Secchiello: riempie la regione chiusa che tocca con la sostanza scelta (clic destro: svuota la regione)',
+    modeFillText:
+      'Secchiello: riempie la regione chiusa che tocca con la sostanza scelta (clic destro: svuota la regione)',
     modeLine: 'Linea',
     modeLineText: 'Trascina per tracciare una linea',
     modeRect: 'Rettangolo',
     modeRectText: 'Trascina per disegnare un rettangolo (vasche, muri, contenitori)',
     modeEllipse: 'Ellisse',
-    modeEllipseText: 'Trascina per disegnare un\'ellisse',
+    modeEllipseText: "Trascina per disegnare un'ellisse",
     // tavolozza
     salt: 'Sale',
     rust: 'Ruggine',
@@ -125,11 +133,11 @@ export const SANDBOX_STRINGS = {
     scene: 'Scena',
     sceneSave: 'Salva la scena su file',
     sceneOpen: 'Apri una scena da file',
-    scenePng: 'Esporta un\'immagine (PNG)',
+    scenePng: "Esporta un'immagine (PNG)",
     sceneOpened: 'Scena aperta (Ctrl + Z annulla).',
-    sceneRestored: 'Ecco la scena dell\'ultima volta.',
+    sceneRestored: "Ecco la scena dell'ultima volta.",
     sceneNotScene: 'Questo file non è una scena della sandbox.',
-    sceneOld: 'Scena salvata con un\'altra versione dell\'app: le sostanze sono cambiate e non si può aprire.',
+    sceneOld: "Scena salvata con un'altra versione dell'app: le sostanze sono cambiate e non si può aprire.",
     sceneBroken: 'Il file della scena è rovinato.',
     pause: 'Pausa',
     resume: 'Riprendi',
@@ -170,7 +178,8 @@ export const SANDBOX_STRINGS = {
       ['<kbd>F1</kbd>', 'modalità Spiega'],
       ['<kbd>Esc</kbd>', 'chiude i menu, poi torna alla tavola'],
     ],
-    helpNote: 'Il tempo della radioattività è accelerato in scala logaritmica; le reazioni sono semplificate (una cella è un «granello» di sostanza, non un atomo).',
+    helpNote:
+      'Il tempo della radioattività è accelerato in scala logaritmica; le reazioni sono semplificate (una cella è un «granello» di sostanza, non un atomo).',
   },
 
   en: {
@@ -214,11 +223,13 @@ export const SANDBOX_STRINGS = {
     canvas: 'Sandbox: drawing area',
     paused: 'Paused',
     introTitle: 'A sandbox with the periodic table',
-    introText: 'Choose an element or a material on the left and draw. Every element melts, boils, burns and reacts according to its real data.',
+    introText:
+      'Choose an element or a material on the left and draw. Every element melts, boils, burns and reacts according to its real data.',
     introClose: 'Start from a blank sheet',
     logTitle: 'Observed reactions',
     logClear: 'Reset',
-    logEmpty: 'The reactions, decays and changes of state that happen in the sandbox appear here, with their equations.',
+    logEmpty:
+      'The reactions, decays and changes of state that happen in the sandbox appear here, with their equations.',
     logMore: '… and {n} more',
     brush: 'Brush',
     brushSmaller: 'Smaller brush ([)',
@@ -238,25 +249,32 @@ export const SANDBOX_STRINGS = {
     fire: 'Fire',
     fireText: 'Flames at about 900 °C: ignites whatever is flammable when there is air.',
     spark: 'Spark',
-    sparkText: 'Electric discharge in conductors: metals, graphite, water, molten salts and noble gases. Ignites hydrogen.',
+    sparkText:
+      'Electric discharge in conductors: metals, graphite, water, molten salts and noble gases. Ignites hydrogen.',
     neutron: 'Neutrons',
-    neutronText: 'Fast neutron source: they split uranium and plutonium (fission). Water and graphite slow them down, cadmium and boron absorb them.',
+    neutronText:
+      'Fast neutron source: they split uranium and plutonium (fission). Water and graphite slow them down, cadmium and boron absorb them.',
     bomb: 'Explosion',
     bombText: 'One click, one explosion: concrete resists, the indestructible wall is not even scratched.',
     stir: 'Stir',
-    stirText: 'Mixes powders, liquids, gases and solutions under the brush and partly evens out their temperature: it forms mixtures (sulfur and iron, black powder…) that then react. Blocks do not move; liquids of different density separate again on their own.',
+    stirText:
+      'Mixes powders, liquids, gases and solutions under the brush and partly evens out their temperature: it forms mixtures (sulfur and iron, black powder…) that then react. Blocks do not move; liquids of different density separate again on their own.',
     wind: 'Wind',
-    windText: 'Blows: drag the cursor to push gases, powders and liquids in that direction; holding it still pushes them away from the centre.',
+    windText:
+      'Blows: drag the cursor to push gases, powders and liquids in that direction; holding it still pushes them away from the centre.',
     equalize: 'Ambient',
-    equalizeText: 'Brings cells back to air temperature (22 °C) and puts out their embers: to start again after an experiment.',
+    equalizeText:
+      'Brings cells back to air temperature (22 °C) and puts out their embers: to start again after an experiment.',
     extinguish: 'Extinguisher',
     extinguishText: 'Puts out flames and embers and cools flammable things below their ignition point.',
     pick: 'Pipette',
-    pickText: 'Click a substance in the sandbox to select it, with its temperature and state (like middle click or Alt + click).',
+    pickText:
+      'Click a substance in the sandbox to select it, with its temperature and state (like middle click or Alt + click).',
     modeBrush: 'Brush',
     modeBrushText: 'Freehand (Shift + click: line from the previous point)',
     modeFill: 'Fill',
-    modeFillText: 'Bucket: fills the closed region it touches with the chosen substance (right click: empties the region)',
+    modeFillText:
+      'Bucket: fills the closed region it touches with the chosen substance (right click: empties the region)',
     modeLine: 'Line',
     modeLineText: 'Drag to draw a line',
     modeRect: 'Rectangle',
@@ -334,7 +352,8 @@ export const SANDBOX_STRINGS = {
       ['<kbd>F1</kbd>', 'Explain mode'],
       ['<kbd>Esc</kbd>', 'closes the menus, then goes back to the table'],
     ],
-    helpNote: 'Radioactive time is sped up on a logarithmic scale; reactions are simplified (a cell is a “grain” of substance, not an atom).',
+    helpNote:
+      'Radioactive time is sped up on a logarithmic scale; reactions are simplified (a cell is a “grain” of substance, not an atom).',
   },
 
   // «Spiegamelo come se avessi 6 anni»: stesse funzioni, parole più semplici
@@ -347,32 +366,40 @@ export const SANDBOX_STRINGS = {
     glowTitle: 'Fa brillare fiamme, scintille e cose molto calde (G)',
     edgesTitle: 'Se è acceso, quello che esce dallo schermo sparisce',
     clearTitle: 'Cancella tutto e ricomincia',
-    paletteHint: 'Tasto sinistro: disegni · destro: cancelli · rotella: pennello più grande o più piccolo · clic centrale o Alt+clic: prendi la sostanza che tocchi.',
+    paletteHint:
+      'Tasto sinistro: disegni · destro: cancelli · rotella: pennello più grande o più piccolo · clic centrale o Alt+clic: prendi la sostanza che tocchi.',
     introTitle: 'Un foglio dove gli elementi prendono vita',
-    introText: 'Scegli un elemento a sinistra e disegnalo qui. Ogni elemento si scioglie, bolle, brucia e si mescola con gli altri come farebbe davvero.',
+    introText:
+      'Scegli un elemento a sinistra e disegnalo qui. Ogni elemento si scioglie, bolle, brucia e si mescola con gli altri come farebbe davvero.',
     introClose: 'Comincio da un foglio vuoto',
-    logEmpty: 'Qui vedrai cosa succede nella sandbox: quando una cosa brucia, si scioglie, bolle o si trasforma in un\'altra, con la sua «ricetta» chimica.',
+    logEmpty:
+      "Qui vedrai cosa succede nella sandbox: quando una cosa brucia, si scioglie, bolle o si trasforma in un'altra, con la sua «ricetta» chimica.",
     eraseText: 'Cancella tutto quello che tocca, anche il muro. Anche il tasto destro cancella.',
-    heatText: 'Scalda un po\' alla volta: le cose si sciolgono, bollono o prendono fuoco.',
-    coolText: 'Raffredda un po\' alla volta, fino al freddo più freddo che esista: i gas diventano liquidi e i liquidi diventano solidi.',
-    fireText: 'Mette il fuoco. Brucia solo ciò che può bruciare, e solo se c\'è aria intorno.',
-    sparkText: 'Una piccola scossa elettrica. Passa dentro le cose che conducono la corrente, come i metalli e l\'acqua salata. Fa esplodere l\'idrogeno.',
-    neutronText: 'Spara particelle piccolissime chiamate neutroni. Se colpiscono l\'uranio lo rompono in due e liberano tanta energia. L\'acqua li rallenta, il cadmio li ferma.',
-    bombText: 'Un clic e c\'è un\'esplosione. Il calcestruzzo resiste un po\', il muro non si rompe mai.',
-    stirText: 'Mescola come un cucchiaio: polveri, liquidi e gas si mischiano tra loro e poi possono reagire. I liquidi pesanti e quelli leggeri, se li lasci stare, si separano di nuovo.',
+    heatText: "Scalda un po' alla volta: le cose si sciolgono, bollono o prendono fuoco.",
+    coolText:
+      "Raffredda un po' alla volta, fino al freddo più freddo che esista: i gas diventano liquidi e i liquidi diventano solidi.",
+    fireText: "Mette il fuoco. Brucia solo ciò che può bruciare, e solo se c'è aria intorno.",
+    sparkText:
+      "Una piccola scossa elettrica. Passa dentro le cose che conducono la corrente, come i metalli e l'acqua salata. Fa esplodere l'idrogeno.",
+    neutronText:
+      "Spara particelle piccolissime chiamate neutroni. Se colpiscono l'uranio lo rompono in due e liberano tanta energia. L'acqua li rallenta, il cadmio li ferma.",
+    bombText: "Un clic e c'è un'esplosione. Il calcestruzzo resiste un po', il muro non si rompe mai.",
+    stirText:
+      'Mescola come un cucchiaio: polveri, liquidi e gas si mischiano tra loro e poi possono reagire. I liquidi pesanti e quelli leggeri, se li lasci stare, si separano di nuovo.',
     windText: 'Soffia come il vento: muovi il mouse e spingi gas, polveri e liquidi da quella parte.',
     equalizeText: 'Riporta tutto alla temperatura di una stanza (22 °C) e spegne le braci: utile per ricominciare.',
     extinguishText: 'Spegne il fuoco e le braci e raffredda ciò che potrebbe bruciare.',
-    pickText: 'Clicca una cosa nella sandbox per prenderla e usarla per disegnare, così com\'è.',
+    pickText: "Clicca una cosa nella sandbox per prenderla e usarla per disegnare, così com'è.",
     modeBrushText: 'Disegni a mano libera (Maiusc + clic: una linea dritta dal punto di prima)',
     modeFillText: 'Secchiello: riempie tutto uno spazio chiuso con la sostanza scelta (tasto destro: lo svuota)',
     modeRectText: 'Trascina per disegnare un rettangolo: vasche, muri, scatole',
     aqueousOnly: 'Si può mettere solo sciolto in acqua (da solo non esiste)',
-    dissolvedTitle: 'Sciolto nell\'acqua, come lo zucchero nel tè',
+    dissolvedTitle: "Sciolto nell'acqua, come lo zucchero nel tè",
     bucketNeedsSubstance: 'Il secchiello va riempito con una sostanza: scegline una a sinistra.',
     hFrozenSolution: 'acqua sporca ghiacciata',
     hSolution: 'sciolto in acqua',
     hCurrent: 'passa la corrente',
-    helpNote: 'Qui il tempo dei materiali radioattivi va molto più veloce del vero. Ogni quadratino è un granello di sostanza, non un singolo atomo.',
+    helpNote:
+      'Qui il tempo dei materiali radioattivi va molto più veloce del vero. Ogni quadratino è un granello di sostanza, non un singolo atomo.',
   },
 };

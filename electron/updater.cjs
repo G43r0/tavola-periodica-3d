@@ -40,7 +40,9 @@ function setupUpdater({ app, ipcMain, shell, net, getWindow, isDev }) {
     autoUpdater.logger = null;
     autoUpdater.on('checking-for-update', () => publish({ state: 'checking' }));
     autoUpdater.on('update-available', (info) => publish({ state: 'downloading', version: info.version, percent: 0 }));
-    autoUpdater.on('download-progress', (p) => publish({ state: 'downloading', version: status.version, percent: Math.round(p.percent) }));
+    autoUpdater.on('download-progress', (p) =>
+      publish({ state: 'downloading', version: status.version, percent: Math.round(p.percent) }),
+    );
     autoUpdater.on('update-not-available', () => publish({ state: 'none', checkedAt: Date.now() }));
     autoUpdater.on('update-downloaded', (info) => publish({ state: 'ready', version: info.version }));
     autoUpdater.on('error', () => publish({ state: 'error' }));
@@ -53,7 +55,9 @@ function setupUpdater({ app, ipcMain, shell, net, getWindow, isDev }) {
         await autoUpdater.checkForUpdates();
       } else {
         publish({ state: 'checking' });
-        const res = await net.fetch(LATEST_API, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'TavolaPeriodica3D' } });
+        const res = await net.fetch(LATEST_API, {
+          headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'TavolaPeriodica3D' },
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const latest = latestFromRelease(await res.json(), app.getVersion());
         publish(latest ? { state: 'available', ...latest } : { state: 'none', checkedAt: Date.now() });

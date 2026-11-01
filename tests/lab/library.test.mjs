@@ -26,11 +26,12 @@ test('libreria: id unici, strutture distinte, gruppi esistenti', () => {
   }
   const groups = new Set(MOLECULE_GROUPS.map((g) => g.key));
   for (const m of MOLECULES) assert.ok(groups.has(m.group), `${m.id}: gruppo ${m.group} inesistente`);
-  for (const m of MOLECULES) assert.ok(!m.state || ['gas', 'liquido', 'solido', 'soluzione'].includes(m.state), `${m.id}: stato ${m.state}`);
+  for (const m of MOLECULES)
+    assert.ok(!m.state || ['gas', 'liquido', 'solido', 'soluzione'].includes(m.state), `${m.id}: stato ${m.state}`);
   assert.ok(MOLECULES.length >= 400);
 });
 
-test('libreria: almeno un composto per ogni elemento che ne forma (fino all\'einsteinio)', () => {
+test("libreria: almeno un composto per ogni elemento che ne forma (fino all'einsteinio)", () => {
   const present = new Set(lib.entries.flatMap((e) => e.graph.atoms.map((a) => a.z)));
   // gas nobili leggeri e radon: nessun composto stabile; astato e francio: mai isolati in quantità visibile
   const none = new Set([2, 10, 18, 85, 86, 87]);
@@ -86,7 +87,7 @@ test('Lewis: ioni monoatomici senza elettroni spaiati inventati', () => {
 test('Combina usa la libreria ampliata', () => {
   const best = (symbols) => {
     const r = combine(lab, lib, symbols.map(sym));
-    return r.ok ? r.entry?.id ?? null : null;
+    return r.ok ? (r.entry?.id ?? null) : null;
   };
   assert.equal(best(['Fe', 'Cl', 'Cl', 'Cl']), 'fecl3');
   assert.equal(best(['Cu', 'S', 'O', 'O', 'O', 'O']), 'cuso4');
@@ -104,8 +105,20 @@ test('riconoscimento dalla formula per i composti dei metalli', () => {
   assert.equal(r.entry?.id, 'fecl3');
   assert.equal(r.byFormula, true);
   // le molecole organiche no: isomeri diversi restano distinti
-  const dme = lib.identify([{ z: 6, charge: 0 }, { z: 8, charge: 0 }, { z: 6, charge: 0 }, ...Array.from({ length: 6 }, () => ({ z: 1, charge: 0 }))],
-    [{ i: 0, j: 1, order: 1 }, { i: 1, j: 2, order: 1 }, ...[3, 4, 5].map((j) => ({ i: 0, j, order: 1 })), ...[6, 7, 8].map((j) => ({ i: 2, j, order: 1 }))]);
+  const dme = lib.identify(
+    [
+      { z: 6, charge: 0 },
+      { z: 8, charge: 0 },
+      { z: 6, charge: 0 },
+      ...Array.from({ length: 6 }, () => ({ z: 1, charge: 0 })),
+    ],
+    [
+      { i: 0, j: 1, order: 1 },
+      { i: 1, j: 2, order: 1 },
+      ...[3, 4, 5].map((j) => ({ i: 0, j, order: 1 })),
+      ...[6, 7, 8].map((j) => ({ i: 2, j, order: 1 })),
+    ],
+  );
   assert.equal(dme.entry?.id, 'dme');
   assert.equal(dme.exact, true);
 });
@@ -135,9 +148,25 @@ test('lettura delle formule', () => {
   assert.deepEqual(counts(hyd), { Cu: 1, S: 1, O: 9, H: 10 });
   assert.equal(one('CuSO4.5H2O')[0].parts.length, 2);
   const eq = one('2 H2 + O2');
-  assert.deepEqual(eq.map((s) => s.coef), [2, 1]);
-  assert.deepEqual(one('H2+O2').map((s) => s.pretty), ['H₂', 'O₂']);
-  for (const [t, q] of [['NH4+', 1], ['SO4^2-', -2], ['SO4(2-)', -2], ['SO4 2-', -2], ['SO₄²⁻', -2], ['SO4-2', -2], ['Fe3+', 3], ['O2-', -2], ['H+', 1]]) {
+  assert.deepEqual(
+    eq.map((s) => s.coef),
+    [2, 1],
+  );
+  assert.deepEqual(
+    one('H2+O2').map((s) => s.pretty),
+    ['H₂', 'O₂'],
+  );
+  for (const [t, q] of [
+    ['NH4+', 1],
+    ['SO4^2-', -2],
+    ['SO4(2-)', -2],
+    ['SO4 2-', -2],
+    ['SO₄²⁻', -2],
+    ['SO4-2', -2],
+    ['Fe3+', 3],
+    ['O2-', -2],
+    ['H+', 1],
+  ]) {
     assert.equal(one(t)[0].charge, q, t);
   }
   assert.equal(one('Fe3+')[0].counts.get('Fe'), 1, 'Fe3+ è uno ione ferro(III), non Fe₃⁺');
@@ -187,11 +216,20 @@ test('formule: gli stati fisici (aq), (s), (l), (g) si ignorano; un nome sconosc
   assert.deepEqual(Object.fromEntries(r('NaCl(aq)').species[0].counts), { Na: 1, Cl: 1 });
   assert.equal(r('H2O(l)').species[0].pretty, 'H₂O');
   const eq = r('2 H2(g) + O2(g)');
-  assert.deepEqual(eq.species.map((s) => [s.coef, s.pretty]), [[2, 'H₂'], [1, 'O₂']]);
+  assert.deepEqual(
+    eq.species.map((s) => [s.coef, s.pretty]),
+    [
+      [2, 'H₂'],
+      [1, 'O₂'],
+    ],
+  );
   assert.equal(r('Na+(aq)').species[0].charge, 1);
   assert.equal(r('SO4^2-(aq)').species[0].charge, -2);
   assert.deepEqual(Object.fromEntries(r('CuSO4·5H2O(s)').species[0].counts), { Cu: 1, S: 1, O: 9, H: 10 });
-  assert.deepEqual(r('H2(g)+O2(g)').species.map((s) => s.pretty), ['H₂', 'O₂']);
+  assert.deepEqual(
+    r('H2(g)+O2(g)').species.map((s) => s.pretty),
+    ['H₂', 'O₂'],
+  );
   const name = r('ethanol');
   assert.equal(name.ok, false);
   assert.match(name.error, /ethanol/, 'il messaggio parla del nome scritto, non delle maiuscole');
@@ -214,7 +252,11 @@ test('formule: «H2 + » mentre si scrive è una specie seguita da un «+» inco
 test('formule enormi: gli atomi di una specie si elencano solo entro il limite del banco', () => {
   const zOf = (s) => lab.bySymbol.get(s).z;
   const [water] = parseFormula('H2O', isSymbol).species;
-  assert.deepEqual(speciesAtoms(water, zOf, 150), [{ z: 1, charge: 0 }, { z: 1, charge: 0 }, { z: 8, charge: 0 }]);
+  assert.deepEqual(speciesAtoms(water, zOf, 150), [
+    { z: 1, charge: 0 },
+    { z: 1, charge: 0 },
+    { z: 8, charge: 0 },
+  ]);
   const [c150] = parseFormula('C150', isSymbol).species;
   assert.equal(speciesAtoms(c150, zOf, 150).length, 150);
   // prima l'anteprima creava un oggetto per atomo: con C1000000000 «Invalid array length» e gigabyte di memoria
@@ -226,7 +268,7 @@ test('formule enormi: gli atomi di una specie si elencano solo entro il limite d
   }
 });
 
-test('complessi: ferro- e ferricianuro di potassio con il loro nome, lo ione complesso resta un\'unità', () => {
+test("complessi: ferro- e ferricianuro di potassio con il loro nome, lo ione complesso resta un'unità", () => {
   const entry = (t) => {
     const [sp] = parseFormula(t, isSymbol).species;
     const atoms = speciesAtoms(sp, sym, 150);
@@ -245,26 +287,78 @@ test('complessi: ferro- e ferricianuro di potassio con il loro nome, lo ione com
     const parts = covalentParts(salt.graph.atoms, salt.graph.bonds).map((f) => ({
       info: f.atoms.length === 1 ? lab.get(f.atoms[0].z) : null,
       charge: f.charge,
-      libraryName: f.atoms.length > 1 ? lib.identify(f.atoms, f.bonds).entry?.name ?? null : null,
+      libraryName: f.atoms.length > 1 ? (lib.identify(f.atoms, f.bonds).entry?.name ?? null) : null,
     }));
     return ionicCompoundName(parts);
   };
   const na3 = ['Na', 'Na', 'Na', 'Fe', ...Array(6).fill('C'), ...Array(6).fill('N')];
   assert.equal(name(na3), 'Esacianoferrato(III) di sodio');
   // i numeri romani dei nomi della libreria restano maiuscoli
-  assert.equal(name(['Cu', 'N', 'N', 'N', 'N', ...Array(12).fill('H'), 'S', 'O', 'O', 'O', 'O']), 'Solfato di tetraamminorame(II)');
+  assert.equal(
+    name(['Cu', 'N', 'N', 'N', 'N', ...Array(12).fill('H'), 'S', 'O', 'O', 'O', 'O']),
+    'Solfato di tetraamminorame(II)',
+  );
 });
 
 test('nomi sistematici delle molecole binarie', () => {
   const name = (pairs) => binaryCovalentName(new Map(pairs.map(([s, n]) => [lab.bySymbol.get(s), n])));
-  assert.equal(name([['Si', 1], ['Br', 4]]), 'Tetrabromuro di silicio');
-  assert.equal(name([['N', 2], ['O', 3]]), 'Triossido di diazoto');
-  assert.equal(name([['P', 4], ['O', 6]]), 'Esossido di tetrafosforo');
-  assert.equal(name([['C', 1], ['O', 1]]), 'Monossido di carbonio');
-  assert.equal(name([['H', 1], ['Cl', 1]]), 'Cloruro di idrogeno');
-  assert.equal(name([['S', 1], ['F', 6]]), 'Esafluoruro di zolfo');
-  assert.equal(name([['O', 1], ['F', 2]]), 'Difluoruro di ossigeno');
-  assert.equal(name([['C', 2], ['H', 6]]), null, 'gli idrocarburi hanno nomi propri');
+  assert.equal(
+    name([
+      ['Si', 1],
+      ['Br', 4],
+    ]),
+    'Tetrabromuro di silicio',
+  );
+  assert.equal(
+    name([
+      ['N', 2],
+      ['O', 3],
+    ]),
+    'Triossido di diazoto',
+  );
+  assert.equal(
+    name([
+      ['P', 4],
+      ['O', 6],
+    ]),
+    'Esossido di tetrafosforo',
+  );
+  assert.equal(
+    name([
+      ['C', 1],
+      ['O', 1],
+    ]),
+    'Monossido di carbonio',
+  );
+  assert.equal(
+    name([
+      ['H', 1],
+      ['Cl', 1],
+    ]),
+    'Cloruro di idrogeno',
+  );
+  assert.equal(
+    name([
+      ['S', 1],
+      ['F', 6],
+    ]),
+    'Esafluoruro di zolfo',
+  );
+  assert.equal(
+    name([
+      ['O', 1],
+      ['F', 2],
+    ]),
+    'Difluoruro di ossigeno',
+  );
+  assert.equal(
+    name([
+      ['C', 2],
+      ['H', 6],
+    ]),
+    null,
+    'gli idrocarburi hanno nomi propri',
+  );
 });
 
 test('Combina: sali con ioni noti, alcani lunghi, più unità uguali', () => {
@@ -272,7 +366,10 @@ test('Combina: sali con ioni noti, alcani lunghi, più unità uguali', () => {
     const r = combine(lab, lib, symbols.map(sym));
     assert.ok(r.ok, symbols.join(''));
     assert.equal(r.source, 'ions', symbols.join(''));
-    return r.salt.graph.atoms.filter((a) => lab.get(a.z).metal).map((a) => `${lab.get(a.z).symbol}${a.charge}`).sort();
+    return r.salt.graph.atoms
+      .filter((a) => lab.get(a.z).metal)
+      .map((a) => `${lab.get(a.z).symbol}${a.charge}`)
+      .sort();
   };
   const expand = (formula) => {
     const [sp] = parseFormula(formula, isSymbol).species;
@@ -286,7 +383,11 @@ test('Combina: sali con ioni noti, alcani lunghi, più unità uguali', () => {
   assert.deepEqual(charges(expand('V2O3')), ['V3', 'V3'], 'ossido, non perossido');
   assert.deepEqual(charges(expand('SrO2')), ['Sr2'], 'perossido di stronzio');
   assert.deepEqual(charges(expand('FeBr3')), ['Fe3']);
-  for (const [formula, id] of [['Fe2(SO4)3', 'fe2so43'], ['Mn2O3', 'mn2o3'], ['BaO2', 'bao2']]) {
+  for (const [formula, id] of [
+    ['Fe2(SO4)3', 'fe2so43'],
+    ['Mn2O3', 'mn2o3'],
+    ['BaO2', 'bao2'],
+  ]) {
     assert.equal(combine(lab, lib, expand(formula).map(sym)).entry?.id, id, formula);
   }
   // alogenuri con cariche alte: molecole, non sali
@@ -311,7 +412,8 @@ test('una formula ionica resta una sola unità; copie della stessa voce restano 
     for (const b of r.bonds) parent[find(b.i)] = find(b.j);
     return new Set(zs.map((_, i) => find(i))).size;
   };
-  const expand = (formula) => [...parseFormula(formula, isSymbol).species[0].counts].flatMap(([s, n]) => Array(n).fill(s));
+  const expand = (formula) =>
+    [...parseFormula(formula, isSymbol).species[0].counts].flatMap(([s, n]) => Array(n).fill(s));
   assert.equal(units(expand('(NH4)2Fe(SO4)2')), 1, 'sale di Mohr');
   assert.equal(units(expand('Pb3O4')), 1);
   assert.equal(units(expand('KAl(SO4)2')), 1);

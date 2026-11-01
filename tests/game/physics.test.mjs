@@ -18,7 +18,13 @@ function drop(height) {
   const ph = new Physics(R);
   ph.box(0, -0.1, 0, 5, 0.1, 5);
   const owner = { def: { breakable: true, mass: 0.1 } };
-  const body = ph.dynamic({ pos: { x: 0, y: height, z: 0 }, shapes: [{ type: 'cylinder', hh: 0.0475, r: 0.0345, y: 0.0475 }], mass: 0.1, owner, events: true });
+  const body = ph.dynamic({
+    pos: { x: 0, y: height, z: 0 },
+    shapes: [{ type: 'cylinder', hh: 0.0475, r: 0.0345, y: 0.0475 }],
+    mass: 0.1,
+    owner,
+    events: true,
+  });
   let max = 0;
   ph.onImpact = (o, force, other, speed) => {
     if (o === owner && force > owner.def.mass * 60) max = Math.max(max, speed);
@@ -64,7 +70,13 @@ function corridor(dirX, seconds = 4, { z = 0.4, beaker = false } = {}) {
     ph.box(b.x, BENCH_Y - 0.02, b.z, b.w / 2 + 0.02, 0.02, b.d / 2 + 0.02);
   }
   const stools = LAYOUT.stools.map((s) => ph.prop({ x: s.x, z: s.z, ...STOOL }));
-  const glass = beaker ? ph.dynamic({ pos: { x: 0.6 * dirX, y: 0, z }, shapes: [{ type: 'cylinder', hh: 0.0475, r: 0.0345, y: 0.0475 }], mass: 0.1 }) : null;
+  const glass = beaker
+    ? ph.dynamic({
+        pos: { x: 0.6 * dirX, y: 0, z },
+        shapes: [{ type: 'cylinder', hh: 0.0475, r: 0.0345, y: 0.0475 }],
+        mass: 0.1,
+      })
+    : null;
   const p = ph.player({ x: 0.15, y: 0.85, z }, 0.28, 0.55);
   const dt = 1 / 60;
   let vy = 0;
@@ -92,7 +104,7 @@ test('stanza: gli sgabelli non chiudono il corridoio tra i banconi (il giocatore
   assert.ok(corridor(1, 4, { z: 0.38 }).x > 1.9);
 });
 
-test('stanza: il giocatore spinge uno sgabello a passo d\'uomo, ma passa attraverso la vetreria a terra', () => {
+test("stanza: il giocatore spinge uno sgabello a passo d'uomo, ma passa attraverso la vetreria a terra", () => {
   const { stools } = corridor(1, 1.5, { z: 0.3 });
   const moved = stools[1].translation();
   // spinto in avanti, non scagliato via (la velocità trasferita è quella del giocatore, non il doppio)
@@ -103,17 +115,21 @@ test('stanza: il giocatore spinge uno sgabello a passo d\'uomo, ma passa attrave
   assert.ok(Math.hypot(g.x - 0.6, g.z - 0.4) < 0.001, 'il becher a terra non viene calciato via');
 });
 
-test('posa: punto d\'appoggio vero sul bancone e sovrapposizioni con gli altri oggetti', () => {
+test("posa: punto d'appoggio vero sul bancone e sovrapposizioni con gli altri oggetti", () => {
   const ph = new Physics(R);
   ph.box(0, 0.46, 0, 1, 0.46, 0.5);
   const foot = { r: 0.0345, hh: 0.0475 };
-  const other = ph.dynamic({ pos: { x: 0.2, y: 0.92, z: 0 }, shapes: [{ type: 'cylinder', hh: 0.0475, r: 0.0345, y: 0.0475 }], mass: 0.1 });
+  const other = ph.dynamic({
+    pos: { x: 0.2, y: 0.92, z: 0 },
+    shapes: [{ type: 'cylinder', hh: 0.0475, r: 0.0345, y: 0.0475 }],
+    mass: 0.1,
+  });
   ph.step(1 / 60, [other]); // le interrogazioni vedono i collisori dopo il primo passo
   const rest = ph.restHeight(foot, 0, 0, 1.3);
   assert.ok(Math.abs(rest.y - 0.9675) < 0.003, `centro a riposo a ${rest.y}`);
   assert.ok(rest.normal.y > 0.99 && !rest.collider.parent(), 'piano orizzontale e statico');
   const onTop = ph.restHeight(foot, 0.2, 0, 1.3);
-  assert.ok(onTop.collider.parent()?.isDynamic(), 'sopra un becher l\'appoggio è un oggetto mobile');
+  assert.ok(onTop.collider.parent()?.isDynamic(), "sopra un becher l'appoggio è un oggetto mobile");
   assert.equal(ph.overlaps(foot, { x: 0.2, y: 0.9675, z: 0 }), true);
   assert.equal(ph.overlaps(foot, { x: 0.3, y: 0.9675, z: 0 }), false, 'a 10 cm non tocca, e il piano sotto non conta');
   assert.equal(ph.overlaps(foot, { x: 0.2, y: 0.9675, z: 0 }, { exclude: other }), false);
@@ -124,7 +140,10 @@ test('posa: punto d\'appoggio vero sul bancone e sovrapposizioni con gli altri o
 });
 
 test('liquidi: volume del profilo, livello orizzontale e versamento inclinando', () => {
-  const profile = [[0.033, 0.004], [0.033, 0.095]];
+  const profile = [
+    [0.033, 0.004],
+    [0.033, 0.095],
+  ];
   const capacity = profileVolume(profile) * 1e6;
   assert.ok(Math.abs(capacity - Math.PI * 3.3 ** 2 * 9.1) < 1, `capacità ${capacity} mL`);
   const samples = interiorSamples(profile);
@@ -156,5 +175,9 @@ test('stelle e soldi: qualità, sicurezza e tempo', () => {
   const slow = grade({ quality: 1, elapsed: 900, par: 300, pay: 30, costs: 5 });
   assert.equal(slow.stars, 4);
   assert.equal(slow.net, 24 - 5);
-  assert.equal(grade({ quality: 0, elapsed: 10, par: 300, pay: 30 }).stars, 1, 'senza preparato restano solo i punti della sicurezza');
+  assert.equal(
+    grade({ quality: 0, elapsed: 10, par: 300, pay: 30 }).stars,
+    1,
+    'senza preparato restano solo i punti della sicurezza',
+  );
 });

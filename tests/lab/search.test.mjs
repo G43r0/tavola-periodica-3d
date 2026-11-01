@@ -36,12 +36,19 @@ test('esempi del laboratorio: si trovano con la formula scritta in tutti i modi,
 
 test('reazioni del laboratorio: CH₄ e CH4 trovano le stesse reazioni', () => {
   const loaded = REACTIONS.map((r) => {
-    const load = (list) => list.map(([, key]) => {
-      const sp = speciesInfo(lab, library, elements, key);
-      sp.display = sp.formula ?? displayFormula(lab, sp.atoms, 0, { ionic: sp.ionic });
-      return sp;
-    });
-    const re = { r, reactants: load(r.reactants), products: load(r.products), rc: r.reactants.map(([c]) => c), pc: r.products.map(([c]) => c) };
+    const load = (list) =>
+      list.map(([, key]) => {
+        const sp = speciesInfo(lab, library, elements, key);
+        sp.display = sp.formula ?? displayFormula(lab, sp.atoms, 0, { ionic: sp.ionic });
+        return sp;
+      });
+    const re = {
+      r,
+      reactants: load(r.reactants),
+      products: load(r.products),
+      rc: r.reactants.map(([c]) => c),
+      pc: r.products.map(([c]) => c),
+    };
     re.enthalpy = reactionEnthalpy(lab, re.reactants, re.products, re.rc, re.pc);
     return re;
   });

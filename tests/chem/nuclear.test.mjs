@@ -8,7 +8,7 @@ const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.jso
 const bySymbol = new Map(elements.map((el) => [el.symbol, el]));
 const labels = (sym) => viewerIsotopes(bySymbol.get(sym).isotopes).map((i) => i.label);
 
-test('visualizzatore 3D: un isotopo per numero di neutroni, anche quando in natura c\'è solo l\'isomero', () => {
+test("visualizzatore 3D: un isotopo per numero di neutroni, anche quando in natura c'è solo l'isomero", () => {
   // il tantalio naturale è ¹⁸¹Ta e ¹⁸⁰ᵐTa (lo stato fondamentale ¹⁸⁰Ta dura poche ore e non è nei dati)
   assert.deepEqual(labels('Ta'), ['180m', '181']);
   // ⁹⁹ᵐTc ha gli stessi neutroni di ⁹⁹Tc: resta solo lo stato fondamentale
@@ -17,7 +17,11 @@ test('visualizzatore 3D: un isotopo per numero di neutroni, anche quando in natu
     const list = viewerIsotopes(el.isotopes);
     const n = list.map((i) => i.neutrons);
     assert.equal(new Set(n).size, n.length, `${el.symbol}: neutroni ripetuti`);
-    assert.deepEqual([...new Set(el.isotopes.map((i) => i.neutrons))].sort((a, b) => a - b), [...n].sort((a, b) => a - b), `${el.symbol}: manca un nucleo`);
+    assert.deepEqual(
+      [...new Set(el.isotopes.map((i) => i.neutrons))].sort((a, b) => a - b),
+      [...n].sort((a, b) => a - b),
+      `${el.symbol}: manca un nucleo`,
+    );
   }
 });
 
@@ -32,7 +36,16 @@ test('emivita abbreviata del visualizzatore: Ma e Ga, non «milioni di a»', () 
 });
 
 test('energia di legame dei nuclei: misurata (AME2020) anche oltre A = 22', () => {
-  for (const [z, a, mev] of [[26, 56, 8.790], [28, 62, 8.795], [26, 58, 8.792], [50, 120, 8.505], [82, 208, 7.868], [92, 235, 7.591], [92, 238, 7.570], [94, 239, 7.560]]) {
+  for (const [z, a, mev] of [
+    [26, 56, 8.79],
+    [28, 62, 8.795],
+    [26, 58, 8.792],
+    [50, 120, 8.505],
+    [82, 208, 7.868],
+    [92, 235, 7.591],
+    [92, 238, 7.57],
+    [94, 239, 7.56],
+  ]) {
     const b = bindingPerNucleon(z, a);
     assert.equal(b.measured, true, `${z}-${a}`);
     assert.ok(Math.abs(b.mev - mev) < 0.001, `${z}-${a}: ${b.mev}`);

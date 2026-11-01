@@ -29,18 +29,26 @@ const t = createT({
     openCard: 'Apri la scheda',
     loading: 'Cerco…',
     notFound: 'Non ho ancora una spiegazione per «{w}».',
-    notFoundHint: 'Prova con una parola sola, oppure fai clic destro su un pulsante, un elemento o un valore: conosco i 118 elementi, le sostanze del laboratorio, i termini di chimica e fisica e tutti i comandi dell\'app.',
+    notFoundHint:
+      "Prova con una parola sola, oppure fai clic destro su un pulsante, un elemento o un valore: conosco i 118 elementi, le sostanze del laboratorio, i termini di chimica e fisica e tutti i comandi dell'app.",
     elIntro: '{name} ({sym}) è un {cat}: ogni suo atomo ha {z} protoni nel nucleo.',
-    elIntroUnknown: '{name} ({sym}) è un elemento superpesante: ogni suo atomo ha {z} protoni nel nucleo e la sua chimica non è ancora nota.',
+    elIntroUnknown:
+      '{name} ({sym}) è un elemento superpesante: ogni suo atomo ha {z} protoni nel nucleo e la sua chimica non è ancora nota.',
     elPos: 'Si trova nel gruppo {g}, periodo {p}, blocco {b}.',
     elPosNoGroup: 'Si trova nel periodo {p}, blocco {b}.',
     elState: 'A 25 °C è {state}.',
     states: { solid: 'solido', liquid: 'liquido', gas: 'un gas' },
     uses: 'Usi: {list}.',
     aka: 'Detto anche: {list}.',
-    molState: { gas: 'A 25 °C è un gas.', liquido: 'A 25 °C è liquido.', solido: 'A 25 °C è solido.', soluzione: 'Esiste solo sciolto in acqua.' },
+    molState: {
+      gas: 'A 25 °C è un gas.',
+      liquido: 'A 25 °C è liquido.',
+      solido: 'A 25 °C è solido.',
+      soluzione: 'Esiste solo sciolto in acqua.',
+    },
     groupTitle: 'Gruppo {g}',
-    groupText: 'La colonna {g} della tavola periodica: {list}. Gli elementi della stessa colonna hanno lo stesso numero di elettroni esterni e si comportano in modo simile.',
+    groupText:
+      'La colonna {g} della tavola periodica: {list}. Gli elementi della stessa colonna hanno lo stesso numero di elettroni esterni e si comportano in modo simile.',
     periodTitle: 'Periodo {p}',
     periodText: 'La riga {p} della tavola, da {first} a {last}: atomi con {shells} di elettroni occupati.',
     shells: (p) => (p.n === 1 ? 'un solo guscio' : `${p.n} gusci`),
@@ -66,18 +74,26 @@ const t = createT({
     openCard: 'Open the card',
     loading: 'Looking it up…',
     notFound: 'I do not have an explanation for “{w}” yet.',
-    notFoundHint: 'Try a single word, or right-click a button, an element or a value: I know the 118 elements, the lab substances, the terms of chemistry and physics and every command in the app.',
+    notFoundHint:
+      'Try a single word, or right-click a button, an element or a value: I know the 118 elements, the lab substances, the terms of chemistry and physics and every command in the app.',
     elIntro: '{name} ({sym}) is {a} {cat}: each of its atoms has {z} protons in the nucleus.',
-    elIntroUnknown: '{name} ({sym}) is a superheavy element: each of its atoms has {z} protons in the nucleus and its chemistry is not known yet.',
+    elIntroUnknown:
+      '{name} ({sym}) is a superheavy element: each of its atoms has {z} protons in the nucleus and its chemistry is not known yet.',
     elPos: 'It is in group {g}, period {p}, {b}-block.',
     elPosNoGroup: 'It is in period {p}, {b}-block.',
     elState: 'At 25 °C it is {state}.',
     states: { solid: 'solid', liquid: 'liquid', gas: 'a gas' },
     uses: 'Uses: {list}.',
     aka: 'Also known as: {list}.',
-    molState: { gas: 'At 25 °C it is a gas.', liquido: 'At 25 °C it is liquid.', solido: 'At 25 °C it is solid.', soluzione: 'It only exists dissolved in water.' },
+    molState: {
+      gas: 'At 25 °C it is a gas.',
+      liquido: 'At 25 °C it is liquid.',
+      solido: 'At 25 °C it is solid.',
+      soluzione: 'It only exists dissolved in water.',
+    },
     groupTitle: 'Group {g}',
-    groupText: 'Column {g} of the periodic table: {list}. Elements in the same column have the same number of outer electrons and behave alike.',
+    groupText:
+      'Column {g} of the periodic table: {list}. Elements in the same column have the same number of outer electrons and behave alike.',
     periodTitle: 'Period {p}',
     periodText: 'Row {p} of the table, from {first} to {last}: atoms with {shells} of electrons.',
     shells: (p) => (p.n === 1 ? 'a single occupied shell' : `${p.n} occupied shells`),
@@ -85,16 +101,27 @@ const t = createT({
   eli6: {
     bannerHint: 'Evidenzia una parola o premi il tasto destro su qualsiasi cosa e te la spiego',
     notFound: 'Questa parola non la conosco ancora: «{w}».',
-    notFoundHint: 'Prova con una parola sola, oppure premi il tasto destro su un pulsante, su un elemento o su un numero.',
+    notFoundHint:
+      'Prova con una parola sola, oppure premi il tasto destro su un pulsante, su un elemento o su un numero.',
     elPos: 'Sta nella colonna {g} e nella riga {p} della tavola.',
     elPosNoGroup: 'Sta nella riga {p} della tavola, in una delle due file staccate in basso.',
-    groupText: 'La colonna {g} della tavola: {list}. Gli elementi della stessa colonna sono come una famiglia e si comportano in modo simile.',
+    groupText:
+      'La colonna {g} della tavola: {list}. Gli elementi della stessa colonna sono come una famiglia e si comportano in modo simile.',
     periodText: 'La riga {p} della tavola, da {first} a {last}: atomi con {shells} di elettroni.',
     shells: (p) => (p.n === 1 ? 'un solo piano' : `${p.n} piani`),
   },
 });
 
-const FAMILY_OF_GROUP = { 1: 'cat.alkali', 2: 'cat.alkaline-earth', 13: 'term.block', 14: 'term.block', 15: 'term.block', 16: 'term.block', 17: 'cat.halogen', 18: 'cat.noble-gas' };
+const FAMILY_OF_GROUP = {
+  1: 'cat.alkali',
+  2: 'cat.alkaline-earth',
+  13: 'term.block',
+  14: 'term.block',
+  15: 'term.block',
+  16: 'term.block',
+  17: 'cat.halogen',
+  18: 'cat.noble-gas',
+};
 const loadGlossary = () => import('../i18n/glossary.js');
 
 export function createExplain(elements, { onModeChange, onOpenElement } = {}) {
@@ -108,7 +135,12 @@ export function createExplain(elements, { onModeChange, onOpenElement } = {}) {
   // ---- elementi: nomi in tutte le lingue e simboli
   const byName = new Map();
   const bySymbol = new Map(elements.map((el) => [el.symbol, el]));
-  const plain = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  const plain = (s) =>
+    String(s ?? '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .trim();
   for (const el of elements) for (const n of [el.name, el.nameIt, el.nameEn]) if (n) byName.set(plain(n), el);
 
   // ---- interfaccia
@@ -155,11 +187,32 @@ export function createExplain(elements, { onModeChange, onOpenElement } = {}) {
     const body = [];
     if (isSimple() && el.simple) body.push(el.simple);
     else if (el.category === 'unknown') body.push(t('elIntroUnknown', { name: el.name, sym: el.symbol, z: el.z }));
-    else body.push(t('elIntro', { name: el.name, sym: el.symbol, z: el.z, cat: catName, a: /^[aeiou]/i.test(catName) ? 'an' : 'a' }));
-    body.push(el.group ? t('elPos', { g: el.group, p: el.period, b: el.block }) : t('elPosNoGroup', { p: el.period, b: el.block }));
+    else
+      body.push(
+        t('elIntro', {
+          name: el.name,
+          sym: el.symbol,
+          z: el.z,
+          cat: catName,
+          a: /^[aeiou]/i.test(catName) ? 'an' : 'a',
+        }),
+      );
+    body.push(
+      el.group
+        ? t('elPos', { g: el.group, p: el.period, b: el.block })
+        : t('elPosNoGroup', { p: el.period, b: el.block }),
+    );
     const st = t('states')[el.state];
     if (st && !el.statePredicted) body.push(t('elState', { state: st }));
-    if (el.uses?.length) body.push(t('uses', { list: el.uses.slice(0, 3).map((u) => u.replace(/\.$/, '')).join('; ') }));
+    if (el.uses?.length)
+      body.push(
+        t('uses', {
+          list: el.uses
+            .slice(0, 3)
+            .map((u) => u.replace(/\.$/, ''))
+            .join('; '),
+        }),
+      );
     return {
       kind: 'element',
       title: el.name,
@@ -167,13 +220,21 @@ export function createExplain(elements, { onModeChange, onOpenElement } = {}) {
       color: cat.color,
       body,
       see: [`cat.${el.category}`, 'term.atomicNumber'],
-      action: onOpenElement && !document.querySelector('.sbx:not([hidden]), .lab:not([hidden]), .atom-view:not([hidden])') ? { label: t('openCard'), run: () => onOpenElement(el.z) } : null,
+      action:
+        onOpenElement && !document.querySelector('.sbx:not([hidden]), .lab:not([hidden]), .atom-view:not([hidden])')
+          ? { label: t('openCard'), run: () => onOpenElement(el.z) }
+          : null,
     };
   }
 
   function groupEntry(g) {
     const list = elements.filter((el) => el.group === g).map((el) => el.name);
-    return { kind: 'group', title: t('groupTitle', { g }), body: [t('groupText', { g, list: list.join(', ') })], see: [FAMILY_OF_GROUP[g] ?? (g >= 3 && g <= 12 ? 'cat.transition' : 'term.group'), 'term.group'] };
+    return {
+      kind: 'group',
+      title: t('groupTitle', { g }),
+      body: [t('groupText', { g, list: list.join(', ') })],
+      see: [FAMILY_OF_GROUP[g] ?? (g >= 3 && g <= 12 ? 'cat.transition' : 'term.group'), 'term.group'],
+    };
   }
 
   function periodEntry(p) {
@@ -204,10 +265,16 @@ export function createExplain(elements, { onModeChange, onOpenElement } = {}) {
 
   // ---- libreria delle sostanze (dal laboratorio), caricata alla prima ricerca che non trova nulla
   function loadLibrary() {
-    libLoading ??= Promise.all([import('../lab/data/molecules.js'), import('../lab/chem/identify.js'), import('../lab/chem/smiles.js')]).then(([mol, idf, smi]) => {
+    libLoading ??= Promise.all([
+      import('../lab/data/molecules.js'),
+      import('../lab/chem/identify.js'),
+      import('../lab/chem/smiles.js'),
+    ]).then(([mol, idf, smi]) => {
       const labCtx = {
         get: (z) => elements[z - 1],
-        bySymbol: new Map(elements.map((el) => [el.symbol, { z: el.z, en: el.electronegativity ?? 2, group: el.group }])),
+        bySymbol: new Map(
+          elements.map((el) => [el.symbol, { z: el.z, en: el.electronegativity ?? 2, group: el.group }]),
+        ),
       };
       const names = new Map();
       const formulas = new Map();
@@ -228,7 +295,12 @@ export function createExplain(elements, { onModeChange, onOpenElement } = {}) {
         return f;
       };
       for (const m of mol.MOLECULES) {
-        for (const n of [m.name, m.nameIt, ...String(m.aka ?? '').split(/,| o | or /), ...String(m.akaIt ?? '').split(/,| o /)]) {
+        for (const n of [
+          m.name,
+          m.nameIt,
+          ...String(m.aka ?? '').split(/,| o | or /),
+          ...String(m.akaIt ?? '').split(/,| o /),
+        ]) {
           const k = plain(n);
           if (k && !names.has(k)) names.set(k, m);
         }
@@ -300,7 +372,7 @@ export function createExplain(elements, { onModeChange, onOpenElement } = {}) {
     const re = /[\p{L}\p{N}₀-₉⁰-⁹⁺⁻°]+(?:[-][\p{L}\p{N}₀-₉]+)*/gu;
     const tokens = [];
     let at = -1;
-    for (let m; (m = re.exec(text)); ) {
+    for (let m; (m = re.exec(text));) {
       if (offset >= m.index && offset <= m.index + m[0].length && at < 0) at = tokens.length;
       tokens.push({ s: m[0], from: m.index, to: m.index + m[0].length });
     }
@@ -326,7 +398,8 @@ export function createExplain(elements, { onModeChange, onOpenElement } = {}) {
     if (kbd) {
       let text = kbd.textContent;
       const prev = kbd.previousElementSibling;
-      if (prev?.matches('kbd') && /\+\s*$/.test(kbd.previousSibling?.textContent ?? '')) text = `${prev.textContent} + ${text}`;
+      if (prev?.matches('kbd') && /\+\s*$/.test(kbd.previousSibling?.textContent ?? ''))
+        text = `${prev.textContent} + ${text}`;
       const e = keyEntry(text);
       if (e) return e;
     }
@@ -364,7 +437,8 @@ export function createExplain(elements, { onModeChange, onOpenElement } = {}) {
       if (wordHit) return wordHit;
     }
     if (helpHit) return helpHit;
-    if (el.closest('.sbx-mats .sbx-item')) return glossaryEntry('sandbox.materials', { title: el.closest('.sbx-item').textContent.trim() });
+    if (el.closest('.sbx-mats .sbx-item'))
+      return glossaryEntry('sandbox.materials', { title: el.closest('.sbx-item').textContent.trim() });
 
     // pulsanti senza voce: il loro titolo o la loro etichetta
     const ctl = el.closest('[title], [aria-label]');
@@ -392,7 +466,12 @@ export function createExplain(elements, { onModeChange, onOpenElement } = {}) {
     return hit ?? notFound(clean);
   }
 
-  const notFound = (word) => ({ kind: 'none', title: word.length > 40 ? `${word.slice(0, 40)}…` : word, body: [t('notFound', { w: word.length > 40 ? `${word.slice(0, 40)}…` : word }), t('notFoundHint')], see: ['ui.explain'] });
+  const notFound = (word) => ({
+    kind: 'none',
+    title: word.length > 40 ? `${word.slice(0, 40)}…` : word,
+    body: [t('notFound', { w: word.length > 40 ? `${word.slice(0, 40)}…` : word }), t('notFoundHint')],
+    see: ['ui.explain'],
+  });
 
   // ---- scheda
   let anchor = { x: 0, y: 0 };
@@ -403,9 +482,19 @@ export function createExplain(elements, { onModeChange, onOpenElement } = {}) {
       .map(([k, title]) => `<button type="button" class="xp-chip" data-key="${esc(k)}">${esc(title)}</button>`)
       .join('');
     const keys = entry.keys?.length
-      ? `<div class="xp-sec"><h4>${esc(t('shortcuts'))}</h4><dl class="xp-keys">${entry.keys.map(([k, d]) => `<dt>${k.split(' / ').map((x) => `<kbd>${esc(x)}</kbd>`).join(' / ')}</dt><dd>${esc(d)}</dd>`).join('')}</dl></div>`
+      ? `<div class="xp-sec"><h4>${esc(t('shortcuts'))}</h4><dl class="xp-keys">${entry.keys
+          .map(
+            ([k, d]) =>
+              `<dt>${k
+                .split(' / ')
+                .map((x) => `<kbd>${esc(x)}</kbd>`)
+                .join(' / ')}</dt><dd>${esc(d)}</dd>`,
+          )
+          .join('')}</dl></div>`
       : '';
-    const rows = entry.rows?.length ? `<dl class="xp-keys xp-keys--ctx">${entry.rows.map(([c, d]) => `<dt>${esc(c)}</dt><dd>${esc(d)}</dd>`).join('')}</dl>` : '';
+    const rows = entry.rows?.length
+      ? `<dl class="xp-keys xp-keys--ctx">${entry.rows.map(([c, d]) => `<dt>${esc(c)}</dt><dd>${esc(d)}</dd>`).join('')}</dl>`
+      : '';
     card.className = `xp-card xp-card--${entry.kind}`;
     card.style.setProperty('--xc', entry.color ?? '');
     card.setAttribute('aria-label', entry.title);

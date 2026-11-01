@@ -29,14 +29,20 @@ function numberAfter(before) {
   return Number(m[1]);
 }
 /** Tutti i numeri che nel README precedono la parola (anche in grassetto: «**88 termini**»). */
-const numbersBefore = (words) => [...readme.replace(/\*\*/g, '').matchAll(new RegExp(`\\b(\\d+) ${words}`, 'g'))].map((m) => Number(m[1]));
+const numbersBefore = (words) =>
+  [...readme.replace(/\*\*/g, '').matchAll(new RegExp(`\\b(\\d+) ${words}`, 'g'))].map((m) => Number(m[1]));
 
 test('README: termini del glossario, sostanze, entalpie e reazioni scritte a mano', () => {
   assert.deepEqual(numbersBefore('termini'), [Object.keys(GLOSSARY_IT).filter((k) => k.startsWith('term.')).length]);
   for (const n of numbersBefore('sostanze(?! comuni)')) assert.equal(n, MOLECULES.length);
   assert.equal(numberAfter('entalpie di formazione di'), Object.keys(FORMATION_ENTHALPIES).length);
   // il pannello Reazioni del laboratorio mostra tutto il catalogo (prima il README diceva «47 reazioni in 5 gruppi»)
-  assert.match(readme.replace(/\*\*/g, ''), new RegExp(`Reazioni nella barra del laboratorio: le ${REACTIONS.length} reazioni del catalogo in ${REACTION_GROUPS.length} gruppi`));
+  assert.match(
+    readme.replace(/\*\*/g, ''),
+    new RegExp(
+      `Reazioni nella barra del laboratorio: le ${REACTIONS.length} reazioni del catalogo in ${REACTION_GROUPS.length} gruppi`,
+    ),
+  );
   assert.equal(numberAfter('con la ricerca;'), BASE_REACTIONS.length);
   for (const n of numbersBefore('reazioni(?! (in|del|usano))')) assert.equal(n, REACTIONS.length);
 });
@@ -52,16 +58,27 @@ test('README: ΔH°, ricette del libro, quaderno e tutorial', () => {
   const lab = createLabElements(elements);
   const lib = createLibraryIndex(lab, MOLECULES);
   const sp = (k) => speciesInfo(lab, lib, elements, k);
-  const withDH = REACTIONS.filter((r) => reactionEnthalpy(lab, r.reactants.map(([, k]) => sp(k)), r.products.map(([, k]) => sp(k)),
-    r.reactants.map(([c]) => c), r.products.map(([c]) => c)).formation.value !== null).length;
+  const withDH = REACTIONS.filter(
+    (r) =>
+      reactionEnthalpy(
+        lab,
+        r.reactants.map(([, k]) => sp(k)),
+        r.products.map(([, k]) => sp(k)),
+        r.reactants.map(([c]) => c),
+        r.products.map(([c]) => c),
+      ).formation.value !== null,
+  ).length;
   assert.equal(numberAfter('danno il ΔH° a'), withDH);
   assert.equal(numberAfter('le ricette di'), Object.keys(VERIFIED).length);
   assert.equal(numberAfter('tutorial ha'), TUTORIAL.length);
-  assert.match(readme.replace(/\*\*/g, ''), new RegExp(`le ${REACTIONS.length} pagine sono divise nei ${REACTION_GROUPS.length} gruppi`));
+  assert.match(
+    readme.replace(/\*\*/g, ''),
+    new RegExp(`le ${REACTIONS.length} pagine sono divise nei ${REACTION_GROUPS.length} gruppi`),
+  );
 });
 
-test('README e commenti: reagenti dell\'armadio e reazioni che si fanno nel simulatore', () => {
-  assert.deepEqual(numbersBefore('reagenti d\'uso'), [Object.keys(CABINET).length]);
+test("README e commenti: reagenti dell'armadio e reazioni che si fanno nel simulatore", () => {
+  assert.deepEqual(numbersBefore("reagenti d'uso"), [Object.keys(CABINET).length]);
   const ctx = createLabChemistry(elements);
   const shelf = reachable(ctx, keysOf(SHELF)).ids.size;
   const all = reachable(ctx, keysOf(SHELF, CABINET)).ids.size;

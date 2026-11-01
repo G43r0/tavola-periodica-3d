@@ -28,9 +28,17 @@ const ORGANIC = { B: [3], C: [4], N: [3, 5], O: [2], P: [3, 5], S: [2, 4, 6], F:
 const AROMATIC = { b: 'B', c: 'C', n: 'N', o: 'O', p: 'P', s: 'S' };
 const BRACKET_AROMATIC = { ...AROMATIC, se: 'Se', as: 'As' };
 // «/» e «\» dicono solo da che parte sta il sostituente di un doppio legame: per il banco sono legami semplici
-const BOND = { '-': { order: 1 }, '=': { order: 2 }, '#': { order: 3 }, ':': { order: 1, arom: true }, '/': { order: 1 }, '\\': { order: 1 } };
+const BOND = {
+  '-': { order: 1 },
+  '=': { order: 2 },
+  '#': { order: 3 },
+  ':': { order: 1, arom: true },
+  '/': { order: 1 },
+  '\\': { order: 1 },
+};
 // numero di massa, simbolo, stereochimica, idrogeni (H e al massimo una cifra, come in OpenSMILES), carica, classe
-const BRACKET = /^(\d+)?([A-Z][a-z]?|se|as|[bcnops])(@(?:@|TH[12]|AL[12]|SP[123]|TB\d{1,2}|OH\d{1,2})?)?(H(\d?))?([+-]+\d*|[+-]\d+)?(?::\d+)?$/;
+const BRACKET =
+  /^(\d+)?([A-Z][a-z]?|se|as|[bcnops])(@(?:@|TH[12]|AL[12]|SP[123]|TB\d{1,2}|OH\d{1,2})?)?(H(\d?))?([+-]+\d*|[+-]\d+)?(?::\d+)?$/;
 const KEKULE_STEPS = 200000;
 
 /**
@@ -84,7 +92,8 @@ export function parseSmiles(smiles, bySymbol) {
       if (!/^\d+$/.test(d) || (ch === '%' && d.length < 2) || prev === null) throw near(i);
       if (rings.has(d)) {
         const r = rings.get(d);
-        if (r.atom === prev || bonds.some((b) => (b.i === r.atom && b.j === prev) || (b.i === prev && b.j === r.atom))) throw near(i);
+        if (r.atom === prev || bonds.some((b) => (b.i === r.atom && b.j === prev) || (b.i === prev && b.j === r.atom)))
+          throw near(i);
         if (r.bond && pending && r.bond.order !== pending.order) throw near(i);
         bonds.push(bond(r.atom, prev, pending ?? r.bond));
         rings.delete(d);
@@ -119,7 +128,14 @@ export function parseSmiles(smiles, bySymbol) {
         addAtom({ z: bySymbol.get(sym).z, symbol: sym, charge: 0, hCount: null, organic: true, arom: false });
         i += sym.length;
       } else if (AROMATIC[ch]) {
-        addAtom({ z: bySymbol.get(AROMATIC[ch]).z, symbol: AROMATIC[ch], charge: 0, hCount: null, organic: true, arom: true });
+        addAtom({
+          z: bySymbol.get(AROMATIC[ch]).z,
+          symbol: AROMATIC[ch],
+          charge: 0,
+          hCount: null,
+          organic: true,
+          arom: true,
+        });
         i++;
       } else throw near(i);
     }
@@ -184,7 +200,9 @@ function kekulize(atoms, bonds, smiles) {
   const fail = () => new Error(t('aromatic', { s: smiles }));
   const inRing = ringBondSet(atoms.length, bonds);
   // legame aromatico: «:» oppure non scritto tra due atomi aromatici dello stesso anello (il «-» del bifenile no)
-  const arom = bonds.map((b, k) => b.arom === true || (b.arom === null && atoms[b.i].arom && atoms[b.j].arom && inRing.has(k)));
+  const arom = bonds.map(
+    (b, k) => b.arom === true || (b.arom === null && atoms[b.i].arom && atoms[b.j].arom && inRing.has(k)),
+  );
   const used = atoms.map(() => 0);
   bonds.forEach((b, k) => {
     used[b.i] += arom[k] ? 1 : b.order;
@@ -199,7 +217,10 @@ function kekulize(atoms, bonds, smiles) {
     const v = group15or16 ? base + a.charge : base - Math.abs(a.charge);
     return v - used[idx] - (a.hCount ?? 0) >= 1;
   });
-  const options = (idx) => bonds.flatMap((b, k) => (arom[k] && (b.i === idx || b.j === idx) ? [[b.i === idx ? b.j : b.i, k]] : [])).filter(([o]) => needs[o]);
+  const options = (idx) =>
+    bonds
+      .flatMap((b, k) => (arom[k] && (b.i === idx || b.j === idx) ? [[b.i === idx ? b.j : b.i, k]] : []))
+      .filter(([o]) => needs[o]);
   const mate = new Map();
   const doubles = new Set();
   let steps = 0;
@@ -248,7 +269,10 @@ export function writeSmiles({ atoms, bonds }, symbolOf) {
     adj[b.j].push([b.i, k]);
   });
   // idrogeni neutri con un solo legame semplice verso un atomo che non è idrogeno: si scrivono insieme a quell'atomo
-  const folded = atoms.map((a, i) => a.z === 1 && !a.charge && adj[i].length === 1 && bonds[adj[i][0][1]].order === 1 && atoms[adj[i][0][0]].z !== 1);
+  const folded = atoms.map(
+    (a, i) =>
+      a.z === 1 && !a.charge && adj[i].length === 1 && bonds[adj[i][0][1]].order === 1 && atoms[adj[i][0][0]].z !== 1,
+  );
   const hCount = atoms.map((_, i) => adj[i].filter(([j]) => folded[j]).length);
   const valence = atoms.map((_, i) => adj[i].reduce((t, [j, k]) => t + (folded[j] ? 0 : bonds[k].order), 0));
 

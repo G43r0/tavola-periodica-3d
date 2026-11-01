@@ -10,7 +10,7 @@ import { licensesList } from '../../src/ui/info-dialog.js';
 const read = (p) => fs.readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8');
 const notices = read('THIRD_PARTY_NOTICES.md');
 
-test('ogni pacchetto che finisce nell\'app è in THIRD_PARTY con la sua licenza', () => {
+test("ogni pacchetto che finisce nell'app è in THIRD_PARTY con la sua licenza", () => {
   const packages = [
     'three',
     '@dimforge/rapier3d-compat',
@@ -76,7 +76,7 @@ test('la sezione «Licenze» della finestra elenca ogni voce con licenza e colle
   assert.ok(html.includes('Housecroft &amp; Sharpe'));
 });
 
-test('LICENSE e gli avvisi di terze parti entrano nell\'app impacchettata', () => {
+test("LICENSE e gli avvisi di terze parti entrano nell'app impacchettata", () => {
   // MIT, OFL e Apache-2.0 chiedono che l'avviso viaggi con le copie distribuite (font e WASM sono dentro l'app)
   const { files } = JSON.parse(read('package.json')).build;
   for (const f of ['LICENSE', 'THIRD_PARTY_NOTICES.md']) {

@@ -18,7 +18,8 @@ const t = createT({
     zeroCoef: 'Il coefficiente non può essere zero.',
     beforeCharge: 'Manca la formula prima della carica.',
     oneElement: 'Scrivi almeno un elemento.',
-    notName: 'Nessuna sostanza si chiama «{s}» e non è una formula: controlla il nome o scrivi la formula (es. C2H5OH).',
+    notName:
+      'Nessuna sostanza si chiama «{s}» e non è una formula: controlla il nome o scrivi la formula (es. C2H5OH).',
   },
   en: {
     unclosed: 'Bracket «{ch}» not closed.',
@@ -37,14 +38,18 @@ const t = createT({
   eli6: {
     capital: 'Le sigle degli elementi iniziano con la lettera maiuscola: NaCl, non nacl.',
     write: 'Scrivi il nome o la formula di una sostanza.',
-    notName: 'Non conosco «{s}»: controlla come l\'hai scritto, oppure scrivi la formula.',
+    notName: "Non conosco «{s}»: controlla come l'hai scritto, oppure scrivi la formula.",
   },
 });
 
 const SUB = '₀₁₂₃₄₅₆₇₈₉';
 const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 const SUB_OUT = (n) => String(n).replace(/\d/g, (d) => SUB[d]);
-const SUP_OUT = (s) => s.replace(/\d/g, (d) => SUP[d]).replace('+', '⁺').replace('-', '⁻');
+const SUP_OUT = (s) =>
+  s
+    .replace(/\d/g, (d) => SUP[d])
+    .replace('+', '⁺')
+    .replace('-', '⁻');
 const HYDRATE = /[·•∙⋅*]/;
 // stati fisici scritti dopo la formula, anche nelle equazioni copiate: «NaCl(aq)», «2 H2(g) + O2(g)», «Na+(aq)»
 const STATE = /\s*\((?:aq|s|l|g|cr)\)(?=$|[\s+·•∙⋅*])/g;
@@ -58,8 +63,14 @@ export function normalizeFormulaText(text) {
     .trim();
   // apici: ²⁻ → ^2-, ⁺ → ^+
   s = s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]*[⁺⁻]+/g, (m) => {
-    const digits = [...m].filter((c) => SUP.includes(c)).map((c) => SUP.indexOf(c)).join('');
-    const signs = [...m].filter((c) => c === '⁺' || c === '⁻').map((c) => (c === '⁺' ? '+' : '-')).join('');
+    const digits = [...m]
+      .filter((c) => SUP.includes(c))
+      .map((c) => SUP.indexOf(c))
+      .join('');
+    const signs = [...m]
+      .filter((c) => c === '⁺' || c === '⁻')
+      .map((c) => (c === '⁺' ? '+' : '-'))
+      .join('');
     return `^${digits}${signs}`;
   });
   return s;
@@ -113,9 +124,10 @@ function splitSpecies(s) {
 function splitCharge(text) {
   let m = text.match(/^(.*?)\s*\^\s*\(?([+-])(\d+)\)?$/); // SO4^-2
   if (m) return { body: m[1], charge: (m[2] === '+' ? 1 : -1) * Number(m[3]), explicit: true };
-  m = text.match(/^(.*?)\s*\^\s*\(?(\d*)([+-]+)\)?$/) // SO4^2-, Fe^3+, SO4^(2-)
-    ?? text.match(/^(.*?)\s*\((\d*)([+-])\)$/) // SO4(2-)
-    ?? text.match(/^(.*\S)\s+(\d*)([+-]+)$/); // SO4 2-
+  m =
+    text.match(/^(.*?)\s*\^\s*\(?(\d*)([+-]+)\)?$/) ?? // SO4^2-, Fe^3+, SO4^(2-)
+    text.match(/^(.*?)\s*\((\d*)([+-])\)$/) ?? // SO4(2-)
+    text.match(/^(.*\S)\s+(\d*)([+-]+)$/); // SO4 2-
   if (m) {
     const n = m[2] ? Number(m[2]) : m[3].length;
     return { body: m[1], charge: (m[3][0] === '+' ? 1 : -1) * n, explicit: true };
@@ -131,10 +143,12 @@ function splitCharge(text) {
     const sign = signs[0] === '+' ? 1 : -1;
     // ione monoatomico scritto senza separatore (Fe3+, O2-, Al3+): le cifre sono la carica (fino a +8, Os⁸⁺; C60- no)
     const mono = m[1].match(/^([A-Z][a-z]?)([1-8])$/);
-    if (mono && signs.length === 1) return { body: mono[1], charge: sign * Number(mono[2]), explicit: false, monoGuess: true };
+    if (mono && signs.length === 1)
+      return { body: mono[1], charge: sign * Number(mono[2]), explicit: false, monoGuess: true };
     // «SO42-», «PO43-», «Cr2O72-»: un pedice di più cifre attaccato al segno finisce con la carica (una cifra, mai 0)
     const poly = m[1].match(/^(.*[A-Za-z)]\d+)([1-9])$/);
-    if (poly && signs.length === 1) return { body: poly[1], charge: sign * Number(poly[2]), explicit: false, chargeGuess: true };
+    if (poly && signs.length === 1)
+      return { body: poly[1], charge: sign * Number(poly[2]), explicit: false, chargeGuess: true };
     return { body: m[1], charge: sign * signs.length, explicit: false };
   }
   return { body: text, charge: 0 };
@@ -268,12 +282,14 @@ function parseSpecies(text, isSymbol) {
   const { body, charge, monoGuess, chargeGuess } = splitCharge(rest.trim());
   if (!body.trim()) throw new FormulaError(t('beforeCharge'));
   // una parola in minuscolo che non è fatta di simboli è un nome (sconosciuto), non una formula senza maiuscole
-  if (/^[a-zà-ù][a-zà-ù' ]*$/.test(body.trim()) && !symbolsInLowercase(body, isSymbol)) throw new FormulaError(t('notName', { s: body.trim() }));
+  if (/^[a-zà-ù][a-zà-ù' ]*$/.test(body.trim()) && !symbolsInLowercase(body, isSymbol))
+    throw new FormulaError(t('notName', { s: body.trim() }));
   const { counts, pretty, tokens } = parseBody(body.trim(), isSymbol);
   if (!counts.size) throw new FormulaError(t('oneElement'));
   // indizi che il testo sia uno SMILES più che una formula (CC, OO, C1CCCCC1)
-  const suspicious = tokens.some((t, k) => k > 0 && t.symbol === tokens[k - 1].symbol && t.count === 1 && tokens[k - 1].count === 1)
-    || /[A-Za-z]1(?!\d)/.test(body);
+  const suspicious =
+    tokens.some((t, k) => k > 0 && t.symbol === tokens[k - 1].symbol && t.count === 1 && tokens[k - 1].count === 1) ||
+    /[A-Za-z]1(?!\d)/.test(body);
   return {
     coef,
     counts,

@@ -18,7 +18,7 @@ test('dosi: in modalità semplice esatte, in quella reale vicine a 1 g e 0,1 g',
   }
 });
 
-test('colpetti: pochi centesimi di grammo, abbastanza fini per la tolleranza dell\'1 % su 2 g', () => {
+test("colpetti: pochi centesimi di grammo, abbastanza fini per la tolleranza dell'1 % su 2 g", () => {
   for (const r of [lo, hi]) {
     const g = tapGrams('real', r);
     assert.ok(g >= 0.015 && g <= 0.03, `${g} g`);

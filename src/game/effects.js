@@ -15,7 +15,9 @@ export class Drops {
     this.max = max;
     this.grain = grain;
     const geo = grain ? new THREE.DodecahedronGeometry(1, 0) : new THREE.IcosahedronGeometry(1, 1);
-    const mat = grain ? new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0 }) : new THREE.MeshStandardMaterial({ roughness: 0.15, metalness: 0, transparent: true, opacity: 0.85 });
+    const mat = grain
+      ? new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0 })
+      : new THREE.MeshStandardMaterial({ roughness: 0.15, metalness: 0, transparent: true, opacity: 0.85 });
     this.mesh = new THREE.InstancedMesh(geo, mat, max);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.frustumCulled = false;
@@ -102,7 +104,14 @@ export class Stream {
       }
     }
     geo.setIndex(idx);
-    this.mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.78, depthWrite: false });
+    this.mat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.08,
+      metalness: 0,
+      transparent: true,
+      opacity: 0.78,
+      depthWrite: false,
+    });
     this.mesh = new THREE.Mesh(geo, this.mat);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 5;
@@ -207,7 +216,13 @@ export class Puffs {
     this.geo.setAttribute('aColor', new THREE.BufferAttribute(this.colA, 4).setUsage(THREE.DynamicDrawUsage));
     this.points = new THREE.Points(
       this.geo,
-      new THREE.ShaderMaterial({ vertexShader: PUFF_VERT, fragmentShader: PUFF_FRAG, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }),
+      new THREE.ShaderMaterial({
+        vertexShader: PUFF_VERT,
+        fragmentShader: PUFF_FRAG,
+        transparent: true,
+        depthWrite: false,
+        blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+      }),
     );
     this.points.frustumCulled = false;
     this.points.renderOrder = additive ? 7 : 6;
@@ -285,7 +300,17 @@ export class Puffs {
 export class Motes {
   constructor(scene, max = 700) {
     this.max = max;
-    this.mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ roughness: 0.1, metalness: 0, transparent: true, opacity: 0.6, depthWrite: false }), max);
+    this.mesh = new THREE.InstancedMesh(
+      new THREE.IcosahedronGeometry(1, 1),
+      new THREE.MeshStandardMaterial({
+        roughness: 0.1,
+        metalness: 0,
+        transparent: true,
+        opacity: 0.6,
+        depthWrite: false,
+      }),
+      max,
+    );
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.frustumCulled = false;
     this.mesh.count = 0;
@@ -367,7 +392,16 @@ export class Motes {
 
 /** Pozza di liquido su una superficie: un disco che si allarga con il volume. */
 export function createPuddle(scene, x, y, z) {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xd6e8f6, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xd6e8f6,
+    roughness: 0.05,
+    metalness: 0.1,
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+  });
   const mesh = new THREE.Mesh(new THREE.CircleGeometry(1, 28), mat);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.set(x, y + 0.002, z);
@@ -383,7 +417,17 @@ let heapGeo = null;
  */
 export function createHeap(scene, x, y, z, map) {
   // il profilo va dalla base alla cima, così le normali guardano fuori
-  heapGeo ??= new THREE.LatheGeometry([[1, 0], [0.97, 0.04], [0.75, 0.28], [0.4, 0.66], [0.14, 0.96], [0, 1]].map(([r, h]) => new THREE.Vector2(r, h)), 20);
+  heapGeo ??= new THREE.LatheGeometry(
+    [
+      [1, 0],
+      [0.97, 0.04],
+      [0.75, 0.28],
+      [0.4, 0.66],
+      [0.14, 0.96],
+      [0, 1],
+    ].map(([r, h]) => new THREE.Vector2(r, h)),
+    20,
+  );
   const mesh = new THREE.Mesh(heapGeo, new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.95, map }));
   mesh.position.set(x, y + 0.0005, z);
   mesh.rotation.y = Math.random() * Math.PI * 2;

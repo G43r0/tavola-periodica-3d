@@ -10,7 +10,25 @@ import { Mixture, AMBIENT, HEAT_SPEED } from './mixture.js';
 import { tongsMesh } from './apparatus-room.js';
 import { Stream } from './effects.js';
 import { WATER } from '../sandbox/substances.js';
-import { STOPCOCK, DROP_ML, PIPETTE_ML, GAS_FLOW, FILTER_FLOW, HOT_T, buretteReading, nextStopcock, nextVolts, nextLevel, relax, splitVapours, displayCurrent, ION_CHARGE, cellReading, BUNSEN_GAS, meterLitres } from './apparatus-logic.js';
+import {
+  STOPCOCK,
+  DROP_ML,
+  PIPETTE_ML,
+  GAS_FLOW,
+  FILTER_FLOW,
+  HOT_T,
+  buretteReading,
+  nextStopcock,
+  nextVolts,
+  nextLevel,
+  relax,
+  splitVapours,
+  displayCurrent,
+  ION_CHARGE,
+  cellReading,
+  BUNSEN_GAS,
+  meterLitres,
+} from './apparatus-logic.js';
 import { REDUCTION_POTENTIALS } from './reagents.js';
 
 const _v = new THREE.Vector3();
@@ -66,7 +84,11 @@ export class Apparatus {
   /** Mette un recipiente fisso nel suo sostegno: corpo fisso, niente ombra di contatto, non si prende. */
   mount(kind, at) {
     const g = this.g;
-    const it = g.spawn(kind, { pos: new THREE.Vector3(at.x, at.y, at.z), mixture: new Mixture(g.chem), name: g.t(`item_${kind}`) });
+    const it = g.spawn(kind, {
+      pos: new THREE.Vector3(at.x, at.y, at.z),
+      mixture: new Mixture(g.chem),
+      name: g.t(`item_${kind}`),
+    });
     g.physics.fix(it.body);
     it.rig = it.def.rig;
     it.permanent = true;
@@ -177,7 +199,16 @@ export class Apparatus {
    */
   halfCell(spot) {
     const g = this.g;
-    const item = g.items.find((it) => it.def.container && it.mixture && !it.rig && it !== g.held && Math.hypot(it.mesh.position.x - spot.x, it.mesh.position.z - spot.z) < spot.r && Math.abs(it.mesh.position.y - spot.y) < 0.03 && _v.set(0, 1, 0).applyQuaternion(it.mesh.quaternion).y > 0.85);
+    const item = g.items.find(
+      (it) =>
+        it.def.container &&
+        it.mixture &&
+        !it.rig &&
+        it !== g.held &&
+        Math.hypot(it.mesh.position.x - spot.x, it.mesh.position.z - spot.z) < spot.r &&
+        Math.abs(it.mesh.position.y - spot.y) < 0.03 &&
+        _v.set(0, 1, 0).applyQuaternion(it.mesh.quaternion).y > 0.85,
+    );
     if (!item) return null;
     const m = item.mixture;
     const litres = m.liquidVolume / 1000;
@@ -187,7 +218,13 @@ export class Apparatus {
     let z = 0;
     for (const [sid, mol] of m.n) {
       const s = typeof sid === 'number' ? chem.sub(sid) : null;
-      if (s?.kind !== 'element' || mol < 1e-4 || ION_CHARGE[s.symbol] === undefined || REDUCTION_POTENTIALS[s.symbol] === undefined) continue;
+      if (
+        s?.kind !== 'element' ||
+        mol < 1e-4 ||
+        ION_CHARGE[s.symbol] === undefined ||
+        REDUCTION_POTENTIALS[s.symbol] === undefined
+      )
+        continue;
       if ((m.n.get(sid) ?? 0) - (m.d.get(sid) ?? 0) <= 1e-4) continue;
       metal = s.symbol;
       z = sid;
@@ -195,7 +232,8 @@ export class Apparatus {
     }
     if (!metal) return { item, metal: null, E0: 0, n: 1, conc: 0 };
     let ions = 0;
-    for (const [sid, d] of m.d) if (typeof sid === 'number' && sid !== z && d > 0) ions += d * (chem.counts(sid)[z] ?? 0);
+    for (const [sid, d] of m.d)
+      if (typeof sid === 'number' && sid !== z && d > 0) ions += d * (chem.counts(sid)[z] ?? 0);
     return { item, metal, E0: REDUCTION_POTENTIALS[metal], n: ION_CHARGE[metal], conc: ions / litres };
   }
 
@@ -218,7 +256,11 @@ export class Apparatus {
 
   setMantle(level) {
     this.mantle.level = clamp(level, 0, 5);
-    this.g.toast(this.mantle.level ? this.g.t('mantleLevel', { n: this.mantle.level, temp: Math.round(22 + this.mantle.level * 45) }) : this.g.t('mantleOff'));
+    this.g.toast(
+      this.mantle.level
+        ? this.g.t('mantleLevel', { n: this.mantle.level, temp: Math.round(22 + this.mantle.level * 45) })
+        : this.g.t('mantleOff'),
+    );
   }
 
   setVolts(v) {
@@ -275,7 +317,13 @@ export class Apparatus {
         g.toast(t(held.kind === 'thermometer' ? 'thermoHint' : 'phHint'));
         return true;
       }
-      g.toast(t(held.kind === 'thermometer' ? 'readTemp' : 'readPh', { value: this.readout(held), name: g.itemName(g.probing) }), 'ok');
+      g.toast(
+        t(held.kind === 'thermometer' ? 'readTemp' : 'readPh', {
+          value: this.readout(held),
+          name: g.itemName(g.probing),
+        }),
+        'ok',
+      );
       return true;
     }
     if (held.kind !== 'pipette') return false;
@@ -325,7 +373,8 @@ export class Apparatus {
   pipetteDrops(pip, part) {
     const tip = _v.set(0.166, 0.013, 0).applyMatrix4(pip.mesh.matrixWorld);
     const c = part.appearance().liquid;
-    for (let k = 0; k < 4; k++) this.g.drops.emit(tip.x, tip.y - k * 0.004, tip.z, 0, -0.1, 0, 0.0018, c, 0.6, tip.y - 0.08);
+    for (let k = 0; k < 4; k++)
+      this.g.drops.emit(tip.x, tip.y - k * 0.004, tip.z, 0, -0.1, 0, 0.0018, c, 0.6, tip.y - 0.08);
   }
 
   /** Lo strumento in mano è immerso in un recipiente (quello guardato, con del liquido)? */
@@ -362,7 +411,8 @@ export class Apparatus {
     } else item.inIce = false;
     const c = this.power.cell;
     const upright = _v.set(0, 1, 0).applyQuaternion(item.mesh.quaternion).y > 0.85;
-    item.inCell = upright && Math.hypot(p.x - c.x, p.z - c.z) < c.r && Math.abs(p.y - c.y) < 0.03 && item.mixture.liquidVolume > 8;
+    item.inCell =
+      upright && Math.hypot(p.x - c.x, p.z - c.z) < c.r && Math.abs(p.y - c.y) < 0.03 && item.mixture.liquidVolume > 8;
     if (item.inCell && this.power.volts > 0) env.volts = this.power.volts;
     // la porcellana rovente irraggia: sul Bunsen il crogiolo arriva a 800–850 °C, non oltre
     const T = item.mixture.T;
@@ -400,7 +450,17 @@ export class Apparatus {
         const n = Math.min(6, 1 + Math.floor(ev.current * 8));
         for (let k = 0; k < n; k++) {
           const e = this.power.electrodes[k % 2];
-          g.motes.emit(e.x + (Math.random() - 0.5) * 0.005, BENCH_Y + 0.014 + Math.random() * 0.02, e.z + (Math.random() - 0.5) * 0.005, 0.04 + Math.random() * 0.03, 0.001 + Math.random() * 0.001, [236, 243, 250], top, floor - 1, 3);
+          g.motes.emit(
+            e.x + (Math.random() - 0.5) * 0.005,
+            BENCH_Y + 0.014 + Math.random() * 0.02,
+            e.z + (Math.random() - 0.5) * 0.005,
+            0.04 + Math.random() * 0.03,
+            0.001 + Math.random() * 0.001,
+            [236, 243, 250],
+            top,
+            floor - 1,
+            3,
+          );
         }
       }
     }
@@ -417,7 +477,9 @@ export class Apparatus {
     this.updateGases(dt);
     this.updateCell(dt);
     this.power.current = displayCurrent(this.cellCurrent);
-    this.power.lcd.set(this.power.volts ? `${this.power.volts.toFixed(1)} V  ${this.power.current.toFixed(2)} A` : '-- V');
+    this.power.lcd.set(
+      this.power.volts ? `${this.power.volts.toFixed(1)} V  ${this.power.current.toFixed(2)} A` : '-- V',
+    );
     this.room.still.headLcd.set(`${(this.headT - 273.15).toFixed(1)} °C`);
     this.burette.stopcock.rotation.x = Math.PI / 2 - (this.stopcock / 3) * (Math.PI / 2);
     this.funnel.paper.visible = true;
@@ -502,7 +564,16 @@ export class Apparatus {
     const o = this.room.gasOutlet;
     const open = this.gases.filter((f) => f.open);
     if (!open.length) return;
-    const vessel = g.items.find((it) => it.def.container && it.mixture && !it.rig && it !== g.held && Math.hypot(it.mesh.position.x - o.x, it.mesh.position.z - o.z) < o.r && Math.abs(it.mesh.position.y - BENCH_Y) < 0.03 && _v.set(0, 1, 0).applyQuaternion(it.mesh.quaternion).y > 0.85);
+    const vessel = g.items.find(
+      (it) =>
+        it.def.container &&
+        it.mixture &&
+        !it.rig &&
+        it !== g.held &&
+        Math.hypot(it.mesh.position.x - o.x, it.mesh.position.z - o.z) < o.r &&
+        Math.abs(it.mesh.position.y - BENCH_Y) < 0.03 &&
+        _v.set(0, 1, 0).applyQuaternion(it.mesh.quaternion).y > 0.85,
+    );
     for (const f of open) {
       const sid = g.chem.id(f.gas);
       const mol = GAS_FLOW * dt;
@@ -513,7 +584,18 @@ export class Apparatus {
         if (vessel.liquidMesh.visible && Math.random() < 0.9) {
           const top = vessel.liquidMesh.material.userData.uniforms.uLevel.value - 0.001;
           const floor = vessel.mesh.position.y + vessel.def.profile[0][1];
-          for (let k = 0; k < 2; k++) g.motes.emit(o.x + (Math.random() - 0.5) * 0.004, o.y + 0.002, o.z + (Math.random() - 0.5) * 0.004, 0.06 + Math.random() * 0.04, 0.0012 + Math.random() * 0.0012, [236, 243, 250], top, floor - 1, 3);
+          for (let k = 0; k < 2; k++)
+            g.motes.emit(
+              o.x + (Math.random() - 0.5) * 0.004,
+              o.y + 0.002,
+              o.z + (Math.random() - 0.5) * 0.004,
+              0.06 + Math.random() * 0.04,
+              0.0012 + Math.random() * 0.0012,
+              [236, 243, 250],
+              top,
+              floor - 1,
+              3,
+            );
         }
       } else if (g.chem.toxic.has(sid)) g.toxicGas(sid, mol, new THREE.Vector3(o.x, o.y + 0.02, o.z));
     }
@@ -599,7 +681,11 @@ export class Apparatus {
       const mix = item.mixture;
       for (const c of mix.components()) {
         if (c.sid === WATER || c.mol < 2e-6) continue;
-        out.rows.push({ label: c.name, formula: c.formula, value: g.chemMode === 'simple' ? `${g.fmt(c.grams, 2)} g · ${t(`state_${c.state}`)}` : t(`state_${c.state}`) });
+        out.rows.push({
+          label: c.name,
+          formula: c.formula,
+          value: g.chemMode === 'simple' ? `${g.fmt(c.grams, 2)} g · ${t(`state_${c.state}`)}` : t(`state_${c.state}`),
+        });
       }
       out.notes.push(t(mix.water > 0.2 ? 'paperWet' : 'paperDry'));
       return out;
@@ -635,7 +721,10 @@ export class Apparatus {
       case 'tongs':
         return { note: t(f.taken ? 'stTongsTaken' : 'stTongsHere') };
       case 'mantle':
-        return { note: f.level ? t('stMantle', { n: f.level, temp: Math.round(f.T - 273.15) }) : t('stOffM'), hot: f.level > 0 };
+        return {
+          note: f.level ? t('stMantle', { n: f.level, temp: Math.round(f.T - 273.15) }) : t('stOffM'),
+          hot: f.level > 0,
+        };
       case 'power':
         return { note: f.volts ? t('stPower', { v: f.volts, a: g.fmt(f.current, 2) }) : t('stOffM'), on: f.volts > 0 };
       case 'gas':

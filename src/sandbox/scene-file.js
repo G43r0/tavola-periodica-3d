@@ -5,7 +5,17 @@
 
 export const SCENE_KIND = 'tavola-periodica-3d/sandbox-scene';
 const VERSION = 1;
-const ARRAYS = { type: Uint16Array, temp: Float32Array, life: Int16Array, ctype: Uint16Array, flags: Uint8Array, seed: Uint8Array, vx: Float32Array, vy: Float32Array, spark: Uint8Array };
+const ARRAYS = {
+  type: Uint16Array,
+  temp: Float32Array,
+  life: Int16Array,
+  ctype: Uint16Array,
+  flags: Uint8Array,
+  seed: Uint8Array,
+  vx: Float32Array,
+  vy: Float32Array,
+  spark: Uint8Array,
+};
 const MAX_CELLS = 1000 * 1000;
 
 /** Impronta della tabella delle sostanze (FNV-1a sulle chiavi, nell'ordine degli id). */
@@ -76,7 +86,11 @@ export function decodeScene(data, subs) {
   for (const [k, Type] of Object.entries(ARRAYS)) snap[k] = unrle(data.arrays?.[k], Type, W * H);
   // ctype contiene anche dati impacchettati (non solo id): si controllano gli id delle celle
   for (const id of snap.type) if (id >= subs.list.length) throw new Error('data');
-  if (!Array.isArray(data.particles) || data.particles.some((p) => !p || !Number.isFinite(p.x) || !Number.isFinite(p.y))) throw new Error('data');
+  if (
+    !Array.isArray(data.particles) ||
+    data.particles.some((p) => !p || !Number.isFinite(p.x) || !Number.isFinite(p.y))
+  )
+    throw new Error('data');
   snap.particles = data.particles.filter((p) => p.x >= 0 && p.x < W && p.y >= 0 && p.y < H);
   return snap;
 }

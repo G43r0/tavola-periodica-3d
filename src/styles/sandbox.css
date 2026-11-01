@@ -101,7 +101,9 @@
   border: 1px solid var(--line-2);
   border-radius: var(--r-md);
   cursor: pointer;
-  transition: background var(--t-fast), border-color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast);
 }
 .sbx-icon-btn:hover {
   background: var(--bg-3);
@@ -187,7 +189,10 @@
   border: 1px solid var(--line-2);
   border-radius: 8px;
   cursor: pointer;
-  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast);
 }
 .sbx-tool svg {
   color: var(--tc);
@@ -281,9 +286,13 @@
   background: color-mix(in oklab, var(--c) 22%, var(--bg-2));
   border: 0;
   border-radius: 3px;
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 40%, transparent), inset 0 -2px 0 var(--a);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--c) 40%, transparent),
+    inset 0 -2px 0 var(--a);
   cursor: pointer;
-  transition: transform var(--t-fast), background var(--t-fast);
+  transition:
+    transform var(--t-fast),
+    background var(--t-fast);
 }
 .sbx-cell:hover {
   z-index: 1;
@@ -428,9 +437,7 @@
   place-items: center;
   min-width: 0;
   min-height: 0;
-  background:
-    radial-gradient(ellipse at 50% 40%, rgba(92, 225, 255, 0.05), transparent 70%),
-    #03060a;
+  background: radial-gradient(ellipse at 50% 40%, rgba(92, 225, 255, 0.05), transparent 70%), #03060a;
 }
 .sbx-canvas {
   display: block;
@@ -891,7 +898,9 @@
   border: 1px solid var(--line-2);
   border-radius: 9px;
   cursor: pointer;
-  transition: border-color var(--t-fast), background var(--t-fast);
+  transition:
+    border-color var(--t-fast),
+    background var(--t-fast);
 }
 .sbx-example:hover {
   border-color: var(--warn);

@@ -127,7 +127,10 @@ export function vsepr(lab, desc, lewis) {
     const shape = (it ? SHAPES_IT : SHAPES_EN)[`${X}-${E}`] ?? (it ? `${X + E} domini` : `${X + E} domains`);
     const steric = X + E;
     // senza coppie solitarie l'angolo del numero sterico; con le coppie quello della forma (6-1: nessun angolo unico)
-    const ideal = E === 0 ? (it ? IDEAL_IT : IDEAL_EN)[steric] ?? null : (it ? IDEAL_SHAPE_IT : IDEAL_SHAPE_EN)[`${X}-${E}`] ?? null;
+    const ideal =
+      E === 0
+        ? ((it ? IDEAL_IT : IDEAL_EN)[steric] ?? null)
+        : ((it ? IDEAL_SHAPE_IT : IDEAL_SHAPE_EN)[`${X}-${E}`] ?? null);
     return {
       notation: `AX${X}${E ? `E${E}` : ''}`,
       X,
@@ -196,7 +199,13 @@ export function createRelaxer(lab, desc, lewisAtoms, positions, geo = null) {
     const exp = lookupBond(geo, A, B, b.order);
     neighbors[b.i].push({ k: b.j, order: b.order });
     neighbors[b.j].push({ k: b.i, order: b.order });
-    return { i: b.i, j: b.j, order: b.order, r0: (exp ?? covalentLength(A, B, b.order)) / 100, experimental: exp != null };
+    return {
+      i: b.i,
+      j: b.j,
+      order: b.order,
+      r0: (exp ?? covalentLength(A, B, b.order)) / 100,
+      experimental: exp != null,
+    };
   });
   const ionic = (desc.ionic || []).map((b) => {
     const qa = desc.atoms[b.i].charge;
@@ -212,7 +221,8 @@ export function createRelaxer(lab, desc, lewisAtoms, positions, geo = null) {
     const la = lewisAtoms[i];
     if (x.tier !== TIER.MAIN || !la || neighbors[i].filter((nb) => nb.order > 0).length === 0) return [];
     const out = [];
-    for (let k = 0; k < la.lonePairs; k++) out.push({ w: 1.3, dir: norm([rand() - 0.5, rand() - 0.5, rand() - 0.5]), kind: 'pair' });
+    for (let k = 0; k < la.lonePairs; k++)
+      out.push({ w: 1.3, dir: norm([rand() - 0.5, rand() - 0.5, rand() - 0.5]), kind: 'pair' });
     if (la.unpaired) out.push({ w: 0.62, dir: norm([rand() - 0.5, rand() - 0.5, rand() - 0.5]), kind: 'single' });
     // orientazione iniziale: lontano dai legami
     let avg = [0, 0, 0];
@@ -248,10 +258,12 @@ export function createRelaxer(lab, desc, lewisAtoms, positions, geo = null) {
     const SN = X + lone[c].length;
     let t = null;
     if (SN === 2) t = 180;
-    else if (SN === 3) t = X === 3 ? 120 : pairs ? 117.5 : 134; // AX₂E (SO₂ ≈ 119,5°), radicale AX₂· (NO₂ 134°)
+    else if (SN === 3)
+      t = X === 3 ? 120 : pairs ? 117.5 : 134; // AX₂E (SO₂ ≈ 119,5°), radicale AX₂· (NO₂ 134°)
     else if (SN === 4) {
       if (X === 4) t = 109.47;
-      else if (X === 3) t = pairs ? 106.8 : 118; // NH₃ 106,7°; radicale CH₃· quasi planare
+      else if (X === 3)
+        t = pairs ? 106.8 : 118; // NH₃ 106,7°; radicale CH₃· quasi planare
       else t = 104.5; // AX₂E₂ (H₂O)
     }
     if (t == null) continue;
@@ -267,7 +279,14 @@ export function createRelaxer(lab, desc, lewisAtoms, positions, geo = null) {
 
   // planarità: doppi legami tra atomi con 3 domini (sp²)
   const domainsOf = (i) => neighbors[i].filter((x) => x.order > 0).length + lone[i].length;
-  const planar = bonds.filter((b) => b.order === 2 && info[b.i].tier === TIER.MAIN && info[b.j].tier === TIER.MAIN && domainsOf(b.i) === 3 && domainsOf(b.j) === 3);
+  const planar = bonds.filter(
+    (b) =>
+      b.order === 2 &&
+      info[b.i].tier === TIER.MAIN &&
+      info[b.j].tier === TIER.MAIN &&
+      domainsOf(b.i) === 3 &&
+      domainsOf(b.j) === 3,
+  );
 
   // coppie non legate (escluse le 1-3, gestite dagli angoli)
   const bonded = new Set();
@@ -295,7 +314,8 @@ export function createRelaxer(lab, desc, lewisAtoms, positions, geo = null) {
     // 0. piccola agitazione iniziale: fa uscire da equilibri instabili (es. 4 legami su un piano)
     if (age < 160) {
       const amp = 0.02 * (1 - age / 160);
-      for (let i = 0; i < n; i++) pos[i] = add(pos[i], [(rand() - 0.5) * amp, (rand() - 0.5) * amp, (rand() - 0.5) * amp]);
+      for (let i = 0; i < n; i++)
+        pos[i] = add(pos[i], [(rand() - 0.5) * amp, (rand() - 0.5) * amp, (rand() - 0.5) * amp]);
     }
     age++;
     // 1. molle sui legami
@@ -306,8 +326,8 @@ export function createRelaxer(lab, desc, lewisAtoms, positions, geo = null) {
       const mi = mobility[b.i];
       const mj = mobility[b.j];
       const share = 0.5 * k;
-      pos[b.i] = add(pos[b.i], scale(d, (err * share * mi) / (mi + mj) * 2));
-      pos[b.j] = sub(pos[b.j], scale(d, (err * share * mj) / (mi + mj) * 2));
+      pos[b.i] = add(pos[b.i], scale(d, ((err * share * mi) / (mi + mj)) * 2));
+      pos[b.j] = sub(pos[b.j], scale(d, ((err * share * mj) / (mi + mj)) * 2));
     }
 
     // 2. repulsione tra domini elettronici attorno a ogni atomo
@@ -357,7 +377,10 @@ export function createRelaxer(lab, desc, lewisAtoms, positions, geo = null) {
         }
         if (best) {
           const axis = norm(sub(domains[best.p].dir, domains[best.q].dir));
-          for (const [idx, sign] of [[best.p, 1], [best.q, -1]]) {
+          for (const [idx, sign] of [
+            [best.p, 1],
+            [best.q, -1],
+          ]) {
             const atom = domains[idx].atom;
             const r = len(sub(pos[atom], pos[c]));
             const cur = domains[idx].dir;
@@ -415,7 +438,10 @@ export function createRelaxer(lab, desc, lewisAtoms, positions, geo = null) {
 
     // 4. planarità dei doppi legami trigonali
     for (const b of planar) {
-      const others = [...neighbors[b.i].filter((x) => x.k !== b.j), ...neighbors[b.j].filter((x) => x.k !== b.i)].filter((x) => x.order > 0);
+      const others = [
+        ...neighbors[b.i].filter((x) => x.k !== b.j),
+        ...neighbors[b.j].filter((x) => x.k !== b.i),
+      ].filter((x) => x.order > 0);
       if (others.length < 2) continue;
       const ref = others[0].k;
       const N = norm(cross(sub(pos[b.j], pos[b.i]), sub(pos[ref], pos[b.i])));
@@ -508,9 +534,14 @@ export function initialLayout(lab, desc, center = [0, 0, 0], seed = 1) {
       if (den > 0) pos[i] = scale(num, 1 / den);
     }
   }
-  const c = scale(pos.reduce((s, p) => add(s, p), [0, 0, 0]), 1 / Math.max(1, n));
+  const c = scale(
+    pos.reduce((s, p) => add(s, p), [0, 0, 0]),
+    1 / Math.max(1, n),
+  );
   // piccola perturbazione: permette agli anelli saturi di piegarsi (cicloesano "a sedia")
-  return pos.map((p) => add(add(sub(p, c), center), [(rand() - 0.5) * 0.3, (rand() - 0.5) * 0.3, (rand() - 0.5) * 0.3]));
+  return pos.map((p) =>
+    add(add(sub(p, c), center), [(rand() - 0.5) * 0.3, (rand() - 0.5) * 0.3, (rand() - 0.5) * 0.3]),
+  );
 }
 
 /** Angolo (gradi) tra i legami c–i e c–j. */

@@ -71,7 +71,9 @@ export function relax(pos, count, iterations = 90) {
     }
   }
   // ricentra
-  let cx = 0, cy = 0, cz = 0;
+  let cx = 0,
+    cy = 0,
+    cz = 0;
   for (let i = 0; i < count; i++) {
     cx += pos[i * 3];
     cy += pos[i * 3 + 1];

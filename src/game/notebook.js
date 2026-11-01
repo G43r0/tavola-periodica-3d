@@ -63,7 +63,13 @@ export function notebookPages(ctx, nb) {
     const r = entry.r;
     const g = byKey.get(r.group);
     if (!g) continue;
-    const page = { id: r.id, r, rx: ctx.rxById.get(r.id) ?? null, found: Boolean(nb.rx[r.id]), doable: doable.has(r.id) };
+    const page = {
+      id: r.id,
+      r,
+      rx: ctx.rxById.get(r.id) ?? null,
+      found: Boolean(nb.rx[r.id]),
+      doable: doable.has(r.id),
+    };
     g.pages.push(page);
     g.total++;
     if (page.doable) g.doable++;

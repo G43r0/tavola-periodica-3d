@@ -29,7 +29,8 @@ function latestFromRelease(json, current) {
   const version = parseVersion(json.tag_name) ? String(json.tag_name).replace(/^v/, '') : null;
   if (!version || !isNewer(version, current)) return null;
   // si apre solo una pagina del nostro repository, qualunque cosa risponda la rete
-  const url = typeof json.html_url === 'string' && json.html_url.startsWith(`${RELEASES_URL}/`) ? json.html_url : RELEASES_URL;
+  const url =
+    typeof json.html_url === 'string' && json.html_url.startsWith(`${RELEASES_URL}/`) ? json.html_url : RELEASES_URL;
   return { version, url };
 }
 
@@ -44,4 +45,13 @@ function parseSettings(text) {
   return { autoUpdate: raw && typeof raw === 'object' && raw.autoUpdate === false ? false : true };
 }
 
-module.exports = { REPO, RELEASES_URL, LATEST_API, parseVersion, compareVersions, isNewer, latestFromRelease, parseSettings };
+module.exports = {
+  REPO,
+  RELEASES_URL,
+  LATEST_API,
+  parseVersion,
+  compareVersions,
+  isNewer,
+  latestFromRelease,
+  parseSettings,
+};

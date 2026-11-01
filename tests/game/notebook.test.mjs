@@ -4,7 +4,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createLabChemistry } from '../../src/game/mixture.js';
-import { NOTEBOOK_VERSION, emptyNotebook, loadNotebook, recordReaction, notebookPages, percent } from '../../src/game/notebook.js';
+import {
+  NOTEBOOK_VERSION,
+  emptyNotebook,
+  loadNotebook,
+  recordReaction,
+  notebookPages,
+  percent,
+} from '../../src/game/notebook.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
 const ctx = createLabChemistry(elements);
@@ -20,7 +27,10 @@ test('quaderno: dal salvataggio tiene le voci valide e scarta il resto', () => {
   assert.deepEqual(loadNotebook(null), emptyNotebook());
   assert.deepEqual(loadNotebook('rotto'), emptyNotebook());
   assert.deepEqual(loadNotebook({ v: NOTEBOOK_VERSION + 1, rx: { a: { first: 1 } } }).rx, {}, 'versione futura');
-  const nb = loadNotebook({ v: 1, rx: { a: { first: 5, count: 0, mode: 'career', aq: 1, tags: ['gas', 3] }, b: null, c: 'x' } });
+  const nb = loadNotebook({
+    v: 1,
+    rx: { a: { first: 5, count: 0, mode: 'career', aq: 1, tags: ['gas', 3] }, b: null, c: 'x' },
+  });
   assert.deepEqual(nb.rx, { a: { first: 5, count: 1, mode: 'career', aq: true, tags: ['gas'] } });
   // senza numero di versione (il primo formato) le voci restano
   assert.ok(loadNotebook({ rx: { a: { first: 1 } } }).rx.a);

@@ -4,7 +4,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createSubstances, WATER, WALL } from '../../src/sandbox/substances.js';
 import { World } from '../../src/sandbox/world.js';
-import { encodeScene, decodeScene, SCENE_KIND, autosaveScene, restoreAutosave, AUTOSAVE_KEY } from '../../src/sandbox/scene-file.js';
+import {
+  encodeScene,
+  decodeScene,
+  SCENE_KIND,
+  autosaveScene,
+  restoreAutosave,
+  AUTOSAVE_KEY,
+} from '../../src/sandbox/scene-file.js';
 
 const elements = JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements;
 const subs = createSubstances(elements);
@@ -36,7 +43,7 @@ test('scena: le celle uguali vicine si comprimono (una scena vuota pesa poco)', 
   assert.equal(JSON.parse(empty).kind, SCENE_KIND);
 });
 
-test('scena: file di un altro tipo, di un\'altra tabella di sostanze o rovinato non si apre', () => {
+test("scena: file di un altro tipo, di un'altra tabella di sostanze o rovinato non si apre", () => {
   const good = encodeScene(scene(), subs);
   assert.throws(() => decodeScene({ ...good, kind: 'altro' }, subs), /kind/);
   assert.throws(() => decodeScene({ ...good, table: 'deadbeef' }, subs), /table/);
@@ -45,9 +52,13 @@ test('scena: file di un altro tipo, di un\'altra tabella di sostanze o rovinato 
   assert.throws(() => decodeScene(null, subs), /kind/);
 });
 
-test('salvataggio automatico: la scena dell\'ultima volta torna; archivio rotto o pieno non dà errori', () => {
+test("salvataggio automatico: la scena dell'ultima volta torna; archivio rotto o pieno non dà errori", () => {
   const m = new Map();
-  const storage = { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) };
+  const storage = {
+    getItem: (k) => m.get(k) ?? null,
+    setItem: (k, v) => m.set(k, String(v)),
+    removeItem: (k) => m.delete(k),
+  };
   const w = scene();
   assert.equal(autosaveScene(storage, w, subs), true);
   const snap = restoreAutosave(storage, subs);
@@ -55,7 +66,15 @@ test('salvataggio automatico: la scena dell\'ultima volta torna; archivio rotto 
   assert.deepEqual(snap.type, w.type);
   m.set(AUTOSAVE_KEY, '{rotto');
   assert.equal(restoreAutosave(storage, subs), null);
-  const full = { getItem() { throw new Error('no'); }, setItem() { throw new Error('QuotaExceededError'); }, removeItem() {} };
+  const full = {
+    getItem() {
+      throw new Error('no');
+    },
+    setItem() {
+      throw new Error('QuotaExceededError');
+    },
+    removeItem() {},
+  };
   assert.equal(autosaveScene(full, w, subs), false);
   assert.equal(restoreAutosave(full, subs), null);
   assert.equal(restoreAutosave(null, subs), null);

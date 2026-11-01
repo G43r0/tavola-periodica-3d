@@ -3,7 +3,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { compareVersions, isNewer, latestFromRelease, parseSettings, parseVersion, RELEASES_URL } = createRequire(import.meta.url)('../../electron/update-logic.cjs');
+const { compareVersions, isNewer, latestFromRelease, parseSettings, parseVersion, RELEASES_URL } = createRequire(
+  import.meta.url,
+)('../../electron/update-logic.cjs');
 
 test('versioni: confronto semantico, anche a più cifre e con le versioni di prova', () => {
   assert.equal(compareVersions('0.9.2', '0.9.1'), 1);
@@ -18,7 +20,13 @@ test('versioni: confronto semantico, anche a più cifre e con le versioni di pro
 });
 
 test('ultima release: solo se è più nuova, pubblica e non di prova', () => {
-  const rel = (o) => ({ tag_name: 'v0.9.2', html_url: `${RELEASES_URL}/tag/v0.9.2`, draft: false, prerelease: false, ...o });
+  const rel = (o) => ({
+    tag_name: 'v0.9.2',
+    html_url: `${RELEASES_URL}/tag/v0.9.2`,
+    draft: false,
+    prerelease: false,
+    ...o,
+  });
   assert.deepEqual(latestFromRelease(rel(), '0.9.1'), { version: '0.9.2', url: `${RELEASES_URL}/tag/v0.9.2` });
   assert.equal(latestFromRelease(rel(), '0.9.2'), null, 'già aggiornata');
   assert.equal(latestFromRelease(rel(), '1.0.0'), null, 'chi ha una versione più nuova non torna indietro');

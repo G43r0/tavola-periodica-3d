@@ -9,7 +9,8 @@ test('preset: tre livelli con le stesse impostazioni, Medio è il predefinito', 
   assert.deepEqual(PRESETS, ['simple', 'medium', 'pro']);
   assert.equal(getGfx(), 'medium');
   const keys = Object.keys(gfxOf('medium')).sort();
-  for (const code of PRESETS) assert.deepEqual(Object.keys(gfxOf(code)).sort(), keys, `impostazioni diverse in ${code}`);
+  for (const code of PRESETS)
+    assert.deepEqual(Object.keys(gfxOf(code)).sort(), keys, `impostazioni diverse in ${code}`);
 });
 
 test('preset Medio: la grafica di prima, invariata', () => {
@@ -69,8 +70,10 @@ test('aspetto reale: tutti i 118 elementi, con forma, colore e materiale validi'
 });
 
 test('aspetto reale: testi in ogni lingua, senza segnaposto rimasti', () => {
-  for (const [key, value] of Object.entries(APPEARANCE_STRINGS.it)) assert.equal(typeof APPEARANCE_STRINGS.en[key], typeof value, `en.${key}`);
-  for (const key of Object.keys(APPEARANCE_STRINGS.eli6)) assert.ok(key in APPEARANCE_STRINGS.it, `eli6.${key} non esiste in italiano`);
+  for (const [key, value] of Object.entries(APPEARANCE_STRINGS.it))
+    assert.equal(typeof APPEARANCE_STRINGS.en[key], typeof value, `en.${key}`);
+  for (const key of Object.keys(APPEARANCE_STRINGS.eli6))
+    assert.ok(key in APPEARANCE_STRINGS.it, `eli6.${key} non esiste in italiano`);
   for (const a of Object.values(APPEARANCE)) {
     assert.ok(`look.${a.look}` in APPEARANCE_STRINGS.it, `aggettivo mancante: ${a.look}`);
     if (a.note) assert.ok(`note.${a.note}` in APPEARANCE_STRINGS.it, `nota mancante: ${a.note}`);

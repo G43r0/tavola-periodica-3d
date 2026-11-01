@@ -106,8 +106,17 @@ export function derivedHazards(ctx, sid, { form, molar = 0 }) {
   const known = KNOWN_HAZARDS[s.key];
   if (known) {
     const k = Array.isArray(known) ? { ghs: known } : known;
-    const list = !solution ? k.ghs : molar < 0.05 ? [] : molar < (k.diluteBelow ?? 0) ? k.dilute : k.ghs.filter((g) => g !== 'GHS02');
-    return { ghs: GHS_IDS.filter((g) => list.includes(g)), signal: !list.length ? null : list.some((g) => DANGER.has(g)) ? 'danger' : 'warning' };
+    const list = !solution
+      ? k.ghs
+      : molar < 0.05
+        ? []
+        : molar < (k.diluteBelow ?? 0)
+          ? k.dilute
+          : k.ghs.filter((g) => g !== 'GHS02');
+    return {
+      ghs: GHS_IDS.filter((g) => list.includes(g)),
+      signal: !list.length ? null : list.some((g) => DANGER.has(g)) ? 'danger' : 'warning',
+    };
   }
   if (f & S.EXPLOSIVE) ghs.add('GHS01');
   // infiammabili: liquidi, gas e solo gli elementi solidi (fosforo, zolfo, metalli in polvere); zucchero, amido e cera
@@ -149,6 +158,17 @@ export function reagentLook(ctx, r) {
   const form = formOf(r);
   const family = r.water ? 'water' : r.indicator ? 'indicator' : familyOf(ctx, mainOf(ctx, r), form);
   const curated = Array.isArray(r.ghs);
-  const hz = curated ? { ghs: r.ghs, signal: r.ghs.length ? r.signal ?? 'warning' : null } : derivedHazards(ctx, mainOf(ctx, r), { form, molar: r.molar });
-  return { kind: containerFor(ctx, r), family, cap: FAMILIES[family], ghs: hz.ghs, h: r.h ?? [], signal: hz.signal, curated, form };
+  const hz = curated
+    ? { ghs: r.ghs, signal: r.ghs.length ? (r.signal ?? 'warning') : null }
+    : derivedHazards(ctx, mainOf(ctx, r), { form, molar: r.molar });
+  return {
+    kind: containerFor(ctx, r),
+    family,
+    cap: FAMILIES[family],
+    ghs: hz.ghs,
+    h: r.h ?? [],
+    signal: hz.signal,
+    curated,
+    form,
+  };
 }

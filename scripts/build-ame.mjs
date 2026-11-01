@@ -25,5 +25,8 @@ for (const line of lines.slice(start)) {
 }
 const keys = Object.keys(table);
 const body = keys.map((k) => `'${k}':${table[k]}`).join(',');
-fs.writeFileSync(out, `// Generato da scripts/build-ame.mjs: B/A in keV dei nuclei misurati (AME2020). Non modificare a mano.\nexport default {${body}};\n`);
+fs.writeFileSync(
+  out,
+  `// Generato da scripts/build-ame.mjs: B/A in keV dei nuclei misurati (AME2020). Non modificare a mano.\nexport default {${body}};\n`,
+);
 console.log(`ame2020.js: ${keys.length} nuclei misurati`);

@@ -6,7 +6,9 @@ import { _setLangForTests } from '../../src/i18n/index.js';
 import { localizeElements } from '../../src/i18n/elements.js';
 
 _setLangForTests('en');
-const elements = localizeElements(JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements);
+const elements = localizeElements(
+  JSON.parse(fs.readFileSync(new URL('../../src/data/elements.json', import.meta.url), 'utf8')).elements,
+);
 const bySymbol = new Map(elements.map((e) => [e.symbol, e]));
 
 test('inglese: le sigle dei decadimenti sono quelle inglesi (EC, IT, SF)', () => {

@@ -8,8 +8,25 @@ export const SHELL_LETTERS = ['K', 'L', 'M', 'N', 'O', 'P', 'Q'];
 
 // Ordine di riempimento (n + l crescente, a parità n crescente)
 export const MADELUNG_ORDER = [
-  '1s', '2s', '2p', '3s', '3p', '4s', '3d', '4p', '5s', '4d', '5p',
-  '6s', '4f', '5d', '6p', '7s', '5f', '6d', '7p',
+  '1s',
+  '2s',
+  '2p',
+  '3s',
+  '3p',
+  '4s',
+  '3d',
+  '4p',
+  '5s',
+  '4d',
+  '5p',
+  '6s',
+  '4f',
+  '5d',
+  '6p',
+  '7s',
+  '5f',
+  '6d',
+  '7p',
 ];
 
 const CAPACITY = { s: 2, p: 6, d: 10, f: 14 };
@@ -17,26 +34,26 @@ const CAPACITY = { s: 2, p: 6, d: 10, f: 14 };
 // Eccezioni alla regola di Madelung: sovrascrivono l'occupazione dei sottolivelli.
 // Valori per Z >= 104 sono previsioni teoriche.
 const EXCEPTIONS = {
-  24: { '4s': 1, '3d': 5 },            // Cr
-  29: { '4s': 1, '3d': 10 },           // Cu
-  41: { '5s': 1, '4d': 4 },            // Nb
-  42: { '5s': 1, '4d': 5 },            // Mo
-  44: { '5s': 1, '4d': 7 },            // Ru
-  45: { '5s': 1, '4d': 8 },            // Rh
-  46: { '5s': 0, '4d': 10 },           // Pd
-  47: { '5s': 1, '4d': 10 },           // Ag
-  57: { '4f': 0, '5d': 1 },            // La
-  58: { '4f': 1, '5d': 1 },            // Ce
-  64: { '4f': 7, '5d': 1 },            // Gd
-  78: { '6s': 1, '5d': 9 },            // Pt
-  79: { '6s': 1, '5d': 10 },           // Au
-  89: { '5f': 0, '6d': 1 },            // Ac
-  90: { '5f': 0, '6d': 2 },            // Th
-  91: { '5f': 2, '6d': 1 },            // Pa
-  92: { '5f': 3, '6d': 1 },            // U
-  93: { '5f': 4, '6d': 1 },            // Np
-  96: { '5f': 7, '6d': 1 },            // Cm
-  103: { '6d': 0, '7p': 1 },           // Lr (effetti relativistici)
+  24: { '4s': 1, '3d': 5 }, // Cr
+  29: { '4s': 1, '3d': 10 }, // Cu
+  41: { '5s': 1, '4d': 4 }, // Nb
+  42: { '5s': 1, '4d': 5 }, // Mo
+  44: { '5s': 1, '4d': 7 }, // Ru
+  45: { '5s': 1, '4d': 8 }, // Rh
+  46: { '5s': 0, '4d': 10 }, // Pd
+  47: { '5s': 1, '4d': 10 }, // Ag
+  57: { '4f': 0, '5d': 1 }, // La
+  58: { '4f': 1, '5d': 1 }, // Ce
+  64: { '4f': 7, '5d': 1 }, // Gd
+  78: { '6s': 1, '5d': 9 }, // Pt
+  79: { '6s': 1, '5d': 10 }, // Au
+  89: { '5f': 0, '6d': 1 }, // Ac
+  90: { '5f': 0, '6d': 2 }, // Th
+  91: { '5f': 2, '6d': 1 }, // Pa
+  92: { '5f': 3, '6d': 1 }, // U
+  93: { '5f': 4, '6d': 1 }, // Np
+  96: { '5f': 7, '6d': 1 }, // Cm
+  103: { '6d': 0, '7p': 1 }, // Lr (effetti relativistici)
 };
 
 const NOBLE_GASES = [

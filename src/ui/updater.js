@@ -21,7 +21,7 @@ const t = createT({
     upToDate: 'È già la versione più recente.',
     error: 'Non riesco a controllare gli aggiornamenti (serve Internet solo per questo).',
     portable: 'Questa è la versione portabile: non si aggiorna da sola, ma ti avviso quando ne esce una nuova.',
-    off: 'Gli aggiornamenti funzionano nell\'app installata.',
+    off: "Gli aggiornamenti funzionano nell'app installata.",
     installReady: 'Installa la {v} e riavvia',
   },
   en: {
@@ -74,8 +74,10 @@ export function initUpdater() {
   let announced = '';
   u.onStatus((s) => {
     const key = `${s.state}:${s.version ?? ''}`;
-    if (s.state === 'ready' && announced !== key) showBanner(t('ready', { v: s.version }), t('install'), () => u.install());
-    else if (s.state === 'available' && announced !== key) showBanner(t('available', { v: s.version }), t('download'), () => u.openRelease());
+    if (s.state === 'ready' && announced !== key)
+      showBanner(t('ready', { v: s.version }), t('install'), () => u.install());
+    else if (s.state === 'available' && announced !== key)
+      showBanner(t('available', { v: s.version }), t('download'), () => u.openRelease());
     else if (s.state === 'downloading' && announced !== key) toast(t('downloading', { v: s.version }));
     if (['ready', 'available', 'downloading'].includes(s.state)) announced = key;
   });
@@ -109,7 +111,8 @@ export function createUpdateSection() {
     check.disabled = mode === 'off' || s.state === 'checking' || s.state === 'downloading';
     if (mode === 'off') msg.textContent = t('off');
     else if (s.state === 'checking') msg.textContent = t('checking');
-    else if (s.state === 'downloading') msg.textContent = t(s.percent ? 'downloadingPct' : 'downloading', { v: s.version, p: s.percent });
+    else if (s.state === 'downloading')
+      msg.textContent = t(s.percent ? 'downloadingPct' : 'downloading', { v: s.version, p: s.percent });
     else if (s.state === 'error') msg.textContent = t('error');
     else if (s.state === 'none') msg.textContent = s.checkedAt ? t('upToDate') : mode === 'manual' ? t('portable') : '';
     else msg.textContent = '';

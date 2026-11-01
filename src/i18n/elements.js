@@ -14,7 +14,7 @@ const UNIT_EN = {
 };
 
 const DECAY_EN = {
-  'α': 'α decay',
+  α: 'α decay',
   'β-': 'β⁻ decay',
   'β+': 'β⁺ decay',
   '2β-': 'double β⁻ decay',
@@ -28,7 +28,7 @@ const DECAY_EN = {
 const DECAY_SYMBOL_EN = { CE: 'EC', '2CE': '2EC', TI: 'IT', FS: 'SF' };
 
 const DECAY_ELI6 = {
-  'α': 'il nucleo sputa un pezzetto fatto di 2 protoni e 2 neutroni',
+  α: 'il nucleo sputa un pezzetto fatto di 2 protoni e 2 neutroni',
   'β-': 'un neutrone si trasforma in protone',
   'β+': 'un protone si trasforma in neutrone',
   '2β-': 'due neutroni si trasformano in protoni insieme',
