@@ -37,6 +37,7 @@ import { shapeCells } from './shapes.js';
 import { SANDBOX_STRINGS } from './sandbox-strings.js';
 import { SANDBOX_DESCRIBE } from './describe-strings.js';
 import { sig } from '../ui/spark-sig.js';
+import { exposeForTests } from '../test-hooks.js';
 
 const t = createT(SANDBOX_STRINGS);
 
@@ -1332,8 +1333,8 @@ export function createSandbox(elements, { onClose } = {}) {
   }
   window.addEventListener('keydown', onKey);
 
-  // solo in sviluppo: accesso dalla console
-  if (import.meta.env.DEV) window.__sandbox = { world, subs, state, loadPreset };
+  // accesso dalla console e dagli E2E (solo con `vite` e nella build di prova, vedi src/test-hooks.js)
+  exposeForTests('__sandbox', { world, subs, state, loadPreset });
 
   // ---------------------------------------------------------------- apertura / chiusura
   let lastFocus = null;

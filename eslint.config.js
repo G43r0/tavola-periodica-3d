@@ -33,7 +33,7 @@ export default [
     },
   },
   {
-    files: ['scripts/**', 'tests/**', 'data-sources/**', 'vite.config.js'],
+    files: ['scripts/**', 'tests/**', 'data-sources/**', 'vite.config.js', 'playwright.config.mjs'],
     languageOptions: {
       globals: globals.node,
     },

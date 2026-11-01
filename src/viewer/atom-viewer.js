@@ -19,6 +19,7 @@ import { esc, fmtNumber, fmtAbundance, isotopeNotation } from '../chem/format.js
 import { icons } from '../ui/icons.js';
 import { viewerAutoplay } from '../ui/motion.js';
 import { createT } from '../i18n/index.js';
+import { exposeForTests } from '../test-hooks.js';
 
 const ORIGIN = new THREE.Vector3();
 
@@ -935,9 +936,8 @@ export function createAtomViewer(elements, { onClose }) {
     }
   });
 
-  // solo in sviluppo: accesso dalla console per test e diagnosi
-  if (import.meta.env.DEV)
-    window.__atomViewer = { engine, nucleus, bohr, clouds, quarks, marker, state, select, clearSelection };
+  // accesso dalla console e dagli E2E (solo con `vite` e nella build di prova, vedi src/test-hooks.js)
+  exposeForTests('__atomViewer', { engine, nucleus, bohr, clouds, quarks, marker, state, select, clearSelection });
 
   const fpsEl = $('.av-fps');
   engine.onFps = (fps, q) => {

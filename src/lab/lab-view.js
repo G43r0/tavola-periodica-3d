@@ -28,6 +28,7 @@ import { createPalette } from './palette.js';
 import { unitPanelHtml, summaryHtml, plainFormula, unitSmiles } from './molecule-panel.js';
 import { lewisSvg, standaloneSvg } from './lewis-svg.js';
 import { saveBench, loadBench } from './bench-store.js';
+import { exposeForTests } from '../test-hooks.js';
 import { REACTIONS } from './data/reactions.js';
 import { speciesInfo, reactionEnthalpy } from './chem/reactions.js';
 import { planReactions, diagnose, modelReaction, graphBondEnergy, reactionDH } from './chem/simulate.js';
@@ -2516,34 +2517,33 @@ export function createLab(elements, { onClose }) {
   }
   window.addEventListener('resize', () => !root.hidden && layout());
 
-  // solo in sviluppo: accesso dalla console per i test
-  if (import.meta.env.DEV)
-    window.__lab = {
-      bench,
-      lab,
-      library,
-      state,
-      scene,
-      addAtom,
-      bond,
-      combineAction,
-      buildEntry,
-      select,
-      separate,
-      cycleOrder,
-      breakBond,
-      changeCharge,
-      undo,
-      redo,
-      reactions,
-      openReaction,
-      runReaction,
-      matchReactions,
-      interpret,
-      buildFromFormula,
-      toggleFormula,
-      simulate,
-    };
+  // accesso dalla console e dagli E2E (solo con `vite` e nella build di prova, vedi src/test-hooks.js)
+  exposeForTests('__lab', {
+    bench,
+    lab,
+    library,
+    state,
+    scene,
+    addAtom,
+    bond,
+    combineAction,
+    buildEntry,
+    select,
+    separate,
+    cycleOrder,
+    breakBond,
+    changeCharge,
+    undo,
+    redo,
+    reactions,
+    openReaction,
+    runReaction,
+    matchReactions,
+    interpret,
+    buildFromFormula,
+    toggleFormula,
+    simulate,
+  });
 
   // ---------------------------------------------------------------- apertura / chiusura
   let lastFocus = null;
