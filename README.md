@@ -237,8 +237,9 @@ le geometrie fuori libreria sono stime (≈); il legame metallico non è simulat
 
 ### Reazioni
 
-Pulsante **Reazioni** nella barra del laboratorio: 47 reazioni in 5 gruppi (sintesi, combustioni, decomposizioni,
-acidi e basi, altre: fotosintesi, fermentazione, termite, idrogenazione…).
+Pulsante **Reazioni** nella barra del laboratorio: le 1349 reazioni del catalogo in 14 gruppi (sintesi dagli elementi,
+combustioni, decomposizioni, acidi e basi, precipitazioni, ossidoriduzioni, chimica organica…), con la ricerca; 47 hanno
+un nome e una descrizione (fotosintesi, fermentazione, termite, idrogenazione…).
 
 - **Equazione** con gli stati fisici, es. `CH₄(g) + 2 O₂(g) → CO₂(g) + 2 H₂O(l)`.
 - **Bilancia tu**: si parte da tutti i coefficienti a 1; una tabella conta gli atomi di ogni elemento nei due lati e
@@ -563,7 +564,7 @@ Daniell e contatore del gas.
   intorbida l'acqua di calce, il cloro sposta il bromo, l'idrogeno riduce l'ossido di rame caldo); il cloro e l'ammoniaca che
   escono senza un recipiente sotto fanno scattare l'allarme se la cappa è spenta. Sopra i 60 °C un recipiente **scotta**: si prende con la **pinza**, che si
   prende dal suo supporto accanto alla buretta.
-- **Libro «Come si fa»** (sul bancone A e sulla cattedra, oppure `B`, o dalla pausa): le pagine degli strumenti (24),
+- **Libro «Come si fa»** (sul bancone A e sulla cattedra, oppure `B`, o dalla pausa): le pagine degli strumenti (26),
   delle tecniche (15: pesare con la tara, leggere il menisco, diluire, filtrare, titolare, distillare…) e della sicurezza
   (i nove pittogrammi, le sostanze da non mescolare, gli incidenti, i rifiuti), ognuna con la sua vignetta; i 118
   elementi, con come si ottengono davvero (miniera e industria, aria liquida, elettrolisi, sottoprodotto, reattore o

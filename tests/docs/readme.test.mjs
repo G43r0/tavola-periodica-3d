@@ -7,6 +7,7 @@ import { SHELF, CABINET } from '../../src/game/reagents.js';
 import { createLabChemistry } from '../../src/game/mixture.js';
 import { reachable, keysOf } from '../../src/game/coverage.js';
 import { TUTORIAL } from '../../src/game/tutorial.js';
+import { TOOL_PAGES, TECHNIQUE_PAGES } from '../../src/game/data/book-pages.js';
 import VERIFIED from '../../src/game/data/book-verified.js';
 import { createLabElements } from '../../src/lab/chem/elements-lab.js';
 import { createLibraryIndex } from '../../src/lab/chem/identify.js';
@@ -34,8 +35,17 @@ test('README: termini del glossario, sostanze, entalpie e reazioni scritte a man
   assert.deepEqual(numbersBefore('termini'), [Object.keys(GLOSSARY_IT).filter((k) => k.startsWith('term.')).length]);
   for (const n of numbersBefore('sostanze(?! comuni)')) assert.equal(n, MOLECULES.length);
   assert.equal(numberAfter('entalpie di formazione di'), Object.keys(FORMATION_ENTHALPIES).length);
-  assert.deepEqual(numbersBefore('reazioni in 5 gruppi'), [BASE_REACTIONS.length]);
+  // il pannello Reazioni del laboratorio mostra tutto il catalogo (prima il README diceva «47 reazioni in 5 gruppi»)
+  assert.match(readme.replace(/\*\*/g, ''), new RegExp(`Reazioni nella barra del laboratorio: le ${REACTIONS.length} reazioni del catalogo in ${REACTION_GROUPS.length} gruppi`));
+  assert.equal(numberAfter('con la ricerca;'), BASE_REACTIONS.length);
   for (const n of numbersBefore('reazioni(?! (in|del|usano))')) assert.equal(n, REACTIONS.length);
+});
+
+test('README: pagine del libro «Come si fa» (strumenti, tecniche, sicurezza)', () => {
+  // prima «strumenti (24)», nel gioco 26
+  const inParens = (words) => Number(readme.match(new RegExp(`${words} \\((\\d+)`))?.[1]);
+  assert.equal(inParens('le pagine degli strumenti'), Object.keys(TOOL_PAGES).length);
+  assert.equal(inParens('delle tecniche'), Object.keys(TECHNIQUE_PAGES).length);
 });
 
 test('README: ΔH°, ricette del libro, quaderno e tutorial', () => {

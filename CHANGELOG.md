@@ -113,9 +113,10 @@ Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
 - **Scheda e glossario.** Il periodo non è sempre il numero di gusci: il palladio (periodo 5) ne ha 4, e la scheda lo
   spiega (il 5s resta vuoto) (#61).
 - **Documentazione.** I numeri del README sono quelli dei dati (88 termini, 48 reagenti dell'armadio, 501 reazioni del
-  simulatore con scaffale e armadio, 313 con il solo scaffale, 1146 reazioni nella sandbox) e un
-  test li controlla (#33); le note «non in libreria» di KO₂, U₃O₈, FeS e [Cu(NH₃)₄]²⁺ rimandano alle reazioni che li
-  formano, e un test controlla che una nota così nomini una sostanza che manca davvero (#45).
+  simulatore con scaffale e armadio, 313 con il solo scaffale, 1146 reazioni nella sandbox, le 1349 reazioni in 14 gruppi
+  del pannello Reazioni invece di «47 in 5 gruppi», 26 pagine degli strumenti nel libro) e un test li controlla (#33);
+  le note «non in libreria» di KO₂, U₃O₈, FeS e [Cu(NH₃)₄]²⁺ rimandano alle reazioni che li formano, e un test
+  controlla che una nota così nomini una sostanza che manca davvero (#45).
 - **Ricerca per formula uguale ovunque.** «CuSO4» e «CuSO₄», «Na+» e «Na⁺», «SO42-» e «SO₄²⁻» trovano le stesse cose
   negli esempi e nelle reazioni del laboratorio, nella sandbox, nel magazzino del simulatore e nel libro (#51).
 - **Carriera, reputazione.** Contano gli incidenti del tentativo più pulito di ogni esercitazione, non tutti quelli
