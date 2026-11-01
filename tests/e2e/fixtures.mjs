@@ -9,15 +9,14 @@ import { test as base, expect } from '@playwright/test';
  * - `atomo`: il visualizzatore dell'atomo 3D, src/viewer (`window.__atomViewer`)
  * - `laboratorio`: il laboratorio molecolare, src/lab (`window.__lab`)
  * - `sandbox`: la sandbox degli elementi, src/sandbox (`window.__sandbox`)
- * - `simulatore`: il simulatore di laboratorio, src/game (il gancio `window.__tp3d` non c'è ancora)
+ * - `simulatore`: il simulatore di laboratorio, src/game (`window.__tp3d`)
  */
 const MODULES = {
   tavola: { hook: null },
   atomo: { hook: '__atomViewer' },
   laboratorio: { hook: '__lab' },
   sandbox: { hook: '__sandbox' },
-  // il gancio `__tp3d` non c'è ancora in src/game: quando game-view.js lo espone si scrive qui il suo nome
-  simulatore: { hook: null },
+  simulatore: { hook: '__tp3d' },
 };
 
 /**

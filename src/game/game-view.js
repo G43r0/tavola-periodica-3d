@@ -34,6 +34,7 @@ import {
   bookUnlocks,
   lineParams,
   answerNumber,
+  runSolution,
 } from './career.js';
 import {
   migrate,
@@ -57,6 +58,7 @@ import { createBookView } from './book-view.js';
 import { TOOL_PAGES, TECHNIQUE_PAGES, SAFETY_PAGES } from './data/book-pages.js';
 import { GameAudio } from './audio/audio.js';
 import { GameRenderer } from './game-render.js';
+import { TEST_HOOKS, exposeForTests } from '../test-hooks.js';
 
 const t = createT(GAME_STRINGS);
 const SAVE_KEY = 'tp3d.game';
@@ -240,6 +242,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     game.notebook = notebook;
     bookView = createBookView({ game, t, kj, canOpenLab: () => Boolean(onOpenLab) });
     if (import.meta.env?.DEV) Object.assign(window, { __game: game, __view: view });
+    // il controllo anche qui, non solo in exposeForTests: nella build vera testHook() non gira nemmeno
+    if (TEST_HOOKS) exposeForTests('__tp3d', testHook());
     layout();
     $('.gm-loading').hidden = true;
   }
@@ -994,11 +998,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     }
     const d = b.dataset;
     if (d.bkPrepare) {
-      const recipe = game.book.byId.get(d.bkPrepare);
-      const list = game.prepareRecipe(recipe);
-      game.followRecipe(recipe.id);
-      toast(t('bkPrepared', { list: list.join(', ') }), 'ok', 6000);
-      play();
+      prepareOnBench(game.book.byId.get(d.bkPrepare));
       return true;
     }
     if (d.bkFollow) {
@@ -1015,6 +1015,18 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       return true;
     }
     return false;
+  }
+
+  /**
+   * «Prepara sul banco»: gli oggetti della ricetta sul bancone B, la ricetta seguita nel riquadro, di nuovo in gioco.
+   * @returns {string[]} nomi di ciò che è stato messo sul banco
+   */
+  function prepareOnBench(recipe) {
+    const list = game.prepareRecipe(recipe);
+    game.followRecipe(recipe.id);
+    toast(t('bkPrepared', { list: list.join(', ') }), 'ok', 6000);
+    play();
+    return list;
   }
 
   /** Riquadro della ricetta seguita: i passi, spuntati quando il gioco li riconosce, con quello di adesso evidenziato. */
@@ -1669,6 +1681,57 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       hudAcc = 0;
       renderHud();
     }
+  }
+
+  // ---------------------------------------------------------------- gancio di test
+  /**
+   * `window.__tp3d`, solo con i ganci di test (src/test-hooks.js). Il simulatore si gioca con il puntatore bloccato, che
+   * un test non può comandare: gli E2E (tests/e2e/simulatore.spec.mjs) lo guidano da qui, con le funzioni dei pulsanti.
+   */
+  function testHook() {
+    const hook = {
+      game,
+      startFree,
+      /** Comincia un'esercitazione come dalla mappa della Carriera, anche se nel profilo non è ancora aperta. */
+      startExercise: (id) => game.startCareer(chemMode, id, career()),
+      /** «Prepara sul banco» di una ricetta del libro (game.book.recipes). */
+      prepareRecipe: prepareOnBench,
+      pause: showPause,
+      /**
+       * Consegna l'esercitazione in corso con la soluzione scritta nei dati (career.js, runSolution) e passa dal
+       * campanello e dalla relazione come chi gioca: il recipiente della soluzione va sul vassoio, i suoi eventi (tare,
+       * reazioni, gas, pH letti) vanno nell'ordine, poi campanello e relazione con le risposte giuste. Risolve con il
+       * `result` del gioco.
+       */
+      async deliverSolution() {
+        const o = game.order;
+        if (!o || o.delivered) throw new Error('nessuna esercitazione da consegnare');
+        const s = runSolution(game.chem, o.ex, game.chemMode);
+        if (s.product) {
+          // la soluzione non dice in che recipiente: un becher da 250 mL, appena sopra il piano del vassoio (12 mm)
+          const z = game.fx.tray.zone;
+          const pos = new THREE.Vector3(z.x, z.y + 0.015, z.z);
+          game.spawn('beaker250', { pos, mixture: s.product, name: t('item_beaker250') });
+        }
+        Object.assign(o.ev, s.ev);
+        Object.assign(o.gas, s.gas);
+        for (const id of s.rx) o.rx.add(id);
+        for (const id of s.phRead) o.phRead.add(id);
+        const before = hook.lastResult;
+        game.ringBell();
+        if (o.pending) game.finishReport(o.questions.map((q) => q.right));
+        if (hook.lastResult === before) throw new Error(`«${o.id}»: il campanello non ha chiuso l'esercitazione`);
+        return hook.lastResult;
+      },
+      /** L'ultimo resoconto (`result`) del gioco. */
+      lastResult: null,
+    };
+    const emit = game.emit;
+    game.emit = (type, data) => {
+      if (type === 'result') hook.lastResult = data;
+      emit(type, data);
+    };
+    return hook;
   }
 
   // ---------------------------------------------------------------- apertura / chiusura
