@@ -5,7 +5,22 @@ import { defineConfig } from '@playwright/test';
 //
 // In locale `PW_CHANNEL=chrome` usa il Chrome installato, senza scaricare Chromium (`npx playwright install`, che
 // serve solo in CI).
+//
+// Il progetto `electron` lancia l'app vera (`electron .`) su dist/, la build di produzione: si costruisce prima con
+// `npx vite build`. Non usa né il server né la build di prova, quindi con `--project=electron` il `webServer` non parte.
 const PORT = 4173;
+
+// I progetti chiesti dalla riga di comando (`--project=web`, `--project web`, `-p web`); nessuno = tutti.
+function requestedProjects(argv = process.argv) {
+  const names = [];
+  argv.forEach((arg, i) => {
+    if (arg.startsWith('--project=')) names.push(arg.slice('--project='.length));
+    else if (arg === '--project' || arg === '-p') names.push(argv[i + 1]);
+  });
+  return names;
+}
+const projects = requestedProjects();
+const needsWebServer = projects.length === 0 || projects.includes('web');
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -16,13 +31,15 @@ export default defineConfig({
   workers: 1,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   outputDir: 'test-results',
-  webServer: {
-    command: `npm run build:e2e && npx vite preview --outDir dist-e2e --port ${PORT} --strictPort`,
-    url: `http://127.0.0.1:${PORT}`,
-    // niente riuso: un server rimasto acceso servirebbe una build vecchia
-    reuseExistingServer: false,
-    timeout: 180_000,
-  },
+  webServer: needsWebServer
+    ? {
+        command: `npm run build:e2e && npx vite preview --outDir dist-e2e --port ${PORT} --strictPort`,
+        url: `http://127.0.0.1:${PORT}`,
+        // niente riuso: un server rimasto acceso servirebbe una build vecchia
+        reuseExistingServer: false,
+        timeout: 180_000,
+      }
+    : undefined,
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     // l'app sceglie la lingua da navigator.language: i testi dei test sono in italiano
@@ -32,12 +49,18 @@ export default defineConfig({
   projects: [
     {
       name: 'web',
+      // l'E2E di Electron ha il suo progetto: qui non c'è l'app da lanciare
+      testIgnore: 'electron.spec.mjs',
       use: {
         browserName: 'chromium',
         channel: process.env.PW_CHANNEL,
         viewport: { width: 1366, height: 768 },
         launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
       },
+    },
+    {
+      name: 'electron',
+      testMatch: 'electron.spec.mjs',
     },
   ],
 });
