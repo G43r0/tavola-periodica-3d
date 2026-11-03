@@ -18,7 +18,7 @@ Per una vulnerabilità di sicurezza non aprire una issue pubblica: vedi [SECURIT
 
 ## Preparare il progetto
 
-Serve Node.js 22 o successivo. Dalla cartella del progetto:
+Serve Node.js 22.13 o successivo. Dalla cartella del progetto:
 
 ```bash
 npm install
@@ -47,18 +47,24 @@ git config blame.ignoreRevsFile .git-blame-ignore-revs
 Prima di aprire una pull request `npm test`, `npm run lint`, `npm run format:check` e `npm run typecheck` devono
 passare. I file generati da `npm run data` (come `src/data/elements.json`) non si modificano a mano.
 
+Il progetto `electron` di `npm run e2e` prova l'app su `dist/`: lancia prima `npx vite build` (senza, si ferma subito).
+
 ## Che cosa controlla la CI
 
-A ogni pull request e a ogni push su `main` GitHub Actions lancia due lavori (`.github/workflows/ci.yml`). Una pull
-request con un lavoro rosso non si unisce: apri il passo che è fallito e rilancia in locale lo stesso comando.
+A ogni pull request e a ogni push su `main` GitHub Actions lancia due lavori (`.github/workflows/ci.yml`). Se un passo
+fallisce il lavoro resta rosso: apri il passo che è fallito e rilancia in locale lo stesso comando. Perché una pull
+request rossa non si possa nemmeno unire, nelle impostazioni di protezione del ramo `main` del repository vanno resi
+obbligatori i controlli di stato (*required status checks*) `check` e `windows`: lo decide il repository, non questo
+file.
 
 **`check`** (Linux, Node 22) controlla il codice, nell'ordine:
 
-1. `npm run format:check`, `npm run lint` e `npm run typecheck`;
+1. `npm run format:check`, `npm run lint` e `npm run typecheck` (che controlla i moduli con `// @ts-check` in testa:
+   un errore di tipo in uno di quelli fa fallire il passo);
 2. `npm test`, i test unitari;
 3. `npm audit --audit-level=high` su **tutte** le dipendenze, anche quelle di sviluppo (Electron, three e Rapier lo
-   sono): un avviso alto blocca la pull request anche se non l'hai toccata tu. Di solito lo risolve `npm audit fix` o la
-   pull request di Dependabot;
+   sono): un avviso di sicurezza alto o critico fa fallire il passo anche se non hai toccato tu la dipendenza, mentre
+   quelli moderati non lo fanno fallire. Di solito lo risolve `npm audit fix` o la pull request di Dependabot;
 4. `npx vite build` e `npm run check:dist`, che fallisce se nella build vera finiscono i ganci di test o `ws:` nella
    CSP;
 5. `npm run e2e -- --project=web`, l'interfaccia nel browser (Chromium, rendering software). Serve prima

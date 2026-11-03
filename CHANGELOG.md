@@ -49,7 +49,7 @@ Correzioni e fondamenta (fase R1 del piano) che entreranno nella versione 1.0.0 
 - **Ripresa dopo un crash (R1, app desktop).** Se il processo della pagina si chiude da solo, la pagina si ricarica e un
   avviso lo dice; se si richiude entro 30 secondi dal ricaricamento non si riprova all'infinito e compare un messaggio
   d'errore (`electron/recover.cjs`, provato con finte finestre). `TP3D_USER_DATA` sposta la cartella dei dati dell'app
-  (la usano i test E2E, e serve a chi la porta su una chiavetta).
+  (la usano i test E2E, ed è la base per portare l'app su una chiavetta, lavoro che resta da fare).
 - **Documenti di progetto (R1).** `CONTRIBUTING.md` (come si lavora e che cosa controlla la CI), `SECURITY.md`
   (segnalazione privata dalle Security Advisories di GitHub), moduli per le issue (errore dell'app, errore nei
   contenuti, proposta) e modello per le pull request. `reports/` e `research_notes/` sono ora in `docs/ricerca/`.
@@ -64,11 +64,13 @@ Correzioni e fondamenta (fase R1 del piano) che entreranno nella versione 1.0.0 
   file, menu nella lingua scelta). Una prova fallisce se la pagina scrive un errore in console. I ganci di test
   (`window.__tp3d` e gli altri) stanno in `src/test-hooks.js`, attivi solo con `vite` o con la build `--mode e2e`:
   `scripts/check-dist.mjs` controlla che non finiscano nella build vera, e che la CSP non contenga `ws:`.
-- **Controlli a ogni pull request (R1, GitHub Actions, `.github/workflows/ci.yml`).** Lavoro Linux: formato, lint, tipi,
-  test, `npm audit --audit-level=high`, build, controllo di `dist/` ed E2E nel browser. Lavoro Windows: formato (anche
-  con i CRLF di git), build, `electron-builder --dir`, i cinque fusibili di Electron letti sull'eseguibile costruito ed
-  E2E dell'app. Una PR con un test rotto, un errore di tipo o una dipendenza vulnerabile resta rossa. Dependabot
-  propone gli aggiornamenti ogni lunedì, con gli strumenti di controllo in un gruppo solo.
+- **Controlli a ogni pull request (R1, GitHub Actions, `.github/workflows/ci.yml`).** Il lavoro Linux è impostato per
+  controllare formato, lint, tipi, test, `npm audit --audit-level=high`, build, `dist/` ed E2E nel browser. Il lavoro
+  Windows, formato (anche con i CRLF di git), build, `electron-builder --dir`, i cinque fusibili di Electron (letti
+  dall'eseguibile costruito) ed E2E dell'app. Un test rotto, un errore di tipo nei moduli controllati con
+  `// @ts-check` o un avviso di sicurezza alto o critico su una dipendenza fanno restare rossa la pull request; gli
+  avvisi moderati non bloccano. Dependabot propone gli aggiornamenti ogni lunedì, con gli strumenti di controllo in un
+  gruppo solo.
 
 ### Corretto
 - **Laboratorio, Formula.** La carica dopo una parentesi quadra è una carica (`[Fe(CN)6]3-` non è più Fe₃C₁₈N₁₈⁻) e
@@ -164,9 +166,11 @@ Correzioni e fondamenta (fase R1 del piano) che entreranno nella versione 1.0.0 
   toccare il codice.
 
 ### Sicurezza
-- **App desktop, fusibili di Electron.** L'eseguibile costruito ha spenti `runAsNode`, `NODE_OPTIONS` e `--inspect`
-  (non si usa come un Node qualunque né ci si attacca un debugger) e accesi la verifica dell'integrità di `app.asar` e
-  il caricamento del codice solo da lì (`build.electronFuses` di electron-builder).
+- **App desktop, fusibili di Electron.** L'eseguibile costruito ha spenti `runAsNode`, `NODE_OPTIONS` e `--inspect`: non
+  si usa come un Node qualunque, e il debugger di Node (`--inspect`) e la variabile `NODE_OPTIONS` non hanno effetto.
+  Accesi invece la verifica dell'integrità di `app.asar` e il caricamento del codice solo da lì
+  (`build.electronFuses` di electron-builder). La porta di debug di Chromium (`--remote-debugging-port`) non dipende
+  dai fusibili e resta disponibile.
 - **App desktop, pagine incorporate.** I `<webview>` sono bloccati su ogni finestra (`webviewTag: false` e
   `will-attach-webview` negato) e la Content-Security-Policy aggiunge `object-src 'none'; base-uri 'none'`.
 - **Dipendenze sorvegliate.** `npm audit fix` porta le vulnerabilità alte da 3 a 0 (`undici`, `joi`, `follow-redirects`)

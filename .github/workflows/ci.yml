@@ -3,8 +3,10 @@
 #    dell'interfaccia nel browser;
 #  - windows: build dell'app Windows e E2E di Electron (la build di prova gira solo su Windows: macOS e Linux si
 #    decidono nella R9).
-# Una pull request con un passo rosso non si unisce. Gli screenshot e il rapporto dell'E2E restano scaricabili dalla
-# pagina dell'esecuzione anche quando un passo fallisce. Come lanciare gli stessi controlli in locale: CONTRIBUTING.md.
+# Un passo che fallisce lascia rosso il lavoro; perché la pull request non si possa unire, i controlli `check` e
+# `windows` vanno resi obbligatori nella protezione del ramo `main` del repository (non è un'impostazione di questo
+# file). Gli screenshot e il rapporto dell'E2E restano scaricabili dalla pagina dell'esecuzione anche quando un passo
+# fallisce. Come lanciare gli stessi controlli in locale: CONTRIBUTING.md.
 name: CI
 
 on:
@@ -86,8 +88,9 @@ jobs:
         run: npx vite build
       - name: App Windows (cartella, senza installer)
         run: npx electron-builder --win --dir --publish never
-      # `fuses read` stampa i fusibili ed esce sempre 0: qui si controllano i cinque che imposta build.electronFuses in
-      # package.json (gli altri, come EnableCookieEncryption, restano al valore di Electron). `tr` toglie i CR.
+      # `fuses read` stampa i fusibili ed esce 0 anche se i valori sono sbagliati (esce 1 solo se non riesce a
+      # leggerli): qui si controllano i cinque che imposta build.electronFuses in package.json (gli altri, come
+      # EnableCookieEncryption, restano al valore di Electron). `tr` toglie i CR.
       - name: Fusibili di Electron
         run: |
           out="$(npx @electron/fuses read --app "release/win-unpacked/Tavola Periodica 3D.exe" | tr -d '\r')"
@@ -104,3 +107,10 @@ jobs:
           done
       - name: E2E di Electron
         run: npm run e2e -- --project=electron
+      # L'unica traccia se l'E2E di Electron fallisce sul runner (il rapporto, con le tracce delle prove fallite).
+      - name: Rapporto dell'E2E di Electron
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report-windows
+          path: playwright-report/
