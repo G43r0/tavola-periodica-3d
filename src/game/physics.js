@@ -1,6 +1,6 @@
 // Fisica del simulatore di laboratorio con Rapier: mondo a passo fisso, collisori statici della stanza, corpi della
 // vetreria e degli strumenti, sensori, eventi d'urto (per rompere il vetro), raggi e controllore del personaggio.
-// Rapier (WebAssembly incluso nel pacchetto, ~2 MB) è un file a parte, caricato solo alla prima apertura del gioco.
+// Rapier (WebAssembly incluso nel pacchetto, ~4 MB) è un file a parte, caricato solo alla prima apertura del gioco.
 
 let loading = null;
 /** Carica e inizializza Rapier una volta sola. */
@@ -258,8 +258,9 @@ export class Physics {
   /**
    * Dove si fermerebbe, scendendo da `fromY`, l'ingombro `foot` (cilindro { r, hh } o scatola { hx, hh, hz }, girato di
    * `rot`) centrato in (x, z): il suo centro a riposo, la normale della superficie toccata e il collisore. Il giocatore
-   * non conta. In Rapier 0.19.3 il campo è time_of_impact (per i raggi timeOfImpact); normal2 è la normale dell'altro
-   * collisore, in coordinate del mondo.
+   * non conta. In Rapier 0.21 il campo è time_of_impact (per i raggi timeOfImpact); normal2 è la normale della forma
+   * lanciata nel suo sistema locale (quella della superficie toccata, in coordinate del mondo, è normal1): serve solo
+   * quanto è inclinata rispetto alla verticale, che una rotazione attorno a y non cambia.
    * @returns {{y: number, normal: {x,y,z}, collider: object}|null}
    */
   restHeight(foot, x, z, fromY, { rot = IDENTITY, exclude = null, maxDrop = 1.5 } = {}) {

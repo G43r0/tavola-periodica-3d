@@ -32,7 +32,8 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     target: 'chrome120',
-    // il più grande è il motore fisico del simulatore (Rapier, con il WebAssembly incluso), caricato solo quando serve
-    chunkSizeWarningLimit: 2400,
+    // il più grande è il motore fisico del simulatore (Rapier 0.21, con il WebAssembly incluso: 4,3 MB), caricato solo
+    // quando serve
+    chunkSizeWarningLimit: 4500,
   },
 });
