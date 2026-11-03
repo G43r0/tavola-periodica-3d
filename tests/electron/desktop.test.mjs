@@ -138,6 +138,23 @@ test('watchRenderer: clean-exit non fa nulla', () => {
   assert.equal(webContents.reloads, 1);
 });
 
+test("watchRenderer: finestra già distrutta (chiusura dell'app) non ricarica e non si arrende", () => {
+  // se il renderer muore mentre l'app si chiude, `reload()` su un oggetto distrutto lancerebbe nel processo principale
+  for (const destroyed of ['window', 'webContents']) {
+    const { win, webContents, finishLoad } = fakeWindow();
+    (destroyed === 'window' ? win : webContents).isDestroyed = () => true;
+    let gaveUp = 0;
+    const watcher = watchRenderer(win, { now: () => 0, onGiveUp: () => gaveUp++ });
+    // due crash di fila: né il ricaricamento né la resa, e il codice non deve lanciare
+    watcher.handle({ reason: 'crashed', exitCode: 11 });
+    watcher.handle({ reason: 'oom' });
+    finishLoad();
+    assert.equal(webContents.reloads, 0, `${destroyed} distrutta: nessun ricaricamento`);
+    assert.deepEqual(webContents.sent, [], `${destroyed} distrutta: nessun avviso`);
+    assert.equal(gaveUp, 0, `${destroyed} distrutta: onGiveUp non parte`);
+  }
+});
+
 test('fusibili nella configurazione di electron-builder', () => {
   const pkg = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
   assert.deepEqual(pkg.build.electronFuses, {

@@ -6,7 +6,7 @@
 const RELOAD_WINDOW_MS = 30_000;
 
 /**
- * @param {{ webContents: { reload(): void, once(event: string, fn: () => void): void, send(channel: string): void } }} win
+ * @param {{ isDestroyed?(): boolean, webContents: { isDestroyed?(): boolean, reload(): void, once(event: string, fn: () => void): void, send(channel: string): void } }} win
  * @param {{ now?: () => number, onGiveUp?: (details: { reason: string }) => void }} [options]
  * @returns {{ handle(details: { reason: string }): void }} `handle` va collegato a `render-process-gone`
  */
@@ -17,6 +17,8 @@ function watchRenderer(win, { now = Date.now, onGiveUp = () => {} } = {}) {
     handle(details) {
       // uscita normale (la finestra si sta chiudendo): niente da recuperare
       if (details.reason === 'clean-exit') return;
+      // il renderer può morire mentre l'app si chiude: finestra o pagina già distrutte, `reload()` lancerebbe
+      if (win.isDestroyed?.() || win.webContents.isDestroyed?.()) return;
       const t = now();
       if (lastReload === null || t - lastReload > RELOAD_WINDOW_MS) {
         lastReload = t;
