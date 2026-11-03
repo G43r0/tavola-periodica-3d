@@ -220,7 +220,9 @@
   border: 1px solid color-mix(in oklab, var(--c) 40%, transparent);
   border-radius: 3px;
   cursor: grab;
-  transition: transform var(--t-fast), background var(--t-fast);
+  transition:
+    transform var(--t-fast),
+    background var(--t-fast);
 }
 .pal-cell:hover {
   z-index: 1;
@@ -307,7 +309,10 @@
   border: 1px solid var(--line-2);
   border-radius: 10px;
   cursor: pointer;
-  transition: background var(--t-fast), border-color var(--t-fast), opacity var(--t-fast);
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast),
+    opacity var(--t-fast);
 }
 .lab-act:hover:not(:disabled) {
   background: var(--bg-3);
@@ -374,10 +379,18 @@
     transform: translateY(6px);
   }
 }
-.lab-msg.is-ok { border-left-color: var(--ok); }
-.lab-msg.is-bad { border-left-color: var(--danger); }
-.lab-msg.is-warn { border-left-color: var(--warn); }
-.lab-msg.is-info { border-left-color: var(--accent); }
+.lab-msg.is-ok {
+  border-left-color: var(--ok);
+}
+.lab-msg.is-bad {
+  border-left-color: var(--danger);
+}
+.lab-msg.is-warn {
+  border-left-color: var(--warn);
+}
+.lab-msg.is-info {
+  border-left-color: var(--accent);
+}
 .lab-msg small {
   color: var(--text-2);
 }
@@ -651,7 +664,9 @@
   font-size: 11.5px;
   font-weight: 600;
   color: #fff;
-  text-shadow: 0 0 3px #000, 0 0 6px #000;
+  text-shadow:
+    0 0 3px #000,
+    0 0 6px #000;
   pointer-events: none;
   user-select: none;
 }
@@ -685,10 +700,21 @@
   text-shadow: 0 0 6px rgba(92, 182, 255, 0.7);
 }
 @keyframes lab-float {
-  0% { opacity: 0; transform: translateY(6px) scale(0.9); }
-  15% { opacity: 1; transform: translateY(-6px) scale(1); }
-  70% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-46px); }
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.9);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-46px);
+  }
 }
 
 /* ---------------------------------------------------------------- scheda della molecola */
@@ -800,9 +826,15 @@
   border-left: 3px solid var(--accent);
   border-radius: 6px;
 }
-.mp-status li.is-ok { border-left-color: var(--ok); }
-.mp-status li.is-warn { border-left-color: var(--warn); }
-.mp-status li.is-bad { border-left-color: var(--danger); }
+.mp-status li.is-ok {
+  border-left-color: var(--ok);
+}
+.mp-status li.is-warn {
+  border-left-color: var(--warn);
+}
+.mp-status li.is-bad {
+  border-left-color: var(--danger);
+}
 .mp-status b {
   color: var(--text-0);
 }
@@ -1095,8 +1127,12 @@
   border-left: 3px solid var(--accent);
   border-radius: 6px;
 }
-.rx-status.is-ok { border-left-color: var(--ok); }
-.rx-status.is-warn { border-left-color: var(--warn); }
+.rx-status.is-ok {
+  border-left-color: var(--ok);
+}
+.rx-status.is-warn {
+  border-left-color: var(--warn);
+}
 .rx-tabs {
   margin: 2px 0 6px;
 }
@@ -1192,25 +1228,66 @@
   font-weight: 600;
   border-radius: 10px;
 }
-.rx-dh.is-exo b { color: var(--ok); }
-.rx-dh.is-exo span { color: var(--ok); background: color-mix(in oklab, var(--ok) 14%, transparent); }
-.rx-dh.is-endo b { color: var(--warn); }
-.rx-dh.is-endo span { color: var(--warn); background: color-mix(in oklab, var(--warn) 14%, transparent); }
+.rx-dh.is-exo b {
+  color: var(--ok);
+}
+.rx-dh.is-exo span {
+  color: var(--ok);
+  background: color-mix(in oklab, var(--ok) 14%, transparent);
+}
+.rx-dh.is-endo b {
+  color: var(--warn);
+}
+.rx-dh.is-endo span {
+  color: var(--warn);
+  background: color-mix(in oklab, var(--warn) 14%, transparent);
+}
 .rx-diagram {
   display: block;
   width: 100%;
   max-width: 320px;
   margin: 10px auto 2px;
 }
-.rx-diagram .rx-axis { stroke: var(--line-3); stroke-width: 1.2; }
-.rx-diagram .rx-axis-label { font-size: 9px; fill: var(--text-2); font-family: var(--font-sans); }
-.rx-diagram .rx-curve { fill: none; stroke: var(--accent); stroke-width: 2; }
-.rx-diagram .rx-level { stroke: var(--text-0); stroke-width: 2.4; }
-.rx-diagram .rx-ea { stroke: var(--text-2); stroke-width: 1.2; stroke-dasharray: 3 3; }
-.rx-diagram .rx-dh { stroke-width: 2; }
-.rx-diagram .rx-guide { stroke: var(--line-2); stroke-dasharray: 2 3; }
-.rx-diagram .rx-small { font-size: 9.5px; fill: var(--text-1); font-family: var(--font-mono); }
-.rx-diagram .rx-dh-label { font-size: 12px; font-weight: 700; font-family: var(--font-sans); }
+.rx-diagram .rx-axis {
+  stroke: var(--line-3);
+  stroke-width: 1.2;
+}
+.rx-diagram .rx-axis-label {
+  font-size: 9px;
+  fill: var(--text-2);
+  font-family: var(--font-sans);
+}
+.rx-diagram .rx-curve {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.rx-diagram .rx-level {
+  stroke: var(--text-0);
+  stroke-width: 2.4;
+}
+.rx-diagram .rx-ea {
+  stroke: var(--text-2);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+}
+.rx-diagram .rx-dh {
+  stroke-width: 2;
+}
+.rx-diagram .rx-guide {
+  stroke: var(--line-2);
+  stroke-dasharray: 2 3;
+}
+.rx-diagram .rx-small {
+  font-size: 9.5px;
+  fill: var(--text-1);
+  font-family: var(--font-mono);
+}
+.rx-diagram .rx-dh-label {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+}
 .rx-bonds {
   margin-top: 10px;
   padding: 8px 10px;
@@ -1251,7 +1328,9 @@
   animation: sim-pulse 1s ease-in-out infinite;
 }
 @keyframes sim-pulse {
-  50% { opacity: 0.25; }
+  50% {
+    opacity: 0.25;
+  }
 }
 .sim-steps {
   display: grid;
@@ -1444,4 +1523,16 @@
 .lab-act:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ---- copia ed esporta (scheda della molecola) */
+.mp-smiles {
+  margin: 0 0 8px;
+}
+.mp-smiles code,
+.lab-msg code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-0);
+  overflow-wrap: anywhere;
 }

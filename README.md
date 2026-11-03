@@ -3,7 +3,7 @@
 Applicazione desktop (Electron + Three.js) con la tavola periodica interattiva dei 118 elementi,
 schede informative in italiano e modelli 3D degli atomi esplorabili fino alle singole particelle
 (protoni, neutroni, elettroni e quark), più un **laboratorio molecolare** in cui si collegano gli atomi per formare
-molecole e composti e una **sandbox degli elementi** in stile *The Powder Toy*: i 118 elementi, le 554 sostanze della
+molecole e composti e una **sandbox degli elementi** in stile *The Powder Toy*: i 118 elementi, le 558 sostanze della
 libreria e i materiali di base (legno, carbone, calcestruzzo, muro indistruttibile) cadono, fondono, bollono, si sciolgono,
 bruciano e reagiscono secondo i loro dati reali e le reazioni del catalogo.
 L'interfaccia è in **italiano**, in **inglese** e in **«Spiegamelo come se avessi 6 anni»** (le stesse spiegazioni con parole
@@ -12,7 +12,7 @@ Tre **preset grafici** (Semplice, Medio, Professionale) adattano la grafica al c
 l'**aspetto reale** di ogni elemento (colori e materiali veri) in un campione 3D.
 Il **simulatore di laboratorio** è un gioco in prima persona nel laboratorio di chimica della scuola, nello stile di
 *Cooking Simulator*: si prendono becher e bottiglie, si pesa, si versa inclinando, si scalda, si titola con la buretta,
-si filtra, si distilla, si fa l'elettrolisi, si misura la tensione di una pila e si consegna il preparato all'insegnante, con la fisica vera degli oggetti e la chimica delle 554 sostanze e delle reazioni del catalogo.
+si filtra, si distilla, si fa l'elettrolisi, si misura la tensione di una pila e si consegna il preparato all'insegnante, con la fisica vera degli oggetti e la chimica delle 558 sostanze e delle reazioni del catalogo.
 Ha i suoni del laboratorio (registrazioni in pubblico dominio da Freesound) e una Carriera di dieci capitoli con verifiche,
 pagella, richieste extra e sfide a tempo.
 Funziona **completamente offline**: dati, font e codice sono inclusi nell'app.
@@ -134,7 +134,7 @@ Il file `src/data/elements.json` è **generato** da `scripts/build-data.mjs` a p
 | `data-sources/curated/*.mjs` | Nomi italiani, pesi atomici standard IUPAC/CIAAW, isotopi (abbondanze IUPAC, emivite NUBASE), raggi covalenti (Cordero 2008), stati di ossidazione, storia, origine del nome, usi, presenza in natura, correzioni NIST/CRC dove PubChem è impreciso |
 | `src/chem/electron-config.js` | Configurazioni elettroniche (regola di Madelung + eccezioni NIST) ed elettroni per guscio |
 | `data-sources/xray-data-booklet/` | X-ray Data Booklet (LBNL), tab. 1-1: energie di legame degli elettroni interni, Z = 1–92 (→ `src/data/binding-energies.json`) |
-| `src/chem/particles.js`, `nuclear.js` | Costanti CODATA 2022 e PDG 2024 (masse, cariche, quark, vita media del neutrone); energie di legame nucleari AME2020 per A ≤ 22 |
+| `src/chem/particles.js`, `nuclear.js` | Costanti CODATA 2022 e PDG 2024 (masse, cariche, quark, vita media del neutrone); energie di legame nucleari AME2020 dei 2548 nuclei misurati (`src/data/ame2020.js`, da `scripts/build-ame.mjs`) |
 
 Dopo aver modificato un file in `data-sources/`, rigenera i JSON (`elements.json` e `binding-energies.json`):
 
@@ -208,7 +208,7 @@ Si apre dal pulsante con la beuta nella barra in alto, oppure con «Usa nel labo
   2 H + O → H₂O, Na + Cl → NaCl, 4 H + 2 O → 2 H₂O, C₂H₆O → etanolo (con l'etere dimetilico come isomero alternativo).
 - **Separa** (`S`): scompone la molecola in atomi (H₂ → 2 H); per i composti ionici anche «In ioni» (Na⁺ e Cl⁻).
 - **±e⁻**: aggiunge o toglie un elettrone (es. NH₃ + H⁺ → NH₄⁺, OH + e⁻ → OH⁻).
-- **Esempi**: 554 sostanze pronte in 14 gruppi, con ricerca per nome o formula: almeno un composto per ogni elemento
+- **Esempi**: 558 sostanze pronte in 14 gruppi, con ricerca per nome o formula: almeno un composto per ogni elemento
   che ne forma fino all'einsteinio (esclusi He, Ne, Ar, Rn, At, Fr), idrocarburi, composti organici, biomolecole
   (amminoacidi, zuccheri, basi del DNA), farmaci e aromi, ioni (anche monoatomici e complessi: Na⁺, Cl⁻, Fe³⁺,
   [Cu(NH₃)₄]²⁺), sali, idrati, composti dei metalli di transizione, di lantanidi e attinidi.
@@ -217,6 +217,9 @@ Si apre dal pulsante con la beuta nella barra in alto, oppure con «Usa nel labo
   `CuSO4·5H2O`, `NH4+`, `SO4^2-`, `SO₄²⁻`), più sostanze (`2 H2 + O2`, anche mescolando nomi: `P4O10 + 2 acqua`),
   nomi italiani (`acqua`, `aspirina`) e SMILES (`CCO`). L'anteprima mostra cosa verrà costruito, la massa molare e la
   composizione percentuale in massa; «Solo atomi» mette gli atomi senza legami, da collegare a mano.
+- **Copia ed esporta** (nella scheda della molecola selezionata): la SMILES della molecola costruita (incollata con
+  `Ctrl+V` torna uguale), la formula in testo semplice (`C9H8O4`) e il disegno di Lewis come file SVG per le relazioni.
+  Il banco resta tra una sessione e l'altra (anche ricaricando o cambiando lingua o grafica).
 
 | Cosa calcola | Come |
 |---|---|
@@ -234,8 +237,9 @@ le geometrie fuori libreria sono stime (≈); il legame metallico non è simulat
 
 ### Reazioni
 
-Pulsante **Reazioni** nella barra del laboratorio: 47 reazioni in 5 gruppi (sintesi, combustioni, decomposizioni,
-acidi e basi, altre: fotosintesi, fermentazione, termite, idrogenazione…).
+Pulsante **Reazioni** nella barra del laboratorio: le 1349 reazioni del catalogo in 14 gruppi (sintesi dagli elementi,
+combustioni, decomposizioni, acidi e basi, precipitazioni, ossidoriduzioni, chimica organica…), con la ricerca; 47 hanno
+un nome e una descrizione (fotosintesi, fermentazione, termite, idrogenazione…).
 
 - **Equazione** con gli stati fisici, es. `CH₄(g) + 2 O₂(g) → CO₂(g) + 2 H₂O(l)`.
 - **Bilancia tu**: si parte da tutti i coefficienti a 1; una tabella conta gli atomi di ogni elemento nei due lati e
@@ -287,7 +291,7 @@ nel pennello). È una «sabbiera» a particelle ispirata a *The Powder Toy*: una
 400 × 225), ognuna un granello di sostanza con la sua temperatura.
 
 - **Sostanze**: i 118 elementi (tavola periodica nella tavolozza), i materiali di base — **legno**, **carbone**,
-  **calcestruzzo**, **muro indistruttibile** — più il **generatore elettrico** e **tutte le 554 sostanze della libreria
+  **calcestruzzo**, **muro indistruttibile** — più il **generatore elettrico** e **tutte le 558 sostanze della libreria
   del laboratorio** (molecole, acidi, basi, sali, ossidi, ioni, composti organici ed esplosivi), divise per gruppi e
   con una ricerca per nome o formula (`CuSO4` trova il solfato di rame). Ogni sostanza ha i suoi dati fisici: temperature
   di fusione ed ebollizione, densità, colore, solubilità in acqua, infiammabilità e temperatura di accensione
@@ -301,10 +305,10 @@ nel pennello). È una «sabbiera» a particelle ispirata a *The Powder Toy*: una
   condizioni scritte (soluzione acquosa, riscaldamento, innesco, luce, scintilla) e il calore dal ΔH°: precipitazioni
   (AgNO₃ + NaCl → AgCl, Pb(NO₃)₂ + KI → PbI₂ giallo), neutralizzazioni, metalli e acidi (lo zinco sviluppa idrogeno,
   il rame no), combustioni dei combustibili (metano, etanolo, benzina…), decomposizioni termiche (CaCO₃ → CaO + CO₂),
-  **catalizzatori** (H₂O₂ si decompone solo vicino a MnO₂) e detonazioni (nitroglicerina, TNT, nitrometano). 1149
+  **catalizzatori** (H₂O₂ si decompone solo vicino a MnO₂) e detonazioni (nitroglicerina, TNT, nitrometano). 1146
   reazioni usano il motore del catalogo, 93 coincidono con le regole «a mano» (combustioni, metallo + alogeno, metallo +
-  acqua); restano escluse, con il motivo, solo 107: equilibri (⇌), reazioni con catalizzatori non specificati o assenti
-  e quelle che richiedono un organismo vivente. Un composto infiammabile senza combustione in catalogo brucia comunque, e
+  acqua); restano escluse, con il motivo, solo 110: equilibri (⇌), reazioni con catalizzatori non specificati o assenti,
+  quelle in due passaggi (serve un intermedio) e quelle che richiedono un organismo vivente. Un composto infiammabile senza combustione in catalogo brucia comunque, e
   quelli organici che si decompongono **carbonizzano** (lo zucchero scaldato lascia carbonio).
 - **Stati fisici reali**: ogni elemento è solido, liquido o gas in base a temperatura di fusione e di ebollizione
   (sublimazione per carbonio e arsenico). Nella scheda «Posa come» si sceglie lo stato (es. azoto liquido, ferro
@@ -367,7 +371,9 @@ gas) e il **Pozzo** cancella tutto ciò che lo tocca, per svuotare vasche e smal
 tocca con la sostanza scelta; il clic destro la svuota), *Linea*, *Rettangolo* ed *Ellisse* trascinando il mouse (con
 «Pieno» o solo contorno, spesso quanto il pennello: ideale per vasche e contenitori). **Annulla** e **Ripeti**
 (`Ctrl + Z` / `Ctrl + Y`, anche i pulsanti in alto) tornano indietro di 12 modifiche, compreso «Svuota» e il caricamento
-di un esempio.
+di un esempio. **Scena** (in alto): *Salva* la scena su un file `.json` (griglia, sostanze e temperature, compressi),
+*Apri* una scena da file (si annulla come le altre modifiche) ed *Esporta* un'immagine PNG; chiudendo la sandbox o l'app,
+o cambiando lingua o grafica, l'ultima scena si salva da sola e torna alla prossima apertura.
 
 Limiti dichiarati: una cella è un «granello», non un atomo; le reazioni, le conducibilità e le velocità sono semplificate
 e scelte per il gioco (una cella di prodotto per ogni cella di reagente, in proporzione ai coefficienti); i prodotti
@@ -381,7 +387,7 @@ equilibri; la radioattività segue il solo isotopo principale. Il motore è un m
 l'elemento che si stava guardando (anche il menu dell'app desktop cambia lingua).
 
 - **Italiano** e **inglese**: tutta l'interfaccia, le schede dei 118 elementi (origine del nome, scoperta, usi, dove si
-  trova, decadimenti), il visualizzatore 3D e l'analisi delle particelle, il laboratorio con le 554 sostanze e le 1349
+  trova, decadimenti), il visualizzatore 3D e l'analisi delle particelle, il laboratorio con le 558 sostanze e le 1349
   reazioni (nomi, descrizioni, condizioni, nomi IUPAC generati), la sandbox con le sue schede e il registro.
   La ricerca trova gli elementi e le sostanze per nome in entrambe le lingue.
 - **«Spiegamelo come se avessi 6 anni»**: italiano con parole semplici e paragoni di tutti i giorni, senza linguaggio
@@ -398,8 +404,8 @@ una spiegazione in tutte e tre le lingue.
 sandbox). Quando è attiva:
 
 - **evidenzia** una parola o una frase, oppure fai **clic destro** su qualsiasi cosa: si apre una scheda che la spiega;
-- riconosce gli **81 termini** di chimica e fisica del glossario (con sinonimi e plurali), le **famiglie**, i **gruppi** e i
-  **periodi**, i **118 elementi** (con «Apri la scheda»), le **554 sostanze** del laboratorio (con la formula), le
+- riconosce gli **88 termini** di chimica e fisica del glossario (con sinonimi e plurali), le **famiglie**, i **gruppi** e i
+  **periodi**, i **118 elementi** (con «Apri la scheda»), le **558 sostanze** del laboratorio (con la formula), le
   **funzioni** dell'interfaccia (ogni pulsante, interruttore e area) e i **tasti**: su un `<kbd>` la scheda dice cosa fa
   quel tasto in ogni parte dell'app;
 - ogni scheda ha le scorciatoie utili e i «Vedi anche»; anche le parole dentro la scheda si possono spiegare (con
@@ -458,7 +464,7 @@ richieste extra), con pagella e sfide a tempo; la rifinitura (G8) ha aggiunto au
 Daniell e contatore del gas.
 
 - **Modalità**: *Carriera* (un anno di scuola in capitoli, vedi sotto) e *Laboratorio libero* (tutti gli strumenti e un
-  magazzino con le 554 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
+  magazzino con le 558 sostanze della libreria come solidi, liquidi o soluzioni 0,1 M e 1 M).
 - **Carriera**: dieci capitoli, ognuno con 4–6 esercitazioni e, da 1 a 8, una verifica in fondo. 0 · comandi e sicurezza (portare l'acqua alla cattedra,
   misurare 50 mL, pesare 2,00 g, pulire il bancone, spegnere un fuoco con l'estintore); 1 · misure e soluzioni
   (soluzione di NaCl, diluizione, densità di un liquido misterioso, soluzione satura, sciroppo al 10 %); 2 · acidi e basi
@@ -536,10 +542,10 @@ Daniell e contatore del gas.
   («Pericolo» / «Attenzione») e i pittogrammi GHS: quelli delle schede di sicurezza per i reagenti dello scaffale, dedotti
   dai dati (indicativi) per le altre sostanze del magazzino. Barattoli e bottiglie sono un po' più grandi del vero (+15 % e
   +10 %), per riconoscerli e prenderli meglio. Sodio, potassio e litio stanno sotto olio di paraffina (la spatola prende
-  il pezzetto di metallo e lascia l'olio). Nel magazzino del Laboratorio libero, oltre alle 554 sostanze, c'è l'**armadio
-  della scuola**: 47 reagenti d'uso (acidi e basi 1 M, sali 0,1 M, candeggina, acqua ossigenata 3 %, metalli, ossidi,
+  il pezzetto di metallo e lascia l'olio). Nel magazzino del Laboratorio libero, oltre alle 558 sostanze, c'è l'**armadio
+  della scuola**: 48 reagenti d'uso (acidi e basi 1 M, sali 0,1 M, candeggina, acqua ossigenata 3 %, metalli, ossidi,
   carbonati…) divisi per famiglia con il colore del tappo. Con lo scaffale, l'armadio, l'alimentatore e le bombole si
-  possono fare 504 reazioni del catalogo (317 con il solo scaffale; `node scripts/coverage.mjs` dà la tabella per gruppo,
+  possono fare 501 reazioni del catalogo (313 con il solo scaffale; `node scripts/coverage.mjs` dà la tabella per gruppo,
   un test ne fissa il minimo).
 - **Strumenti di misura e apparecchi**: il **termometro** e il **pH-metro** si immergono nel recipiente guardato e si
   leggono nella finestrella (il termometro sale piano, il pH-metro si stabilizza in un attimo). La **pipetta graduata**
@@ -558,13 +564,13 @@ Daniell e contatore del gas.
   intorbida l'acqua di calce, il cloro sposta il bromo, l'idrogeno riduce l'ossido di rame caldo); il cloro e l'ammoniaca che
   escono senza un recipiente sotto fanno scattare l'allarme se la cappa è spenta. Sopra i 60 °C un recipiente **scotta**: si prende con la **pinza**, che si
   prende dal suo supporto accanto alla buretta.
-- **Libro «Come si fa»** (sul bancone A e sulla cattedra, oppure `B`, o dalla pausa): le pagine degli strumenti (24),
+- **Libro «Come si fa»** (sul bancone A e sulla cattedra, oppure `B`, o dalla pausa): le pagine degli strumenti (26),
   delle tecniche (15: pesare con la tara, leggere il menisco, diluire, filtrare, titolare, distillare…) e della sicurezza
   (i nove pittogrammi, le sostanze da non mescolare, gli incidenti, i rifiuti), ognuna con la sua vignetta; i 118
   elementi, con come si ottengono davvero (miniera e industria, aria liquida, elettrolisi, sottoprodotto, reattore o
   acceleratore, dalle fonti CRC Handbook e Greenwood ed Earnshaw), le ricette del libro che li liberano e le altre
   reazioni del catalogo che li liberano con il motivo per cui il laboratorio non le fa (un forno oltre i 900 °C, un sale
-  fuso, un gas che il laboratorio non ha…); le **ricette** di 668 reazioni del catalogo, generate dai dati
+  fuso, un gas che il laboratorio non ha…); le **ricette** di 648 reazioni del catalogo, generate dai dati
   (`src/game/book.js`): ingredienti nelle forme che il magazzino dà davvero (solido, liquido, soluzione 0,1 o 1 M, gas
   delle bombole, aria), con le dosi calcolate dalle masse molari per una dose da scuola e un leggero eccesso, lette sulla
   bilancia (0,05 g) e sul cilindro (1 mL); il recipiente; la piastra al livello giusto (calcolato con le perdite di
@@ -589,15 +595,15 @@ Daniell e contatore del gas.
   la luce, l'acqua o un reagente (KMnO₄ e Fe²⁺ vogliono l'acido solforico), oppure il metallo è meno attivo (il rame non
   sposta l'idrogeno dall'HCl: E° = +0,34 V), serve la corrente dell'alimentatore, la soluzione non conduce, o la reazione
   chiede una scarica, raggi UV o vapore. La temperatura accelera le
-  reazioni lente (fattore di Arrhenius, circa il doppio ogni 10 °C). Le entalpie di formazione di 176 sostanze comuni
-  (tabelle NBS e CRC) danno il ΔH° a 1045 reazioni del catalogo invece di 599, anche nel laboratorio molecolare e nella
+  reazioni lente (fattore di Arrhenius, circa il doppio ogni 10 °C). Le entalpie di formazione di 218 sostanze comuni
+  (tabelle NBS e CRC) danno il ΔH° a 1089 reazioni del catalogo invece di 315, anche nel laboratorio molecolare e nella
   sandbox.
 - **Quaderno di laboratorio**: è un oggetto sul bancone, davanti a sinistra (un clic lo apre; anche `N`, la pausa e il
   menu). Ha due schede. Il **tutorial** ha 18 pagine illustrate, dai comandi alle tecniche: il libro, muoversi, prendere e girare,
   versare, pesare, acqua e lavaggio, scaldare, pH e temperatura, pipetta, buretta, filtrare, crogiolo e pinza,
   distillare, elettrolisi, gas dalle bombole, reazioni, sicurezza e rifiuti. Nelle **reazioni scoperte** ogni reazione
   osservata la prima volta resta scritta, tra una partita e l'altra, con l'equazione, il ΔH°, che cosa si è visto e
-  quando; le 1349 pagine sono divise nei 14 gruppi del catalogo con la percentuale scoperta tra le 1231 che il simulatore
+  quando; le 1349 pagine sono divise nei 14 gruppi del catalogo con la percentuale scoperta tra le 1228 che il simulatore
   sa fare, e quelle che non sa fare dicono perché. Ogni pagina si apre nel laboratorio molecolare e, se c'è, nella
   ricetta del libro.
 - **Etichette verso di sé**: un barattolo o una bottiglia preso in mano mostra sempre l'etichetta a chi lo tiene.
@@ -731,7 +737,7 @@ src/
     game-strings.js   testi del simulatore nelle tre lingue
   sandbox/            sandbox degli elementi
     substances.js     sostanze: elementi (dati reali), materiali, prodotti, sostanze della libreria; proprietà per il motore
-    data/compounds.js dati fisici delle 554 sostanze della libreria (fusione, ebollizione, densità, colore, solubilità…)
+    data/compounds.js dati fisici delle 558 sostanze della libreria (fusione, ebollizione, densità, colore, solubilità…)
     chemistry.js      le reazioni del catalogo per il motore: specie, condizioni, catalizzatori, indici per coppia
     world.js          motore: movimento, calore, cambi di stato, soluzioni, combustione, reazioni, elettricità, radioattività, esplosioni
     render.js         disegno: colori, incandescenza, fiamme colorate, scariche, vista termica, bagliore

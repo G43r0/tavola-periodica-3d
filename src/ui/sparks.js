@@ -162,15 +162,28 @@ function T() {
   return texts;
 }
 const L = () => T()[getLang() === 'en' ? 'en' : 'it'];
-const fill = (s, v) => s.replace(/\{(\w+)\}/g, (m, k) => (v[k] ?? m));
+const fill = (s, v) => s.replace(/\{(\w+)\}/g, (m, k) => v[k] ?? m);
 
 const SIG = {
   m: new Set([773133140, 2743789629, 1901496013, 626043772, 504691236, 1226390107, 2323847349, 2171279677]),
-  k: new Set([3476472790, 3510028028, 416018962, 1779338931, 1719429393, 3084510534, 2122001984, 2189112460, 1831366366]),
+  k: new Set([
+    3476472790, 3510028028, 416018962, 1779338931, 1719429393, 3084510534, 2122001984, 2189112460, 1831366366,
+  ]),
   a: 2279835011,
   c: 1188328550,
 };
-const WAVE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+const WAVE = [
+  'ArrowUp',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowLeft',
+  'ArrowRight',
+  'b',
+  'a',
+];
 const PREDICTED = [21, 31, 32, 43];
 
 function loadFound() {
@@ -204,11 +217,12 @@ function spell(word, symbols) {
   return best[s.length];
 }
 
-export function initSparks({ elements, store, table, explain }) {
+export function initSparks({ elements, store, explain }) {
   const found = loadFound();
   const ids = () => T().ids;
   const symbols = new Map(elements.map((el) => [el.symbol.toLowerCase(), el]));
-  const overlayOpen = () => document.querySelector('dialog[open], .sbx:not([hidden]), .lab:not([hidden]), .atom-view:not([hidden])');
+  const overlayOpen = () =>
+    document.querySelector('dialog[open], .sbx:not([hidden]), .lab:not([hidden]), .atom-view:not([hidden])');
 
   function reveal(id, { vars = {}, variant = 'd', point } = {}) {
     const txt = L();
@@ -219,7 +233,10 @@ export function initSparks({ elements, store, table, explain }) {
     const k = found.size;
     const N = ids().length;
     const foot = `${fill(fresh ? txt.foot : txt.again, { k, N })}${k >= N ? ` ${txt.all}` : ''}`;
-    explain.showCard({ kind: 'secret', title: s.t, body: (s[variant] ?? s.d).map((p) => fill(p, { ...vars, k, N })), foot }, point);
+    explain.showCard(
+      { kind: 'secret', title: s.t, body: (s[variant] ?? s.d).map((p) => fill(p, { ...vars, k, N })), foot },
+      point,
+    );
   }
 
   function glow(zs, ms = 9000) {
@@ -251,7 +268,9 @@ export function initSparks({ elements, store, table, explain }) {
       setTimeout(() => ghost.classList.add('is-leaving'), 14000);
       setTimeout(() => ghost.remove(), 15000);
     }
-    reveal('uue', { point: fr ? { x: fr.getBoundingClientRect().right + 40, y: fr.getBoundingClientRect().top } : undefined });
+    reveal('uue', {
+      point: fr ? { x: fr.getBoundingClientRect().right + 40, y: fr.getBoundingClientRect().top } : undefined,
+    });
   });
 
   // ---- il codice più famoso dei videogiochi
@@ -269,7 +288,10 @@ export function initSparks({ elements, store, table, explain }) {
       void c.offsetWidth;
       c.classList.add('spark-wave');
     });
-    setTimeout(() => document.querySelectorAll('.spark-wave').forEach((c) => c.classList.remove('spark-wave')), 118 * 18 + 1200);
+    setTimeout(
+      () => document.querySelectorAll('.spark-wave').forEach((c) => c.classList.remove('spark-wave')),
+      118 * 18 + 1200,
+    );
     reveal('konami');
   });
 
@@ -281,7 +303,10 @@ export function initSparks({ elements, store, table, explain }) {
   window.addEventListener('tp3d:secret', (ev) => {
     if (ev.detail?.id !== 'alchemy') return;
     const n = ev.detail.n ?? 0;
-    reveal('alchemy', { vars: { n: n.toLocaleString(getLang() === 'en' ? 'en-GB' : 'it-IT') }, variant: n ? 'd' : 'none' });
+    reveal('alchemy', {
+      vars: { n: n.toLocaleString(getLang() === 'en' ? 'en-GB' : 'it-IT') },
+      variant: n ? 'd' : 'none',
+    });
   });
   // ---- il modello 3D: l'elettrone inafferrabile
   let catches = [];
@@ -305,7 +330,8 @@ export function initSparks({ elements, store, table, explain }) {
     const txt = L();
     const missing = ids().filter((id) => !found.has(id) && txt.hints[id]);
     const body = [fill(txt.keeper.d[0], { k: found.size, N: ids().length })];
-    if (missing.length) body.push(fill(txt.keeper.hint, { h: txt.hints[missing[Math.floor(Math.random() * missing.length)]] }));
+    if (missing.length)
+      body.push(fill(txt.keeper.hint, { h: txt.hints[missing[Math.floor(Math.random() * missing.length)]] }));
     else body.push(txt.all);
     return { kind: 'secret', title: txt.keeper.t, body };
   });
@@ -337,8 +363,14 @@ export function initSparks({ elements, store, table, explain }) {
         const parts = spell(word, symbols);
         store.set({ query: '' });
         if (parts) {
-          glow(parts.map((el) => el.z), 7000);
-          reveal('spell', { vars: { word, symbols: parts.map((el) => el.symbol).join(' · ') }, point: { x: 40, y: innerHeight - 330 } });
+          glow(
+            parts.map((el) => el.z),
+            7000,
+          );
+          reveal('spell', {
+            vars: { word, symbols: parts.map((el) => el.symbol).join(' · ') },
+            point: { x: 40, y: innerHeight - 330 },
+          });
         } else reveal('spell', { vars: { word }, variant: 'no' });
         return true;
       }

@@ -94,7 +94,7 @@ export default {
   },
   48: {
     name: "Cadmio", cat: "transition", m: "112.41", ox: "+2", cr: 144,
-    iso: "106:1.25; 108:0.89; 110:12.49; 111:12.80; 112:24.13; 113:12.22:8.04e15 a:β-; *114:28.73; 116:7.49",
+    iso: "106:1.25; 108:0.89; 110:12.49; 111:12.80; 112:24.13; 113:12.22:8.04e15 a:β-; *114:28.73; 116:7.49:2.7e19 a:2β-",
     year: "1817", by: "Friedrich Stromeyer (e Karl Samuel Leberecht Hermann)",
     orig: "Dal latino cadmia, antico nome della calamina (minerale di zinco), dal greco kadmeía, legato al mitico Cadmo, fondatore di Tebe.",
     uses: [
@@ -148,7 +148,7 @@ export default {
   },
   52: {
     name: "Tellurio", cat: "metalloid", m: "127.60", ox: "−2, +4, +6", cr: 138,
-    iso: "122:2.55; 124:4.74; 125:7.07; 126:18.84; 128:31.74:2.2e24 a:2β-; *130:34.08:7.9e20 a:2β-",
+    iso: "120:0.09; 122:2.55; 123:0.89; 124:4.74; 125:7.07; 126:18.84; 128:31.74:2.2e24 a:2β-; *130:34.08:7.9e20 a:2β-",
     year: "1782", by: "Franz-Joseph Müller von Reichenstein",
     orig: "Dal latino tellus, «Terra».",
     uses: [
@@ -174,7 +174,7 @@ export default {
   },
   54: {
     name: "Xeno", cat: "noble-gas", m: "131.29", ox: "0, +2, +4, +6", cr: 140,
-    iso: "124:0.095; 126:0.089; 128:1.910; 129:26.401; 130:4.071; 131:21.232; *132:26.909; 134:10.436; 136:8.857:2.17e21 a:2β-",
+    iso: "124:0.095:1.8e22 a:2CE; 126:0.089; 128:1.910; 129:26.401; 130:4.071; 131:21.232; *132:26.909; 134:10.436; 136:8.857:2.17e21 a:2β-",
     year: "1898", by: "William Ramsay e Morris Travers",
     orig: "Dal greco xénos, «straniero».",
     uses: [
@@ -199,8 +199,8 @@ export default {
     occ: "Si estrae principalmente dalla pollucite. Il cesio-137 è un prodotto di fissione rilasciato negli incidenti di Černobyl' e Fukushima.",
   },
   56: {
-    name: "Bario", cat: "alkaline-earth", m: "137.33", ox: "+2", cr: 215,
-    iso: "130:0.106; 132:0.101; 134:2.417; 135:6.592; 136:7.854; 137:11.232; *138:71.698",
+    name: "Bario", ea: 0.145, cat: "alkaline-earth", m: "137.33", ox: "+2", cr: 215,
+    iso: "130:0.106:~1e21 a:2CE; 132:0.101; 134:2.417; 135:6.592; 136:7.854; 137:11.232; *138:71.698",
     year: "1808", by: "Humphry Davy (riconosciuto da Carl Wilhelm Scheele nel 1772)",
     orig: "Dal greco barýs, «pesante», per l'elevata densità della barite (BaSO₄).",
     uses: [

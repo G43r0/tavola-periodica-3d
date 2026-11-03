@@ -66,7 +66,11 @@ function sample(x, y) {
   const t = y / S;
   const base = [14 + (5 - 14) * t, 26 + (10 - 26) * t, 44 + (18 - 44) * t];
   const halo = Math.exp(-((x - C) ** 2 + (y - C) ** 2) / (2 * 150 ** 2)) * 0.35;
-  over(px, base.map((v, k) => v + (CYAN[k] - v) * halo * 0.4), 1);
+  over(
+    px,
+    base.map((v, k) => v + (CYAN[k] - v) * halo * 0.4),
+    1,
+  );
   // bordo luminoso
   if (bg > -7) over(px, CYAN, 0.35);
 
@@ -92,7 +96,10 @@ const raw = Buffer.alloc(S * (S * 4 + 1));
 for (let y = 0; y < S; y++) {
   raw[y * (S * 4 + 1)] = 0; // filtro PNG: nessuno
   for (let x = 0; x < S; x++) {
-    let r = 0, g = 0, b = 0, a = 0;
+    let r = 0,
+      g = 0,
+      b = 0,
+      a = 0;
     for (let sy = 0; sy < SS; sy++) {
       for (let sx = 0; sx < SS; sx++) {
         const p = sample(x + (sx + 0.5) / SS, y + (sy + 0.5) / SS);

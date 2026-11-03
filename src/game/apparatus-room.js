@@ -9,8 +9,18 @@ import { lcdTexture } from './items.js';
 import { CYLINDER_GASES } from './apparatus-logic.js';
 
 /** Gas delle bombole (CYLINDER_GASES): formula e colore dell'ogiva (EN 1089-3). */
-const CYLINDER_LOOK = { O: ['O₂', '#f4f4f0'], H: ['H₂', '#c8161d'], co2: ['CO₂', '#8e959c'], Cl: ['Cl₂', '#f2c014'], nh3: ['NH₃', '#f2c014'] };
-export const GAS_CYLINDERS = CYLINDER_GASES.map((gas) => ({ gas, formula: CYLINDER_LOOK[gas][0], shoulder: CYLINDER_LOOK[gas][1] }));
+const CYLINDER_LOOK = {
+  O: ['O₂', '#f4f4f0'],
+  H: ['H₂', '#c8161d'],
+  co2: ['CO₂', '#8e959c'],
+  Cl: ['Cl₂', '#f2c014'],
+  nh3: ['NH₃', '#f2c014'],
+};
+export const GAS_CYLINDERS = CYLINDER_GASES.map((gas) => ({
+  gas,
+  formula: CYLINDER_LOOK[gas][0],
+  shoulder: CYLINDER_LOOK[gas][1],
+}));
 
 /** Pinza da crogiolo: due bracci d'acciaio incrociati, lunga 0,2 m lungo z (le punte verso −z). */
 export function tongsMesh(steel) {
@@ -36,16 +46,38 @@ export function tongsMesh(steel) {
 export function buildApparatus(h) {
   const { group, physics, fixtures, mesh, box, solid, std, M, BENCH_Y, LAYOUT } = h;
   const Y = BENCH_Y;
-  const rod = (x, z, y0, len, mat = M.steel, r = 0.006) => mesh(new THREE.CylinderGeometry(r, r, len, 10), mat, x, y0 + len / 2, z);
+  const rod = (x, z, y0, len, mat = M.steel, r = 0.006) =>
+    mesh(new THREE.CylinderGeometry(r, r, len, 10), mat, x, y0 + len / 2, z);
   /** Tubo tra due punti (cilindro orientato). */
   const tube = (a, b, r, mat, opts) => {
     const d = new THREE.Vector3().subVectors(b, a);
-    const m = mesh(new THREE.CylinderGeometry(r, r, d.length(), 10, 1, true), mat, (a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2, opts);
+    const m = mesh(
+      new THREE.CylinderGeometry(r, r, d.length(), 10, 1, true),
+      mat,
+      (a.x + b.x) / 2,
+      (a.y + b.y) / 2,
+      (a.z + b.z) / 2,
+      opts,
+    );
     m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
     return m;
   };
-  const glass = new THREE.MeshStandardMaterial({ color: 0xdcecf2, roughness: 0.06, metalness: 0.05, transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide });
-  const water = new THREE.MeshStandardMaterial({ color: 0x9cc8e6, roughness: 0.1, transparent: true, opacity: 0.35, depthWrite: false });
+  const glass = new THREE.MeshStandardMaterial({
+    color: 0xdcecf2,
+    roughness: 0.06,
+    metalness: 0.05,
+    transparent: true,
+    opacity: 0.32,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const water = new THREE.MeshStandardMaterial({
+    color: 0x9cc8e6,
+    roughness: 0.1,
+    transparent: true,
+    opacity: 0.35,
+    depthWrite: false,
+  });
   const graphite = std({ color: 0x2a2b2e, roughness: 0.55 });
   const brass = std({ color: 0xc9a54a, metalness: 0.8, roughness: 0.3 });
 
@@ -83,16 +115,34 @@ export function buildApparatus(h) {
 
   // ------------------------------------------------------------ bagno di ghiaccio
   const ib = LAYOUT.icebath;
-  const icebath = { kind: 'icebath', id: 'icebath', hit: [], zone: { x: ib.x, z: ib.z, hx: 0.115, hz: 0.135, y: Y + 0.006 } };
+  const icebath = {
+    kind: 'icebath',
+    id: 'icebath',
+    hit: [],
+    zone: { x: ib.x, z: ib.z, hx: 0.115, hz: 0.135, y: Y + 0.006 },
+  };
   const tub = std({ color: 0x2f6fd1, roughness: 0.5 });
   const [tw, td, th] = [0.26, 0.3, 0.09];
   icebath.hit.push(solid(tw, 0.006, td, tub, ib.x, Y + 0.003, ib.z, icebath));
-  for (const [w, d, dx, dz] of [[tw, 0.01, 0, -td / 2], [tw, 0.01, 0, td / 2], [0.01, td, -tw / 2, 0], [0.01, td, tw / 2, 0]]) icebath.hit.push(solid(w, th, d, tub, ib.x + dx, Y + th / 2, ib.z + dz, icebath));
+  for (const [w, d, dx, dz] of [
+    [tw, 0.01, 0, -td / 2],
+    [tw, 0.01, 0, td / 2],
+    [0.01, td, -tw / 2, 0],
+    [0.01, td, tw / 2, 0],
+  ])
+    icebath.hit.push(solid(w, th, d, tub, ib.x + dx, Y + th / 2, ib.z + dz, icebath));
   icebath.hit.push(box(tw - 0.02, 0.05, td - 0.02, water, ib.x, Y + 0.031, ib.z, { cast: false }));
   const ice = std({ color: 0xeef6fb, roughness: 0.15, transparent: true, opacity: 0.8 });
   for (let k = 0; k < 16; k++) {
     const s = 0.018 + (k % 4) * 0.004;
-    const cube = mesh(new THREE.BoxGeometry(s, s, s), ice, ib.x + (((k * 37) % 11) / 11 - 0.5) * 0.2, Y + 0.054, ib.z + (((k * 53) % 13) / 13 - 0.5) * 0.24, { cast: false });
+    const cube = mesh(
+      new THREE.BoxGeometry(s, s, s),
+      ice,
+      ib.x + (((k * 37) % 11) / 11 - 0.5) * 0.2,
+      Y + 0.054,
+      ib.z + (((k * 53) % 13) / 13 - 0.5) * 0.24,
+      { cast: false },
+    );
     cube.rotation.set(k * 0.7, k * 1.3, k * 0.4);
   }
   fixtures.push(icebath);
@@ -101,10 +151,18 @@ export function buildApparatus(h) {
   const st = LAYOUT.still;
   const mantle = { kind: 'mantle', id: 'mantle', hit: [], level: 0, T: 295 };
   const mantleMat = std({ color: 0x8b9097, roughness: 0.6, emissive: 0xff3300, emissiveIntensity: 0 });
-  mantle.hit.push(mesh(new THREE.CylinderGeometry(0.068, 0.072, 0.09, seg(24, 12), 1, true), mantleMat, st.x, Y + 0.045, st.z));
+  mantle.hit.push(
+    mesh(new THREE.CylinderGeometry(0.068, 0.072, 0.09, seg(24, 12), 1, true), mantleMat, st.x, Y + 0.045, st.z),
+  );
   mantle.hit.push(mesh(new THREE.TorusGeometry(0.06, 0.009, 8, seg(24, 12)), mantleMat, st.x, Y + 0.09, st.z));
   mantle.hit[1].rotation.x = Math.PI / 2;
-  const cup = mesh(new THREE.SphereGeometry(0.044, seg(20, 10), 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), std({ color: 0xd8cfb8, roughness: 0.9, side: THREE.DoubleSide }), st.x, Y + 0.086, st.z);
+  const cup = mesh(
+    new THREE.SphereGeometry(0.044, seg(20, 10), 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+    std({ color: 0xd8cfb8, roughness: 0.9, side: THREE.DoubleSide }),
+    st.x,
+    Y + 0.086,
+    st.z,
+  );
   mantle.hit.push(cup);
   physics.cylinder(st.x, Y + 0.03, st.z, 0.03, 0.07, mantle);
   mantle.hit.push(solid(0.06, 0.05, 0.1, M.instrument, st.x + 0.1, Y + 0.025, st.z, mantle));
@@ -132,7 +190,12 @@ export function buildApparatus(h) {
   tube(along(0.1), along(0.1).add(new THREE.Vector3(-0.12, 0.02, 0)), 0.004, hoseOut);
   const outlet = { x: st.x, y: Y + 0.158, z: st.z + 0.475 };
   tube(condB, new THREE.Vector3(outlet.x, outlet.y + 0.03, outlet.z), 0.006, glass);
-  tube(new THREE.Vector3(outlet.x, outlet.y + 0.03, outlet.z), new THREE.Vector3(outlet.x, outlet.y, outlet.z), 0.004, glass);
+  tube(
+    new THREE.Vector3(outlet.x, outlet.y + 0.03, outlet.z),
+    new THREE.Vector3(outlet.x, outlet.y, outlet.z),
+    0.004,
+    glass,
+  );
   // sostegno del refrigerante
   rod(st.x - 0.12, st.z + 0.26, Y, 0.38);
   physics.cylinder(st.x - 0.12, Y + 0.19, st.z + 0.26, 0.19, 0.007);
@@ -142,24 +205,58 @@ export function buildApparatus(h) {
   const headY = neckTop + 0.1;
   rod(st.x, st.z, headY, 0.03, M.darkSteel, 0.008);
   const headLcd = lcdTexture(160, 56);
-  const headScreen = mesh(new THREE.PlaneGeometry(0.06, 0.021), new THREE.MeshBasicMaterial({ map: headLcd.tex, toneMapped: false }), st.x + 0.012, headY + 0.045, st.z, { cast: false });
+  const headScreen = mesh(
+    new THREE.PlaneGeometry(0.06, 0.021),
+    new THREE.MeshBasicMaterial({ map: headLcd.tex, toneMapped: false }),
+    st.x + 0.012,
+    headY + 0.045,
+    st.z,
+    { cast: false },
+  );
   headScreen.rotation.y = Math.PI / 2;
   box(0.012, 0.03, 0.068, M.darkSteel, st.x + 0.005, headY + 0.045, st.z);
   mantle.hit.push(headScreen);
 
   // ------------------------------------------------------------ cappa: alimentatore ed elettrodi
   const pw = LAYOUT.power;
-  const power = { kind: 'power', id: 'power', hit: [], volts: 0, current: 0, cell: { x: pw.x - 0.36, z: pw.z, r: 0.045, y: Y } };
+  const power = {
+    kind: 'power',
+    id: 'power',
+    hit: [],
+    volts: 0,
+    current: 0,
+    cell: { x: pw.x - 0.36, z: pw.z, r: 0.045, y: Y },
+  };
   power.hit.push(solid(0.16, 0.1, 0.2, std({ color: 0x3b4450, roughness: 0.5 }), pw.x, Y + 0.05, pw.z, power));
   const pLcd = lcdTexture(320, 64);
-  const pScreen = mesh(new THREE.PlaneGeometry(0.13, 0.026), new THREE.MeshBasicMaterial({ map: pLcd.tex, toneMapped: false }), pw.x - 0.081, Y + 0.068, pw.z, { cast: false });
+  const pScreen = mesh(
+    new THREE.PlaneGeometry(0.13, 0.026),
+    new THREE.MeshBasicMaterial({ map: pLcd.tex, toneMapped: false }),
+    pw.x - 0.081,
+    Y + 0.068,
+    pw.z,
+    { cast: false },
+  );
   pScreen.rotation.y = -Math.PI / 2;
   power.hit.push(pScreen);
-  const pKnob = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.012, 14), M.black, pw.x - 0.086, Y + 0.028, pw.z + 0.05);
+  const pKnob = mesh(
+    new THREE.CylinderGeometry(0.012, 0.012, 0.012, 14),
+    M.black,
+    pw.x - 0.086,
+    Y + 0.028,
+    pw.z + 0.05,
+  );
   pKnob.rotation.z = Math.PI / 2;
   power.hit.push(pKnob);
   power.knob = pKnob;
-  const terminals = [[M.red, -0.03], [M.black, 0.03]].map(([mat, dz]) => mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.014, 10), mat, pw.x - 0.086, Y + 0.028, pw.z - 0.04 + dz).rotateZ(Math.PI / 2));
+  const terminals = [
+    [M.red, -0.03],
+    [M.black, 0.03],
+  ].map(([mat, dz]) =>
+    mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.014, 10), mat, pw.x - 0.086, Y + 0.028, pw.z - 0.04 + dz).rotateZ(
+      Math.PI / 2,
+    ),
+  );
   power.hit.push(...terminals);
   // sostegno con la barra degli elettrodi di grafite, sopra il punto in cui va il becher
   const c = power.cell;
@@ -167,11 +264,27 @@ export function buildApparatus(h) {
   physics.cylinder(pw.x - 0.16, Y + 0.15, pw.z, 0.15, 0.007);
   box(0.21, 0.012, 0.012, M.darkSteel, c.x + 0.095, Y + 0.24, c.z);
   box(0.018, 0.016, 0.05, std({ color: 0xe8e6df, roughness: 0.5 }), c.x, Y + 0.24, c.z);
-  for (const dz of [-0.013, 0.013]) mesh(new THREE.CylinderGeometry(0.0032, 0.0032, 0.225, 10), graphite, c.x, Y + 0.012 + 0.1125, c.z + dz, { cast: false });
-  power.electrodes = [{ x: c.x, z: c.z - 0.013 }, { x: c.x, z: c.z + 0.013 }];
+  for (const dz of [-0.013, 0.013])
+    mesh(new THREE.CylinderGeometry(0.0032, 0.0032, 0.225, 10), graphite, c.x, Y + 0.012 + 0.1125, c.z + dz, {
+      cast: false,
+    });
+  power.electrodes = [
+    { x: c.x, z: c.z - 0.013 },
+    { x: c.x, z: c.z + 0.013 },
+  ];
   // fili dai morsetti agli elettrodi
-  tube(new THREE.Vector3(pw.x - 0.09, Y + 0.028, pw.z - 0.07), new THREE.Vector3(c.x, Y + 0.25, c.z - 0.013), 0.0018, M.red);
-  tube(new THREE.Vector3(pw.x - 0.09, Y + 0.028, pw.z - 0.01), new THREE.Vector3(c.x, Y + 0.25, c.z + 0.013), 0.0018, M.black);
+  tube(
+    new THREE.Vector3(pw.x - 0.09, Y + 0.028, pw.z - 0.07),
+    new THREE.Vector3(c.x, Y + 0.25, c.z - 0.013),
+    0.0018,
+    M.red,
+  );
+  tube(
+    new THREE.Vector3(pw.x - 0.09, Y + 0.028, pw.z - 0.01),
+    new THREE.Vector3(c.x, Y + 0.25, c.z + 0.013),
+    0.0018,
+    M.black,
+  );
   power.lcd = pLcd;
   fixtures.push(power);
 
@@ -184,7 +297,15 @@ export function buildApparatus(h) {
     const z = zs[i];
     const f = { kind: 'gas', id: `gas-${g.gas}`, gas: g.gas, formula: g.formula, hit: [], open: false };
     f.hit.push(mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.36, seg(20, 12)), body, gr.x, Y + 0.18, z));
-    f.hit.push(mesh(new THREE.SphereGeometry(0.034, seg(20, 12), 8, 0, Math.PI * 2, 0, Math.PI / 2), std({ color: g.shoulder, roughness: 0.4 }), gr.x, Y + 0.36, z));
+    f.hit.push(
+      mesh(
+        new THREE.SphereGeometry(0.034, seg(20, 12), 8, 0, Math.PI * 2, 0, Math.PI / 2),
+        std({ color: g.shoulder, roughness: 0.4 }),
+        gr.x,
+        Y + 0.36,
+        z,
+      ),
+    );
     physics.cylinder(gr.x, Y + 0.2, z, 0.2, 0.035, f);
     // valvola con il volantino (gira quando si apre)
     f.hit.push(mesh(new THREE.CylinderGeometry(0.008, 0.01, 0.05, 10), brass, gr.x, Y + 0.415, z));
@@ -192,55 +313,115 @@ export function buildApparatus(h) {
     f.hit.push(wheel);
     f.wheel = wheel;
     // fascia con la formula, rivolta verso chi guarda dalla cappa (−x)
-    const lbl = mesh(new THREE.PlaneGeometry(0.05, 0.05), new THREE.MeshStandardMaterial({ map: h.canvasTexture(128, 128, (cg, w, hh) => {
-      cg.fillStyle = '#ffffff';
-      cg.fillRect(0, 0, w, hh);
-      cg.fillStyle = g.shoulder === '#f4f4f0' ? '#1d2733' : g.shoulder;
-      cg.fillRect(0, 0, w, 18);
-      cg.fillStyle = '#10161e';
-      cg.font = '700 52px "IBM Plex Sans", sans-serif';
-      cg.textAlign = 'center';
-      cg.fillText(g.formula, w / 2, 84);
-    }), roughness: 0.7 }), gr.x - 0.0345, Y + 0.24, z, { cast: false });
+    const lbl = mesh(
+      new THREE.PlaneGeometry(0.05, 0.05),
+      new THREE.MeshStandardMaterial({
+        map: h.canvasTexture(128, 128, (cg, w, hh) => {
+          cg.fillStyle = '#ffffff';
+          cg.fillRect(0, 0, w, hh);
+          cg.fillStyle = g.shoulder === '#f4f4f0' ? '#1d2733' : g.shoulder;
+          cg.fillRect(0, 0, w, 18);
+          cg.fillStyle = '#10161e';
+          cg.font = '700 52px "IBM Plex Sans", sans-serif';
+          cg.textAlign = 'center';
+          cg.fillText(g.formula, w / 2, 84);
+        }),
+        roughness: 0.7,
+      }),
+      gr.x - 0.0345,
+      Y + 0.24,
+      z,
+      { cast: false },
+    );
     lbl.rotation.y = -Math.PI / 2;
     f.hit.push(lbl);
     // tubo dalla valvola al collettore
-    tube(new THREE.Vector3(gr.x, Y + 0.43, z), new THREE.Vector3(gr.x - 0.05, Y + 0.48, z), 0.003, std({ color: 0xd8dde2, roughness: 0.4 }));
+    tube(
+      new THREE.Vector3(gr.x, Y + 0.43, z),
+      new THREE.Vector3(gr.x - 0.05, Y + 0.48, z),
+      0.003,
+      std({ color: 0xd8dde2, roughness: 0.4 }),
+    );
     fixtures.push(f);
     return f;
   });
   const pipe = std({ color: 0xd8dde2, roughness: 0.4 });
-  tube(new THREE.Vector3(gr.x - 0.05, Y + 0.48, zs[0] - 0.01), new THREE.Vector3(gr.x - 0.05, Y + 0.48, zs[zs.length - 1] + 0.01), 0.004, pipe);
-  tube(new THREE.Vector3(gr.x - 0.05, Y + 0.48, gr.outZ), new THREE.Vector3(gasOutlet.x, Y + 0.48, gr.outZ), 0.004, pipe);
-  tube(new THREE.Vector3(gasOutlet.x, Y + 0.48, gr.outZ), new THREE.Vector3(gasOutlet.x, gasOutlet.y, gr.outZ), 0.003, glass);
+  tube(
+    new THREE.Vector3(gr.x - 0.05, Y + 0.48, zs[0] - 0.01),
+    new THREE.Vector3(gr.x - 0.05, Y + 0.48, zs[zs.length - 1] + 0.01),
+    0.004,
+    pipe,
+  );
+  tube(
+    new THREE.Vector3(gr.x - 0.05, Y + 0.48, gr.outZ),
+    new THREE.Vector3(gasOutlet.x, Y + 0.48, gr.outZ),
+    0.004,
+    pipe,
+  );
+  tube(
+    new THREE.Vector3(gasOutlet.x, Y + 0.48, gr.outZ),
+    new THREE.Vector3(gasOutlet.x, gasOutlet.y, gr.outZ),
+    0.003,
+    glass,
+  );
 
   // ------------------------------------------------------------ pila Daniell: due posti, voltmetro, ponte salino
   // Nei due posti segnati vanno due becher, ognuno con il suo metallo e una soluzione dei suoi ioni (Zn in ZnSO₄, Cu in
   // CuSO₄); i coccodrilli del voltmetro pendono sopra i posti, il ponte salino si mette e si toglie con un clic.
   const ce = LAYOUT.cell;
-  const spots = [{ x: ce.x, z: ce.z - 0.17, r: 0.06, y: Y }, { x: ce.x, z: ce.z + 0.17, r: 0.06, y: Y }];
+  const spots = [
+    { x: ce.x, z: ce.z - 0.17, r: 0.06, y: Y },
+    { x: ce.x, z: ce.z + 0.17, r: 0.06, y: Y },
+  ];
   const ringMat = new THREE.MeshBasicMaterial({ color: 0xe8e6df, transparent: true, opacity: 0.7, depthWrite: false });
   for (const s of spots) {
     const ring = mesh(new THREE.RingGeometry(0.045, 0.052, 32), ringMat, s.x, Y + 0.0008, s.z, { cast: false });
     ring.rotation.x = -Math.PI / 2;
   }
-  const voltmeter = { kind: 'voltmeter', id: 'voltmeter', hit: [], spots, reading: { volts: 0, plus: null, why: 'empty' } };
+  const voltmeter = {
+    kind: 'voltmeter',
+    id: 'voltmeter',
+    hit: [],
+    spots,
+    reading: { volts: 0, plus: null, why: 'empty' },
+  };
   const vx = ce.x - 0.27;
   voltmeter.hit.push(solid(0.12, 0.09, 0.17, std({ color: 0xd9a21b, roughness: 0.5 }), vx, Y + 0.045, ce.z, voltmeter));
   const vLcd = lcdTexture(320, 64);
-  const vScreen = mesh(new THREE.PlaneGeometry(0.12, 0.024), new THREE.MeshBasicMaterial({ map: vLcd.tex, toneMapped: false }), vx + 0.0605, Y + 0.062, ce.z, { cast: false });
+  const vScreen = mesh(
+    new THREE.PlaneGeometry(0.12, 0.024),
+    new THREE.MeshBasicMaterial({ map: vLcd.tex, toneMapped: false }),
+    vx + 0.0605,
+    Y + 0.062,
+    ce.z,
+    { cast: false },
+  );
   vScreen.rotation.y = Math.PI / 2;
   voltmeter.hit.push(vScreen);
   voltmeter.lcd = vLcd;
   // morsetti e fili con i coccodrilli sopra i due posti (rosso verso sud, nero verso nord)
-  for (const [mat, s, dz] of [[M.black, spots[0], -0.04], [M.red, spots[1], 0.04]]) {
-    voltmeter.hit.push(mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.012, 10), mat, vx + 0.064, Y + 0.025, ce.z + dz).rotateZ(Math.PI / 2));
+  for (const [mat, s, dz] of [
+    [M.black, spots[0], -0.04],
+    [M.red, spots[1], 0.04],
+  ]) {
+    voltmeter.hit.push(
+      mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.012, 10), mat, vx + 0.064, Y + 0.025, ce.z + dz).rotateZ(
+        Math.PI / 2,
+      ),
+    );
     const clip = new THREE.Vector3(s.x - 0.03, Y + 0.2, s.z);
     tube(new THREE.Vector3(vx + 0.07, Y + 0.025, ce.z + dz), new THREE.Vector3(vx + 0.12, Y + 0.24, s.z), 0.0018, mat);
     tube(new THREE.Vector3(vx + 0.12, Y + 0.24, s.z), clip, 0.0018, mat);
     box(0.012, 0.02, 0.008, mat, clip.x, clip.y - 0.01, clip.z);
     // elettrodo: la striscia di metallo che il coccodrillo tiene nel becher (il metallo vero è quello nel becher)
-    mesh(new THREE.BoxGeometry(0.003, 0.17, 0.016), std({ color: 0x9aa0a8, metalness: 0.8, roughness: 0.35 }), clip.x, Y + 0.105, clip.z, { cast: false });
+    mesh(
+      new THREE.BoxGeometry(0.003, 0.17, 0.016),
+      std({ color: 0x9aa0a8, metalness: 0.8, roughness: 0.35 }),
+      clip.x,
+      Y + 0.105,
+      clip.z,
+      { cast: false },
+    );
   }
   // ponte salino: un tubo a U di vetro pieno di gel bianco (KNO₃ in agar); dentro i becher o appoggiato sul bancone
   const gel = std({ color: 0xf2f0e6, roughness: 0.6, transparent: true, opacity: 0.85 });
@@ -252,8 +433,15 @@ export function buildApparatus(h) {
   const topB = new THREE.Vector3(0, 0.17, half - 0.012);
   const legB = new THREE.Vector3(0, 0.035, half - 0.012);
   const bridgeMeshes = [];
-  for (const [a, b] of [[legA, topA], [topA, topB], [topB, legB]]) {
-    for (const [r, mat] of [[0.007, glass], [0.0045, gel]]) {
+  for (const [a, b] of [
+    [legA, topA],
+    [topA, topB],
+    [topB, legB],
+  ]) {
+    for (const [r, mat] of [
+      [0.007, glass],
+      [0.0045, gel],
+    ]) {
       const d = new THREE.Vector3().subVectors(b, a);
       const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 10, 1, true), mat);
       m.position.copy(a).add(b).multiplyScalar(0.5);
@@ -280,13 +468,27 @@ export function buildApparatus(h) {
   // ------------------------------------------------------------ contatore del gas del Bunsen
   const gm = LAYOUT.gasMeter;
   const gasMeter = { kind: 'gasMeter', id: 'gasMeter', hit: [], mol: 0 };
-  gasMeter.hit.push(solid(0.09, 0.07, 0.06, std({ color: 0x8a9099, roughness: 0.45, metalness: 0.3 }), gm.x, Y + 0.035, gm.z, gasMeter));
+  gasMeter.hit.push(
+    solid(0.09, 0.07, 0.06, std({ color: 0x8a9099, roughness: 0.45, metalness: 0.3 }), gm.x, Y + 0.035, gm.z, gasMeter),
+  );
   const gLcd = lcdTexture(256, 64);
-  const gScreen = mesh(new THREE.PlaneGeometry(0.07, 0.0175), new THREE.MeshBasicMaterial({ map: gLcd.tex, toneMapped: false }), gm.x, Y + 0.045, gm.z + 0.0305, { cast: false });
+  const gScreen = mesh(
+    new THREE.PlaneGeometry(0.07, 0.0175),
+    new THREE.MeshBasicMaterial({ map: gLcd.tex, toneMapped: false }),
+    gm.x,
+    Y + 0.045,
+    gm.z + 0.0305,
+    { cast: false },
+  );
   gasMeter.hit.push(gScreen);
   gasMeter.lcd = gLcd;
   // tubo rosso dal contatore al rubinetto del Bunsen
-  tube(new THREE.Vector3(gm.x - 0.045, Y + 0.012, gm.z), new THREE.Vector3(LAYOUT.bunsen.x + 0.05, Y + 0.008, LAYOUT.bunsen.z + 0.02), 0.006, M.red);
+  tube(
+    new THREE.Vector3(gm.x - 0.045, Y + 0.012, gm.z),
+    new THREE.Vector3(LAYOUT.bunsen.x + 0.05, Y + 0.008, LAYOUT.bunsen.z + 0.02),
+    0.006,
+    M.red,
+  );
   fixtures.push(gasMeter);
 
   const update = (dt) => {

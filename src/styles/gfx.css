@@ -71,11 +71,17 @@ html[data-gfx='pro'] .cell:not(.is-selected)::after {
   width: calc(var(--cell) * 0.36);
   height: calc(var(--cell) * 0.36);
   border-radius: 50%;
-  background: var(--spec) center / 118% no-repeat, #0b111a;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 6px rgba(0, 0, 0, 0.55);
+  background:
+    var(--spec) center / 118% no-repeat,
+    #0b111a;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 2px 6px rgba(0, 0, 0, 0.55);
   opacity: 0;
   transform: scale(0.6);
-  transition: opacity 500ms var(--ease-out), transform 500ms var(--ease-out);
+  transition:
+    opacity 500ms var(--ease-out),
+    transform 500ms var(--ease-out);
   pointer-events: none;
 }
 .cell.has-spec .cell__spec {
@@ -90,5 +96,7 @@ html[data-gfx='pro'] .cell:not(.is-selected)::after {
   height: 100%;
   border-radius: var(--r-lg);
   object-fit: cover;
-  box-shadow: 0 0 0 1px var(--line-2), 0 10px 30px rgba(0, 0, 0, 0.45);
+  box-shadow:
+    0 0 0 1px var(--line-2),
+    0 10px 30px rgba(0, 0, 0, 0.45);
 }

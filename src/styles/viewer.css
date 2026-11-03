@@ -100,7 +100,11 @@
   width: 48px;
   height: 48px;
   padding: 4px 6px;
-  background: linear-gradient(160deg, color-mix(in oklab, var(--c) 30%, var(--bg-3)), color-mix(in oklab, var(--c) 8%, var(--bg-1)));
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--c) 30%, var(--bg-3)),
+    color-mix(in oklab, var(--c) 8%, var(--bg-1))
+  );
   border: 1px solid var(--c);
   border-radius: 10px;
   box-shadow: 0 0 22px color-mix(in oklab, var(--c) 35%, transparent);
@@ -164,7 +168,9 @@
   border-radius: var(--r-lg);
   backdrop-filter: blur(14px);
   box-shadow: var(--shadow-lg);
-  transition: transform var(--t-slow) var(--ease-out), opacity var(--t-med);
+  transition:
+    transform var(--t-slow) var(--ease-out),
+    opacity var(--t-med);
 }
 .atom-view.panel-closed .av-panel {
   transform: translateX(calc(100% + 24px));
@@ -209,7 +215,9 @@
   border: 1px solid var(--line-2);
   border-radius: 8px;
   cursor: pointer;
-  transition: border-color var(--t-fast), background var(--t-fast);
+  transition:
+    border-color var(--t-fast),
+    background var(--t-fast);
 }
 .iso-chip b {
   font-size: 15px;
@@ -242,8 +250,12 @@
 .av-iso-info .eq {
   font-family: var(--font-mono);
 }
-.av-iso-info .p { color: var(--proton); }
-.av-iso-info .n { color: var(--neutron); }
+.av-iso-info .p {
+  color: var(--proton);
+}
+.av-iso-info .n {
+  color: var(--neutron);
+}
 
 /* pulsante nucleo */
 .av-btn {
@@ -260,7 +272,10 @@
   border: 1px solid var(--line-2);
   border-radius: var(--r-md);
   cursor: pointer;
-  transition: border-color var(--t-fast), background var(--t-fast), color var(--t-fast);
+  transition:
+    border-color var(--t-fast),
+    background var(--t-fast),
+    color var(--t-fast);
 }
 .av-btn kbd {
   margin-left: auto;
@@ -327,7 +342,9 @@
   background: var(--bg-3);
   border: 1px solid var(--line-2);
   border-radius: 10px;
-  transition: background var(--t-fast), border-color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast);
 }
 .switch__track::after {
   content: '';
@@ -338,7 +355,9 @@
   height: 12px;
   background: var(--text-2);
   border-radius: 50%;
-  transition: transform var(--t-med) var(--ease-out), background var(--t-fast);
+  transition:
+    transform var(--t-med) var(--ease-out),
+    background var(--t-fast);
 }
 .switch input:checked + .switch__track {
   background: color-mix(in oklab, var(--accent) 25%, var(--bg-3));
@@ -417,7 +436,10 @@
   border: 1px solid var(--line);
   border-radius: 6px;
   cursor: pointer;
-  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+  transition:
+    color var(--t-fast),
+    border-color var(--t-fast),
+    background var(--t-fast);
 }
 .orb-chip sub {
   font-size: 9.5px;
@@ -437,7 +459,9 @@
 }
 /* orbitale dell'elettrone selezionato */
 .orb-chip.is-focus {
-  box-shadow: 0 0 0 2px var(--bg-1), 0 0 0 3px var(--text-0);
+  box-shadow:
+    0 0 0 2px var(--bg-1),
+    0 0 0 3px var(--text-0);
 }
 .av-orb-legend {
   display: flex;
@@ -509,9 +533,18 @@
   height: 10px;
   border-radius: 50%;
 }
-.dot--p { background: var(--proton); box-shadow: 0 0 8px var(--proton); }
-.dot--n { background: var(--neutron); box-shadow: 0 0 8px var(--neutron); }
-.dot--e { background: var(--electron); box-shadow: 0 0 8px var(--electron); }
+.dot--p {
+  background: var(--proton);
+  box-shadow: 0 0 8px var(--proton);
+}
+.dot--n {
+  background: var(--neutron);
+  box-shadow: 0 0 8px var(--neutron);
+}
+.dot--e {
+  background: var(--electron);
+  box-shadow: 0 0 8px var(--electron);
+}
 .av-scale {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -576,12 +609,24 @@
   color: var(--text-0);
   font-weight: 600;
 }
-.av-tip b.p { color: var(--proton); }
-.av-tip b.n { color: var(--neutron); }
-.av-tip b.e { color: var(--electron); }
-.av-tip b.q-r { color: #ff7482; }
-.av-tip b.q-g { color: #5ff59e; }
-.av-tip b.q-b { color: #79a9ff; }
+.av-tip b.p {
+  color: var(--proton);
+}
+.av-tip b.n {
+  color: var(--neutron);
+}
+.av-tip b.e {
+  color: var(--electron);
+}
+.av-tip b.q-r {
+  color: #ff7482;
+}
+.av-tip b.q-g {
+  color: #5ff59e;
+}
+.av-tip b.q-b {
+  color: #79a9ff;
+}
 .av-tip small {
   color: var(--text-2);
 }
@@ -760,8 +805,12 @@
   font-family: var(--font-mono);
   color: var(--text-0);
 }
-.pp-eq .p { color: var(--proton); }
-.pp-eq .n { color: var(--neutron); }
+.pp-eq .p {
+  color: var(--proton);
+}
+.pp-eq .n {
+  color: var(--neutron);
+}
 .pp-note,
 .pp-hint {
   font-size: 11.5px;
@@ -798,13 +847,30 @@
   color: var(--text-0);
   border-radius: 50%;
 }
-.q--r { background: color-mix(in oklab, #ff4b5c 70%, black); box-shadow: 0 0 8px rgba(255, 75, 92, 0.5); }
-.q--g { background: color-mix(in oklab, #3ef08a 55%, black); box-shadow: 0 0 8px rgba(62, 240, 138, 0.45); }
-.q--b { background: color-mix(in oklab, #4d8dff 65%, black); box-shadow: 0 0 8px rgba(77, 141, 255, 0.5); }
-.cc { font-weight: 600; }
-.cc--r { color: #ff7482; }
-.cc--g { color: #5ff59e; }
-.cc--b { color: #79a9ff; }
+.q--r {
+  background: color-mix(in oklab, #ff4b5c 70%, black);
+  box-shadow: 0 0 8px rgba(255, 75, 92, 0.5);
+}
+.q--g {
+  background: color-mix(in oklab, #3ef08a 55%, black);
+  box-shadow: 0 0 8px rgba(62, 240, 138, 0.45);
+}
+.q--b {
+  background: color-mix(in oklab, #4d8dff 65%, black);
+  box-shadow: 0 0 8px rgba(77, 141, 255, 0.5);
+}
+.cc {
+  font-weight: 600;
+}
+.cc--r {
+  color: #ff7482;
+}
+.cc--g {
+  color: #5ff59e;
+}
+.cc--b {
+  color: #79a9ff;
+}
 .pp-table {
   width: 100%;
   margin-top: 10px;

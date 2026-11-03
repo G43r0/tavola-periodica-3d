@@ -1,3 +1,4 @@
+// @ts-check
 // La Carriera: un anno scolastico in capitoli, con le esercitazioni scritte come dati (data/career-exercises.js).
 // Questo modulo puro (niente Three.js né DOM) sa leggere quei dati: misure sulle miscele e sullo stato del banco,
 // condizioni dei passi, valutazione del preparato con le tolleranze della chimica realistica e semplificata, risposte,
@@ -59,7 +60,8 @@ export const REP_TITLES = [
 
 // ------------------------------------------------------------------ misure
 
-const pickMode = (v, mode) => (v !== null && typeof v === 'object' && !Array.isArray(v) && ('real' in v || 'simple' in v) ? v[mode] ?? v.real : v);
+const pickMode = (v, mode) =>
+  v !== null && typeof v === 'object' && !Array.isArray(v) && ('real' in v || 'simple' in v) ? (v[mode] ?? v.real) : v;
 const sidOf = (ctx, key) => ctx.id(key) || key;
 
 /** Solubilità (g di soluto anidro in 100 g d'acqua) alla temperatura T (K), interpolata nella tabella. */
@@ -78,7 +80,10 @@ export function solubilityAt(key, T) {
   return tab[tab.length - 1][1];
 }
 
-/** Grammi di soluto non sciolto (sul fondo). */
+/**
+ * Grammi di soluto non sciolto (sul fondo).
+ * @param {import('../types').Mixture} m
+ */
 function undissolvedGrams(m, key) {
   const ctx = m.ctx;
   const sid = sidOf(ctx, key);
@@ -86,7 +91,10 @@ function undissolvedGrams(m, key) {
   return Math.max(0, (mol - (m.d.get(sid) ?? 0)) * (typeof sid === 'string' ? 0 : ctx.molar(sid)));
 }
 
-/** Grammi di tutti i solidi non sciolti. */
+/**
+ * Grammi di tutti i solidi non sciolti.
+ * @param {import('../types').Mixture} m
+ */
 function solidGrams(m) {
   const ctx = m.ctx;
   let g = 0;
@@ -98,7 +106,11 @@ function solidGrams(m) {
   return g;
 }
 
-/** Sostanze estranee (oltre all'acqua e a quelle ammesse) e sali dell'acqua del rubinetto. */
+/**
+ * Sostanze estranee (oltre all'acqua e a quelle ammesse) e sali dell'acqua del rubinetto.
+ * @param {import('../types').Mixture} m
+ * @param {string[]} allowed
+ */
 export function foreign(m, allowed) {
   const ctx = m.ctx;
   const ok = new Set(['water', ...allowed].map((k) => sidOf(ctx, k)));
@@ -118,6 +130,9 @@ export function foreign(m, allowed) {
  * 'volume' (mL) 'mass' (g) 'ph' 'tempC' 'peakC' (la temperatura più alta raggiunta, m.peakT) 'pink' 'solids' (g non sciolti) 'undissolved:K' (g) 'dissolvedFrac:K'
  * 'massPct:K' 'saturation:K' (1 = satura) 'density' (g/mL) 'impure:K1,K2' (sostanze estranee) 'tap' (0/1)
  * 'leftover:P:R1/c1,R2/c2' (reagente rimasto rispetto al prodotto, 0 = nessun eccesso).
+ * @param {import('../types').Mixture | null | undefined} m
+ * @param {string} spec
+ * @returns {number}
  */
 export function mixMeasure(m, spec) {
   if (!m) return 0;
@@ -147,7 +162,7 @@ export function mixMeasure(m, spec) {
     case 'peakC':
       return (m.peakT ?? m.T) - 273.15;
     case 'pink':
-      return m.isEmpty() ? 0 : m.appearance().pink ?? 0;
+      return m.isEmpty() ? 0 : (m.appearance().pink ?? 0);
     case 'solids':
       return solidGrams(m);
     case 'undissolved':
@@ -177,10 +192,14 @@ export function mixMeasure(m, spec) {
       const [p, list] = arg.split(':');
       const made = m.amount(sidOf(ctx, p));
       if (made <= 0) return 1;
-      return Math.max(...list.split(',').map((x) => {
-        const [k, c] = x.split('/');
-        return m.amount(sidOf(ctx, k)) / Number(c || 1);
-      })) / made;
+      return (
+        Math.max(
+          ...list.split(',').map((x) => {
+            const [k, c] = x.split('/');
+            return m.amount(sidOf(ctx, k)) / Number(c || 1);
+          }),
+        ) / made
+      );
     }
     default:
       throw new Error(`misura sconosciuta: ${spec}`);
@@ -191,6 +210,8 @@ export function mixMeasure(m, spec) {
  * Valore di una misura sullo stato del banco (spec che comincia con «$»): '$delivered' '$answered' '$ev:NOME' '$gas:K'
  * (moli uscite dai recipienti; s.gas è per id della sostanza e s.ctx la chimica) '$rx:ID' '$flame' '$bunsen' '$fires' '$mess' '$dirtyLeft' '$cleanFrac' '$held' (tipo dell'oggetto in mano)
  * '$tray' (recipienti sul vassoio) '$phRead' (campioni misurati) '$fireTime' (s per spegnere il fuoco).
+ * @param {import('../types').Snapshot} s
+ * @param {string} spec
  */
 export function stateMeasure(s, spec) {
   const i = spec.indexOf(':');
@@ -253,6 +274,9 @@ function containerOk(c, conds, mode) {
 /**
  * Condizione sullo stato del banco: { m: '$…' } sullo stato, { m: '…' } sul preparato consegnato, { any: [...] } un
  * contenitore che soddisfa tutto, { count: [...], min } quanti, { none: [...] } nessuno, { all } e { or }.
+ * @param {import('../types').Snapshot} s
+ * @param {import('../types').Condition} c
+ * @param {import('../types').ChemMode} [mode]
  */
 export function check(s, c, mode = s.mode) {
   if (c.all) return c.all.every((x) => check(s, x, mode));
@@ -265,7 +289,13 @@ export function check(s, c, mode = s.mode) {
   return within(v, c, mode);
 }
 
-/** Testi della lavagna e dei passi: i passi fatti restano fatti (latch) e uno dopo completa anche quelli prima. */
+/**
+ * Testi della lavagna e dei passi: i passi fatti restano fatti (latch) e uno dopo completa anche quelli prima.
+ * @param {import('../types').Exercise} ex
+ * @param {import('../types').Snapshot} s
+ * @param {import('../types').ChemMode} mode
+ * @param {boolean[]} [prev]
+ */
 export function stepsDone(ex, s, mode, prev = []) {
   const done = ex.steps.map((st, i) => Boolean(prev[i]) || check(s, st.when, mode));
   const last = done.lastIndexOf(true);
@@ -287,18 +317,32 @@ function shuffle(list, rand) {
 /**
  * Campioni incogniti di un'esercitazione: ex.samples = { pool: [{ content, answer }], count, oneOfEach? }. Con
  * oneOfEach ce n'è uno per ogni risposta possibile, in ordine casuale.
+ * @param {import('../types').Exercise} ex
+ * @param {() => number} [rand]
  */
 export function pickSamples(ex, rand = Math.random) {
   const sp = ex.samples;
   if (!sp) return [];
   if (sp.oneOfEach) {
     const answers = [...new Set(sp.pool.map((p) => p.answer))];
-    return shuffle(answers.map((a) => shuffle(sp.pool.filter((p) => p.answer === a), rand)[0]), rand).slice(0, sp.count ?? answers.length);
+    return shuffle(
+      answers.map(
+        (a) =>
+          shuffle(
+            sp.pool.filter((p) => p.answer === a),
+            rand,
+          )[0],
+      ),
+      rand,
+    ).slice(0, sp.count ?? answers.length);
   }
   return shuffle(sp.pool, rand).slice(0, sp.count ?? 1);
 }
 
-/** Risposte possibili (valori) per un'esercitazione con risposte a scelta. */
+/**
+ * Risposte possibili (valori) per un'esercitazione con risposte a scelta.
+ * @param {import('../types').Exercise} ex
+ */
 export function answerOptions(ex) {
   const a = ex.answers;
   if (!a || a.type !== 'choice') return [];
@@ -306,7 +350,13 @@ export function answerOptions(ex) {
   return a.options;
 }
 
-/** Valore giusto della risposta i: la risposta del campione, un valore fisso o una misura sul campione. */
+/**
+ * Valore giusto della risposta i: la risposta del campione, un valore fisso o una misura sul campione.
+ * @param {import('../types').Exercise} ex
+ * @param {import('../types').Unknown[]} unknowns
+ * @param {number} i
+ * @returns {any} un numero o un testo, secondo `ex.answers.type`
+ */
 export function rightAnswer(ex, unknowns, i) {
   const a = ex.answers;
   if (a.value !== undefined) return a.value;
@@ -315,22 +365,42 @@ export function rightAnswer(ex, unknowns, i) {
   return u?.answer;
 }
 
-/** Punteggio di una risposta: 1 o 0 a scelta, con la tolleranza (relativa) per un numero. */
+/**
+ * Numero scritto in una risposta: con la virgola o il punto, anche seguito dall'unità («1,09 g/mL», «16 mL»);
+ * NaN se non c'è un numero.
+ */
+export function answerNumber(text) {
+  const m = /[-−]?\d+(?:[.,]\d+)?(?:e[-−+]?\d+)?/i.exec(String(text ?? ''));
+  return m ? Number(m[0].replace(',', '.').replace(/−/g, '-')) : NaN;
+}
+
+/**
+ * Punteggio di una risposta: 1 o 0 a scelta, con la tolleranza (relativa) per un numero.
+ * @param {import('../types').Exercise} ex
+ * @param {import('../types').Unknown[]} unknowns
+ * @param {Record<number, unknown> | null | undefined} answers
+ * @param {number} i
+ * @param {import('../types').ChemMode} mode
+ */
 export function answerScore(ex, unknowns, answers, i, mode) {
   const a = ex.answers;
   const right = rightAnswer(ex, unknowns, i);
   const given = answers?.[i];
   if (a.type === 'number') {
-    const v = Number(String(given ?? '').replace(',', '.'));
-    if (!Number.isFinite(v) || given === '' || given === undefined) return 0;
+    const v = answerNumber(given);
+    if (!Number.isFinite(v)) return 0;
     const [full, zero] = pickMode(a.tol, mode);
     return score(Math.abs(v - right) / Math.abs(right), full, zero);
   }
   return given === right ? 1 : 0;
 }
 
-/** Numero di risposte che l'esercitazione chiede. */
-export const answerCount = (ex, unknowns) => (ex.answers ? ex.answers.count ?? Math.max(1, unknowns.length) : 0);
+/**
+ * Numero di risposte che l'esercitazione chiede.
+ * @param {import('../types').Exercise} ex
+ * @param {import('../types').Unknown[]} unknowns
+ */
+export const answerCount = (ex, unknowns) => (ex.answers ? (ex.answers.count ?? Math.max(1, unknowns.length)) : 0);
 
 // ------------------------------------------------------------------ valutazione
 
@@ -354,8 +424,28 @@ function goalScore(g, v, mode) {
 }
 
 /**
+ * Parametri di una riga del resoconto pronti da scrivere: i numeri interi (conteggi come il disordine o i fuochi
+ * spenti, percentuali tonde) senza decimali, le misure con 3, 2 o 1 decimali secondo la grandezza. fmt(n, cifre)
+ * scrive il numero nella lingua dell'interfaccia.
+ */
+export function lineParams(p = {}, fmt) {
+  const out = {};
+  for (const [k, v] of Object.entries(p)) {
+    if (typeof v !== 'number') out[k] = v;
+    else if (!Number.isFinite(v)) out[k] = '—';
+    else if ((k === 'value' || k === 'target') && !Number.isInteger(v))
+      out[k] = fmt(v, Math.abs(v) < 1 ? 3 : Math.abs(v) < 10 ? 2 : 1);
+    else out[k] = fmt(v, 0);
+  }
+  return out;
+}
+
+/**
  * Valuta un'esercitazione sullo stato finale: s.product è la miscela consegnata (null se non c'è), s.answers le
  * risposte. Restituisce la qualità (0–1) e le righe del resoconto ({ ok, key, p }).
+ * @param {import('../types').Exercise} ex
+ * @param {import('../types').Snapshot} s
+ * @param {import('../types').ChemMode} [mode]
  */
 export function evaluateExercise(ex, s, mode = s.mode) {
   const lines = [];
@@ -373,13 +463,25 @@ export function evaluateExercise(ex, s, mode = s.mode) {
       for (let i = 0; i < n; i++) {
         const q = answerScore(ex, s.unknowns ?? [], s.answers, i, mode);
         right += q;
-        lines.push({ ok: mark(q), key: ex.answers.type === 'number' ? 'evAnswerNum' : 'evSampleAns', p: { sample: 'ABCDE'[i], answer: s.answers?.[i] ?? '—', right: rightAnswer(ex, s.unknowns ?? [], i), unit: ex.answers.unit ?? '', ex: ex.id, i } });
+        lines.push({
+          ok: mark(q),
+          key: ex.answers.type === 'number' ? 'evAnswerNum' : 'evSampleAns',
+          p: {
+            sample: 'ABCDE'[i],
+            answer: s.answers?.[i] ?? '—',
+            right: rightAnswer(ex, s.unknowns ?? [], i),
+            unit: ex.answers.unit ?? '',
+            ex: ex.id,
+            i,
+          },
+        });
       }
       sum += (w * right) / Math.max(1, n);
       wsum += w;
       continue;
     }
-    const v = g.m.startsWith('$') ? stateMeasure(s, g.m) : mixMeasure(s.product, g.m);
+    // le misure degli obiettivi sono numeri (solo `$held`, che non è un obiettivo, dà un testo)
+    const v = /** @type {number} */ (g.m.startsWith('$') ? stateMeasure(s, g.m) : mixMeasure(s.product, g.m));
     const scale = g.show?.scale ?? 1;
     const p = { value: v * scale, target: (pickMode(g.target, mode) ?? 0) * scale };
     if (g.range) {
@@ -416,7 +518,10 @@ export function evaluateExercise(ex, s, mode = s.mode) {
 /** Domande della relazione: { q, opts, a } con le opzioni mescolate (l'indice giusto segue). */
 export function reportQuestions(ex, rand = Math.random) {
   return (ex.report ?? []).map((r, k) => {
-    const order = shuffle(r.opts.map((_, i) => i), rand);
+    const order = shuffle(
+      r.opts.map((_, i) => i),
+      rand,
+    );
     return { id: `${ex.id}.${k}`, q: r.q, opts: order.map((i) => r.opts[i]), right: order.indexOf(r.a) };
   });
 }
@@ -431,13 +536,15 @@ export function reportStars(right, total) {
 /**
  * Reputazione con l'insegnante (0–100), calcolata dai risultati migliori di ogni esercitazione: 2 punti per stella meno
  * 3 (sotto 1,5 stelle si perde), +1 per ogni risposta giusta della relazione, −2 per ogni incidente (fuoco, gas, schizzi,
- * esplosioni) di tutto l'anno. Calcolata e non accumulata: rifare un'esercitazione conta solo se si migliora.
+ * esplosioni) del tentativo più pulito di ogni esercitazione. Calcolata e non accumulata: rifare un'esercitazione conta
+ * solo se si migliora, e rifarla senza incidenti li recupera (prima contavano tutti quelli dell'anno, per sempre, e
+ * potevano chiudere i capitoli senza via d'uscita).
  */
 export function reputation(career) {
   let r = 0;
-  for (const res of Object.values(career?.results ?? {})) r += 2 * (res.stars ?? 0) - 3 + (res.report ?? 0);
+  for (const res of Object.values(career?.results ?? {}))
+    r += 2 * (res.stars ?? 0) - 3 + (res.report ?? 0) - 2 * (res.incidents ?? 0);
   for (const c of Object.values(career?.challenges ?? {})) r += c.medal ?? 0;
-  r -= 2 * (career?.incidents ?? 0);
   return Math.max(0, Math.min(100, Math.round(r)));
 }
 
@@ -504,7 +611,15 @@ const mean = (list) => list.reduce((a, b) => a + b, 0) / list.length;
 
 /** Giudizio sulla media dei voti (id dei testi judge_<id>). */
 export function judgement(average) {
-  return average < 6 ? 'insufficient' : average < 7 ? 'sufficient' : average < 8 ? 'good' : average < 9 ? 'veryGood' : 'excellent';
+  return average < 6
+    ? 'insufficient'
+    : average < 7
+      ? 'sufficient'
+      : average < 8
+        ? 'good'
+        : average < 9
+          ? 'veryGood'
+          : 'excellent';
 }
 
 /**
@@ -517,7 +632,13 @@ export function reportCard(career) {
     const exams = EXAMS.filter((e) => e.chapter === ch.id);
     if (!exams.length) continue;
     const marks = exams.map((e) => career?.results?.[e.id]?.mark).filter((m) => m !== undefined);
-    rows.push({ chapter: ch.id, total: exams.length, taken: marks.length, mark: marks.length ? mean(marks) : null, marks: exams.map((e) => ({ id: e.id, mark: career?.results?.[e.id]?.mark ?? null })) });
+    rows.push({
+      chapter: ch.id,
+      total: exams.length,
+      taken: marks.length,
+      mark: marks.length ? mean(marks) : null,
+      marks: exams.map((e) => ({ id: e.id, mark: career?.results?.[e.id]?.mark ?? null })),
+    });
   }
   const taken = rows.flatMap((r) => r.marks.map((m) => m.mark).filter((m) => m !== null));
   const average = taken.length ? mean(taken) : null;
@@ -552,8 +673,9 @@ export function challengeBonus(ch, career, medal) {
 /** Registra il risultato di una sfida (nuovo oggetto): tiene la medaglia più alta e il tempo migliore tra quelle valide. */
 export function recordChallenge(career, id, { medal, elapsed }) {
   const old = career.challenges?.[id];
-  const best = medal > (old?.medal ?? 0) || (medal === (old?.medal ?? 0) && medal > 0 && elapsed < (old?.best ?? Infinity));
-  const next = best ? { medal, best: Math.round(elapsed) } : old ?? { medal: 0, best: null };
+  const best =
+    medal > (old?.medal ?? 0) || (medal === (old?.medal ?? 0) && medal > 0 && elapsed < (old?.best ?? Infinity));
+  const next = best ? { medal, best: Math.round(elapsed) } : (old ?? { medal: 0, best: null });
   return { ...career, challenges: { ...(career.challenges ?? {}), [id]: { ...next, tries: (old?.tries ?? 0) + 1 } } };
 }
 
@@ -606,23 +728,30 @@ export function buy(career, id) {
 }
 
 /**
- * Registra il risultato di un'esercitazione nella Carriera (nuovo oggetto): tiene il migliore, somma soldi e incidenti.
+ * Registra il risultato di un'esercitazione nella Carriera (nuovo oggetto): tiene il migliore e il minor numero di
+ * incidenti di un tentativo; somma soldi e incidenti dell'anno (per la pagella).
  * r: { stars, report (risposte giuste), money (soldi dopo l'esercitazione), incidents }.
  */
 export function recordResult(career, id, r) {
   const old = career.results?.[id];
   const best = !old || r.stars > old.stars || (r.stars === old.stars && (r.report ?? 0) > (old.report ?? 0));
   const results = { ...(career.results ?? {}) };
-  results[id] = best ? { stars: r.stars, report: Math.max(r.report ?? 0, old?.report ?? 0), tries: (old?.tries ?? 0) + 1 } : { ...old, report: Math.max(old.report ?? 0, r.report ?? 0), tries: (old.tries ?? 0) + 1 };
+  results[id] = best
+    ? { stars: r.stars, report: Math.max(r.report ?? 0, old?.report ?? 0), tries: (old?.tries ?? 0) + 1 }
+    : { ...old, report: Math.max(old.report ?? 0, r.report ?? 0), tries: (old.tries ?? 0) + 1 };
   // verifica: il voto migliore (4–10) dalla qualità del lavoro
   if (EXERCISE_BY_ID.get(id)?.exam && r.quality !== undefined) {
     const mark = examMark(r.quality);
     results[id].mark = Math.max(mark, old?.mark ?? 0);
   } else if (old?.mark !== undefined) results[id].mark = old.mark;
+  results[id].incidents = Math.min(r.incidents ?? 0, old?.incidents ?? Infinity);
   return { ...career, results, money: r.money, incidents: (career.incidents ?? 0) + (r.incidents ?? 0), last: id };
 }
 
-/** Carriera nuova. */
+/**
+ * Carriera nuova.
+ * @returns {import('../types').Career}
+ */
 export const newCareer = () => ({ results: {}, money: 0, incidents: 0, owned: [], last: null, challenges: {} });
 
 // ------------------------------------------------------------------ reagenti e soluzione scritta nei dati
@@ -630,18 +759,29 @@ export const newCareer = () => ({ results: {}, money: 0, incidents: 0, owned: []
 /**
  * Miscela di una porzione di un reagente dello scaffale o dell'armadio (come la dà il gioco): amount in mL per soluzioni,
  * liquidi, acqua e indicatori (fenolftaleina all'1 %), in grammi per i solidi.
+ * @param {import('../types').LabChemistry} ctx
+ * @param {string} key
+ * @param {number} amount
  */
 export function reagentPortion(ctx, key, amount) {
   const r = SHELF[key] ?? CABINET[key];
   if (!r) throw new Error(`reagente sconosciuto: ${key}`);
   if (r.water) return Mixture.liquid(ctx, 'water', amount);
-  if (r.indicator) return Mixture.of(ctx, [['water', (amount * 0.99) / 18.015], [r.indicator, (amount * 0.01) / 318.3]]);
+  if (r.indicator)
+    return Mixture.of(ctx, [
+      ['water', (amount * 0.99) / 18.015],
+      [r.indicator, (amount * 0.01) / 318.3],
+    ]);
   if (r.solute) return Mixture.solution(ctx, r.solute, r.molar, amount);
   if (r.liquid) return Mixture.liquid(ctx, r.liquid, amount);
   return Mixture.solid(ctx, r.solid, amount);
 }
 
-/** Miscela descritta nei dati: { solution: [K, M, mL] } | { solid: [K, g] } | { water: mL } | { liquid: [K, mL] }. */
+/**
+ * Miscela descritta nei dati: { solution: [K, M, mL] } | { solid: [K, g] } | { water: mL } | { liquid: [K, mL] }.
+ * @param {import('../types').LabChemistry} ctx
+ * @param {any} c il contenuto (i dati ne hanno diverse forme, vedi sopra)
+ */
 export function contentMixture(ctx, c) {
   if (!c) return new Mixture(ctx);
   if (c.solution) return Mixture.solution(ctx, ...c.solution);
@@ -652,7 +792,12 @@ export function contentMixture(ctx, c) {
   throw new Error(`contenuto sconosciuto: ${JSON.stringify(c)}`);
 }
 
-/** Valore di un campione per le risposte numeriche (ex.answers.of): per ora la densità del liquido. */
+/**
+ * Valore di un campione per le risposte numeriche (ex.answers.of): per ora la densità del liquido.
+ * @param {import('../types').LabChemistry} ctx
+ * @param {import('../types').Exercise} ex
+ * @param {import('../types').ExerciseSample} sample
+ */
 export function sampleValue(ctx, ex, sample) {
   if (!ex.answers?.of) return undefined;
   return mixMeasure(contentMixture(ctx, sample.content), ex.answers.of);
@@ -665,6 +810,11 @@ const ENV = { lossWK: 0.5, containerC: 120, area: 30 };
  * valutare. Azioni: [A, 'add', contenuto] · [A, 'reagent', chiave, quantità] · [A, 'fill', mL] (acqua fino al volume) ·
  * [A, 'pour', B, mL] · [A, 'filter', B] · [A, 'heat', °C, s] · [A, 'cool', s] · [A, 'wait', s] · [A, 'gas', K, s] ·
  * [A, 'volt', V, s] (elettrolisi) · [A, 'distill', B, °C, s] (il distillato va in B) · ['out', K, mol] · ['ev', nome, n] · ['state', campo, valore] · ['answer', i | 'all', valore | true] · ['deliver', A | null].
+ * @param {import('../types').LabChemistry} ctx
+ * @param {import('../types').Exercise} ex
+ * @param {import('../types').ChemMode} [mode]
+ * @param {() => number} [rand]
+ * @returns {import('../types').Snapshot}
  */
 export function runSolution(ctx, ex, mode = 'real', rand = () => 0.42) {
   const mixes = new Map();
@@ -672,11 +822,28 @@ export function runSolution(ctx, ex, mode = 'real', rand = () => 0.42) {
     if (!mixes.has(k)) mixes.set(k, new Mixture(ctx));
     return mixes.get(k);
   };
-  const s = { mode, ctx, ev: {}, gas: {}, rx: new Set(), flame: new Set(), phRead: new Set(), containers: [], product: null, delivered: false, answers: null, dirtyStart: 0, dirtyLeft: 0, mess: 0, fires: 0 };
+  const s = {
+    mode,
+    ctx,
+    ev: {},
+    gas: {},
+    rx: new Set(),
+    flame: new Set(),
+    phRead: new Set(),
+    containers: [],
+    product: null,
+    delivered: false,
+    answers: null,
+    dirtyStart: 0,
+    dirtyLeft: 0,
+    mess: 0,
+    fires: 0,
+  };
   const samples = pickSamples(ex, rand).map((x) => ({ ...x, value: sampleValue(ctx, ex, x) }));
   s.unknowns = samples;
   const tick = (m, secs, env = {}) => {
     for (let t = 0; t < secs; t += 0.2) {
+      /** @type {import('../types').TickEnv} */
       const e = { ...ENV, stir: 0.5, ...env };
       if (env.heatT) e.heatW = Math.max(0, Math.min(400, 6 * (env.heatT - m.T)));
       if (env.gas) m.addSpecies(ctx.id(env.gas), GAS_FLOW * 0.2);
@@ -777,7 +944,10 @@ export function runSolution(ctx, ex, mode = 'real', rand = () => 0.42) {
 /**
  * Stelle e paga di un'esercitazione (orders.js, grade) più la relazione: le stelle della relazione si aggiungono fino a 5.
  */
-export function gradeExercise(ex, { quality, elapsed, mess, incidents, wrongBins, costs, reportRight = 0, reportTotal = 0 }) {
+export function gradeExercise(
+  ex,
+  { quality, elapsed, mess, incidents, wrongBins, costs, reportRight = 0, reportTotal = 0 },
+) {
   const g = grade({ quality, elapsed, par: ex.par, mess, incidents, wrongBins, pay: ex.pay, costs });
   const bonus = reportStars(reportRight, reportTotal);
   const stars = Math.min(5, g.stars + bonus);

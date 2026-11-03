@@ -73,7 +73,10 @@ const nextVoltsLabel = (v) => VOLT_STEPS[(VOLT_STEPS.indexOf(v) + 1) % VOLT_STEP
 function rigRows(target, key = 'lmb') {
   switch (target.rig) {
     case 'burette':
-      return [row([key], `lgStopcock${(target.level + 1) % 4}`), ...(target.level && key === 'lmb' ? [row(['rmb'], 'lgStopcockClose')] : [])];
+      return [
+        row([key], `lgStopcock${(target.level + 1) % 4}`),
+        ...(target.level && key === 'lmb' ? [row(['rmb'], 'lgStopcockClose')] : []),
+      ];
     case 'funnel':
       return [row([key], 'lgFilterPaper')];
     default:
@@ -88,14 +91,25 @@ function toolRows(held, target) {
     case 'spatula':
       // carica: E tutto, E tenuto piano (come il sinistro tenuto con un recipiente), Maiusc+E un colpetto
       return held.loaded
-        ? [row(['e'], 'lgSpatulaDrop', null, !onVessel), row(['e'], 'lgSpatulaTrickle', null, !onVessel), row(['shift', 'e'], 'lgSpatulaTap', null, !onVessel)]
+        ? [
+            row(['e'], 'lgSpatulaDrop', null, !onVessel),
+            row(['e'], 'lgSpatulaTrickle', null, !onVessel),
+            row(['shift', 'e'], 'lgSpatulaTap', null, !onVessel),
+          ]
         : [row(['e'], 'lgSpatulaTake', null, !onVessel), row(['shift', 'e'], 'lgSpatulaPinch', null, !onVessel)];
     case 'loop':
       return [row(['e'], 'lgLoop', null, !onVessel)];
     case 'strip':
       return [row(['e'], 'lgStrip', null, !onVessel)];
     case 'towel':
-      return [row(['e'], target?.heap ? 'lgWipeHeap' : target?.stain ? 'lgWipeStain' : 'lgWipe', null, target?.type !== 'puddle')];
+      return [
+        row(
+          ['e'],
+          target?.heap ? 'lgWipeHeap' : target?.stain ? 'lgWipeStain' : 'lgWipe',
+          null,
+          target?.type !== 'puddle',
+        ),
+      ];
     case 'extinguisher':
       return [row(['e'], 'lgSpray')];
     case 'thermometer':
@@ -103,7 +117,8 @@ function toolRows(held, target) {
       return [row(['e'], 'lgReadout', null, !held.probing)];
     case 'pipette':
       if (target?.type === 'fixture' && target.kind === 'sink') return [row(['e'], 'lgWashPipette')];
-      if (target?.type === 'fixture' && target.kind === 'bin') return [row(['e'], 'lgEmpty', { bin: target.binName ?? '' }, !held.loaded)];
+      if (target?.type === 'fixture' && target.kind === 'bin')
+        return [row(['e'], 'lgEmpty', { bin: target.binName ?? '' }, !held.loaded)];
       return held.loaded
         ? [row(['e'], 'lgPipetteOut', null, !held.probing), row(['shift', 'e'], 'lgPipetteOne', null, !held.probing)]
         : [row(['e'], 'lgPipetteIn', null, !held.probing)];
@@ -137,7 +152,8 @@ export function legendRows(s) {
       out.push(row(['rmb'], 'lgFillStop'));
     } else if (held.container && s.pouring && !s.precise) {
       // mentre si versa contano solo il getto (o l'inclinazione, con il destro) e dove va il liquido
-      if (s.pourAuto) out.push(row(['lmb', 'mouse'], into ? 'lgPouringInto' : 'lgPouring', { name: target?.name ?? '' }));
+      if (s.pourAuto)
+        out.push(row(['lmb', 'mouse'], into ? 'lgPouringInto' : 'lgPouring', { name: target?.name ?? '' }));
       else out.push(row(['rmb', 'mouse'], 'lgTilting'));
     } else if (s.precise) {
       // manipolazione precisa (Maiusc tenuto): la camera è ferma, il mouse sposta l'oggetto
@@ -182,7 +198,9 @@ export function legendRows(s) {
     if (f.kind === 'power' && f.on) out.push(row(['rmb'], 'lgPowerOff'));
     if (f.kind === 'bin') out.push(row(['e'], 'lgBinNeedsVessel', { bin: f.binName ?? '' }, true));
   } else if (target?.type === 'puddle') {
-    out.push(row(['e'], target.heap ? 'lgNeedTowelHeap' : target.stain ? 'lgNeedTowelStain' : 'lgNeedTowel', null, true));
+    out.push(
+      row(['e'], target.heap ? 'lgNeedTowelHeap' : target.stain ? 'lgNeedTowelStain' : 'lgNeedTowel', null, true),
+    );
   }
   const rows = out.slice(0, MAX_ROWS - 1);
   // nella manipolazione precisa e al rubinetto si sta fermi: niente righe di movimento
@@ -191,7 +209,8 @@ export function legendRows(s) {
   // cammina solo avanti e indietro
   let base;
   if (still) base = [];
-  else if (mode === 'bench') base = held ? [row(['tab'], 'lgFirstPerson')] : [row(['ad'], 'lgStation'), row(['tab'], 'lgFirstPerson')];
+  else if (mode === 'bench')
+    base = held ? [row(['tab'], 'lgFirstPerson')] : [row(['ad'], 'lgStation'), row(['tab'], 'lgFirstPerson')];
   else base = [row(['wasd'], held ? 'lgWalkHeld' : 'lgWalk'), row(['tab'], 'lgBenchView')];
   for (const b of base) if (rows.length < MAX_ROWS - 1) rows.push(b);
   rows.push(row(['h'], 'lgHelp'));

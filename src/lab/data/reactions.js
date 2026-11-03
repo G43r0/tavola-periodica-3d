@@ -124,7 +124,10 @@ export const BASE_REACTIONS = [
 
 const written = new Map(BASE_REACTIONS.map((r) => [r.id, r]));
 
-/** Tutte le reazioni, nell'ordine del catalogo: gruppo, sottogruppo, condizioni e, per le nuove, equazione e nota. */
+/**
+ * Tutte le reazioni, nell'ordine del catalogo: gruppo, sottogruppo, condizioni e, per le nuove, equazione e nota.
+ * @type {import('../../types').Reaction[]}
+ */
 export const REACTIONS = CATALOG.map((c) => {
   const meta = { group: c.group, sub: c.sub, catalogo: c.n, ...(c.cond && { cond: c.cond }), ...(c.rev && { rev: true }) };
   if (c.ex) return { ...written.get(c.ex), ...meta };

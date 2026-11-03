@@ -8,6 +8,176 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 > non hanno commit separati: questo file è la cronologia ufficiale. Il codice di ogni fase è tutto presente
 > nella release più recente.
 
+## [Non rilasciato] — per la 1.0.0
+
+Correzioni e fondamenta (fase R1 del piano) che entreranno nella versione 1.0.0 (nessuna release intermedia).
+
+### Aggiunto
+- **SMILES come si copiano da PubChem e Wikipedia** nel riquadro Formula: aromatici minuscoli (`c1ccccc1`,
+  `c1ccncc1`, `c1cc[nH]c1`, che diventano una struttura di Kekulé), stereochimica (`/`, `\`, `@`, `@@`, ignorata),
+  isotopi (`[13CH4]`, `[2H]O[2H]`) e anelli oltre il 9 (`%10`) (#41).
+- **Ferro- e ferricianuro di potassio** e i due ioni esacianoferrato nella libreria (558 sostanze); un sale con uno
+  ione complesso ha il nome del complesso: Na₃[Fe(CN)₆] → «Esacianoferrato(III) di sodio», [Cu(NH₃)₄]SO₄ → «Solfato di
+  tetraamminorame(II)» (#19).
+- **Energie di legame nucleari misurate (AME2020) per tutti i 2548 nuclei misurati** invece dei 24 nuclei leggeri
+  (A ≤ 22): il ⁵⁶Fe vale 8,790 MeV per nucleone invece della stima di Weizsäcker, e il ⁶²Ni è il più legato.
+  `npm run data` rigenera la tabella dal file dell'IAEA con `scripts/build-ame.mjs` (#53).
+- **Versione dell'app** in fondo alla finestra «Fonti dei dati e guida», con le versioni di Electron e Chrome nell'app
+  desktop e il collegamento alle note di rilascio; nel menu dell'app desktop «Aiuto → Informazioni su Tavola Periodica
+  3D» (#35).
+- **«Riduci movimento» del sistema** (`prefers-reduced-motion`): nel simulatore la scossa della camera parte spenta
+  (si riaccende dal menu) e il lampo delle esplosioni è attenuato, il campione 3D dell'aspetto reale sta fermo (si
+  gira trascinando) e il visualizzatore dell'atomo si apre con l'animazione in pausa (#48).
+- **Calore di soluzione nel simulatore**: sciogliere la soda caustica, la potassa, il cloruro di calcio o l'acido
+  solforico scalda (4 g di NaOH in 100 mL: circa +10 °C), il nitrato di potassio, il nitrato e il cloruro d'ammonio
+  raffreddano (la busta del ghiaccio istantaneo); la cristallizzazione restituisce il calore. Entalpie di soluzione di
+  23 sali, acidi e basi dal CRC Handbook (#42).
+- **Entalpie di formazione di altre 42 sostanze** (NBS, CRC, NIST): Al(OH)₃, alcani, alcheni, alogenuri organici,
+  anidride acetica, acetonitrile, acidi ossalico, salicilico e benzoico, ossidi, ossiacidi e fluoruri: il ΔH° c'è per 1089
+  reazioni del catalogo invece di 931, in laboratorio, nel simulatore, nella sandbox e nel libro (#46).
+- **Laboratorio, copia ed esporta.** Nella scheda della molecola: la SMILES della molecola costruita (un nuovo scrittore
+  SMILES: incollata con Ctrl+V torna la stessa molecola, provato su tutte le 558 sostanze), la formula in testo semplice
+  e il disegno di Lewis come file SVG con i colori per la stampa. Il banco resta ricaricando l'app o cambiando lingua o
+  grafica (#64).
+- **Sandbox, scene.** Salva e Apri una scena su file `.json` (le celle uguali vicine compresse; si apre solo con la
+  stessa tabella di sostanze, altrimenti un avviso), Esporta un'immagine PNG, e l'ultima scena si salva da sola e
+  torna alla prossima apertura (#63).
+- **Licenze e avvisi di terze parti (R1).** `LICENSE` (MIT) e `THIRD_PARTY_NOTICES.md` (three, Rapier, IBM Plex,
+  Electron, electron-updater, i 21 suoni CC0 di Freesound e le fonti dei dati) viaggiano dentro l'app impacchettata, e
+  la finestra «Fonti dei dati e guida» ha una sezione **Licenze** in italiano, inglese e nella versione semplice. Un
+  test controlla che le licenze elencate siano quelle di `node_modules`.
+- **Ripresa dopo un crash (R1, app desktop).** Se il processo della pagina si chiude da solo, la pagina si ricarica e un
+  avviso lo dice; se si richiude entro 30 secondi dal ricaricamento non si riprova all'infinito e compare un messaggio
+  d'errore (`electron/recover.cjs`, provato con finte finestre). `TP3D_USER_DATA` sposta la cartella dei dati dell'app
+  (la usano i test E2E, ed è la base per portare l'app su una chiavetta, lavoro che resta da fare).
+- **Documenti di progetto (R1).** `CONTRIBUTING.md` (come si lavora e che cosa controlla la CI), `SECURITY.md`
+  (segnalazione privata dalle Security Advisories di GitHub), moduli per le issue (errore dell'app, errore nei
+  contenuti, proposta) e modello per le pull request. `reports/` e `research_notes/` sono ora in `docs/ricerca/`.
+- **Controlli di formato, correttezza e tipi (R1).** Prettier 3.9.10 (120 colonne, apici singoli, fine riga LF fissata
+  da `.gitattributes`; dati, Markdown e JSON esclusi), ESLint 10.14 con le sole regole di correttezza (`recommended`) e
+  TypeScript 7.0.2 come controllore dei tipi JSDoc su 26 moduli puri (`// @ts-check` in testa, un modulo alla volta,
+  forme condivise in `src/types.d.ts`): `npm run format:check`, `npm run lint`, `npm run typecheck`. Gli strumenti sono
+  fissati a una versione esatta.
+- **Test end-to-end con Playwright (R1, `npm run e2e`).** 22 prove sulla versione web (tavola, atomo 3D, laboratorio,
+  sandbox, simulatore in Laboratorio libero e in Carriera, e cinque inquadrature in ciascuno dei tre preset grafici in
+  `test-results/screens/`) e 4 sull'app Electron lanciata davvero (cartella dei dati temporanea, preload, salvataggio su
+  file, menu nella lingua scelta). Una prova fallisce se la pagina scrive un errore in console. I ganci di test
+  (`window.__tp3d` e gli altri) stanno in `src/test-hooks.js`, attivi solo con `vite` o con la build `--mode e2e`:
+  `scripts/check-dist.mjs` controlla che non finiscano nella build vera, e che la CSP non contenga `ws:`.
+- **Controlli a ogni pull request (R1, GitHub Actions, `.github/workflows/ci.yml`).** Il lavoro Linux è impostato per
+  controllare formato, lint, tipi, test, `npm audit --audit-level=high`, build, `dist/` ed E2E nel browser. Il lavoro
+  Windows, formato (anche con i CRLF di git), build, `electron-builder --dir`, i cinque fusibili di Electron (letti
+  dall'eseguibile costruito) ed E2E dell'app. Un test rotto, un errore di tipo nei moduli controllati con
+  `// @ts-check` o un avviso di sicurezza alto o critico su una dipendenza fanno restare rossa la pull request; gli
+  avvisi moderati non bloccano. Dependabot propone gli aggiornamenti ogni lunedì, con gli strumenti di controllo in un
+  gruppo solo.
+
+### Corretto
+- **Laboratorio, Formula.** La carica dopo una parentesi quadra è una carica (`[Fe(CN)6]3-` non è più Fe₃C₁₈N₁₈⁻) e
+  `SO42-`, `PO43-`, `Cr2O72-` sono SO₄²⁻, PO₄³⁻, Cr₂O₇²⁻, con l'avviso di lettura (#17); gli stati fisici `(aq)`, `(s)`,
+  `(l)`, `(g)` si ignorano e un nome sconosciuto («ethanol») non dà più l'errore delle maiuscole (#20); mentre si scrive
+  `H2 + ` l'anteprima mostra H₂ e «manca ancora una sostanza», non lo ione H₂⁺ (#21); gli SMILES malformati (`C)C`,
+  `C(`, `C==C`, `CC.`…) sono un errore e non bloccano più il banco fino al ricaricamento (#40).
+- **Laboratorio, Combina.** 4 N e 4 O diventano 2 N₂ e 2 O₂ (6 O → 3 O₂), non N₄ e O₄ (#18); con molti atomi diversi
+  risponde in meno di 2 secondi invece di bloccare l'app per minuti (#65).
+- **Laboratorio, scheda.** Le due strutture di Kekulé di un anello sono la stessa molecola: l'aspirina, l'acido
+  salicilico e l'o-xilene con i doppi legami spostati sono riconosciuti (#54); l'angolo ideale VSEPR dipende dalla forma
+  (XeF₂ lineare 180°, ClF₃ a T < 90°) (#55).
+- **Sandbox.** I 78 composti che «si decompongono» senza una reazione nel catalogo restano solidi invece di diventare
+  vapore di sé stessi, e gli idrati perdono l'acqua: CuSO₄·5H₂O a 150 °C diventa CuSO₄ bianco più vapore (#22); a
+  pressione atmosferica l'elio resta liquido fino allo zero assoluto (#52); cambiare la griglia conserva il disegno
+  (centrato e appoggiato in basso) e si annulla come ogni altra modifica (#43); il campo Temperatura rispetta i limiti
+  (le soluzioni tra 0 e 99 °C) e vuoto lascia il valore di prima (#44); nella barra laterale non ci sono più etichette
+  tagliate a 1280×800 né alla finestra minima (#23).
+- **Condizioni delle reazioni del catalogo** (simulatore, sandbox e libro). «Detonazione» e «sfregamento» chiedono un
+  urto (il nitrato d'ammonio non esplode più da solo nel becher, #37); le sostanze scritte nella condizione sono
+  requisiti anche senza «cat.» (clorato e zucchero vogliono l'acido, l'acetammide il P₄O₁₀, la formaldeide il
+  Ca(OH)₂, #38); «fiamma», «fusione», «caldo» e «anni» diventano vincoli (il CCl₄ non fa più fosgene all'aria, soda e
+  sabbia non fanno il vetro a 22 °C, #59). Un test controlla che ogni condizione scritta del catalogo diventi un vincolo.
+- **Simulatore, chimica.** Il bicarbonato è anfotero (pH ≈ 8,3) e va nel lavandino (#24); la candeggina è basica, e
+  hanno il loro pH anche Na₃PO₄, i sali di rame, zinco, alluminio, ferro(II) e nichel e il fenolo (#25); le reazioni
+  endotermiche rallentano col freddo invece di portare il contenuto a 1 K (#39).
+- **Libro «Come si fa».** Niente più pirotecnica, miscele vietate o reazioni che danno fosgene, e via le ricette che
+  riuscivano solo perché le condizioni erano ignorate: 648 ricette verificate (#60).
+- **Simulatore, rifiuti e pericoli.** Un solvente organico diluito va nei solventi organici (l'etanolo molto diluito e il
+  glicerolo nel lavandino), la sabbia e gli altri solidi inerti nei rifiuti solidi (#57); metanolo, fenolo, formaldeide,
+  benzene, toluene, CCl₄, anilina, acido acetico e ossalico, ammoniaca hanno i pittogrammi del CLP, e il glicerolo e gli
+  altri liquidi che bollono oltre i 175 °C non sono più «infiammabili» (#58).
+- **Simulatore, profili.** Un profilo nuovo prende il primo nome libero (niente «Studente 3» doppio) e gli id dei
+  profili non si ripetono nemmeno in un salvataggio rovinato (#27).
+- **Laboratorio, Formula.** Scrivere `[Cu(NH3)4]2+` a mano non manda più in crash la pagina (ciclo infinito con una «[»
+  non ancora chiusa, #66); numeri enormi come `C1000000000` non bloccano più l'anteprima occupando gigabyte (#67).
+- **Laboratorio.** «Simula» su una seconda reazione (o Annulla) subito dopo la prima non si perde più (#75); in
+  «Bilancia tu» i coefficienti arrivano a 99, così si bilanciano anche le 34 reazioni che chiedono più di 20 (#78).
+- **Simulatore.** Un doppio clic su «Simulatore» non crea più due renderer con la stanza nera (#68); «Elimina» un
+  profilo chiede conferma e Invio salva il nuovo nome (#70); i conteggi del resoconto non hanno più decimali inutili
+  (#76); una risposta numerica scritta con l'unità («1,09 g/mL») vale e il resoconto non dice più «NaN» (#79); in
+  inglese le concentrazioni del magazzino usano il punto decimale (#73).
+- **Libro «Come si fa».** La bilancia delle vignette mostra «0,3 g» invece di «0,30000000000000004 g» (#69).
+- **Sandbox.** Annulla/Ripeti segue anche le etichette degli esempi e il secchiello «a vuoto» non cancella più Ripeti
+  (#71).
+- **Finestre.** Visualizzatore 3D, laboratorio, sandbox e simulatore riaperti subito dopo la chiusura non si richiudono
+  più da soli (#72).
+- **Tavola.** Una ricerca di soli spazi non nasconde più tutti gli elementi (#74); il visualizzatore 3D mostra anche il
+  tantalio-180m, isotopo naturale (#77).
+- **App desktop.** Le scritture del salvataggio del simulatore vanno una alla volta (prima due salvataggi ravvicinati
+  potevano lasciare un file JSON rotto o vecchio) e se il file è rotto si legge la copia `.bak` (#26).
+- **App desktop, sicurezza.** La Content-Security-Policy dell'eseguibile non contiene più l'indirizzo del server di
+  sviluppo (`ws://127.0.0.1:5173` si aggiunge solo con `vite`, sulla porta del server) e la pagina non ottiene nessun
+  permesso (fotocamera, microfono, posizione, notifiche…), che Electron altrimenti concede, tranne il blocco del
+  puntatore del simulatore, lo schermo intero e la scrittura negli appunti (#62).
+- **Finestra minima (1024 × 640).** La barra in alto si compatta davvero (prima la colonna della pagina si allargava
+  ai pulsanti e la barra adattiva non scattava): Grafica, Lingua, Fonti e la ✕ della scheda restano sullo schermo (#32).
+- **Laboratorio molecolare.** L'etichetta sopra il titolo è «Molecole e reazioni» invece di «Simulatore», che è il
+  nome del gioco (#34).
+- **Dati degli elementi.** Il tellurio ha tutti gli isotopi naturali (¹²⁰Te e ¹²³Te, somma 100 %, #30); ¹¹⁶Cd, ¹²⁴Xe,
+  ¹³⁰Ba, ¹⁵²Gd, ¹⁷⁴Hf e ⁷⁸Kr sono radionuclidi primordiali con la loro emivita, come ¹²⁸Te e ¹³⁰Te, e c'è la doppia
+  cattura elettronica (#31); elettronegatività stimate per Pm, Eu, Tb e Yb (con l'etichetta «stima»), affinità
+  elettroniche misurate per Ca, Sr, Ba, Lu e Hf e «anione instabile» per He, Be, N, i gas nobili, Mg, Mn, Zn, Cd e Hg
+  invece della riga mancante (#50). `npm run data` avvisa se le abbondanze di un elemento si scostano da 100 % più
+  di 0,1 %.
+- **Inglese.** Le sigle dei decadimenti sono quelle inglesi (EC, IT, SF, 2EC, #28); i nomi IUPAC Aluminium e Caesium,
+  e la ricerca trova anche «aluminum» e «cesium» (#47); «hot solution» e «pressure» nelle condizioni del catalogo (#56).
+- **Visualizzatore 3D.** Le emivite lunghe si abbreviano in «2,6 Ma» e «4,5 Ga» invece di «2,6 milioni di a» (#29).
+- **Scheda e glossario.** Il periodo non è sempre il numero di gusci: il palladio (periodo 5) ne ha 4, e la scheda lo
+  spiega (il 5s resta vuoto) (#61).
+- **Documentazione.** I numeri del README sono quelli dei dati (88 termini, 48 reagenti dell'armadio, 501 reazioni del
+  simulatore con scaffale e armadio, 313 con il solo scaffale, 1146 reazioni nella sandbox, le 1349 reazioni in 14 gruppi
+  del pannello Reazioni invece di «47 in 5 gruppi», 26 pagine degli strumenti nel libro) e un test li controlla (#33);
+  le note «non in libreria» di KO₂, U₃O₈, FeS e [Cu(NH₃)₄]²⁺ rimandano alle reazioni che li formano, e un test
+  controlla che una nota così nomini una sostanza che manca davvero (#45).
+- **Ricerca per formula uguale ovunque.** «CuSO4» e «CuSO₄», «Na+» e «Na⁺», «SO42-» e «SO₄²⁻» trovano le stesse cose
+  negli esempi e nelle reazioni del laboratorio, nella sandbox, nel magazzino del simulatore e nel libro (#51).
+- **Carriera, reputazione.** Contano gli incidenti del tentativo più pulito di ogni esercitazione, non tutti quelli
+  dell'anno per sempre: rifacendo un'esercitazione senza incidenti la reputazione torna, e un capitolo non resta chiuso
+  senza via d'uscita. Il totale dell'anno resta nel salvataggio (#49).
+
+### Modificato
+- **Rapier 0.21.0** (era 0.19.3; il motore passa dalla 0.30 alla 0.36). L'avviso «using deprecated parameters for the
+  initialization function» in console non c'è più. Nel simulatore i corpi si addormentano dopo 0,5 s invece di 2 s e un
+  cilindro lasciato cadere dritto da 0,6 m o più (urto oltre circa 3,4 m/s) ora si ribalta invece di restare in piedi;
+  le scatole restano in piedi. Il pezzo del motore passa da 2,2 a 4,3 MB (il WASM da 1,6 a 3,1 MB).
+- **Riformattazione unica con Prettier** di 149 file (JS, MJS, CJS e CSS): solo formato, i file JS e CSS di
+  `dist/assets/` costruiti prima e dopo sono identici byte per byte. Il commit è elencato in `.git-blame-ignore-revs`,
+  quindi `git blame` e GitHub lo saltano.
+- **ESLint: 21 segnalazioni sistemate** (variabili e assegnazioni mai lette, due espressioni con caratteri di controllo
+  volute e ora commentate, uno spazio unificatore diventato ` `): nessuna era un bug, il comportamento non cambia.
+  Anche i 182 errori di tipo dei moduli controllati erano JSDoc troppo vaghi (`@param {object}`), corretti senza
+  toccare il codice.
+
+### Sicurezza
+- **App desktop, fusibili di Electron.** L'eseguibile costruito ha spenti `runAsNode`, `NODE_OPTIONS` e `--inspect`: non
+  si usa come un Node qualunque, e il debugger di Node (`--inspect`) e la variabile `NODE_OPTIONS` non hanno effetto.
+  Accesi invece la verifica dell'integrità di `app.asar` e il caricamento del codice solo da lì
+  (`build.electronFuses` di electron-builder). La porta di debug di Chromium (`--remote-debugging-port`) non dipende
+  dai fusibili e resta disponibile.
+- **App desktop, pagine incorporate.** I `<webview>` sono bloccati su ogni finestra (`webviewTag: false` e
+  `will-attach-webview` negato) e la Content-Security-Policy aggiunge `object-src 'none'; base-uri 'none'`.
+- **Dipendenze sorvegliate.** `npm audit fix` porta le vulnerabilità alte da 3 a 0 (`undici`, `joi`, `follow-redirects`)
+  e `npm audit --omit=dev` resta pulito. Restano 19 avvisi moderati, tutti da `minimatch` dentro ESLint ed
+  electron-builder, cioè solo strumenti di sviluppo: l'unica via che `npm audit fix --force` propone è abbassare la
+  versione maggiore dei due strumenti, quindi si aspetta un loro aggiornamento. In CI `npm audit --audit-level=high` è su tutte le dipendenze.
+
 ## [0.9.2] — 2026-10-30 — Aggiornamenti automatici e barra che ci sta sempre
 
 Versione di correzioni e di una funzione nuova, la prima del piano per la 1.0

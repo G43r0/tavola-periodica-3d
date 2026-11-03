@@ -54,7 +54,13 @@ function buildGeometry(orbital) {
   const key = `${orbital.n}-${orbital.l}-${orbital.m}`;
   if (geometryCache.has(key)) return geometryCache.get(key);
   const count = pointsFor(orbital.n);
-  const { positions, signs, density } = sampleOrbital(orbital.n, orbital.l, orbital, count, 1009 * orbital.n + 97 * orbital.l + orbital.m + 13);
+  const { positions, signs, density } = sampleOrbital(
+    orbital.n,
+    orbital.l,
+    orbital,
+    count,
+    1009 * orbital.n + 97 * orbital.l + orbital.m + 13,
+  );
   const pos = new Float32Array(count * 3);
   const col = new Float32Array(count * 3);
   const seed = new Float32Array(count);
@@ -130,7 +136,14 @@ export class OrbitalClouds {
       // scala per guscio: il 90% della probabilità dell'orbitale ns cade sul raggio del guscio n
       const k = radii[sub.n - 1] / radiusQuantile(sub.n, 0, 0.9);
       for (const o of sub.orbitals) {
-        this.entries.set(o.id, { orbital: o, scale: k, shellR: radii[sub.n - 1], wanted: false, points: null, fade: 0 });
+        this.entries.set(o.id, {
+          orbital: o,
+          scale: k,
+          shellR: radii[sub.n - 1],
+          wanted: false,
+          points: null,
+          fade: 0,
+        });
       }
     }
     const R = radii.at(-1) * 1.12;

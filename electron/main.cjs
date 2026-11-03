@@ -1,13 +1,33 @@
 // Processo principale Electron: crea la finestra e carica l'interfaccia (offline).
-const { app, BrowserWindow, Menu, shell, ipcMain, net } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, net, session, dialog } = require('electron');
 const { setupUpdater } = require('./updater.cjs');
+const { createSaveFile } = require('./save-file.cjs');
+const { menuTemplate } = require('./menu.cjs');
+const { lockDownSession, lockWebContents } = require('./security.cjs');
+const { watchRenderer } = require('./recover.cjs');
 const path = require('node:path');
-const fs = require('node:fs');
+
+// Cartella dei dati dell'utente scelta da fuori: serve all'E2E (una cartella temporanea, mai i dati veri di chi sviluppa)
+// ed è la base per l'app su chiavetta. Va impostata prima di `ready` e prima che qualcosa legga userData (blocco
+// dell'istanza unica, salvataggi, impostazioni dell'aggiornatore).
+if (process.env.TP3D_USER_DATA) app.setPath('userData', path.resolve(process.env.TP3D_USER_DATA));
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 const isDev = Boolean(DEV_URL);
 
 let mainWindow = null;
+let uiLang = 'it';
+
+// Ogni webContents creato dall'app (la finestra e qualunque altro) non può agganciare una <webview>.
+app.on('web-contents-created', (_event, contents) => lockWebContents(contents));
+
+// Messaggio quando il renderer si richiude subito dopo il ricaricamento (electron/recover.cjs).
+const GIVE_UP_TEXT = {
+  it: (reason) =>
+    `L'app si è chiusa per un errore (${reason}) e si è richiusa subito dopo il ricaricamento.\nChiudila e riaprila.`,
+  en: (reason) =>
+    `The app closed because of an error (${reason}) and closed again right after being reloaded.\nClose it and open it again.`,
+};
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -25,9 +45,16 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      webviewTag: false,
       spellcheck: false,
     },
   });
+
+  // Se il renderer si chiude (crash, memoria esaurita) la pagina si ricarica una volta; se si richiude subito, errore.
+  const renderer = watchRenderer(mainWindow, {
+    onGiveUp: (details) => dialog.showErrorBox('Tavola Periodica 3D', GIVE_UP_TEXT[uiLang](details.reason)),
+  });
+  mainWindow.webContents.on('render-process-gone', (_event, details) => renderer.handle(details));
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.maximize();
@@ -47,63 +74,22 @@ function createWindow() {
   else mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
 }
 
-// Voci del menu nella lingua scelta nell'app («eli6» usa l'italiano).
-const MENU_TEXT = {
-  it: { quit: 'Esci', view: 'Visualizza', reload: 'Ricarica', resetZoom: 'Zoom predefinito', zoomIn: 'Aumenta zoom', zoomOut: 'Riduci zoom', fullscreen: 'Schermo intero', devTools: 'Strumenti per sviluppatori' },
-  en: { quit: 'Quit', view: 'View', reload: 'Reload', resetZoom: 'Actual size', zoomIn: 'Zoom in', zoomOut: 'Zoom out', fullscreen: 'Full screen', devTools: 'Developer tools' },
-};
-
+// Voci del menu nella lingua scelta nell'app (electron/menu.cjs).
 function buildMenu(lang = 'it') {
-  const m = MENU_TEXT[lang] ?? MENU_TEXT.it;
-  const template = [
-    {
-      label: 'File',
-      submenu: [{ role: 'quit', label: m.quit }],
-    },
-    {
-      label: m.view,
-      submenu: [
-        { role: 'reload', label: m.reload },
-        { type: 'separator' },
-        { role: 'resetZoom', label: m.resetZoom },
-        { role: 'zoomIn', label: m.zoomIn },
-        { role: 'zoomOut', label: m.zoomOut },
-        { type: 'separator' },
-        { role: 'togglefullscreen', label: m.fullscreen },
-        ...(isDev ? [{ type: 'separator' }, { role: 'toggleDevTools', label: m.devTools }] : []),
-      ],
-    },
-  ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate(lang, { isDev })));
 }
 
-ipcMain.on('set-language', (_event, code) => buildMenu(code === 'en' ? 'en' : 'it'));
-
-// Salvataggi del simulatore: un file JSON nella cartella dei dati dell'utente (accanto, la copia precedente). Si accetta
-// solo JSON valido fino a 5 MB; la scrittura passa da un file temporaneo, così un'interruzione non lascia il file a metà.
-const SAVE_MAX = 5 * 1024 * 1024;
-const saveFile = () => path.join(app.getPath('userData'), 'simulatore-salvataggio.json');
-ipcMain.handle('game-save:read', async () => {
-  try {
-    const text = await fs.promises.readFile(saveFile(), 'utf8');
-    return text.length <= SAVE_MAX ? text : null;
-  } catch {
-    return null;
-  }
+ipcMain.on('set-language', (_event, code) => {
+  uiLang = code === 'en' ? 'en' : 'it';
+  buildMenu(uiLang);
 });
+
+// Salvataggi del simulatore (electron/save-file.cjs): un file JSON nella cartella dei dati dell'utente.
+let saves = null;
+const saveStore = () => (saves ??= createSaveFile(path.join(app.getPath('userData'), 'simulatore-salvataggio.json')));
+ipcMain.handle('game-save:read', () => saveStore().read());
 ipcMain.on('game-save:write', (_event, json) => {
-  if (typeof json !== 'string' || json.length > SAVE_MAX) return;
-  try {
-    JSON.parse(json);
-  } catch {
-    return;
-  }
-  const file = saveFile();
-  const tmp = `${file}.tmp`;
-  fs.promises.writeFile(tmp, json, 'utf8')
-    .then(() => fs.promises.copyFile(file, `${file}.bak`).catch(() => {}))
-    .then(() => fs.promises.rename(tmp, file))
-    .catch(() => {});
+  saveStore().write(json);
 });
 
 if (!app.requestSingleInstanceLock()) {
@@ -117,6 +103,13 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
+    lockDownSession(session.defaultSession);
+    app.setAboutPanelOptions({
+      applicationName: 'Tavola Periodica 3D',
+      applicationVersion: app.getVersion(),
+      version: `Electron ${process.versions.electron} · Chrome ${process.versions.chrome}`,
+      credits: `Electron ${process.versions.electron} · Chrome ${process.versions.chrome} · Node.js ${process.versions.node}`,
+    });
     buildMenu();
     createWindow();
     setupUpdater({ app, ipcMain, shell, net, getWindow: () => mainWindow, isDev }).schedule();

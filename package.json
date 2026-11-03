@@ -11,14 +11,21 @@
   "scripts": {
     "dev": "concurrently -k -n vite,electron -c cyan,magenta \"vite\" \"wait-on tcp:127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
     "dev:web": "vite",
-    "data": "node scripts/build-data.mjs && node scripts/build-binding.mjs",
+    "data": "node scripts/build-data.mjs && node scripts/build-binding.mjs && node scripts/build-ame.mjs",
     "icon": "node scripts/make-icon.mjs",
     "build": "vite build",
+    "build:e2e": "vite build --mode e2e --outDir dist-e2e",
     "start": "vite build && electron .",
     "dist": "vite build && electron-builder --win",
     "dist:mac": "vite build && electron-builder --mac",
     "dist:linux": "vite build && electron-builder --linux",
-    "test": "node --test \"tests/**/*.test.mjs\""
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -p tsconfig.json",
+    "e2e": "playwright test",
+    "check:dist": "node scripts/check-dist.mjs"
   },
   "build": {
     "appId": "it.tavolaperiodica3d.app",
@@ -31,7 +38,9 @@
       "dist/**/*",
       "electron/**/*",
       "build/icon.png",
-      "package.json"
+      "package.json",
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md"
     ],
     "win": {
       "target": [
@@ -69,6 +78,13 @@
       "category": "Education",
       "icon": "build/icon.png"
     },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
     "publish": [
       {
         "provider": "github",
@@ -79,14 +95,20 @@
     ]
   },
   "devDependencies": {
-    "@dimforge/rapier3d-compat": "^0.19.3",
+    "@dimforge/rapier3d-compat": "^0.21.0",
+    "@eslint/js": "10.0.1",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@playwright/test": "1.64.1",
     "concurrently": "^10.0.6",
     "cross-env": "^10.1.0",
     "electron": "^44.10.0",
     "electron-builder": "^26.18.0",
+    "eslint": "10.14.0",
+    "globals": "17.14.0",
+    "prettier": "3.9.10",
     "three": "^0.186.1",
+    "typescript": "7.0.2",
     "vite": "^8.3.5",
     "wait-on": "^9.5.1"
   },

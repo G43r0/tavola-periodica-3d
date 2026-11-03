@@ -22,7 +22,20 @@ export const norm = (s) =>
     .replace(/^[\s.,;:!?()«»"“”[\]{}]+|[\s.,;:!?()«»"“”[\]{}]+$/g, '');
 
 // ---- voci generate dai testi della sandbox (strumenti e modi di disegno), così restano allineate
-const SBX_TOOLS = ['erase', 'heat', 'cool', 'fire', 'spark', 'neutron', 'bomb', 'stir', 'wind', 'equalize', 'extinguish', 'pick'];
+const SBX_TOOLS = [
+  'erase',
+  'heat',
+  'cool',
+  'fire',
+  'spark',
+  'neutron',
+  'bomb',
+  'stir',
+  'wind',
+  'equalize',
+  'extinguish',
+  'pick',
+];
 const SBX_TOOL_KEY = { erase: 'E', stir: 'M', wind: 'W' };
 const SBX_MODES = { brush: 'Brush', fill: 'Fill', line: 'Line', rect: 'Rect', ellipse: 'Ellipse' };
 function sbx(key) {
@@ -36,7 +49,8 @@ function generated(key) {
     return { t: sbx(m[1]), d: sbx(`${m[1]}Text`), k: k ? [[k, sbx(m[1])]] : undefined, s: ['sandbox.tools'] };
   }
   m = /^sandbox\.mode\.(\w+)$/.exec(key);
-  if (m && SBX_MODES[m[1]]) return { t: sbx(`mode${SBX_MODES[m[1]]}`), d: sbx(`mode${SBX_MODES[m[1]]}Text`), s: ['sandbox.canvas'] };
+  if (m && SBX_MODES[m[1]])
+    return { t: sbx(`mode${SBX_MODES[m[1]]}`), d: sbx(`mode${SBX_MODES[m[1]]}Text`), s: ['sandbox.canvas'] };
   return null;
 }
 
@@ -98,7 +112,10 @@ export function variants(word) {
 export function shortcut(keyText) {
   const lang = KEYS[getLang()] ?? KEYS.it;
   const base = getLang() === 'en' ? KEYS.en : KEYS.it;
-  let k = String(keyText).trim().toLowerCase().replace(/\s*\+\s*/g, '+');
+  let k = String(keyText)
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\+\s*/g, '+');
   k = base.alias[k] ?? k;
   const rows = base.keys[k];
   if (!rows?.length) return null;

@@ -46,9 +46,19 @@ export class BohrModel {
     this.dispose();
     this.radii = radii;
     this.electrons = electrons;
-    this.ringMaterial = new THREE.MeshBasicMaterial({ color: 0x5ce1ff, transparent: true, opacity: 0, depthWrite: false });
+    this.ringMaterial = new THREE.MeshBasicMaterial({
+      color: 0x5ce1ff,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
     this.electronMaterial = new THREE.MeshStandardMaterial({
-      color: 0xb8f6ff, emissive: 0x2fd4ff, emissiveIntensity: 0.95, roughness: 0.3, transparent: true, opacity: 0,
+      color: 0xb8f6ff,
+      emissive: 0x2fd4ff,
+      emissiveIntensity: 0.95,
+      roughness: 0.3,
+      transparent: true,
+      opacity: 0,
     });
 
     this.shells = radii.map((r, i) => {
@@ -67,11 +77,23 @@ export class BohrModel {
       const label = new CSS2DObject(div);
       // etichetta nel punto più a destra dell'anello: i gusci si leggono in fila dal nucleo verso l'esterno
       const a = Math.atan2(v.x, u.x);
-      label.position.copy(u.clone().multiplyScalar(Math.cos(a) * r).addScaledVector(v, Math.sin(a) * r)).add(new THREE.Vector3(0.9, 0.6, 0));
+      label.position
+        .copy(
+          u
+            .clone()
+            .multiplyScalar(Math.cos(a) * r)
+            .addScaledVector(v, Math.sin(a) * r),
+        )
+        .add(new THREE.Vector3(0.9, 0.6, 0));
       this.group.add(label);
 
       return {
-        n, r, u, v, ring, label,
+        n,
+        r,
+        u,
+        v,
+        ring,
+        label,
         members: members.map(({ idx }) => idx),
         omega: 0.9 / n ** 1.15, // gusci interni più veloci
         phase: i * 0.9,
@@ -80,7 +102,8 @@ export class BohrModel {
     });
 
     this.slot = new Map(); // indice elettrone → posizione nel suo guscio
-    for (const s of this.shells) s.members.forEach((idx, k) => this.slot.set(idx, { shell: s, k, count: s.members.length }));
+    for (const s of this.shells)
+      s.members.forEach((idx, k) => this.slot.set(idx, { shell: s, k, count: s.members.length }));
 
     this.mesh = new THREE.InstancedMesh(electronGeometry, this.electronMaterial, Math.max(1, electrons.length));
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -118,7 +141,10 @@ export class BohrModel {
   electronPosition(i, time, out = new THREE.Vector3()) {
     const { shell, k, count } = this.slot.get(i);
     const a = (2 * Math.PI * k) / count + shell.phase + shell.omega * time;
-    return out.copy(shell.u).multiplyScalar(Math.cos(a) * shell.r).addScaledVector(shell.v, Math.sin(a) * shell.r);
+    return out
+      .copy(shell.u)
+      .multiplyScalar(Math.cos(a) * shell.r)
+      .addScaledVector(shell.v, Math.sin(a) * shell.r);
   }
 
   update(dt, time) {
@@ -134,7 +160,8 @@ export class BohrModel {
     this.mesh.visible = this.electronFade.cur > 0.01;
     for (const s of this.shells) {
       s.ring.visible = this.ringFade.cur > 0.01;
-      s.label.visible = Boolean(this.labelsOn) && (this.ringFade.cur > 0.5 || this.electronFade.cur > 0.5) && this.dim.target === 1;
+      s.label.visible =
+        Boolean(this.labelsOn) && (this.ringFade.cur > 0.5 || this.electronFade.cur > 0.5) && this.dim.target === 1;
     }
 
     for (let i = 0; i < this.electrons.length; i++) {

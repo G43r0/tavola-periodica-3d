@@ -14,8 +14,17 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'src', 'data', 'elements.json');
 
 const CATEGORIES = [
-  'alkali', 'alkaline-earth', 'transition', 'post-transition', 'metalloid',
-  'nonmetal', 'halogen', 'noble-gas', 'lanthanide', 'actinide', 'unknown',
+  'alkali',
+  'alkaline-earth',
+  'transition',
+  'post-transition',
+  'metalloid',
+  'nonmetal',
+  'halogen',
+  'noble-gas',
+  'lanthanide',
+  'actinide',
+  'unknown',
 ];
 
 // ---------------------------------------------------------------- sorgenti
@@ -30,7 +39,10 @@ const pubchem = new Map(
 
 const curatedDir = path.join(ROOT, 'data-sources', 'curated');
 const curated = {};
-for (const file of fs.readdirSync(curatedDir).filter((f) => f.endsWith('.mjs')).sort()) {
+for (const file of fs
+  .readdirSync(curatedDir)
+  .filter((f) => f.endsWith('.mjs'))
+  .sort()) {
   const mod = await import(pathToFileURL(path.join(curatedDir, file)).href);
   Object.assign(curated, mod.default);
 }
@@ -40,7 +52,10 @@ const num = (s) => (s === undefined || s === null || String(s).trim() === '' ? n
 const pick = (c, key, fallback) => (Object.prototype.hasOwnProperty.call(c, key) ? c[key] : fallback);
 const fmtIt = (v, opts = {}) => new Intl.NumberFormat('it-IT', { maximumSignificantDigits: 6, ...opts }).format(v);
 const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
-const sup = (n) => String(n).replace(/-/g, '⁻').replace(/\d/g, (d) => SUP[d]);
+const sup = (n) =>
+  String(n)
+    .replace(/-/g, '⁻')
+    .replace(/\d/g, (d) => SUP[d]);
 
 const PERIOD_STARTS = [1, 3, 11, 19, 37, 55, 87];
 
@@ -78,15 +93,20 @@ const UNIT = {
 };
 
 const DECAY = {
-  'α': 'decadimento α',
+  α: 'decadimento α',
   'β-': 'decadimento β⁻',
   'β+': 'decadimento β⁺',
   '2β-': 'doppio decadimento β⁻',
   CE: 'cattura elettronica',
+  '2CE': 'doppia cattura elettronica',
   FS: 'fissione spontanea',
   TI: 'transizione isomerica',
 };
-const DECAY_SHORT = { 'α': 'α', 'β-': 'β⁻', 'β+': 'β⁺', '2β-': '2β⁻', CE: 'CE', FS: 'FS', TI: 'TI' };
+const DECAY_SHORT = { α: 'α', 'β-': 'β⁻', 'β+': 'β⁺', '2β-': '2β⁻', CE: 'CE', '2CE': '2CE', FS: 'FS', TI: 'TI' };
+// nomi inglesi IUPAC (aluminium, caesium) al posto di quelli americani di PubChem
+const IUPAC_EN = { Aluminum: 'Aluminium', Cesium: 'Caesium' };
+// elementi il cui anione non è legato (affinità elettronica negativa): Be, N, Mg, Mn, Zn, Cd, Hg e i gas nobili
+const UNBOUND_ANION = new Set([2, 4, 7, 10, 12, 18, 25, 30, 36, 48, 54, 80, 86]);
 
 function halfLifeText(value, unit, approx) {
   const u = UNIT[unit];
@@ -96,42 +116,57 @@ function halfLifeText(value, unit, approx) {
     const mant = value / 10 ** exp;
     return `${pre}${fmtIt(mant, { maximumSignificantDigits: 4 })} × 10${sup(exp)} anni`;
   }
-  if (unit === 'a' && value >= 1e9) return `${pre}${fmtIt(value / 1e9, { maximumSignificantDigits: 4 })} miliardi di anni`;
-  if (unit === 'a' && value >= 1e6) return `${pre}${fmtIt(value / 1e6, { maximumSignificantDigits: 4 })} milioni di anni`;
+  if (unit === 'a' && value >= 1e9)
+    return `${pre}${fmtIt(value / 1e9, { maximumSignificantDigits: 4 })} miliardi di anni`;
+  if (unit === 'a' && value >= 1e6)
+    return `${pre}${fmtIt(value / 1e6, { maximumSignificantDigits: 4 })} milioni di anni`;
   return `${pre}${fmtIt(value)} ${value === 1 ? u.one : u.many}`;
 }
 
 function parseIsotopes(spec, z) {
-  const list = spec.split(';').map((s) => s.trim()).filter(Boolean).map((part) => {
-    const main = part.startsWith('*');
-    const [label, abundance, half, decay] = (main ? part.slice(1) : part).split(':');
-    const massNumber = parseInt(label, 10);
-    const iso = {
-      label,
-      massNumber,
-      neutrons: massNumber - z,
-      isomer: /m$/.test(label),
-      main,
-      abundance: abundance === 'tr' || abundance === '-' ? null : Number(abundance),
-      trace: abundance === 'tr',
-      synthetic: abundance === '-',
-      stable: !half,
-      halfLife: null,
-      decay: [],
-    };
-    if (half) {
-      const m = half.trim().match(/^(~|>)?([\d.e+]+)\s*(a|d|h|min|s|ms)$/);
-      if (!m) throw new Error(`Emivita non valida per Z=${z}: "${half}"`);
-      const approx = Boolean(m[1]);
-      const value = Number(m[2]);
-      iso.halfLife = { value, unit: m[3], approx, seconds: value * UNIT[m[3]].s, text: halfLifeText(value, m[3], approx) };
-      iso.decay = (decay || '').split('/').filter(Boolean).map((code) => {
-        if (!DECAY[code]) throw new Error(`Decadimento sconosciuto per Z=${z}: "${code}"`);
-        return { code, symbol: DECAY_SHORT[code], label: DECAY[code] };
-      });
-    }
-    return iso;
-  });
+  const list = spec
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const main = part.startsWith('*');
+      const [label, abundance, half, decay] = (main ? part.slice(1) : part).split(':');
+      const massNumber = parseInt(label, 10);
+      const iso = {
+        label,
+        massNumber,
+        neutrons: massNumber - z,
+        isomer: /m$/.test(label),
+        main,
+        abundance: abundance === 'tr' || abundance === '-' ? null : Number(abundance),
+        trace: abundance === 'tr',
+        synthetic: abundance === '-',
+        stable: !half,
+        halfLife: null,
+        decay: [],
+      };
+      if (half) {
+        const m = half.trim().match(/^(~|>)?([\d.e+]+)\s*(a|d|h|min|s|ms)$/);
+        if (!m) throw new Error(`Emivita non valida per Z=${z}: "${half}"`);
+        const approx = Boolean(m[1]);
+        const value = Number(m[2]);
+        iso.halfLife = {
+          value,
+          unit: m[3],
+          approx,
+          seconds: value * UNIT[m[3]].s,
+          text: halfLifeText(value, m[3], approx),
+        };
+        iso.decay = (decay || '')
+          .split('/')
+          .filter(Boolean)
+          .map((code) => {
+            if (!DECAY[code]) throw new Error(`Decadimento sconosciuto per Z=${z}: "${code}"`);
+            return { code, symbol: DECAY_SHORT[code], label: DECAY[code] };
+          });
+      }
+      return iso;
+    });
   return list.sort((a, b) => a.massNumber - b.massNumber || a.label.localeCompare(b.label));
 }
 
@@ -152,8 +187,14 @@ const elements = [];
 for (let z = 1; z <= 118; z++) {
   const pc = pubchem.get(z);
   const c = curated[z];
-  if (!pc) { errors.push(`Z=${z}: manca in PubChem`); continue; }
-  if (!c) { errors.push(`Z=${z}: mancano i dati curati`); continue; }
+  if (!pc) {
+    errors.push(`Z=${z}: manca in PubChem`);
+    continue;
+  }
+  if (!c) {
+    errors.push(`Z=${z}: mancano i dati curati`);
+    continue;
+  }
   for (const key of ['name', 'cat', 'm', 'ox', 'iso', 'year', 'by', 'orig', 'uses', 'occ']) {
     if (c[key] === undefined || c[key] === '') errors.push(`Z=${z}: campo curato mancante "${key}"`);
   }
@@ -168,7 +209,8 @@ for (let z = 1; z <= 118; z++) {
   const natural = isotopes.filter((i) => i.abundance !== null);
   if (natural.length) {
     const sum = natural.reduce((s, i) => s + i.abundance, 0);
-    if (sum < 98.5 || sum > 100.5) warnings.push(`Z=${z}: somma abbondanze ${sum.toFixed(3)}%`);
+    // ±0,1 %: prima con 98,5–100,5 % non si vedeva che al tellurio mancavano ¹²⁰Te e ¹²³Te (99,02 %)
+    if (Math.abs(sum - 100) > 0.1) warnings.push(`Z=${z}: somma abbondanze ${sum.toFixed(3)}%`);
   }
 
   const shellList = shells(z);
@@ -195,7 +237,9 @@ for (let z = 1; z <= 118; z++) {
     z,
     symbol: pc.Symbol,
     name: c.name,
-    nameEn: pc.Name,
+    nameEn: IUPAC_EN[pc.Name] ?? pc.Name,
+    // la variante americana resta per la ricerca («aluminum» trova l'alluminio)
+    ...(IUPAC_EN[pc.Name] ? { nameEnAlt: pc.Name } : {}),
     atomicMass: {
       text: massText,
       value: isMassNumber ? Number(massText.slice(1, -1)) : Number(massText),
@@ -226,8 +270,13 @@ for (let z = 1; z <= 118; z++) {
     vdwRadiusPm: num(pc.AtomicRadius),
     covalentRadiusPm: c.cr ?? null,
     ionizationEnergyEv: pick(c, 'ie', num(pc.IonizationEnergy)),
-    electronAffinityEv: num(pc.ElectronAffinity),
-    oxidationStates: c.ox.split(',').map((s) => s.trim()).filter(Boolean),
+    electronAffinityEv: pick(c, 'ea', num(pc.ElectronAffinity)),
+    // anione non legato (affinità elettronica negativa): la scheda lo dice invece di lasciare il vuoto
+    ...(UNBOUND_ANION.has(z) ? { anionUnbound: true } : {}),
+    oxidationStates: c.ox
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
     isotopes,
     discovery: { year: c.year, by: c.by },
     nameOrigin: c.orig,
@@ -250,15 +299,20 @@ const output = {
     description: 'Dati dei 118 elementi per Tavola Periodica 3D',
     generatedAt: new Date().toISOString().slice(0, 10),
     sources: [
-      'IUPAC/CIAAW — pesi atomici standard (valori abbreviati); numero di massa dell\'isotopo più stabile tra parentesi quadre',
+      "IUPAC/CIAAW — pesi atomici standard (valori abbreviati); numero di massa dell'isotopo più stabile tra parentesi quadre",
       'PubChem (NCBI) — Periodic Table of Elements: punti di fusione/ebollizione, densità, elettronegatività, raggi di van der Waals',
       'NIST Atomic Spectra Database — energie di prima ionizzazione e configurazioni elettroniche',
       'IUPAC / NUBASE2020 — composizione isotopica naturale ed emivite',
       'Cordero et al., Dalton Trans. 2008 — raggi covalenti',
     ],
     units: {
-      meltingPointK: 'K', boilingPointK: 'K', densityGcm3: 'g/cm³ (gas: g/cm³ a 0 °C, 1 atm)',
-      vdwRadiusPm: 'pm', covalentRadiusPm: 'pm', ionizationEnergyEv: 'eV', electronAffinityEv: 'eV',
+      meltingPointK: 'K',
+      boilingPointK: 'K',
+      densityGcm3: 'g/cm³ (gas: g/cm³ a 0 °C, 1 atm)',
+      vdwRadiusPm: 'pm',
+      covalentRadiusPm: 'pm',
+      ionizationEnergyEv: 'eV',
+      electronAffinityEv: 'eV',
     },
   },
   elements,
@@ -266,4 +320,6 @@ const output = {
 
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, JSON.stringify(output, null, 1) + '\n');
-console.log(`OK: ${elements.length} elementi → ${path.relative(ROOT, OUT)} (${(fs.statSync(OUT).size / 1024).toFixed(0)} KB)`);
+console.log(
+  `OK: ${elements.length} elementi → ${path.relative(ROOT, OUT)} (${(fs.statSync(OUT).size / 1024).toFixed(0)} KB)`,
+);

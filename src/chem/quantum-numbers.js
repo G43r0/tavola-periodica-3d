@@ -1,3 +1,4 @@
+// @ts-check
 // Numeri quantici degli elettroni e orbitali reali.
 // Riempimento dei sottolivelli secondo la configurazione dello stato fondamentale
 // (electron-config.js) e, dentro ogni sottolivello, regola di Hund:

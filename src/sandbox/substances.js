@@ -1,5 +1,5 @@
 // Sostanze della sandbox: i 118 elementi con i dati reali di elements.json (fusione, ebollizione, densità,
-// radioattività, elettronegatività), i materiali di base, i prodotti delle reazioni e le 554 sostanze della libreria
+// radioattività, elettronegatività), i materiali di base, i prodotti delle reazioni e le 558 sostanze della libreria
 // del laboratorio (dati fisici in data/compounds.js).
 // Modulo puro (niente DOM): lo usano il motore (world.js), il disegno e i test.
 import { MOLECULES, MOLECULE_GROUPS } from '../lab/data/molecules.js';
@@ -81,72 +81,285 @@ export const saltParts = (ctype) => [ctype >> 7, ctype & 127];
 
 // decadimenti
 export const DECAY = { NONE: 0, ALPHA: 1, BETA: 2, EC: 3, DOUBLE_BETA: 4, FISSION: 5 };
-const DECAY_CODE = { 'α': DECAY.ALPHA, 'β-': DECAY.BETA, 'β+': DECAY.EC, CE: DECAY.EC, '2β-': DECAY.DOUBLE_BETA, FS: DECAY.FISSION };
+const DECAY_CODE = {
+  α: DECAY.ALPHA,
+  'β-': DECAY.BETA,
+  'β+': DECAY.EC,
+  CE: DECAY.EC,
+  '2β-': DECAY.DOUBLE_BETA,
+  FS: DECAY.FISSION,
+};
 
-const METAL_CATEGORIES = new Set(['alkali', 'alkaline-earth', 'transition', 'post-transition', 'lanthanide', 'actinide']);
+const METAL_CATEGORIES = new Set([
+  'alkali',
+  'alkaline-earth',
+  'transition',
+  'post-transition',
+  'lanthanide',
+  'actinide',
+]);
 
 // ------------------------------------------------------------------ dati curati per la simulazione
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
 /** Aspetto reale del solido (colori approssimati); gli altri metalli sono argentei. */
 const APPEARANCE = {
-  H: '#d8e6ff', He: '#f2f2f2', Li: '#c9c9c4', Be: '#9aa0a6', B: '#3d2f28', C: '#2b2b2d', N: '#e8ecf2', O: '#9fd0ff',
-  F: '#f4f0a0', Ne: '#f0f0f0', Na: '#d8d9dd', Mg: '#c4c8cc', Al: '#cfd3d8', Si: '#5a6372', P: '#f0e9c8', S: '#f0cf2c',
-  Cl: '#d9d48a', Ar: '#f0f0f0', K: '#d0d0d6', Ca: '#d6d6d0', Ti: '#a8a9ad', V: '#9ca3ad', Cr: '#c3c8d0', Mn: '#a39c94',
-  Fe: '#8c8f94', Co: '#9da1a8', Ni: '#b7b3a8', Cu: '#c8763d', Zn: '#a9b1bd', Ga: '#c8ccd2', Ge: '#9aa0a6', As: '#757a80',
-  Se: '#6e3b3b', Br: '#5c1d14', Kr: '#f0f0f0', Rb: '#cbc8d0', Sr: '#d6d2c4', Zr: '#b5b8bc', Nb: '#9fa6b0', Mo: '#a6abb3',
-  Tc: '#a0a5ad', Ru: '#b0b4b8', Rh: '#c4c8cc', Pd: '#c0bdb8', Ag: '#d8dadc', Cd: '#b5b9c0', In: '#c0c4cc', Sn: '#c2c6cc',
-  Sb: '#b4b8c2', Te: '#a3a8ad', I: '#4b3a5e', Xe: '#f0f0f0', Cs: '#e2c672', Ba: '#c9c6b8', W: '#8e939a', Os: '#7f97b0',
-  Ir: '#c8ccd0', Pt: '#d4d4d8', Au: '#e8b52a', Hg: '#c8ccd4', Tl: '#9fa3a8', Pb: '#6e7381', Bi: '#c4a6b8', Po: '#a8acb2',
-  At: '#4a4a52', Rn: '#ffcc40', Fr: '#c0bfc8', Ra: '#e8e8e2', U: '#7b7f86', Pu: '#9ea2aa', Th: '#a7aaa8',
+  H: '#d8e6ff',
+  He: '#f2f2f2',
+  Li: '#c9c9c4',
+  Be: '#9aa0a6',
+  B: '#3d2f28',
+  C: '#2b2b2d',
+  N: '#e8ecf2',
+  O: '#9fd0ff',
+  F: '#f4f0a0',
+  Ne: '#f0f0f0',
+  Na: '#d8d9dd',
+  Mg: '#c4c8cc',
+  Al: '#cfd3d8',
+  Si: '#5a6372',
+  P: '#f0e9c8',
+  S: '#f0cf2c',
+  Cl: '#d9d48a',
+  Ar: '#f0f0f0',
+  K: '#d0d0d6',
+  Ca: '#d6d6d0',
+  Ti: '#a8a9ad',
+  V: '#9ca3ad',
+  Cr: '#c3c8d0',
+  Mn: '#a39c94',
+  Fe: '#8c8f94',
+  Co: '#9da1a8',
+  Ni: '#b7b3a8',
+  Cu: '#c8763d',
+  Zn: '#a9b1bd',
+  Ga: '#c8ccd2',
+  Ge: '#9aa0a6',
+  As: '#757a80',
+  Se: '#6e3b3b',
+  Br: '#5c1d14',
+  Kr: '#f0f0f0',
+  Rb: '#cbc8d0',
+  Sr: '#d6d2c4',
+  Zr: '#b5b8bc',
+  Nb: '#9fa6b0',
+  Mo: '#a6abb3',
+  Tc: '#a0a5ad',
+  Ru: '#b0b4b8',
+  Rh: '#c4c8cc',
+  Pd: '#c0bdb8',
+  Ag: '#d8dadc',
+  Cd: '#b5b9c0',
+  In: '#c0c4cc',
+  Sn: '#c2c6cc',
+  Sb: '#b4b8c2',
+  Te: '#a3a8ad',
+  I: '#4b3a5e',
+  Xe: '#f0f0f0',
+  Cs: '#e2c672',
+  Ba: '#c9c6b8',
+  W: '#8e939a',
+  Os: '#7f97b0',
+  Ir: '#c8ccd0',
+  Pt: '#d4d4d8',
+  Au: '#e8b52a',
+  Hg: '#c8ccd4',
+  Tl: '#9fa3a8',
+  Pb: '#6e7381',
+  Bi: '#c4a6b8',
+  Po: '#a8acb2',
+  At: '#4a4a52',
+  Rn: '#ffcc40',
+  Fr: '#c0bfc8',
+  Ra: '#e8e8e2',
+  U: '#7b7f86',
+  Pu: '#9ea2aa',
+  Th: '#a7aaa8',
 };
 
 /** Gas incolori o colorati: colore e opacità con cui si disegnano. */
 const GAS_LOOK = {
-  H: ['#cfe3ff', 0.2], He: ['#ffe8d8', 0.18], N: ['#d9e2ff', 0.18], O: ['#bfe0ff', 0.24], F: ['#f0f08a', 0.34],
-  Ne: ['#ffd9cc', 0.18], Cl: ['#bfe24a', 0.46], Ar: ['#e6dcff', 0.18], Kr: ['#e0f0ff', 0.18], Xe: ['#cfe0ff', 0.2],
-  Rn: ['#e0e8f0', 0.22], Br: ['#b8462a', 0.5], I: ['#9b3fbf', 0.45], Hg: ['#d8dcf0', 0.22], S: ['#e8b040', 0.35],
+  H: ['#cfe3ff', 0.2],
+  He: ['#ffe8d8', 0.18],
+  N: ['#d9e2ff', 0.18],
+  O: ['#bfe0ff', 0.24],
+  F: ['#f0f08a', 0.34],
+  Ne: ['#ffd9cc', 0.18],
+  Cl: ['#bfe24a', 0.46],
+  Ar: ['#e6dcff', 0.18],
+  Kr: ['#e0f0ff', 0.18],
+  Xe: ['#cfe0ff', 0.2],
+  Rn: ['#e0e8f0', 0.22],
+  Br: ['#b8462a', 0.5],
+  I: ['#9b3fbf', 0.45],
+  Hg: ['#d8dcf0', 0.22],
+  S: ['#e8b040', 0.35],
 };
 
 /** Colori dei liquidi diversi dal solido. */
-const LIQUID_LOOK = { O: '#7fb8ff', N: '#dfe8f5', F: '#f2e86a', Cl: '#e6c23a', Br: '#7a1a10', S: '#b5501c', H: '#e0ecff', Ne: '#ffe8e0' };
+const LIQUID_LOOK = {
+  O: '#7fb8ff',
+  N: '#dfe8f5',
+  F: '#f2e86a',
+  Cl: '#e6c23a',
+  Br: '#7a1a10',
+  S: '#b5501c',
+  H: '#e0ecff',
+  Ne: '#ffe8e0',
+};
 
 /** Colore della fiamma (saggio alla fiamma). */
 const FLAME_COLOR = {
-  H: '#9cc8ff', Li: '#ff2a4d', B: '#5cff6a', Na: '#ffb300', Mg: '#ffffff', Al: '#fff4e0', P: '#fff6d6', S: '#3d6bff',
-  K: '#c48cff', Ca: '#ff6a2b', Fe: '#ffbe55', Cu: '#33d9b0', Zn: '#b8f0ff', As: '#6a8cff', Se: '#5ab4ff', Rb: '#d0357c',
-  Sr: '#ff1f3d', In: '#6a5cff', Sb: '#a8f0a0', Te: '#9cf0a0', Cs: '#8b7dff', Ba: '#a6ff4d', Tl: '#7dff3a', Pb: '#b0c8ff',
-  Mo: '#d0ff70', Ti: '#ffffff', Ce: '#fff0c0', U: '#ffd080', Ra: '#ff3050',
+  H: '#9cc8ff',
+  Li: '#ff2a4d',
+  B: '#5cff6a',
+  Na: '#ffb300',
+  Mg: '#ffffff',
+  Al: '#fff4e0',
+  P: '#fff6d6',
+  S: '#3d6bff',
+  K: '#c48cff',
+  Ca: '#ff6a2b',
+  Fe: '#ffbe55',
+  Cu: '#33d9b0',
+  Zn: '#b8f0ff',
+  As: '#6a8cff',
+  Se: '#5ab4ff',
+  Rb: '#d0357c',
+  Sr: '#ff1f3d',
+  In: '#6a5cff',
+  Sb: '#a8f0a0',
+  Te: '#9cf0a0',
+  Cs: '#8b7dff',
+  Ba: '#a6ff4d',
+  Tl: '#7dff3a',
+  Pb: '#b0c8ff',
+  Mo: '#d0ff70',
+  Ti: '#ffffff',
+  Ce: '#fff0c0',
+  U: '#ffd080',
+  Ra: '#ff3050',
 };
-export const FLAME_COLOR_NAME = isItalian() ? {
-  H: 'azzurro pallido', Li: 'rosso carminio', B: 'verde brillante', Na: 'giallo-arancio', Mg: 'bianca abbagliante',
-  Al: 'bianca', P: 'bianca', S: 'blu', K: 'lilla', Ca: 'rosso-arancio', Fe: 'dorata, con scintille', Cu: 'verde-azzurro',
-  Zn: 'bianco-azzurro', As: 'blu', Se: 'azzurra', Rb: 'rosso-violetto', Sr: 'rosso cremisi', In: 'indaco', Sb: 'verde pallido',
-  Te: 'verde pallido', Cs: 'blu-violetto', Ba: 'verde mela', Tl: 'verde', Pb: 'azzurro pallido', Mo: 'giallo-verde',
-  Ti: 'bianca', Ce: 'giallo pallido', U: 'gialla', Ra: 'rossa',
-} : {
-  H: 'pale blue', Li: 'carmine red', B: 'bright green', Na: 'yellow-orange', Mg: 'dazzling white',
-  Al: 'white', P: 'white', S: 'blue', K: 'lilac', Ca: 'orange-red', Fe: 'golden, with sparks', Cu: 'blue-green',
-  Zn: 'bluish white', As: 'blue', Se: 'light blue', Rb: 'red-violet', Sr: 'crimson', In: 'indigo', Sb: 'pale green',
-  Te: 'pale green', Cs: 'blue-violet', Ba: 'apple green', Tl: 'green', Pb: 'pale blue', Mo: 'yellow-green',
-  Ti: 'white', Ce: 'pale yellow', U: 'yellow', Ra: 'red',
-};
+export const FLAME_COLOR_NAME = isItalian()
+  ? {
+      H: 'azzurro pallido',
+      Li: 'rosso carminio',
+      B: 'verde brillante',
+      Na: 'giallo-arancio',
+      Mg: 'bianca abbagliante',
+      Al: 'bianca',
+      P: 'bianca',
+      S: 'blu',
+      K: 'lilla',
+      Ca: 'rosso-arancio',
+      Fe: 'dorata, con scintille',
+      Cu: 'verde-azzurro',
+      Zn: 'bianco-azzurro',
+      As: 'blu',
+      Se: 'azzurra',
+      Rb: 'rosso-violetto',
+      Sr: 'rosso cremisi',
+      In: 'indaco',
+      Sb: 'verde pallido',
+      Te: 'verde pallido',
+      Cs: 'blu-violetto',
+      Ba: 'verde mela',
+      Tl: 'verde',
+      Pb: 'azzurro pallido',
+      Mo: 'giallo-verde',
+      Ti: 'bianca',
+      Ce: 'giallo pallido',
+      U: 'gialla',
+      Ra: 'rossa',
+    }
+  : {
+      H: 'pale blue',
+      Li: 'carmine red',
+      B: 'bright green',
+      Na: 'yellow-orange',
+      Mg: 'dazzling white',
+      Al: 'white',
+      P: 'white',
+      S: 'blue',
+      K: 'lilac',
+      Ca: 'orange-red',
+      Fe: 'golden, with sparks',
+      Cu: 'blue-green',
+      Zn: 'bluish white',
+      As: 'blue',
+      Se: 'light blue',
+      Rb: 'red-violet',
+      Sr: 'crimson',
+      In: 'indigo',
+      Sb: 'pale green',
+      Te: 'pale green',
+      Cs: 'blue-violet',
+      Ba: 'apple green',
+      Tl: 'green',
+      Pb: 'pale blue',
+      Mo: 'yellow-green',
+      Ti: 'white',
+      Ce: 'pale yellow',
+      U: 'yellow',
+      Ra: 'red',
+    };
 
 /** Colore della scarica elettrica nel gas (tubi al neon). */
 const DISCHARGE_COLOR = {
-  H: '#ff6fd0', He: '#ffb38a', N: '#c27bff', O: '#d9c8ff', Ne: '#ff5a2a', Ar: '#b07cff', Kr: '#ece6ff',
-  Xe: '#7d95ff', Rn: '#ff4060', Hg: '#9fb8ff', Na: '#ffc63d',
+  H: '#ff6fd0',
+  He: '#ffb38a',
+  N: '#c27bff',
+  O: '#d9c8ff',
+  Ne: '#ff5a2a',
+  Ar: '#b07cff',
+  Kr: '#ece6ff',
+  Xe: '#7d95ff',
+  Rn: '#ff4060',
+  Hg: '#9fb8ff',
+  Na: '#ffc63d',
 };
-export const DISCHARGE_COLOR_NAME = isItalian() ? {
-  H: 'rosa-magenta', He: 'rosa-arancio', N: 'viola', O: 'lilla pallido', Ne: 'rosso-arancio', Ar: 'violetto',
-  Kr: 'bianco-lilla', Xe: 'blu-violetto', Rn: 'rosso', Hg: 'azzurro-violetto', Na: 'giallo',
-} : {
-  H: 'pink-magenta', He: 'pink-orange', N: 'purple', O: 'pale lilac', Ne: 'orange-red', Ar: 'violet',
-  Kr: 'lilac white', Xe: 'blue-violet', Rn: 'red', Hg: 'violet-blue', Na: 'yellow',
-};
+export const DISCHARGE_COLOR_NAME = isItalian()
+  ? {
+      H: 'rosa-magenta',
+      He: 'rosa-arancio',
+      N: 'viola',
+      O: 'lilla pallido',
+      Ne: 'rosso-arancio',
+      Ar: 'violetto',
+      Kr: 'bianco-lilla',
+      Xe: 'blu-violetto',
+      Rn: 'rosso',
+      Hg: 'azzurro-violetto',
+      Na: 'giallo',
+    }
+  : {
+      H: 'pink-magenta',
+      He: 'pink-orange',
+      N: 'purple',
+      O: 'pale lilac',
+      Ne: 'orange-red',
+      Ar: 'violet',
+      Kr: 'lilac white',
+      Xe: 'blue-violet',
+      Rn: 'red',
+      Hg: 'violet-blue',
+      Na: 'yellow',
+    };
 
 /** Densità dei gas liquefatti (g/cm³) al punto di ebollizione. */
-const LIQUID_DENSITY = { H: 0.0708, He: 0.125, N: 0.807, O: 1.141, F: 1.505, Ne: 1.207, Cl: 1.563, Ar: 1.395, Kr: 2.413, Xe: 2.942, Rn: 4.4 };
+const LIQUID_DENSITY = {
+  H: 0.0708,
+  He: 0.125,
+  N: 0.807,
+  O: 1.141,
+  F: 1.505,
+  Ne: 1.207,
+  Cl: 1.563,
+  Ar: 1.395,
+  Kr: 2.413,
+  Xe: 2.942,
+  Rn: 4.4,
+};
 /** Atomi per molecola nel vapore (per la densità del gas). */
 const VAPOR_ATOMS = { H: 2, N: 2, O: 2, F: 2, Cl: 2, Br: 2, I: 2, At: 2, P: 4, As: 4, S: 2 };
 /** Liquidi più densi del solido (anomalie come l'acqua). */
@@ -154,9 +367,17 @@ const DENSER_LIQUID = new Set(['Si', 'Ge', 'Ga', 'Bi', 'Sb']);
 
 /** Stime per gli elementi senza dati misurati (temperature in K, densità in g/cm³). */
 const ESTIMATE = {
-  Fm: { density: 9.7 }, Md: { density: 10.3 }, No: { density: 9.9 }, Lr: { density: 15.6 },
-  Cn: { mp: 283, bp: 340 }, Nh: { mp: 700, bp: 1430 }, Fl: { mp: 284, bp: 380 }, Mc: { mp: 670, bp: 1400 },
-  Lv: { mp: 708, bp: 1085 }, Ts: { mp: 723, bp: 883 }, Og: { mp: 325, bp: 450 },
+  Fm: { density: 9.7 },
+  Md: { density: 10.3 },
+  No: { density: 9.9 },
+  Lr: { density: 15.6 },
+  Cn: { mp: 283, bp: 340 },
+  Nh: { mp: 700, bp: 1430 },
+  Fl: { mp: 284, bp: 380 },
+  Mc: { mp: 670, bp: 1400 },
+  Lv: { mp: 708, bp: 1085 },
+  Ts: { mp: 723, bp: 883 },
+  Og: { mp: 325, bp: 450 },
 };
 
 /**
@@ -166,8 +387,26 @@ const ESTIMATE = {
  */
 const BURN = {
   H: { ignite: 858, flame: 2400, instant: true },
-  C: { ignite: 973, flame: 1600, fuel: [500, 800], gases: [['CO2', 1]], gasChance: 0.12, soot: true, end: 'CO2', block: true },
-  P: { ignite: 307, chance: 0.04, flame: 1100, fuel: [25, 45], gases: [['p4o10', 1]], gasChance: 0.5, end: 'OXIDE', block: true },
+  C: {
+    ignite: 973,
+    flame: 1600,
+    fuel: [500, 800],
+    gases: [['CO2', 1]],
+    gasChance: 0.12,
+    soot: true,
+    end: 'CO2',
+    block: true,
+  },
+  P: {
+    ignite: 307,
+    chance: 0.04,
+    flame: 1100,
+    fuel: [25, 45],
+    gases: [['p4o10', 1]],
+    gasChance: 0.5,
+    end: 'OXIDE',
+    block: true,
+  },
   S: { ignite: 505, flame: 1100, fuel: [70, 130], gases: [['SO2', 1]], gasChance: 0.3, end: 'SO2', block: true },
   Li: { ignite: 453, flame: 1500, fuel: [60, 100], end: 'OXIDE', block: true },
   Na: { ignite: 388, flame: 1300, fuel: [60, 110], end: 'OXIDE', block: true },
@@ -217,24 +456,118 @@ const WATER_REACTION = {
 };
 
 /** Probabilità di fissione per cella attraversata da un neutrone veloce (lento: ×3). */
-const FISSILE = { Th: 0.006, Pa: 0.03, U: 0.04, Np: 0.05, Pu: 0.12, Am: 0.07, Cm: 0.1, Bk: 0.08, Cf: 0.13, Es: 0.1, Fm: 0.1 };
+const FISSILE = {
+  Th: 0.006,
+  Pa: 0.03,
+  U: 0.04,
+  Np: 0.05,
+  Pu: 0.12,
+  Am: 0.07,
+  Cm: 0.1,
+  Bk: 0.08,
+  Cf: 0.13,
+  Es: 0.1,
+  Fm: 0.1,
+};
 /** Isotopo fissile usato nelle equazioni. */
-export const FISSILE_ISOTOPE = { Th: 232, Pa: 231, U: 235, Np: 237, Pu: 239, Am: 241, Cm: 245, Bk: 247, Cf: 251, Es: 252, Fm: 257 };
+export const FISSILE_ISOTOPE = {
+  Th: 232,
+  Pa: 231,
+  U: 235,
+  Np: 237,
+  Pu: 239,
+  Am: 241,
+  Cm: 245,
+  Bk: 247,
+  Cf: 251,
+  Es: 252,
+  Fm: 257,
+};
 /** Assorbitori di neutroni (probabilità per cella). */
 const ABSORBER = { B: 0.5, Cd: 0.8, Gd: 0.9, Sm: 0.5, Eu: 0.5, Hf: 0.35, Dy: 0.35, In: 0.3, Er: 0.2, Ag: 0.12 };
 /** Moderatori: fattore di rallentamento per cella. */
 const MODERATOR = { H: 0.75, C: 0.88 };
 
 /** Riscaldamento resistivo per scintilla (K). */
-const SPARK_HEAT = { W: 30, C: 22, Ti: 14, Mn: 12, Cr: 10, Bi: 9, Pt: 8, Fe: 6, Ni: 6, Hg: 6, Pb: 6, Cu: 1, Ag: 1, Au: 1, Al: 1.5 };
+const SPARK_HEAT = {
+  W: 30,
+  C: 22,
+  Ti: 14,
+  Mn: 12,
+  Cr: 10,
+  Bi: 9,
+  Pt: 8,
+  Fe: 6,
+  Ni: 6,
+  Hg: 6,
+  Pb: 6,
+  Cu: 1,
+  Ag: 1,
+  Au: 1,
+  Al: 1.5,
+};
 /** Conduttività termica relativa (0–0,24). */
-const THERMAL = { Ag: 0.24, Cu: 0.24, Au: 0.22, Al: 0.21, W: 0.19, Mg: 0.17, C: 0.15, Si: 0.14, Fe: 0.12, Pb: 0.07, Hg: 0.06, Bi: 0.05, Mn: 0.05 };
+const THERMAL = {
+  Ag: 0.24,
+  Cu: 0.24,
+  Au: 0.22,
+  Al: 0.21,
+  W: 0.19,
+  Mg: 0.17,
+  C: 0.15,
+  Si: 0.14,
+  Fe: 0.12,
+  Pb: 0.07,
+  Hg: 0.06,
+  Bi: 0.05,
+  Mn: 0.05,
+};
 
 /** Carica tipica del catione per sali e ossidi (dove la regola generale non basta). */
 const CHARGE = {
-  Si: 4, Ge: 4, Sn: 4, Pb: 2, Ti: 4, Zr: 4, Hf: 4, Ce: 4, Th: 4, U: 4, Np: 4, Pu: 4, Se: 4, Te: 4, Mn: 2, Co: 2, Ni: 2,
-  Cu: 2, Zn: 2, Cd: 2, Hg: 2, Pd: 2, Pt: 4, Tl: 1, Ag: 1, Au: 3, Fe: 3, Cr: 3, V: 5, Mo: 6, W: 6, Nb: 5, Ta: 5, Re: 7,
-  Os: 4, Ru: 4, Ir: 4, Rh: 3, Tc: 7, Eu: 3, Sm: 3, Yb: 3, Tm: 3,
+  Si: 4,
+  Ge: 4,
+  Sn: 4,
+  Pb: 2,
+  Ti: 4,
+  Zr: 4,
+  Hf: 4,
+  Ce: 4,
+  Th: 4,
+  U: 4,
+  Np: 4,
+  Pu: 4,
+  Se: 4,
+  Te: 4,
+  Mn: 2,
+  Co: 2,
+  Ni: 2,
+  Cu: 2,
+  Zn: 2,
+  Cd: 2,
+  Hg: 2,
+  Pd: 2,
+  Pt: 4,
+  Tl: 1,
+  Ag: 1,
+  Au: 3,
+  Fe: 3,
+  Cr: 3,
+  V: 5,
+  Mo: 6,
+  W: 6,
+  Nb: 5,
+  Ta: 5,
+  Re: 7,
+  Os: 4,
+  Ru: 4,
+  Ir: 4,
+  Rh: 3,
+  Tc: 7,
+  Eu: 3,
+  Sm: 3,
+  Yb: 3,
+  Tm: 3,
 };
 
 /** Tempo di dimezzamento «di gioco» (s) da quello reale, in scala logaritmica: 1 ms → 0,4 s, 4,5 miliardi di anni → 44 min. */
@@ -267,7 +600,7 @@ function makeElement(el) {
   let mp = el.meltingPointK;
   let bp = el.boilingPointK;
   if (el.sublimationPointK) mp = bp = el.sublimationPointK;
-  if (sym === 'He') mp = 0.95; // a 1 atm non solidifica
+  if (sym === 'He') mp = 0; // a 1 atm resta liquido fino allo zero assoluto (solidifica solo sopra ~25 atm)
   if (mp == null) {
     mp = est.mp ?? 2000;
     estimated = true;
@@ -326,7 +659,9 @@ function makeElement(el) {
     flags |= S.RADIOACTIVE;
     const mode = DECAY_CODE[main.decay[0]?.code] ?? DECAY.ALPHA;
     const game = gameHalfLife(main.halfLife.seconds);
-    const daughter = { [DECAY.ALPHA]: el.z - 2, [DECAY.BETA]: el.z + 1, [DECAY.EC]: el.z - 1, [DECAY.DOUBLE_BETA]: el.z + 2 }[mode] ?? 0;
+    const daughter =
+      { [DECAY.ALPHA]: el.z - 2, [DECAY.BETA]: el.z + 1, [DECAY.EC]: el.z - 1, [DECAY.DOUBLE_BETA]: el.z + 2 }[mode] ??
+      0;
     decay = {
       mode,
       daughter,
@@ -342,15 +677,28 @@ function makeElement(el) {
 
   // ---- aspetto
   const category = el.category;
-  const solid = hex(APPEARANCE[sym] ?? (isMetal ? '#b4b9c0' : el.cpkColor && el.cpkColor.length === 7 ? el.cpkColor : '#9aa3ad'));
+  const solid = hex(
+    APPEARANCE[sym] ?? (isMetal ? '#b4b9c0' : el.cpkColor && el.cpkColor.length === 7 ? el.cpkColor : '#9aa3ad'),
+  );
   const gasLook = GAS_LOOK[sym];
   const colors = {
     [SOLID]: [...solid, 1],
-    [LIQUID]: [...(LIQUID_LOOK[sym] ? hex(LIQUID_LOOK[sym]) : mix(solid, [255, 255, 255], isMetal ? 0.12 : 0)), el.state === 'gas' ? 0.75 : 1],
+    [LIQUID]: [
+      ...(LIQUID_LOOK[sym] ? hex(LIQUID_LOOK[sym]) : mix(solid, [255, 255, 255], isMetal ? 0.12 : 0)),
+      el.state === 'gas' ? 0.75 : 1,
+    ],
     [GAS]: gasLook ? [...hex(gasLook[0]), gasLook[1]] : [...mix(solid, [255, 255, 255], 0.45), 0.3],
   };
 
-  const thermal = THERMAL[sym] ?? (isMetal ? (category === 'lanthanide' || category === 'actinide' ? 0.06 : 0.14) : el.category === 'metalloid' ? 0.07 : 0.02);
+  const thermal =
+    THERMAL[sym] ??
+    (isMetal
+      ? category === 'lanthanide' || category === 'actinide'
+        ? 0.06
+        : 0.14
+      : el.category === 'metalloid'
+        ? 0.07
+        : 0.02);
 
   return {
     id: el.z,
@@ -382,7 +730,18 @@ function makeElement(el) {
     flameColor: FLAME_COLOR[sym] ? hex(FLAME_COLOR[sym]) : null,
     discharge: DISCHARGE_COLOR[sym] ? hex(DISCHARGE_COLOR[sym]) : null,
     electronegativity: el.electronegativity ?? (isMetal ? 1.2 : 2.2),
-    charge: isMetal || sym === 'Si' || sym === 'B' || sym === 'Ge' || sym === 'As' || sym === 'Sb' || sym === 'Se' || sym === 'Te' || sym === 'P' ? cationCharge(el) : 0,
+    charge:
+      isMetal ||
+      sym === 'Si' ||
+      sym === 'B' ||
+      sym === 'Ge' ||
+      sym === 'As' ||
+      sym === 'Sb' ||
+      sym === 'Se' ||
+      sym === 'Te' ||
+      sym === 'P'
+        ? cationCharge(el)
+        : 0,
     estimated: estimated || el.z >= 100,
     defaultPowder: true,
   };
@@ -390,103 +749,369 @@ function makeElement(el) {
 
 /** Materiali di base, composti e prodotti delle reazioni. */
 function makeOthers() {
-  const base = { kind: 'material', z: 0, burn: null, water: null, decay: null, fission: 0, absorb: 0, moderate: 1, sparkHeat: 0, flameColor: null, discharge: null, electronegativity: 0, charge: 0, estimated: false, sublimes: false, disp: 3, hardness: 0.3, defaultPowder: false };
+  const base = {
+    kind: 'material',
+    z: 0,
+    burn: null,
+    water: null,
+    decay: null,
+    fission: 0,
+    absorb: 0,
+    moderate: 1,
+    sparkHeat: 0,
+    flameColor: null,
+    discharge: null,
+    electronegativity: 0,
+    charge: 0,
+    estimated: false,
+    sublimes: false,
+    disp: 3,
+    hardness: 0.3,
+    defaultPowder: false,
+  };
   const gasOf = (molar) => molar / MOLAR_VOLUME;
   return [
     {
-      ...base, id: WOOD, key: 'wood', name: L('Legno', 'Wood'), symbol: L('Legno', 'Wood'), mp: Infinity, bp: Infinity, densS: 0.6, densL: 0.6, densG: 0.0013,
-      cond: 0.012, hardness: 0.35, flags: S.FLAMMABLE | S.BURNS_AS_BLOCK | S.BLOCK_DEFAULT,
+      ...base,
+      id: WOOD,
+      key: 'wood',
+      name: L('Legno', 'Wood'),
+      symbol: L('Legno', 'Wood'),
+      mp: Infinity,
+      bp: Infinity,
+      densS: 0.6,
+      densL: 0.6,
+      densG: 0.0013,
+      cond: 0.012,
+      hardness: 0.35,
+      flags: S.FLAMMABLE | S.BURNS_AS_BLOCK | S.BLOCK_DEFAULT,
       colors: { [SOLID]: [138, 92, 48, 1], [LIQUID]: [138, 92, 48, 1], [GAS]: [138, 92, 48, 0.3] },
       // (C₆H₁₀O₅)ₙ: circa 6 CO₂ ogni 5 H₂O, più la fuliggine (e il catrame) di ciò che non brucia del tutto: il fumo
       // della legna si vede, quello della CO₂ e del vapore quasi no
-      burn: { ignite: 573, chance: 1, flame: 1150, fuel: [70, 150], gases: [['CO2', 0.4], ['water', 0.35], ['SMOKE', 0.25]], gasChance: 0.35, soot: true, residue: [['ASH', 0.4], ['COAL', 0.08]] },
+      burn: {
+        ignite: 573,
+        chance: 1,
+        flame: 1150,
+        fuel: [70, 150],
+        gases: [
+          ['CO2', 0.4],
+          ['water', 0.35],
+          ['SMOKE', 0.25],
+        ],
+        gasChance: 0.35,
+        soot: true,
+        residue: [
+          ['ASH', 0.4],
+          ['COAL', 0.08],
+        ],
+      },
     },
     {
-      ...base, id: COAL, key: 'coal', name: L('Carbone', 'Coal'), symbol: L('Carb.', 'Coal'), mp: Infinity, bp: Infinity, densS: 1.35, densL: 1.35, densG: 0.0013,
-      cond: 0.02, hardness: 0.3, flags: S.FLAMMABLE | S.BURNS_AS_BLOCK | S.BLOCK_DEFAULT,
+      ...base,
+      id: COAL,
+      key: 'coal',
+      name: L('Carbone', 'Coal'),
+      symbol: L('Carb.', 'Coal'),
+      mp: Infinity,
+      bp: Infinity,
+      densS: 1.35,
+      densL: 1.35,
+      densG: 0.0013,
+      cond: 0.02,
+      hardness: 0.3,
+      flags: S.FLAMMABLE | S.BURNS_AS_BLOCK | S.BLOCK_DEFAULT,
       colors: { [SOLID]: [36, 33, 31, 1], [LIQUID]: [36, 33, 31, 1], [GAS]: [60, 60, 60, 0.3] },
-      burn: { ignite: 700, chance: 1, flame: 1450, fuel: [450, 750], gases: [['CO2', 1]], gasChance: 0.08, soot: true, residue: [['ASH', 0.3]] },
+      burn: {
+        ignite: 700,
+        chance: 1,
+        flame: 1450,
+        fuel: [450, 750],
+        gases: [['CO2', 1]],
+        gasChance: 0.08,
+        soot: true,
+        residue: [['ASH', 0.3]],
+      },
     },
     {
-      ...base, id: CONCRETE, key: 'concrete', name: L('Calcestruzzo', 'Concrete'), symbol: L('Cls', 'Conc.'), mp: 1900, bp: 3200, densS: 2.4, densL: 2.5, densG: gasOf(60),
-      cond: 0.035, hardness: 0.85, disp: 1, flags: S.BLOCK_DEFAULT,
+      ...base,
+      id: CONCRETE,
+      key: 'concrete',
+      name: L('Calcestruzzo', 'Concrete'),
+      symbol: L('Cls', 'Conc.'),
+      mp: 1900,
+      bp: 3200,
+      densS: 2.4,
+      densL: 2.5,
+      densG: gasOf(60),
+      cond: 0.035,
+      hardness: 0.85,
+      disp: 1,
+      flags: S.BLOCK_DEFAULT,
       colors: { [SOLID]: [150, 150, 144, 1], [LIQUID]: [170, 120, 90, 1], [GAS]: [200, 190, 180, 0.3] },
     },
     {
-      ...base, id: WALL, key: 'wall', name: L('Muro indistruttibile', 'Indestructible wall'), symbol: L('Muro', 'Wall'), mp: Infinity, bp: Infinity, densS: 1e9, densL: 1e9, densG: 1e9,
-      cond: 0, hardness: Infinity, flags: S.WALL | S.BLOCK_ONLY | S.BLOCK_DEFAULT | S.SHIELD,
+      ...base,
+      id: WALL,
+      key: 'wall',
+      name: L('Muro indistruttibile', 'Indestructible wall'),
+      symbol: L('Muro', 'Wall'),
+      mp: Infinity,
+      bp: Infinity,
+      densS: 1e9,
+      densL: 1e9,
+      densG: 1e9,
+      cond: 0,
+      hardness: Infinity,
+      flags: S.WALL | S.BLOCK_ONLY | S.BLOCK_DEFAULT | S.SHIELD,
       colors: { [SOLID]: [70, 80, 96, 1], [LIQUID]: [70, 80, 96, 1], [GAS]: [70, 80, 96, 1] },
     },
     {
-      ...base, id: GENERATOR, key: 'generator', name: L('Generatore elettrico', 'Electric generator'), symbol: 'Gen', mp: Infinity, bp: Infinity, densS: 5, densL: 5, densG: 5,
-      cond: 0.05, hardness: 0.9, flags: S.GENERATOR | S.BLOCK_ONLY | S.BLOCK_DEFAULT,
+      ...base,
+      id: GENERATOR,
+      key: 'generator',
+      name: L('Generatore elettrico', 'Electric generator'),
+      symbol: 'Gen',
+      mp: Infinity,
+      bp: Infinity,
+      densS: 5,
+      densL: 5,
+      densG: 5,
+      cond: 0.05,
+      hardness: 0.9,
+      flags: S.GENERATOR | S.BLOCK_ONLY | S.BLOCK_DEFAULT,
       colors: { [SOLID]: [214, 170, 40, 1], [LIQUID]: [214, 170, 40, 1], [GAS]: [214, 170, 40, 1] },
     },
     {
-      ...base, id: SOURCE, key: 'source', name: L('Sorgente', 'Source'), symbol: L('Sorg', 'Src'), mp: Infinity, bp: Infinity, densS: 5, densL: 5, densG: 5,
-      cond: 0, hardness: 0.9, flags: S.SOURCE | S.BLOCK_ONLY | S.BLOCK_DEFAULT,
+      ...base,
+      id: SOURCE,
+      key: 'source',
+      name: L('Sorgente', 'Source'),
+      symbol: L('Sorg', 'Src'),
+      mp: Infinity,
+      bp: Infinity,
+      densS: 5,
+      densL: 5,
+      densG: 5,
+      cond: 0,
+      hardness: 0.9,
+      flags: S.SOURCE | S.BLOCK_ONLY | S.BLOCK_DEFAULT,
       colors: { [SOLID]: [58, 170, 140, 1], [LIQUID]: [58, 170, 140, 1], [GAS]: [58, 170, 140, 1] },
     },
     {
-      ...base, id: DRAIN, key: 'drain', name: L('Pozzo', 'Drain'), symbol: L('Pozzo', 'Drain'), mp: Infinity, bp: Infinity, densS: 5, densL: 5, densG: 5,
-      cond: 0, hardness: 0.9, flags: S.DRAIN | S.BLOCK_ONLY | S.BLOCK_DEFAULT,
+      ...base,
+      id: DRAIN,
+      key: 'drain',
+      name: L('Pozzo', 'Drain'),
+      symbol: L('Pozzo', 'Drain'),
+      mp: Infinity,
+      bp: Infinity,
+      densS: 5,
+      densL: 5,
+      densG: 5,
+      cond: 0,
+      hardness: 0.9,
+      flags: S.DRAIN | S.BLOCK_ONLY | S.BLOCK_DEFAULT,
       colors: { [SOLID]: [96, 52, 120, 1], [LIQUID]: [96, 52, 120, 1], [GAS]: [96, 52, 120, 1] },
     },
     {
-      ...base, kind: 'compound', id: WATER, key: 'water', name: L('Acqua', 'Water'), symbol: 'H₂O', mp: 273.15, bp: 373.15, densS: 0.917, densL: 0.998, densG: gasOf(18.015),
-      cond: 0.06, disp: 5, flags: S.LIQUID_CONDUCTOR | S.EXTINGUISHER | S.MODERATOR | S.MISCIBLE, moderate: 0.6, sparkHeat: 2,
+      ...base,
+      kind: 'compound',
+      id: WATER,
+      key: 'water',
+      name: L('Acqua', 'Water'),
+      symbol: 'H₂O',
+      mp: 273.15,
+      bp: 373.15,
+      densS: 0.917,
+      densL: 0.998,
+      densG: gasOf(18.015),
+      cond: 0.06,
+      disp: 5,
+      flags: S.LIQUID_CONDUCTOR | S.EXTINGUISHER | S.MODERATOR | S.MISCIBLE,
+      moderate: 0.6,
+      sparkHeat: 2,
       colors: { [SOLID]: [200, 232, 255, 0.95], [LIQUID]: [40, 120, 220, 0.86], [GAS]: [225, 233, 242, 0.26] },
     },
     {
-      ...base, kind: 'product', id: FIRE, key: 'fire', name: L('Fuoco', 'Fire'), symbol: L('Fuoco', 'Fire'), mp: -1, bp: -1, densS: 0.0002, densL: 0.0002, densG: 0.0002,
-      cond: 0.12, flags: S.FIRE,
+      ...base,
+      kind: 'product',
+      id: FIRE,
+      key: 'fire',
+      name: L('Fuoco', 'Fire'),
+      symbol: L('Fuoco', 'Fire'),
+      mp: -1,
+      bp: -1,
+      densS: 0.0002,
+      densL: 0.0002,
+      densG: 0.0002,
+      cond: 0.12,
+      flags: S.FIRE,
       colors: { [SOLID]: [255, 140, 30, 1], [LIQUID]: [255, 140, 30, 1], [GAS]: [255, 140, 30, 0.9] },
     },
     {
       // particelle di carbonio incombusto: si formano solo quando l'ossigeno non basta
-      ...base, kind: 'product', id: SMOKE, key: 'smoke', name: L('Fumo nero (fuliggine)', 'Black smoke (soot)'), symbol: 'C', mp: -1, bp: -1, densS: 1, densL: 1, densG: 0.00105,
-      cond: 0.02, flags: S.FADES,
+      ...base,
+      kind: 'product',
+      id: SMOKE,
+      key: 'smoke',
+      name: L('Fumo nero (fuliggine)', 'Black smoke (soot)'),
+      symbol: 'C',
+      mp: -1,
+      bp: -1,
+      densS: 1,
+      densL: 1,
+      densG: 0.00105,
+      cond: 0.02,
+      flags: S.FADES,
       colors: { [SOLID]: [90, 90, 90, 0.45], [LIQUID]: [90, 90, 90, 0.45], [GAS]: [92, 92, 96, 0.42] },
     },
     {
-      ...base, kind: 'product', id: ASH, key: 'ash', name: L('Cenere', 'Ash'), symbol: L('Cenere', 'Ash'), mp: 1500, bp: 3000, densS: 0.7, densL: 2.2, densG: gasOf(60),
-      cond: 0.015, defaultPowder: true, flags: 0,
+      ...base,
+      kind: 'product',
+      id: ASH,
+      key: 'ash',
+      name: L('Cenere', 'Ash'),
+      symbol: L('Cenere', 'Ash'),
+      mp: 1500,
+      bp: 3000,
+      densS: 0.7,
+      densL: 2.2,
+      densG: gasOf(60),
+      cond: 0.015,
+      defaultPowder: true,
+      flags: 0,
       colors: { [SOLID]: [141, 138, 133, 1], [LIQUID]: [180, 120, 80, 1], [GAS]: [200, 200, 200, 0.3] },
     },
     {
-      ...base, kind: 'product', id: CO2, key: 'co2', name: L('Anidride carbonica', 'Carbon dioxide'), symbol: 'CO₂', mp: 194.65, bp: 194.65, densS: 1.56, densL: 1.1, densG: gasOf(44.01),
-      cond: 0.015, sublimes: true, defaultPowder: true, flags: S.EXTINGUISHER,
+      ...base,
+      kind: 'product',
+      id: CO2,
+      key: 'co2',
+      name: L('Anidride carbonica', 'Carbon dioxide'),
+      symbol: 'CO₂',
+      mp: 194.65,
+      bp: 194.65,
+      densS: 1.56,
+      densL: 1.1,
+      densG: gasOf(44.01),
+      cond: 0.015,
+      sublimes: true,
+      defaultPowder: true,
+      flags: S.EXTINGUISHER,
       colors: { [SOLID]: [236, 242, 248, 1], [LIQUID]: [220, 230, 240, 0.6], [GAS]: [200, 210, 220, 0.12] },
     },
     {
-      ...base, kind: 'product', id: SO2, key: 'so2', name: L('Anidride solforosa', 'Sulfur dioxide'), symbol: 'SO₂', mp: 200, bp: 263, densS: 1.6, densL: 1.46, densG: gasOf(64.07),
-      cond: 0.015, flags: S.EXTINGUISHER,
+      ...base,
+      kind: 'product',
+      id: SO2,
+      key: 'so2',
+      name: L('Anidride solforosa', 'Sulfur dioxide'),
+      symbol: 'SO₂',
+      mp: 200,
+      bp: 263,
+      densS: 1.6,
+      densL: 1.46,
+      densG: gasOf(64.07),
+      cond: 0.015,
+      flags: S.EXTINGUISHER,
       colors: { [SOLID]: [240, 236, 210, 1], [LIQUID]: [235, 228, 190, 0.7], [GAS]: [232, 222, 150, 0.2] },
     },
     {
-      ...base, kind: 'compound', id: SALT, key: 'salt', name: L('Sale', 'Salt'), symbol: L('Sale', 'Salt'), mp: 1000, bp: 1700, densS: 2.2, densL: 1.6, densG: gasOf(58),
-      cond: 0.03, disp: 2, defaultPowder: true, flags: S.LIQUID_CONDUCTOR, sparkHeat: 3,
+      ...base,
+      kind: 'compound',
+      id: SALT,
+      key: 'salt',
+      name: L('Sale', 'Salt'),
+      symbol: L('Sale', 'Salt'),
+      mp: 1000,
+      bp: 1700,
+      densS: 2.2,
+      densL: 1.6,
+      densG: gasOf(58),
+      cond: 0.03,
+      disp: 2,
+      defaultPowder: true,
+      flags: S.LIQUID_CONDUCTOR,
+      sparkHeat: 3,
       colors: { [SOLID]: [238, 238, 240, 1], [LIQUID]: [250, 240, 220, 1], [GAS]: [230, 230, 230, 0.3] },
     },
     {
-      ...base, kind: 'compound', id: OXIDE, key: 'oxide', name: L('Ossido', 'Oxide'), symbol: L('Oss.', 'Ox.'), mp: 2200, bp: 3500, densS: 4, densL: 3.6, densG: gasOf(100),
-      cond: 0.03, disp: 1, defaultPowder: true, flags: 0,
+      ...base,
+      kind: 'compound',
+      id: OXIDE,
+      key: 'oxide',
+      name: L('Ossido', 'Oxide'),
+      symbol: L('Oss.', 'Ox.'),
+      mp: 2200,
+      bp: 3500,
+      densS: 4,
+      densL: 3.6,
+      densG: gasOf(100),
+      cond: 0.03,
+      disp: 1,
+      defaultPowder: true,
+      flags: 0,
       colors: { [SOLID]: [216, 214, 208, 1], [LIQUID]: [255, 200, 120, 1], [GAS]: [230, 230, 230, 0.3] },
     },
     {
-      ...base, kind: 'product', id: SOLUTION, key: 'solution', name: L('Idrossido in soluzione', 'Hydroxide in solution'), symbol: 'OH⁻', mp: 265, bp: 378, densS: 1.15, densL: 1.08, densG: gasOf(18.015),
-      cond: 0.06, disp: 5, flags: S.LIQUID_CONDUCTOR | S.EXTINGUISHER | S.MODERATOR | S.MISCIBLE | S.AQUEOUS, moderate: 0.6, sparkHeat: 2,
+      ...base,
+      kind: 'product',
+      id: SOLUTION,
+      key: 'solution',
+      name: L('Idrossido in soluzione', 'Hydroxide in solution'),
+      symbol: 'OH⁻',
+      mp: 265,
+      bp: 378,
+      densS: 1.15,
+      densL: 1.08,
+      densG: gasOf(18.015),
+      cond: 0.06,
+      disp: 5,
+      flags: S.LIQUID_CONDUCTOR | S.EXTINGUISHER | S.MODERATOR | S.MISCIBLE | S.AQUEOUS,
+      moderate: 0.6,
+      sparkHeat: 2,
       colors: { [SOLID]: [215, 230, 245, 0.95], [LIQUID]: [92, 150, 214, 0.86], [GAS]: [225, 233, 242, 0.26] },
     },
   ];
 }
 
 /** Colore di un sale, di un ossido o di una soluzione in base agli elementi che contiene. */
-const SALT_COLOR = { Cu: '#3fb3a0', Fe: '#c07a2a', Ni: '#6fb96f', Co: '#3d5fd9', Cr: '#7b4fb0', Mn: '#f2c6d2', Au: '#e0b030', Pt: '#c88a3a', V: '#7a5a3a' };
+const SALT_COLOR = {
+  Cu: '#3fb3a0',
+  Fe: '#c07a2a',
+  Ni: '#6fb96f',
+  Co: '#3d5fd9',
+  Cr: '#7b4fb0',
+  Mn: '#f2c6d2',
+  Au: '#e0b030',
+  Pt: '#c88a3a',
+  V: '#7a5a3a',
+};
 const OXIDE_COLOR = {
-  Fe: '#8b3a1e', Cu: '#262020', Cr: '#3d7a3a', Ni: '#5a8a4a', Co: '#26355e', U: '#2a241e', Pu: '#4a4a30', Pb: '#e8c040',
-  Mn: '#2e2622', Ag: '#3a2c24', Hg: '#c03020', K: '#f0e6b0', V: '#c08a2a', Mo: '#e8f0f0', W: '#d8d040', Co3: '#26355e',
-  Se: '#f0f0f0', Np: '#5a5040', Ce: '#f2ecd0', Tl: '#2a2a2a', Bi: '#f0e080', Cd: '#7a4a2a', Zn: '#f4f4f0', Ti: '#fafafa',
+  Fe: '#8b3a1e',
+  Cu: '#262020',
+  Cr: '#3d7a3a',
+  Ni: '#5a8a4a',
+  Co: '#26355e',
+  U: '#2a241e',
+  Pu: '#4a4a30',
+  Pb: '#e8c040',
+  Mn: '#2e2622',
+  Ag: '#3a2c24',
+  Hg: '#c03020',
+  K: '#f0e6b0',
+  V: '#c08a2a',
+  Mo: '#e8f0f0',
+  W: '#d8d040',
+  Co3: '#26355e',
+  Se: '#f0f0f0',
+  Np: '#5a5040',
+  Ce: '#f2ecd0',
+  Tl: '#2a2a2a',
+  Bi: '#f0e080',
+  Cd: '#7a4a2a',
+  Zn: '#f4f4f0',
+  Ti: '#fafafa',
 };
 
 export function variantColor(subs, id, ctype) {
@@ -528,7 +1153,10 @@ export function exhaustOf(counts) {
     ['SO2', n(16)],
     ['N', n(7) / 2],
     ['p4o10', n(15) / 4],
-    ['hf', n(9)], ['hcl', n(17)], ['hbr', n(35)], ['hi', n(53)],
+    ['hf', n(9)],
+    ['hcl', n(17)],
+    ['hbr', n(35)],
+    ['hi', n(53)],
     ['sio2', n(14)],
   ].filter(([, w]) => w > 0);
   const total = out.reduce((t, [, w]) => t + w, 0);
@@ -583,19 +1211,36 @@ function makeCompound(id, entry, data, elements, lab) {
     flags |= S.FLAMMABLE | S.BURNS_AS_BLOCK;
     if (state25 === 'gas') flags |= S.INSTANT_BURN;
     const gases = exhaustOf(counts);
-    burn = { ignite: ignC != null ? ignC + 273.15 : organic ? 573 : 673, chance: 1, flame: state25 === 'gas' ? 2200 : 1700, fuel: [60, 140], gases, gasChance: gases.length ? 0.15 : 0, soot: Boolean(counts[6]) };
+    burn = {
+      ignite: ignC != null ? ignC + 273.15 : organic ? 573 : 673,
+      chance: 1,
+      flame: state25 === 'gas' ? 2200 : 1700,
+      fuel: [60, 140],
+      gases,
+      gasChance: gases.length ? 0.15 : 0,
+      soot: Boolean(counts[6]),
+    };
   }
   const rgb = color ? hex(color) : null;
   const colors = {
     [SOLID]: [...(rgb ?? [242, 242, 240]), 1],
-    [LIQUID]: aqueous ? [...(rgb ? mix(WATER_RGB, rgb, 0.6) : [70, 140, 226]), 0.86] : rgb ? [...rgb, 1] : [214, 228, 242, 0.6],
+    [LIQUID]: aqueous
+      ? [...(rgb ? mix(WATER_RGB, rgb, 0.6) : [70, 140, 226]), 0.86]
+      : rgb
+        ? [...rgb, 1]
+        : [214, 228, 242, 0.6],
     [GAS]: rgb ? [...rgb, 0.4] : [208, 216, 226, 0.13],
   };
   // la formula scritta in libreria non ha la carica; quella generata sì
-  const formula = entry.formula ? entry.formula + chargeText(entry.charge) : displayFormula(lab, atoms, entry.charge, { ionic: entry.ionic });
+  const formula = entry.formula
+    ? entry.formula + chargeText(entry.charge)
+    : displayFormula(lab, atoms, entry.charge, { ionic: entry.ionic });
   const viscous = ['glicerolo', 'acido-oleico', 'h2so4', 'glicole-etilenico', 'nitroglicerina'].includes(entry.id);
   // il primo metallo che colora la fiamma (NaCl → sodio, giallo)
-  const tintZ = Number(Object.keys(counts).find((z) => FLAME_COLOR[elements[z - 1].symbol] && elements[z - 1].category !== 'nonmetal')) || 0;
+  const tintZ =
+    Number(
+      Object.keys(counts).find((z) => FLAME_COLOR[elements[z - 1].symbol] && elements[z - 1].category !== 'nonmetal'),
+    ) || 0;
   return {
     id,
     key: entry.id,
@@ -640,18 +1285,32 @@ function makeCompound(id, entry, data, elements, lab) {
 
 /**
  * Tabella completa delle sostanze: `list[id]` (oggetti descrittivi) e array tipizzati per il motore.
- * @param {object[]} elements elementi di elements.json
+ * @param {import('../types').Element[]} elements elementi di elements.json
  */
 export function createSubstances(elements) {
   const lab = createLabElements(elements);
   const library = createLibraryIndex(lab, MOLECULES);
   const list = new Array(FIRST_COMPOUND).fill(null);
-  list[EMPTY] = { id: EMPTY, key: 'empty', name: L('Aria', 'Air'), symbol: '', kind: 'empty', mp: -1, bp: -1, densS: AIR_DENSITY, densL: AIR_DENSITY, densG: AIR_DENSITY, cond: 0, flags: 0, colors: {} };
+  list[EMPTY] = {
+    id: EMPTY,
+    key: 'empty',
+    name: L('Aria', 'Air'),
+    symbol: '',
+    kind: 'empty',
+    mp: -1,
+    bp: -1,
+    densS: AIR_DENSITY,
+    densL: AIR_DENSITY,
+    densG: AIR_DENSITY,
+    cond: 0,
+    flags: 0,
+    colors: {},
+  };
   for (const el of elements) list[el.z] = makeElement(el);
   for (const s of makeOthers()) list[s.id] = s;
 
   const byKey = new Map(list.map((s) => [s.key, s]));
-  // le 554 voci della libreria: alcune sono già sostanze (H₂ → idrogeno, H₂O → acqua), le altre diventano composti
+  // le 558 voci della libreria: alcune sono già sostanze (H₂ → idrogeno, H₂O → acqua), le altre diventano composti
   const libraryId = new Map();
   for (const entry of library.entries) {
     const alias = LIBRARY_ALIASES[entry.id];
@@ -666,7 +1325,11 @@ export function createSubstances(elements) {
     byKey.set(s.key, s);
     libraryId.set(entry.id, s.id);
   }
-  const keyId = (k) => (k ? byKey.get({ CO2: 'co2', SO2: 'so2', SMOKE: 'smoke', ASH: 'ash', COAL: 'coal', OXIDE: 'oxide' }[k] ?? k)?.id ?? 0 : 0);
+  const keyId = (k) =>
+    k
+      ? (byKey.get({ CO2: 'co2', SO2: 'so2', SMOKE: 'smoke', ASH: 'ash', COAL: 'coal', OXIDE: 'oxide' }[k] ?? k)?.id ??
+        0)
+      : 0;
   /** [chiave, quota] → [id, probabilità]; se una sostanza manca, le quote delle altre si rinormalizzano. */
   const idShares = (pairs) => {
     const ids = pairs.map(([k, p]) => [keyId(k), p]).filter(([id]) => id);
@@ -740,7 +1403,7 @@ export function createSubstances(elements) {
       P.fuelMin[i] = s.burn.fuel?.[0] ?? 0;
       P.fuelMax[i] = s.burn.fuel?.[1] ?? 0;
       P.burnGases[i] = idShares(s.burn.gases ?? []);
-      P.gasChance[i] = P.burnGases[i] ? s.burn.gasChance ?? 0 : 0;
+      P.gasChance[i] = P.burnGases[i] ? (s.burn.gasChance ?? 0) : 0;
       P.soot[i] = s.burn.soot ? 1 : 0;
       P.burnEnd[i] = keyId(s.burn.end);
       if (s.burn.residue) P.residue[i] = s.burn.residue.map(([k, p]) => [keyId(k), p]);
@@ -787,18 +1450,37 @@ export function createSubstances(elements) {
         return byAtoms([...rep(z, 2 / g), ...rep(8, c / g)]);
       }),
     /** Idrossido M(OH)ₙ della libreria (0 se non c'è). */
-    hydroxideFor: (z) => cached(`h${z}`, () => byAtoms([atom(z), ...rep(8, list[z].charge || 1), ...rep(1, list[z].charge || 1)])),
+    hydroxideFor: (z) =>
+      cached(`h${z}`, () => byAtoms([atom(z), ...rep(8, list[z].charge || 1), ...rep(1, list[z].charge || 1)])),
     /** Gas di scarico di un composto, dagli atomi ([[id, probabilità], …] o null): combustioni e detonazioni fuori catalogo. */
-    exhaustFor: (id) => cached(`x${id}`, () => P.burnGases[id] ?? (list[id].counts ? idShares(exhaustOf(list[id].counts)) : null)),
+    exhaustFor: (id) =>
+      cached(`x${id}`, () => P.burnGases[id] ?? (list[id].counts ? idShares(exhaustOf(list[id].counts)) : null)),
+    /** Sale anidro di un idrato della libreria («cuso4-5h2o» → «cuso4»), o 0. */
+    anhydrousOf: (id) => cached(`a${id}`, () => byKey.get(String(list[id].key).match(/^(.+)-\d+h2o$/)?.[1])?.id ?? 0),
   };
 
-  return { list, byKey, P, elements, lab, library, libraryId, groups: MOLECULE_GROUPS, firstCompound: FIRST_COMPOUND, ...lookups };
+  return {
+    list,
+    byKey,
+    P,
+    elements,
+    lab,
+    library,
+    libraryId,
+    groups: MOLECULE_GROUPS,
+    firstCompound: FIRST_COMPOUND,
+    ...lookups,
+  };
 }
 
 /** Stato fisico di una sostanza alla temperatura T (K). */
 export function phaseAt(sub, T) {
   if (sub.flags & S.FIRE) return GAS;
-  return T < sub.mp ? SOLID : T < sub.bp ? LIQUID : GAS;
+  if (T < sub.mp) return SOLID;
+  if (T < sub.bp) return LIQUID;
+  // chi si decompone non bolle (World.phaseOf fa lo stesso)
+  if (sub.flags & S.DECOMPOSES) return sub.mp < sub.bp ? LIQUID : SOLID;
+  return GAS;
 }
 
 /** Densità (g/cm³) nello stato dato; per i gas dipende dalla temperatura (gas ideale). */

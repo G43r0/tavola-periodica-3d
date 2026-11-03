@@ -1001,6 +1001,7 @@ export const LATE_EXERCISES = [
  * d'argento entro silver, di bronzo entro bronze (se la qualità è almeno 0,8 e non ci sono stati incidenti); il premio
  * in soldi è la paga dell'esercitazione per 0,25 per ogni medaglia (bronzo 1, argento 2, oro 3).
  */
+/** @type {import('../../types').Challenge[]} */
 export const CHALLENGES = [
   { id: 'chNacl', ex: 'nacl', gold: 150, silver: 200, bronze: 280 },
   { id: 'chDilute', ex: 'dilute', gold: 120, silver: 170, bronze: 240 },

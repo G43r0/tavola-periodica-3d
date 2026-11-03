@@ -72,7 +72,7 @@ un getto se si inclina molto). Il getto cade con una parabola; se attraversa la 
 vi passa, altrimenti forma una pozza dove tocca. Lo shader del liquido scarta i frammenti sopra il livello e disegna le
 facce interne come superficie.
 
-Aggiornamento dopo la ricerca su *Cooking Simulator* (`reports/Oggetti e fluidi in Cooking Simulator.md`): la
+Aggiornamento dopo la ricerca su *Cooking Simulator* (`docs/ricerca/reports/Oggetti e fluidi in Cooking Simulator.md`): la
 portata è in `pourRate` (`liquid.js`) con una zona morta di 0,5 mm e un massimo di 150 · flow mL/s; vicino al bordo il
 mouse inclina più finemente; un anello verde o rosso mostra il punto d'arrivo prima della prima goccia; il getto è un
 tubo che si assottiglia (continuità) e si ferma sugli ostacoli lungo la parabola; il liquido arriva dopo il tempo di

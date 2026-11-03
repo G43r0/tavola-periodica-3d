@@ -21,4 +21,6 @@ ${lines.join('\n')}
 };
 `;
 fs.writeFileSync(new URL('../src/game/data/book-verified.js', import.meta.url), out);
-console.log(`ricette costruite: ${book.recipes.length}, riuscite: ${Object.keys(ok).length}, non costruibili: ${book.failed.size}`);
+console.log(
+  `ricette costruite: ${book.recipes.length}, riuscite: ${Object.keys(ok).length}, non costruibili: ${book.failed.size}`,
+);

@@ -3,8 +3,22 @@
 import { CATEGORY } from '../data/categories.js';
 import { fmtNumber } from '../chem/format.js';
 import {
-  AMBIENT, AIR_DENSITY, SOLID, LIQUID, GAS, S, DECAY, FLAME_COLOR_NAME, DISCHARGE_COLOR_NAME, FISSILE_ISOTOPE,
-  SALT, OXIDE, SOLUTION, WATER, phaseAt, saltParts,
+  AMBIENT,
+  AIR_DENSITY,
+  SOLID,
+  LIQUID,
+  GAS,
+  S,
+  DECAY,
+  FLAME_COLOR_NAME,
+  DISCHARGE_COLOR_NAME,
+  FISSILE_ISOTOPE,
+  SALT,
+  OXIDE,
+  SOLUTION,
+  WATER,
+  phaseAt,
+  saltParts,
 } from './substances.js';
 import { createT, isItalian } from '../i18n/index.js';
 import { SANDBOX_DESCRIBE } from './describe-strings.js';
@@ -86,7 +100,10 @@ export function substanceLabel(subs, id, ctype = 0) {
     const M = subs.list[ctype];
     if (!M?.el) return { name: s.name, formula: '' };
     const c = M.charge || 1;
-    return { name: t('hydroxideOf', { metal: metalName(M.el, c), Metal: cap(metalName(M.el, c)) }), formula: c === 1 ? `${M.symbol}OH` : `${M.symbol}(OH)${sub(c)}` };
+    return {
+      name: t('hydroxideOf', { metal: metalName(M.el, c), Metal: cap(metalName(M.el, c)) }),
+      formula: c === 1 ? `${M.symbol}OH` : `${M.symbol}(OH)${sub(c)}`,
+    };
   }
   if (s.kind === 'element') return { name: s.name, formula: MOLECULE[s.symbol] ?? s.symbol };
   if (s.kind === 'compound' && s.formula) return { name: s.name, formula: s.formula };
@@ -94,7 +111,20 @@ export function substanceLabel(subs, id, ctype = 0) {
 }
 
 // ------------------------------------------------------------------ equazioni
-export const ALIAS_FORMULA = { h2: 'H₂', n2: 'N₂', o2: 'O₂', f2: 'F₂', cl2: 'Cl₂', br2: 'Br₂', i2: 'I₂', p4: 'P₄', s8: 'S₈', h2o: 'H₂O', co2: 'CO₂', so2: 'SO₂' };
+export const ALIAS_FORMULA = {
+  h2: 'H₂',
+  n2: 'N₂',
+  o2: 'O₂',
+  f2: 'F₂',
+  cl2: 'Cl₂',
+  br2: 'Br₂',
+  i2: 'I₂',
+  p4: 'P₄',
+  s8: 'S₈',
+  h2o: 'H₂O',
+  co2: 'CO₂',
+  so2: 'SO₂',
+};
 const STATE_MARK = { solid: '(s)', liquid: '(l)', gas: '(g)', aq: '(aq)' };
 const mark = (s) => STATE_MARK[s.state25] ?? '';
 const phaseMark = (subs, s, T) => ({ 1: '(s)', 2: '(l)', 3: '(g)' })[phaseAt(s, T)] ?? '';
@@ -161,7 +191,18 @@ function burnEquation(subs, id) {
 }
 
 /** Prodotti della combustione completa per elemento del combustibile (come exhaustOf): [Z, formula, atomi di Z, ossigeni]. */
-const EXHAUST = [[6, 'CO₂', 1, 2], [1, 'H₂O', 2, 1], [16, 'SO₂', 1, 2], [7, 'N₂', 2, 0], [15, 'P₄O₁₀', 4, 10], [9, 'HF', 1, 0], [17, 'HCl', 1, 0], [35, 'HBr', 1, 0], [53, 'HI', 1, 0], [14, 'SiO₂', 1, 2]];
+const EXHAUST = [
+  [6, 'CO₂', 1, 2],
+  [1, 'H₂O', 2, 1],
+  [16, 'SO₂', 1, 2],
+  [7, 'N₂', 2, 0],
+  [15, 'P₄O₁₀', 4, 10],
+  [9, 'HF', 1, 0],
+  [17, 'HCl', 1, 0],
+  [35, 'HBr', 1, 0],
+  [53, 'HI', 1, 0],
+  [14, 'SiO₂', 1, 2],
+];
 const HALOGEN_Z = [9, 17, 35, 53];
 
 /**
@@ -174,7 +215,9 @@ function compoundBurnEquation(s) {
   const halogens = HALOGEN_Z.reduce((t, z) => t + n(z), 0);
   if (n(1) < halogens) return null;
   // moli di ogni prodotto per una mole di combustibile (l'idrogeno degli alogenuri non fa acqua)
-  const products = EXHAUST.map(([z, f, a, o]) => [f, (z === 1 ? n(1) - halogens : n(z)) / a, o]).filter(([, c]) => c > 0);
+  const products = EXHAUST.map(([z, f, a, o]) => [f, (z === 1 ? n(1) - halogens : n(z)) / a, o]).filter(
+    ([, c]) => c > 0,
+  );
   const o2 = (products.reduce((t, [, c, o]) => t + c * o, 0) - n(8)) / 2;
   if (!products.length || o2 <= 0) return null;
   // il più piccolo moltiplicatore che rende interi tutti i coefficienti
@@ -218,7 +261,9 @@ function thermiteEquation(A, B) {
 function fissionEquation(P, heavy, light, spontaneous) {
   const z = P.z;
   const k = 2 + ((z + heavy.z) & 1);
-  const A = spontaneous ? P.decay.massNumber : FISSILE_ISOTOPE[P.symbol] ?? P.decay?.massNumber ?? Math.round(P.el.atomicMass.value);
+  const A = spontaneous
+    ? P.decay.massNumber
+    : (FISSILE_ISOTOPE[P.symbol] ?? P.decay?.massNumber ?? Math.round(P.el.atomicMass.value));
   const total = (spontaneous ? A : A + 1) - k;
   const Ah = Math.round((total * heavy.z) / z);
   const lhs = spontaneous ? `${sup(A)}${P.symbol}` : `${sup(A)}${P.symbol} + n`;
@@ -237,19 +282,49 @@ export function describeEvent(subs, key) {
       return describeCatalogReaction(subs, key.slice(3));
     case 'dissolve': {
       const s = L[Number(a)];
-      return { group: t('gSolutions'), title: t('dissolves', { name: low(s.name) }), equation: `${s.formula}${mark(s)} → ${s.formula}(aq)` };
+      return {
+        group: t('gSolutions'),
+        title: t('dissolves', { name: low(s.name) }),
+        equation: `${s.formula}${mark(s)} → ${s.formula}(aq)`,
+      };
     }
     case 'crystal': {
       const s = L[Number(a)];
-      return { group: t('gSolutions'), title: t('crystal', { name: low(s.name) }), equation: `${s.formula}(aq) → ${s.formula}${phaseMark(subs, s, 373.15)} + H₂O(g)`, note: t('crystalNote') };
+      return {
+        group: t('gSolutions'),
+        title: t('crystal', { name: low(s.name) }),
+        equation: `${s.formula}(aq) → ${s.formula}${phaseMark(subs, s, 373.15)} + H₂O(g)`,
+        note: t('crystalNote'),
+      };
     }
     case 'char': {
       const s = L[Number(a)];
-      return { group: t('gDecompositions'), title: t('char', { name: low(s.name) }), equation: `${s.formula} → C + H₂O + …`, note: t('charNote', { T: fmtCelsius(s.bp) }) };
+      return {
+        group: t('gDecompositions'),
+        title: t('char', { name: low(s.name) }),
+        equation: `${s.formula} → C + H₂O + …`,
+        note: t('charNote', { T: fmtCelsius(s.bp) }),
+      };
+    }
+    case 'dehyd': {
+      const s = L[Number(a)];
+      const anh = L[subs.anhydrousOf(Number(a))];
+      const n = String(s.key).match(/-(\d+)h2o$/)?.[1] ?? '';
+      return {
+        group: t('gDecompositions'),
+        title: t('dehyd', { name: low(s.name) }),
+        equation: `${s.formula} → ${anh?.formula ?? '…'} + ${n} H₂O(g)`,
+        note: t('dehydNote', { T: fmtCelsius(s.bp) }),
+      };
     }
     case 'boom': {
       const s = L[Number(a)];
-      return { group: t('gExplosions'), title: t('boom', { name: low(s.name) }), equation: `${s.formula} → ${t('hotGases')}`, note: t('boomNote') };
+      return {
+        group: t('gExplosions'),
+        title: t('boom', { name: low(s.name) }),
+        equation: `${s.formula} → ${t('hotGases')}`,
+        note: t('boomNote'),
+      };
     }
     case 'burn': {
       const s = L[Number(a)];
@@ -261,8 +336,14 @@ export function describeEvent(subs, key) {
         return { group: t('gCombustions'), title: t('burn', { name: low(s.name) }), equation, note: t('burnGeneric') };
       }
       const notes = t('burnNotes');
-      const flame = s.kind === 'element' && FLAME_COLOR_NAME[s.symbol] ? t('flame', { c: FLAME_COLOR_NAME[s.symbol] }) : '';
-      return { group: t('gCombustions'), title: t('burn', { name: s.name.toLowerCase() }), equation: burnEquation(subs, s.id), note: notes[s.key] ?? flame };
+      const flame =
+        s.kind === 'element' && FLAME_COLOR_NAME[s.symbol] ? t('flame', { c: FLAME_COLOR_NAME[s.symbol] }) : '';
+      return {
+        group: t('gCombustions'),
+        title: t('burn', { name: s.name.toLowerCase() }),
+        equation: burnEquation(subs, s.id),
+        note: notes[s.key] ?? flame,
+      };
     }
     case 'water': {
       const M = L[Number(a)];
@@ -270,22 +351,39 @@ export function describeEvent(subs, key) {
       return {
         group: t('chemical'),
         title: t('plusWater', { name: M.name }),
-        equation: alkali ? `2 ${M.symbol} + 2 H₂O → 2 ${M.symbol}OH + H₂` : `${M.symbol} + 2 H₂O → ${M.symbol}(OH)₂ + H₂`,
+        equation: alkali
+          ? `2 ${M.symbol} + 2 H₂O → 2 ${M.symbol}OH + H₂`
+          : `${M.symbol} + 2 H₂O → ${M.symbol}(OH)₂ + H₂`,
         note: M.water.boom ? t('waterBoom') : M.water.heat > 500 ? t('waterHot') : t('waterCalm'),
       };
     }
     case 'salt': {
       const M = L[Number(a)];
       const X = L[Number(b)];
-      return { group: t('chemical'), title: t('synthesis', { name: low(substanceLabel(subs, SALT, Number(a) * 128 + Number(b)).name) }), equation: saltEquation(M, X), note: t('saltNote') };
+      return {
+        group: t('chemical'),
+        title: t('synthesis', { name: low(substanceLabel(subs, SALT, Number(a) * 128 + Number(b)).name) }),
+        equation: saltEquation(M, X),
+        note: t('saltNote'),
+      };
     }
     case 'thermite': {
       const A = L[Number(a)];
       const B = L[Number(b)];
-      return { group: t('chemical'), title: t('thermite', { a: A.name.toLowerCase(), b: B.name.toLowerCase() }), equation: thermiteEquation(A, B), note: t('thermiteNote', { b: B.name.toLowerCase() }) };
+      return {
+        group: t('chemical'),
+        title: t('thermite', { a: A.name.toLowerCase(), b: B.name.toLowerCase() }),
+        equation: thermiteEquation(A, B),
+        note: t('thermiteNote', { b: B.name.toLowerCase() }),
+      };
     }
     case 'rust':
-      return { group: t('chemical'), title: t('rust'), equation: '4 Fe + 3 O₂ + 2n H₂O → 2 Fe₂O₃·nH₂O', note: t('rustNote') };
+      return {
+        group: t('chemical'),
+        title: t('rust'),
+        equation: '4 Fe + 3 O₂ + 2n H₂O → 2 Fe₂O₃·nH₂O',
+        note: t('rustNote'),
+      };
     case 'pyrolysis':
       return { group: t('chemical'), title: t('pyrolysis'), equation: t('pyrolysisEq'), note: t('pyrolysisNote') };
     case 'decay': {
@@ -299,12 +397,20 @@ export function describeEvent(subs, key) {
         [DECAY.EC]: `${sup(A)}${P.symbol} + e⁻ → ${sup(A)}${D.symbol} + νₑ`,
         [DECAY.DOUBLE_BETA]: `${sup(A)}${P.symbol} → ${sup(A)}${D.symbol} + 2 e⁻ + 2 ν̄ₑ`,
       }[d.mode];
-      const kindName = { [DECAY.ALPHA]: 'α', [DECAY.BETA]: 'β⁻', [DECAY.EC]: t('ec'), [DECAY.DOUBLE_BETA]: t('doubleBeta') }[d.mode];
+      const kindName = {
+        [DECAY.ALPHA]: 'α',
+        [DECAY.BETA]: 'β⁻',
+        [DECAY.EC]: t('ec'),
+        [DECAY.DOUBLE_BETA]: t('doubleBeta'),
+      }[d.mode];
       return {
         group: t('gNuclear'),
         title: t('decay', { kind: kindName, name: `${P.name.toLowerCase()}-${A}` }),
         equation: eq,
-        note: d.mode === DECAY.ALPHA ? t('becomesAlpha', { d: D.name.toLowerCase(), t: d.halfLifeText }) : t('becomes', { d: D.name.toLowerCase(), t: d.halfLifeText }),
+        note:
+          d.mode === DECAY.ALPHA
+            ? t('becomesAlpha', { d: D.name.toLowerCase(), t: d.halfLifeText })
+            : t('becomes', { d: D.name.toLowerCase(), t: d.halfLifeText }),
       };
     }
     case 'fission':
@@ -317,11 +423,19 @@ export function describeEvent(subs, key) {
         group: t('gNuclear'),
         title: `${spontaneous ? t('sf') : t('fission')}: ${P.name.toLowerCase()}`,
         equation: fissionEquation(P, heavy, light, spontaneous),
-        note: spontaneous ? t('sfNote') : t('fissionNote', { a: heavy.name.toLowerCase(), b: light.name.toLowerCase() }),
+        note: spontaneous
+          ? t('sfNote')
+          : t('fissionNote', { a: heavy.name.toLowerCase(), b: light.name.toLowerCase() }),
       };
     }
     case 'electrolysis': {
-      if (a === 'water') return { group: t('gElectricity'), title: t('electrolysisWater'), equation: '2 H₂O → 2 H₂ + O₂', note: t('electrolysisWaterNote') };
+      if (a === 'water')
+        return {
+          group: t('gElectricity'),
+          title: t('electrolysisWater'),
+          equation: '2 H₂O → 2 H₂ + O₂',
+          note: t('electrolysisWaterNote'),
+        };
       const M = L[Number(b)];
       const X = L[Number(c)];
       const cc = M.charge || 1;
@@ -330,7 +444,12 @@ export function describeEvent(subs, key) {
       const k = gcd(x, y);
       x /= k;
       y /= k;
-      return { group: t('gElectricity'), title: t('electrolysisMolten', { name: low(substanceLabel(subs, SALT, Number(b) * 128 + Number(c)).name) }), equation: `${coef(x)}${M.symbol}${X.symbol}${sub(cc)} → ${coef(x)}${M.symbol} + ${coef(y)}${MOLECULE[X.symbol] ?? X.symbol + '₂'}`, note: t('electrolysisMoltenNote') };
+      return {
+        group: t('gElectricity'),
+        title: t('electrolysisMolten', { name: low(substanceLabel(subs, SALT, Number(b) * 128 + Number(c)).name) }),
+        equation: `${coef(x)}${M.symbol}${X.symbol}${sub(cc)} → ${coef(x)}${M.symbol} + ${coef(y)}${MOLECULE[X.symbol] ?? X.symbol + '₂'}`,
+        note: t('electrolysisMoltenNote'),
+      };
     }
     case 'phase': {
       const id = Number(a);
@@ -338,7 +457,11 @@ export function describeEvent(subs, key) {
       const verb = TRANSITION[b];
       if (!s || !verb) return null;
       const T = b === '12' || b === '21' || b === '13' || b === '31' ? s.mp : s.bp;
-      return { group: t('gPhase'), title: `${cap(verb)}: ${s.name.toLowerCase()}`, equation: t('atT', { T: fmtCelsius(T), est: s.estimated }) };
+      return {
+        group: t('gPhase'),
+        title: `${cap(verb)}: ${s.name.toLowerCase()}`,
+        equation: t('atT', { T: fmtCelsius(T), est: s.estimated }),
+      };
     }
     default:
       return null;
@@ -372,20 +495,29 @@ export function substanceNotes(subs, id, ctype = 0) {
   if (f & S.DRAIN) return t('drain');
   if (f & S.GENERATOR) return t('generator');
   const phase = phaseAt(s, AMBIENT);
-  if (s.kind === 'element') notes.push(t('elementAt22', { cat: cap(CATEGORY[s.category]?.singular ?? ''), phase: phase === GAS ? t('aGas') : PHASE_NAME[phase] }));
-  if (s.mp > 0 && Number.isFinite(s.mp)) {
+  if (s.kind === 'element')
+    notes.push(
+      t('elementAt22', {
+        cat: cap(CATEGORY[s.category]?.singular ?? ''),
+        phase: phase === GAS ? t('aGas') : PHASE_NAME[phase],
+      }),
+    );
+  // l'elio ha mp = 0: a pressione ambiente non solidifica
+  if (s.kind === 'element' && s.symbol === 'He') notes.push(t('helium', { T: fmtCelsius(s.bp, 2) }));
+  else if (s.mp > 0 && Number.isFinite(s.mp)) {
     const est = s.estimated ? t('estimate') : '';
     if (s.sublimes || s.mp === s.bp) notes.push(t('sublimes', { T: fmtCelsius(s.mp), est }));
-    else if (s.symbol === 'He') notes.push(t('helium', { T: fmtCelsius(s.bp, 2) }));
     else notes.push(t('meltsBoils', { mp: fmtCelsius(s.mp), bp: fmtCelsius(s.bp), est }));
   } else if (s.key === 'wood' || s.key === 'coal') notes.push(t('noMelt'));
   if (s.densS) notes.push(densityText(s, phase));
   if (s.burn) {
     const where = s.burn.instant ? t('burnsInstant') : f & S.BURNS_AS_BLOCK ? t('burns') : t('burnsPowder');
     const from = s.burn.ignite < AMBIENT + 20 ? t('evenRoomT') : t('above', { T: fmtCelsius(s.burn.ignite) });
-    const flame = s.kind === 'element' && FLAME_COLOR_NAME[s.symbol] ? t('flameShort', { c: FLAME_COLOR_NAME[s.symbol] }) : '';
+    const flame =
+      s.kind === 'element' && FLAME_COLOR_NAME[s.symbol] ? t('flameShort', { c: FLAME_COLOR_NAME[s.symbol] }) : '';
     notes.push(`${where}${from}${flame}.`);
-  } else if (s.kind === 'element' && FLAME_COLOR_NAME[s.symbol]) notes.push(t('flameTest', { c: FLAME_COLOR_NAME[s.symbol] }));
+  } else if (s.kind === 'element' && FLAME_COLOR_NAME[s.symbol])
+    notes.push(t('flameTest', { c: FLAME_COLOR_NAME[s.symbol] }));
   if (s.key === 'wood') notes.push(t('woodPyro'));
   if (s.key === 'concrete') notes.push(t('concrete'));
   if (s.water) notes.push(s.water.boom ? t('waterExplodes') : s.water.hot ? t('waterHotOnly') : t('waterReacts'));
@@ -399,8 +531,16 @@ export function substanceNotes(subs, id, ctype = 0) {
   if (s.decay) {
     const d = s.decay;
     const D = subs.list[d.daughter];
-    const mode = { [DECAY.ALPHA]: `α → ${D?.name}`, [DECAY.BETA]: `β⁻ → ${D?.name}`, [DECAY.EC]: `${t('ecShort')} → ${D?.name}`, [DECAY.DOUBLE_BETA]: `${t('doubleBeta')} → ${D?.name}`, [DECAY.FISSION]: t('sfLow') }[d.mode];
-    notes.push(t('radioactive', { sym: s.symbol, A: d.massNumber, t: d.halfLifeText, game: fmtDuration(d.gameSeconds), mode }));
+    const mode = {
+      [DECAY.ALPHA]: `α → ${D?.name}`,
+      [DECAY.BETA]: `β⁻ → ${D?.name}`,
+      [DECAY.EC]: `${t('ecShort')} → ${D?.name}`,
+      [DECAY.DOUBLE_BETA]: `${t('doubleBeta')} → ${D?.name}`,
+      [DECAY.FISSION]: t('sfLow'),
+    }[d.mode];
+    notes.push(
+      t('radioactive', { sym: s.symbol, A: d.massNumber, t: d.halfLifeText, game: fmtDuration(d.gameSeconds), mode }),
+    );
   }
   if (f & S.FISSILE) notes.push(t('fissile'));
   if (f & S.ABSORBER) notes.push(t('absorber'));
@@ -428,7 +568,12 @@ function compoundNotes(subs, s) {
   } else {
     const phase = phaseAt(s, AMBIENT);
     notes.push(t('at22', { phase: phase === GAS ? t('aGas') : PHASE_NAME[phase] }));
-    if (f & S.DECOMPOSES) notes.push(s.mp < s.bp ? t('meltsDecomposes', { mp: fmtCelsius(s.mp), bp: fmtCelsius(s.bp), est }) : t('decomposes', { bp: fmtCelsius(s.bp), est }));
+    if (f & S.DECOMPOSES)
+      notes.push(
+        s.mp < s.bp
+          ? t('meltsDecomposes', { mp: fmtCelsius(s.mp), bp: fmtCelsius(s.bp), est })
+          : t('decomposes', { bp: fmtCelsius(s.bp), est }),
+      );
     else if (s.sublimes) notes.push(t('sublimes', { T: fmtCelsius(s.mp), est }));
     else notes.push(t('meltsBoils', { mp: fmtCelsius(s.mp), bp: fmtCelsius(s.bp), est }));
     notes.push(densityText(s, phase));
@@ -436,13 +581,18 @@ function compoundNotes(subs, s) {
     else if (f & S.MISCIBLE) notes.push(t('miscible'));
     else if (phase !== GAS) notes.push(t('insoluble'));
   }
-  if (s.burn) notes.push(t('flammable', { instant: f & S.INSTANT_BURN, ign: s.ignC != null ? fmtCelsius(s.ignC + 273.15) : null }));
+  if (s.burn)
+    notes.push(
+      t('flammable', { instant: f & S.INSTANT_BURN, ign: s.ignC != null ? fmtCelsius(s.ignC + 273.15) : null }),
+    );
   if (f & S.EXPLOSIVE) notes.push(t('explosive', { T: fmtCelsius(s.bp) }));
   if (f & S.OXIDIZER) notes.push(t('oxidizerCompound'));
   if (f & S.EXTINGUISHER) notes.push(t('extinguisher'));
-  if (f & S.LIQUID_CONDUCTOR && !(f & S.AQUEOUS) && (f & S.SOLUBLE || s.mp < s.bp)) notes.push(f & S.SOLUBLE ? t('conductsSoluble') : t('conductsMolten'));
+  if (f & S.LIQUID_CONDUCTOR && !(f & S.AQUEOUS) && (f & S.SOLUBLE || s.mp < s.bp))
+    notes.push(f & S.SOLUBLE ? t('conductsSoluble') : t('conductsMolten'));
   const tint = subs.P.flameTint[s.id];
-  if (tint && FLAME_COLOR_NAME[subs.list[tint].symbol]) notes.push(t('flameOf', { c: FLAME_COLOR_NAME[subs.list[tint].symbol], name: low(subs.list[tint].name) }));
+  if (tint && FLAME_COLOR_NAME[subs.list[tint].symbol])
+    notes.push(t('flameOf', { c: FLAME_COLOR_NAME[subs.list[tint].symbol], name: low(subs.list[tint].name) }));
   const n = subs.chem?.involvement.get(s.id);
   notes.push(n ? t('inCatalog', { n }) : t('noCatalog'));
   if (s.entry?.uses) notes.push(t('uses', { u: s.entry.uses }));

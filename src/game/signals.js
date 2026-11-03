@@ -19,13 +19,18 @@ const AQUEOUS_GROUPS = new Set(['precipitazioni', 'ioni', 'acidi-basi']);
  * La reazione si fa in acqua? Condizione «in soluzione», acqua tra i reagenti, ioni, precipitazioni, acidi e basi, e
  * le reazioni con un acido o una base (che in laboratorio si usano in soluzione). Nel gioco vale il contenitore vero.
  */
-export const aqueousOf = (rx, ctx = null) => Boolean(
-  rx.cond?.water || rx.reactants.some((r) => r.sid === WATER) || AQUEOUS_GROUPS.has(rx.group)
-  || (ctx && rx.reactants.some((r) => {
-    const ab = ctx.acidBase.get(r.sid);
-    return ab && (ab.sa || ab.sb || ab.ka) && ctx.solubility(r.sid, AMBIENT) > 0;
-  })),
-);
+export const aqueousOf = (rx, ctx = null) =>
+  Boolean(
+    rx.cond?.water ||
+    rx.reactants.some((r) => r.sid === WATER) ||
+    AQUEOUS_GROUPS.has(rx.group) ||
+    (ctx &&
+      rx.reactants.some((r) => {
+        const ab = ctx.acidBase.get(r.sid);
+        // phOnly (idrolisi dei sali metallici, fenolo, Ka₂ del bicarbonato): conta per il pH, ma non ne fa un acido da usare in soluzione
+        return ab && (ab.sa || ab.sb || (ab.ka && !ab.phOnly)) && ctx.solubility(r.sid, AMBIENT) > 0;
+      })),
+  );
 
 /**
  * Stato fisico di una specie nell'equazione: 's' solido, 'l' liquido, 'g' gas, 'aq' sciolto in acqua.
@@ -54,14 +59,19 @@ export function stateOf(ctx, sid, { aqueous = false, product = false, T = AMBIEN
  * @param {object} rx reazione del contesto (ctx.rxs o ctx.offline)
  */
 export function equation(ctx, rx, { aqueous = aqueousOf(rx, ctx), T = AMBIENT, states = true } = {}) {
-  const side = (list, product) => list
-    .map((x) => `${x.c > 1 ? `${x.c} ` : ''}${ctx.formula(x.sid)}${states ? `(${stateOf(ctx, x.sid, { aqueous, product, T })})` : ''}`)
-    .join(' + ');
+  const side = (list, product) =>
+    list
+      .map(
+        (x) =>
+          `${x.c > 1 ? `${x.c} ` : ''}${ctx.formula(x.sid)}${states ? `(${stateOf(ctx, x.sid, { aqueous, product, T })})` : ''}`,
+      )
+      .join(' + ');
   return `${side(rx.reactants, false)} → ${side(rx.products, true)}`;
 }
 
 /** ΔH° della reazione come è scritta (kJ), o null: in acqua la neutralizzazione vale −55,8 kJ per mole d'acqua. */
-export const reactionHeat = (rx, aqueous = aqueousOf(rx)) => (rx.neutral && aqueous ? -55.8 * rx.neutral : rx.dH ?? null);
+export const reactionHeat = (rx, aqueous = aqueousOf(rx)) =>
+  rx.neutral && aqueous ? -55.8 * rx.neutral : (rx.dH ?? null);
 
 const rgbOf = (c, fallback) => (c ? c.slice(0, 3).map(Math.round) : fallback);
 
@@ -75,7 +85,17 @@ const rgbOf = (c, fallback) => (c ? c.slice(0, 3).map(Math.round) : fallback);
  *   heat: si scalda molto, si scalda, si raffredda; fire: brucia o serve una fiamma; light: serve la luce.
  */
 export function reactionSignals(ctx, rx, { aqueous = aqueousOf(rx, ctx), T = AMBIENT } = {}) {
-  const out = { gases: [], solids: [], consumed: [], color: null, heat: null, dH: reactionHeat(rx, aqueous), fire: Boolean(rx.combustion || rx.cond?.ignite), light: Boolean(rx.cond?.light), aqueous };
+  const out = {
+    gases: [],
+    solids: [],
+    consumed: [],
+    color: null,
+    heat: null,
+    dH: reactionHeat(rx, aqueous),
+    fire: Boolean(rx.combustion || rx.cond?.ignite),
+    light: Boolean(rx.cond?.light),
+    aqueous,
+  };
   for (const p of rx.products) {
     if (p.sid === WATER || typeof p.sid === 'string') continue;
     const s = ctx.sub(p.sid);
@@ -84,14 +104,23 @@ export function reactionSignals(ctx, rx, { aqueous = aqueousOf(rx, ctx), T = AMB
       const c = s?.colors?.[GAS];
       out.gases.push({ sid: p.sid, rgb: rgbOf(c, [235, 240, 245]), colored: (c?.[3] ?? 0) >= COLORED_GAS });
     } else if (st === 's' && aqueous) {
-      out.solids.push({ sid: p.sid, rgb: rgbOf(s?.colors?.[SOLID], [240, 240, 240]), metal: Boolean(s?.kind === 'element' && ctx.P.flags[p.sid] & S.METAL) });
+      out.solids.push({
+        sid: p.sid,
+        rgb: rgbOf(s?.colors?.[SOLID], [240, 240, 240]),
+        metal: Boolean(s?.kind === 'element' && ctx.P.flags[p.sid] & S.METAL),
+      });
     }
   }
   if (aqueous) {
     const madeSolid = new Set(out.solids.map((x) => x.sid));
-    for (const r of rx.reactants) if (stateOf(ctx, r.sid, { aqueous, T }) === 's' && !madeSolid.has(r.sid)) out.consumed.push(r.sid);
+    for (const r of rx.reactants)
+      if (stateOf(ctx, r.sid, { aqueous, T }) === 's' && !madeSolid.has(r.sid)) out.consumed.push(r.sid);
     // il colore della soluzione: il primo ione o anione colorato sciolto, prima e dopo
-    const tint = (list, product) => list.filter((x) => stateOf(ctx, x.sid, { aqueous, product, T }) === 'aq').map((x) => solutionTint(ctx, x.sid)).find(Boolean)?.rgb ?? null;
+    const tint = (list, product) =>
+      list
+        .filter((x) => stateOf(ctx, x.sid, { aqueous, product, T }) === 'aq')
+        .map((x) => solutionTint(ctx, x.sid))
+        .find(Boolean)?.rgb ?? null;
     const from = tint(rx.reactants, false);
     const to = tint(rx.products, true);
     if (String(from) !== String(to)) out.color = { from, to };
@@ -120,7 +149,26 @@ export function signalTags(sig) {
 // ------------------------------------------------------------------ perché non reagisce?
 
 // dal più utile (si può fare subito qualcosa) al meno utile
-const WHY_ORDER = ['heat', 'flame', 'catalyst', 'light', 'water', 'undissolved', 'conduct', 'missing', 'tooHot', 'lessActive', 'noble', 'electrolysis', 'discharge', 'steam', 'shock', 'equilibrium', 'catalyst-unknown', 'living'];
+const WHY_ORDER = [
+  'heat',
+  'flame',
+  'catalyst',
+  'light',
+  'water',
+  'undissolved',
+  'conduct',
+  'missing',
+  'tooHot',
+  'lessActive',
+  'noble',
+  'electrolysis',
+  'discharge',
+  'steam',
+  'shock',
+  'equilibrium',
+  'catalyst-unknown',
+  'living',
+];
 const byWhy = (a, b) => WHY_ORDER.indexOf(a.why) - WHY_ORDER.indexOf(b.why);
 
 /**
@@ -157,7 +205,8 @@ export function whyNot(mix, env = {}) {
     if (stuck) out.push({ why: 'undissolved', sid: stuck.sid, rx, uses: u });
   }
   for (const rx of mix.candidates(false, [ctx.offSingle, ctx.offPair]).values()) {
-    if (rx.reactants.every((r) => r.sid === WATER || has(r.sid))) out.push({ why: rx.why === 'catalyst' ? 'catalyst-unknown' : rx.why, rx, uses: uses(rx) });
+    if (rx.reactants.every((r) => r.sid === WATER || has(r.sid)))
+      out.push({ why: rx.why === 'catalyst' ? 'catalyst-unknown' : rx.why, rx, uses: uses(rx) });
   }
   const strong = out.filter((x) => x.uses >= 2).sort(byWhy);
   const weak = out.filter((x) => x.uses < 2).sort(byWhy);
@@ -169,19 +218,29 @@ function activityHints(mix) {
   const { ctx } = mix;
   const out = [];
   const present = [...mix.n.keys()].filter((sid) => typeof sid === 'number' && sid !== WATER && mix.n.get(sid) > 1e-10);
-  const metals = present.filter((sid) => ctx.sub(sid)?.kind === 'element' && REDUCTION_POTENTIALS[ctx.sub(sid).symbol] !== undefined);
+  const metals = present.filter(
+    (sid) => ctx.sub(sid)?.kind === 'element' && REDUCTION_POTENTIALS[ctx.sub(sid).symbol] !== undefined,
+  );
   if (!metals.length) return out;
   const dissolved = present.filter((sid) => (mix.d.get(sid) ?? 0) > 1e-10);
+  // un sale di un metallo un po' acido per idrolisi (ZnSO₄, CuSO₄) non è l'acido da cui spostare l'idrogeno
+  const metalSalt = (sid) =>
+    Object.keys(ctx.counts(sid)).some((z) => {
+      const sym = ctx.sub(Number(z))?.symbol;
+      return sym !== 'H' && REDUCTION_POTENTIALS[sym] !== undefined;
+    });
   const acid = dissolved.find((sid) => {
     const ab = ctx.acidBase.get(sid);
-    return ab?.sa || ab?.ka;
+    return (ab?.sa || ab?.ka) && !metalSalt(sid);
   });
   for (const m of metals) {
     const E = REDUCTION_POTENTIALS[ctx.sub(m).symbol];
     if (acid && E > 0) out.push({ why: 'noble', sid: m, other: acid, E, uses: 2 });
     for (const salt of dissolved) {
       if (salt === acid) continue;
-      const z = Object.keys(ctx.counts(salt)).map(Number).find((k) => k !== m && REDUCTION_POTENTIALS[ctx.sub(k)?.symbol] !== undefined);
+      const z = Object.keys(ctx.counts(salt))
+        .map(Number)
+        .find((k) => k !== m && REDUCTION_POTENTIALS[ctx.sub(k)?.symbol] !== undefined);
       if (z === undefined) continue;
       const E2 = REDUCTION_POTENTIALS[ctx.sub(z).symbol];
       if (E2 < E) out.push({ why: 'lessActive', sid: m, other: z, salt, E, E2, uses: 2 });

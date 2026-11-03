@@ -13,7 +13,7 @@ import { CYLINDER_GASES } from './apparatus-logic.js';
 export const LAB_MAX_T = 1173;
 
 /** Sostanza principale di un reagente dello scaffale o dell'armadio (chiave della libreria o simbolo). */
-export const reagentKey = (r) => (r.water ? 'water' : r.solute ?? r.solid ?? r.liquid ?? null);
+export const reagentKey = (r) => (r.water ? 'water' : (r.solute ?? r.solid ?? r.liquid ?? null));
 
 /**
  * Reazioni realizzabili.
@@ -23,7 +23,11 @@ export const reagentKey = (r) => (r.water ? 'water' : r.solute ?? r.solid ?? r.l
  *   del laboratorio: electro = c'è l'alimentatore, gases = i gas delle bombole
  * @returns {{ids: Set<string>, byGroup: Map<string, number>, species: Set<number>}}
  */
-export function reachable(ctx, keys, { maxT = LAB_MAX_T, light = true, flame = true, electro = true, gases = CYLINDER_GASES } = {}) {
+export function reachable(
+  ctx,
+  keys,
+  { maxT = LAB_MAX_T, light = true, flame = true, electro = true, gases = CYLINDER_GASES } = {},
+) {
   const have = new Set([WATER, ...[...keys, ...gases].map((k) => ctx.id(k)).filter(Boolean)]);
   const ids = new Set();
   const can = (rx) => {
@@ -54,7 +58,9 @@ export function reachable(ctx, keys, { maxT = LAB_MAX_T, light = true, flame = t
 }
 
 /** Chiavi delle sostanze dello scaffale (e di un elenco di reagenti in più, come l'armadio). */
-export const keysOf = (...lists) => [...new Set(lists.flatMap((l) => Object.values(l).map(reagentKey)).filter(Boolean))];
+export const keysOf = (...lists) => [
+  ...new Set(lists.flatMap((l) => Object.values(l).map(reagentKey)).filter(Boolean)),
+];
 
 /** Copertura dello scaffale da solo. */
 export const shelfCoverage = (ctx) => reachable(ctx, keysOf(SHELF));

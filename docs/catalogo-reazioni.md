@@ -9,9 +9,9 @@ La libreria «Esempi» del laboratorio conteneva **445 sostanze** (`src/lab/data
 molecole, ioni e composti ionici. Per scrivere le reazioni classiche che mancavano ne sono state aggiunte **109**
 (`src/lab/data/molecules-reazioni.js`): gli ioni monoatomici (Na⁺, K⁺, Ag⁺, Ca²⁺, Ba²⁺, Pb²⁺, Cu²⁺, Zn²⁺, Fe²⁺,
 Fe³⁺, Mn²⁺, Cr³⁺, Cl⁻, Br⁻, I⁻), quattro complessi, la silice e i silicati, i sali di manganese, cromo, piombo,
-ferro, rame e argento, tre idrati e una ventina di composti organici di base. Ora sono **554**.
+ferro, rame e argento, tre idrati e una ventina di composti organici di base. Ora sono **558**.
 
-Gli elementi chimici sono 118. Il catalogo usa quindi **672 specie**: le 554 sostanze più i 118 elementi nel loro
+Gli elementi chimici sono 118. Il catalogo usa quindi **676 specie**: le 558 sostanze più i 118 elementi nel loro
 stato standard (`el:Na`, `el:Fe`, `el:C`…), che il motore supporta già.
 
 ## Che cosa vuol dire «tutte le reazioni possibili»
@@ -26,7 +26,7 @@ Non si può arrivare all'elenco provando tutte le combinazioni. Con 672 specie c
 Il catalogo elenca quindi tutte le reazioni **reali e documentate** (chimica generale, analitica, industriale,
 organica e biochimica) che rispettano due condizioni:
 
-1. **Sono chiuse sulla libreria**: ogni reagente e ogni prodotto è una delle 554 voci o un elemento `el:X`.
+1. **Sono chiuse sulla libreria**: ogni reagente e ogni prodotto è una delle 558 voci o un elemento `el:X`.
    Il motore attuale le può quindi caricare senza aggiungere sostanze.
 2. **Sono bilanciate** con i coefficienti interi minimi. Se una specie è uno ione, si conserva anche la carica.
 
@@ -113,7 +113,7 @@ il nichel tetracarbonile ([Appendice A](#appendice-a--reazioni-ancora-fuori-libr
 | 1 | 4 Li + O₂ → 2 Li₂O | Δ | Fiamma rossa. | −1196 | `4 el:Li + o2 → 2 li2o` |
 | 2 | 4 Na + O₂ → 2 Na₂O | ossigeno limitato | **già presente** (`na2o`) | −828 | `4 el:Na + o2 → 2 na2o` |
 | 3 | 2 Na + O₂ → Na₂O₂ | Δ, ossigeno in eccesso | Con ossigeno abbondante il sodio forma soprattutto il perossido. |  | `2 el:Na + o2 → na2o2` |
-| 4 | 4 K + O₂ → 2 K₂O | ossigeno limitato | Con ossigeno in eccesso si forma il superossido KO₂ (non in libreria). | −723 | `4 el:K + o2 → 2 k2o` |
+| 4 | 4 K + O₂ → 2 K₂O | ossigeno limitato | Con ossigeno in eccesso si forma il superossido KO₂ (reazione n. 62). | −723 | `4 el:K + o2 → 2 k2o` |
 | 5 | 2 Mg + O₂ → 2 MgO | innesco | **già presente** (`mgo`) | −1203 | `2 el:Mg + o2 → 2 mgo` |
 | 6 | 2 Ca + O₂ → 2 CaO | aria | **già presente** (`cao`) | −1270 | `2 el:Ca + o2 → 2 cao` |
 | 7 | 4 Al + 3 O₂ → 2 Al₂O₃ | aria | **già presente** (`al2o3`) | −3351 | `4 el:Al + 3 o2 → 2 al2o3` |
@@ -163,7 +163,7 @@ il nichel tetracarbonile ([Appendice A](#appendice-a--reazioni-ancora-fuori-libr
 | 51 | 4 Ac + 3 O₂ → 2 Ac₂O₃ | Δ | Radioattivo. |  | `4 el:Ac + 3 o2 → 2 ac2o3` |
 | 52 | Th + O₂ → ThO₂ | Δ | Il torio in polvere è piroforico. |  | `el:Th + o2 → tho2` |
 | 53 | 4 Pa + 5 O₂ → 2 Pa₂O₅ | Δ | Radioattivo. |  | `4 el:Pa + 5 o2 → 2 pa2o5` |
-| 54 | U + O₂ → UO₂ | Δ | All'aria si forma anche U₃O₈ (non in libreria). |  | `el:U + o2 → uo2` |
+| 54 | U + O₂ → UO₂ | Δ | All'aria si forma anche U₃O₈ (reazione n. 63). |  | `el:U + o2 → uo2` |
 | 55 | Np + O₂ → NpO₂ | Δ | Radioattivo. |  | `el:Np + o2 → npo2` |
 | 56 | Pu + O₂ → PuO₂ | aria | Il plutonio si ossida all'aria; in polvere è piroforico. |  | `el:Pu + o2 → puo2` |
 | 57 | Am + O₂ → AmO₂ | Δ | Radioattivo. |  | `el:Am + o2 → amo2` |
@@ -224,7 +224,7 @@ il nichel tetracarbonile ([Appendice A](#appendice-a--reazioni-ancora-fuori-libr
 |---:|---|---|---|---:|---|
 | 103 | 2 Na + S → Na₂S | Δ |  |  | `2 el:Na + el:S → na2s` |
 | 104 | Zn + S → ZnS | innesco | La miscela di polveri reagisce in modo violento. |  | `el:Zn + el:S → zns` |
-| 105 | Fe + 2 S → FeS₂ | Δ, zolfo in eccesso | Il classico solfuro FeS non è in libreria: con eccesso di zolfo si ottiene la pirite. |  | `el:Fe + 2 el:S → fes2` |
+| 105 | Fe + 2 S → FeS₂ | Δ, zolfo in eccesso | Con eccesso di zolfo si ottiene la pirite invece del classico solfuro FeS (reazione n. 117). |  | `el:Fe + 2 el:S → fes2` |
 | 106 | 2 Ag + S → Ag₂S |  | Annerimento dell'argento. |  | `2 el:Ag + el:S → ag2s` |
 | 107 | Hg + S → HgS | temperatura ambiente | Lo zolfo in polvere si usa per raccogliere il mercurio versato. |  | `el:Hg + el:S → hgs` |
 | 108 | Pb + S → PbS | Δ |  |  | `el:Pb + el:S → pbs` |
@@ -1187,7 +1187,7 @@ il nichel tetracarbonile ([Appendice A](#appendice-a--reazioni-ancora-fuori-libr
 | 807 | CuSO₄ + 2 NaOH → Cu(OH)₂ + Na₂SO₄ | soluzione | Precipitato azzurro gelatinoso. |  | `cuso4 + 2 naoh → cuoh2 + na2so4` |
 | 808 | CuSO₄ + 2 KOH → Cu(OH)₂ + K₂SO₄ | soluzione |  |  | `cuso4 + 2 koh → cuoh2 + k2so4` |
 | 809 | CuCl₂ + 2 NaOH → Cu(OH)₂ + 2 NaCl | soluzione |  |  | `cucl2 + 2 naoh → cuoh2 + 2 nacl` |
-| 810 | CuSO₄ + 2 NH₃ + 2 H₂O → Cu(OH)₂ + (NH₄)₂SO₄ | poca ammoniaca | Con altra ammoniaca il precipitato si scioglie in un complesso blu intenso (non in libreria). |  | `cuso4 + 2 nh3 + 2 h2o → cuoh2 + nh42so4` |
+| 810 | CuSO₄ + 2 NH₃ + 2 H₂O → Cu(OH)₂ + (NH₄)₂SO₄ | poca ammoniaca | Con altra ammoniaca il precipitato si scioglie nel complesso blu intenso [Cu(NH₃)₄]²⁺ (reazione n. 761). |  | `cuso4 + 2 nh3 + 2 h2o → cuoh2 + nh42so4` |
 | 811 | MgCl₂ + 2 NaOH → Mg(OH)₂ + 2 NaCl | soluzione |  |  | `mgcl2 + 2 naoh → mgoh2 + 2 nacl` |
 | 812 | MgSO₄ + 2 NaOH → Mg(OH)₂ + Na₂SO₄ | soluzione |  |  | `mgso4 + 2 naoh → mgoh2 + na2so4` |
 | 813 | MgCl₂ + Ca(OH)₂ → Mg(OH)₂ + CaCl₂ | soluzione | Estrazione del magnesio dall'acqua di mare (processo Dow). |  | `mgcl2 + caoh2 → mgoh2 + cacl2` |

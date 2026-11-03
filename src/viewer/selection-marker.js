@@ -12,13 +12,23 @@ export class SelectionMarker {
     this.group.renderOrder = 10;
     scene.add(this.group);
 
-    const mat = () => new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthTest: false, depthWrite: false, toneMapped: false });
+    const mat = () =>
+      new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0,
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: false,
+      });
     this.ringMaterial = mat();
     this.arcMaterial = mat();
     this.ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.045, 96), this.ringMaterial);
     this.arcs = new THREE.Group();
     for (let i = 0; i < 4; i++) {
-      const arc = new THREE.Mesh(new THREE.RingGeometry(1.16, 1.24, 24, 1, (i * Math.PI) / 2 + 0.25, Math.PI / 2 - 0.5), this.arcMaterial);
+      const arc = new THREE.Mesh(
+        new THREE.RingGeometry(1.16, 1.24, 24, 1, (i * Math.PI) / 2 + 0.25, Math.PI / 2 - 0.5),
+        this.arcMaterial,
+      );
       this.arcs.add(arc);
     }
     this.group.add(this.ring, this.arcs);

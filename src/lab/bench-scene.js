@@ -9,13 +9,43 @@ import { gfx, seg } from '../gfx/preset.js';
 const sphereGeo = new THREE.SphereGeometry(1, seg(36), seg(24));
 const cylGeo = new THREE.CylinderGeometry(1, 1, 1, seg(16), 1, false);
 const lobeGeo = new THREE.SphereGeometry(1, seg(20), seg(14));
-const haloMat = new THREE.MeshBasicMaterial({ color: 0x5ce1ff, transparent: true, opacity: 0.22, side: THREE.BackSide, depthWrite: false });
-const pendingMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.35, side: THREE.BackSide, depthWrite: false });
-const lobeMat = new THREE.MeshStandardMaterial({ color: 0xb69cff, transparent: true, opacity: 0.32, roughness: 0.6, depthWrite: false, emissive: 0x3b2a7a, emissiveIntensity: 0.4 });
+const haloMat = new THREE.MeshBasicMaterial({
+  color: 0x5ce1ff,
+  transparent: true,
+  opacity: 0.22,
+  side: THREE.BackSide,
+  depthWrite: false,
+});
+const pendingMat = new THREE.MeshBasicMaterial({
+  color: 0xfbbf24,
+  transparent: true,
+  opacity: 0.35,
+  side: THREE.BackSide,
+  depthWrite: false,
+});
+const lobeMat = new THREE.MeshStandardMaterial({
+  color: 0xb69cff,
+  transparent: true,
+  opacity: 0.32,
+  roughness: 0.6,
+  depthWrite: false,
+  emissive: 0x3b2a7a,
+  emissiveIntensity: 0.4,
+});
 const singleMat = new THREE.MeshBasicMaterial({ color: 0xffe28a });
 // legami che si rompono (rosso) e che si formano (verde) durante una reazione
-const breakMat = new THREE.MeshStandardMaterial({ color: 0xff5d6c, emissive: 0xff2a3d, emissiveIntensity: 1.3, roughness: 0.4 });
-const formMat = new THREE.MeshStandardMaterial({ color: 0x7cf29a, emissive: 0x22d46a, emissiveIntensity: 1.1, roughness: 0.4 });
+const breakMat = new THREE.MeshStandardMaterial({
+  color: 0xff5d6c,
+  emissive: 0xff2a3d,
+  emissiveIntensity: 1.3,
+  roughness: 0.4,
+});
+const formMat = new THREE.MeshStandardMaterial({
+  color: 0x7cf29a,
+  emissive: 0x22d46a,
+  emissiveIntensity: 1.1,
+  roughness: 0.4,
+});
 const UP = new THREE.Vector3(0, 1, 0);
 
 const _a = new THREE.Vector3();
@@ -43,8 +73,20 @@ export function createBenchScene(stage, deps) {
       materials.set(
         color,
         G.physical
-          ? new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.32, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.08, emissive: c.clone().multiplyScalar(0.04) })
-          : new THREE.MeshStandardMaterial({ color: c, roughness: 0.38, metalness: 0.06, emissive: c.clone().multiplyScalar(0.12) }),
+          ? new THREE.MeshPhysicalMaterial({
+              color: c,
+              roughness: 0.32,
+              metalness: 0,
+              clearcoat: 1,
+              clearcoatRoughness: 0.08,
+              emissive: c.clone().multiplyScalar(0.04),
+            })
+          : new THREE.MeshStandardMaterial({
+              color: c,
+              roughness: 0.38,
+              metalness: 0.06,
+              emissive: c.clone().multiplyScalar(0.12),
+            }),
       );
       engine.sphereAO?.patch(materials.get(color));
     }
@@ -84,7 +126,14 @@ export function createBenchScene(stage, deps) {
         const label = new CSS2DObject(labelEl);
         mesh.add(label);
         root.add(mesh);
-        o = { mesh, label, labelEl, disp: new THREE.Vector3(...(deps.spawnFrom?.(a.id) ?? a.pos)), halo: null, radius: 0.4 };
+        o = {
+          mesh,
+          label,
+          labelEl,
+          disp: new THREE.Vector3(...(deps.spawnFrom?.(a.id) ?? a.pos)),
+          halo: null,
+          radius: 0.4,
+        };
         atoms.set(a.id, o);
       }
       o.radius = deps.radiusOf(a.id);
@@ -106,7 +155,16 @@ export function createBenchScene(stage, deps) {
       if (b.ionic) {
         const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(1, 0, 0)]);
         const hl = bondHighlight.get(b.id);
-        line = new THREE.Line(geo, new THREE.LineDashedMaterial({ color: hl === 'break' ? 0xff5d6c : hl === 'form' ? 0x7cf29a : 0xd8e4f5, dashSize: 0.12, gapSize: 0.1, transparent: true, opacity: 0.85 }));
+        line = new THREE.Line(
+          geo,
+          new THREE.LineDashedMaterial({
+            color: hl === 'break' ? 0xff5d6c : hl === 'form' ? 0x7cf29a : 0xd8e4f5,
+            dashSize: 0.12,
+            gapSize: 0.1,
+            transparent: true,
+            opacity: 0.85,
+          }),
+        );
         line.userData = { bondId: b.id };
         group.add(line);
       } else {
@@ -141,7 +199,10 @@ export function createBenchScene(stage, deps) {
       lobes.set(
         id,
         dirs.map((d) => {
-          const m = new THREE.Mesh(d.kind === 'single' ? sphereGeo : lobeGeo, d.kind === 'single' ? singleMat : lobeMat);
+          const m = new THREE.Mesh(
+            d.kind === 'single' ? sphereGeo : lobeGeo,
+            d.kind === 'single' ? singleMat : lobeMat,
+          );
           m.userData = { lone: true };
           root.add(m);
           return m;
@@ -224,7 +285,9 @@ export function createBenchScene(stage, deps) {
         for (let half = 0; half < 2; half++) {
           const m = o.parts[idx * 2 + half];
           const t0 = half === 0 ? 0 : 0.5;
-          _m.copy(A.disp).addScaledVector(_d, L * (t0 + 0.25)).addScaledVector(perp, off);
+          _m.copy(A.disp)
+            .addScaledVector(_d, L * (t0 + 0.25))
+            .addScaledVector(perp, off);
           m.position.copy(_m);
           m.quaternion.copy(_q);
           m.scale.set(r, L / 2, r);
@@ -284,7 +347,16 @@ export function createBenchScene(stage, deps) {
       g.fillRect(0, 0, 64, 64);
       glowMap = new THREE.CanvasTexture(c);
     }
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowMap, color, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
+    const sprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: glowMap,
+        color,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
     sprite.position.set(pos[0], pos[1], pos[2]);
     sprite.raycast = () => {};
     root.add(sprite);
@@ -342,7 +414,10 @@ export function createBenchScene(stage, deps) {
     const bondMeshes = [];
     for (const o of bonds.values()) bondMeshes.push(...o.parts);
     raycaster.params.Line.threshold = 0.12;
-    const bh = raycaster.intersectObjects([...bondMeshes, ...[...bonds.values()].filter((o) => o.line).map((o) => o.line)], false)[0];
+    const bh = raycaster.intersectObjects(
+      [...bondMeshes, ...[...bonds.values()].filter((o) => o.line).map((o) => o.line)],
+      false,
+    )[0];
     if (bh) return { bondId: bh.object.userData.bondId };
     return null;
   }
@@ -390,7 +465,14 @@ export function createBenchScene(stage, deps) {
       engine.controls.enabled = false;
       const a = deps.bench.atoms.get(hit.atomId);
       const start = new THREE.Vector3(...a.pos);
-      drag = { id: hit.atomId, unit: new Set(deps.unitOf(hit.atomId)), last: pointOnPlane(ev.clientX, ev.clientY, start) ?? start, start, moved: false, target: null };
+      drag = {
+        id: hit.atomId,
+        unit: new Set(deps.unitOf(hit.atomId)),
+        last: pointOnPlane(ev.clientX, ev.clientY, start) ?? start,
+        start,
+        moved: false,
+        target: null,
+      };
       canvas.setPointerCapture?.(ev.pointerId);
     },
     { capture: true },
@@ -520,7 +602,10 @@ export function createBenchScene(stage, deps) {
         const steps = ring === 0 ? 1 : 6 * ring;
         for (let s = 0; s < steps; s++) {
           const ang = (s / steps) * Math.PI * 2 + ring * 0.37;
-          const p = target.clone().addScaledVector(right, Math.cos(ang) * ring * 1.3).addScaledVector(up, Math.sin(ang) * ring * 1.0);
+          const p = target
+            .clone()
+            .addScaledVector(right, Math.cos(ang) * ring * 1.3)
+            .addScaledVector(up, Math.sin(ang) * ring * 1.0);
           if (existing.every((e) => e.distanceTo(p) > clearance)) return [p.x, p.y, p.z];
         }
       }

@@ -226,6 +226,7 @@ export const MOLECULE_GROUPS = MORE_GROUPS.reduce((list, g) => {
   return list;
 }, [...BASE_GROUPS]);
 
+/** @type {import('../../types').Molecule[]} */
 export const MOLECULES = [...BASE_MOLECULES, ...MORE_MOLECULES, ...REACTION_MOLECULES];
 // ΔHf° tabulati delle sostanze del catalogo delle reazioni che ne erano senza (formation-enthalpies.js)
 for (const m of MOLECULES) if (m.hf == null && FORMATION_ENTHALPIES[m.id] !== undefined) m.hf = FORMATION_ENTHALPIES[m.id];

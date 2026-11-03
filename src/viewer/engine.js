@@ -97,7 +97,9 @@ export class Engine {
     // post-processing
     this.bloom = null;
     if (G.post) {
-      const target = G.msaa ? new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: G.msaa }) : undefined;
+      const target = G.msaa
+        ? new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: G.msaa })
+        : undefined;
       this.composer = new EffectComposer(this.renderer, target);
       this.composer.setPixelRatio(this.pixelRatio);
       this.composer.addPass(new RenderPass(this.scene, this.camera));
@@ -162,7 +164,14 @@ export class Engine {
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({ color: 0x6f8fb8, size: 1.1, sizeAttenuation: true, transparent: true, opacity: 0.35, depthWrite: false });
+    const mat = new THREE.PointsMaterial({
+      color: 0x6f8fb8,
+      size: 1.1,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false,
+    });
     return new THREE.Points(geo, mat);
   }
 
@@ -304,7 +313,7 @@ export class Engine {
     if (tw) {
       tw.t = Math.min(1, tw.t + dt / tw.duration);
       const k = easeInOut(tw.t);
-      const toTarget = tw.track ? follow ?? tw.fromTarget : tw.toTarget;
+      const toTarget = tw.track ? (follow ?? tw.fromTarget) : tw.toTarget;
       const toPos = tw.track ? _to.copy(toTarget).add(tw.offset) : tw.toPos;
       this.camera.position.lerpVectors(tw.fromPos, toPos, k);
       this.controls.target.lerpVectors(tw.fromTarget, toTarget, k);

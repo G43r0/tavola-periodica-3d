@@ -8,10 +8,28 @@ import { createT, isItalian } from '../i18n/index.js';
 import { gfx } from '../gfx/preset.js';
 import { icons } from '../ui/icons.js';
 import {
-  createSubstances, AMBIENT, T_MAX, SOLID, LIQUID, GAS, S, WOOD, COAL, CONCRETE, WALL, GENERATOR, SOURCE, DRAIN, WATER, SALT, OXIDE, CO2,
+  createSubstances,
+  AMBIENT,
+  T_MAX,
+  SOLID,
+  LIQUID,
+  GAS,
+  S,
+  WOOD,
+  COAL,
+  CONCRETE,
+  WALL,
+  GENERATOR,
+  SOURCE,
+  DRAIN,
+  WATER,
+  SALT,
+  OXIDE,
+  CO2,
   phaseAt,
 } from './substances.js';
 import { World } from './world.js';
+import { encodeScene, decodeScene, autosaveScene, restoreAutosave } from './scene-file.js';
 import { createRenderer, heatScale } from './render.js';
 import { describeEvent, substanceLabel, ALIAS_FORMULA, substanceNotes, fmtCelsius, PHASE_NAME } from './describe.js';
 import { PRESETS } from './presets.js';
@@ -19,6 +37,7 @@ import { shapeCells } from './shapes.js';
 import { SANDBOX_STRINGS } from './sandbox-strings.js';
 import { SANDBOX_DESCRIBE } from './describe-strings.js';
 import { sig } from '../ui/spark-sig.js';
+import { exposeForTests } from '../test-hooks.js';
 
 const t = createT(SANDBOX_STRINGS);
 
@@ -104,6 +123,12 @@ const TEMPLATE = () => `
       <div class="sbx-history" role="group" aria-label="${t('history')}" data-help="sandbox.undo">
         <button type="button" class="sbx-icon-btn" data-act="undo" title="${t('undoTitle')}" aria-label="${t('undo')}" disabled>${icons.undo(16)}</button>
         <button type="button" class="sbx-icon-btn" data-act="redo" title="${t('redoTitle')}" aria-label="${t('redo')}" disabled>${icons.redo(16)}</button>
+      </div>
+      <div class="sbx-history" role="group" aria-label="${t('scene')}">
+        <button type="button" class="sbx-icon-btn" data-act="scene-save" title="${t('sceneSave')}" aria-label="${t('sceneSave')}">${icons.download(16)}</button>
+        <button type="button" class="sbx-icon-btn" data-act="scene-open" title="${t('sceneOpen')}" aria-label="${t('sceneOpen')}">${icons.upload(16)}</button>
+        <button type="button" class="sbx-icon-btn" data-act="scene-png" title="${t('scenePng')}" aria-label="${t('scenePng')}">${icons.image(16)}</button>
+        <input type="file" class="sbx-scene-file" accept=".json,application/json" hidden />
       </div>
       <button type="button" class="btn-ghost" data-act="examples" data-help="sandbox.examples" aria-expanded="false">${icons.book(16)}<span>${t('examples')}</span></button>
       <button type="button" class="btn-ghost" data-act="clear" data-help="sandbox.clear" title="${t('clearTitle')}">${icons.broom(16)}<span>${t('clear')}</span></button>
@@ -229,7 +254,8 @@ export function createSandbox(elements, { onClose } = {}) {
   // ---------------------------------------------------------------- tavolozza
   const swatchColor = (id) => {
     const s = L[id];
-    const c = id === SALT ? [238, 238, 240] : id === OXIDE ? [139, 58, 30] : s.colors[phaseAt(s, AMBIENT)] ?? s.colors[SOLID];
+    const c =
+      id === SALT ? [238, 238, 240] : id === OXIDE ? [139, 58, 30] : (s.colors[phaseAt(s, AMBIENT)] ?? s.colors[SOLID]);
     return `rgb(${c[0]},${c[1]},${c[2]})`;
   };
   const swatch = (id, ctype = 0, short) => {
@@ -238,17 +264,20 @@ export function createSandbox(elements, { onClose } = {}) {
     return `<button type="button" class="sbx-item" data-id="${id}" data-ctype="${ctype}" style="--sw:${swatchColor(id)}" title="${esc(label.name)}${label.formula ? ` (${esc(label.formula)})` : ''}">
       <span class="sbx-item__sw"></span><span class="sbx-item__name">${esc(short ?? (id === GENERATOR ? t('generator') : id === WALL ? t('wall') : s.name))}</span></button>`;
   };
-  const toolButton = (x) => `<button type="button" class="sbx-tool" data-tool="${x.key}" data-help="sandbox.tool.${x.key}" style="--tc:${x.color}" title="${esc(x.name)}: ${esc(x.text)}">${icons[x.icon](17)}<span>${x.name}</span></button>`;
+  const toolButton = (x) =>
+    `<button type="button" class="sbx-tool" data-tool="${x.key}" data-help="sandbox.tool.${x.key}" style="--tc:${x.color}" title="${esc(x.name)}: ${esc(x.text)}">${icons[x.icon](17)}<span>${x.name}</span></button>`;
   $('.sbx-tools:not(.sbx-tools--util)').innerHTML = TOOLS.map(toolButton).join('');
   $('.sbx-tools--util').innerHTML = UTILITIES.map(toolButton).join('');
   $('.sbx-mats').innerHTML = MATERIALS.map((m) => swatch(m.id, m.ctype)).join('');
-  $('.sbx-comps').innerHTML = COMPOUNDS(subs).map((m) => swatch(m.id, m.ctype, m.label)).join('');
-  // le 554 sostanze della libreria del laboratorio, per gruppi (alcune sono elementi o sostanze già presenti: H₂, H₂O…)
+  $('.sbx-comps').innerHTML = COMPOUNDS(subs)
+    .map((m) => swatch(m.id, m.ctype, m.label))
+    .join('');
+  // le 558 sostanze della libreria del laboratorio, per gruppi (alcune sono elementi o sostanze già presenti: H₂, H₂O…)
   const libItems = subs.library.entries.map((e) => {
     const id = subs.libraryId.get(e.id);
     const s = L[id];
     const formula = ALIAS_FORMULA[e.id] ?? (s.formula || substanceLabel(subs, id).formula || '');
-    return { e, id, name: e.name, formula, search: normalize(`${e.name} ${e.aka ?? ''} ${formula} ${formula.replace(/[₀-₉]/g, (d) => '₀₁₂₃₄₅₆₇₈₉'.indexOf(d))}`) };
+    return { e, id, name: e.name, formula, search: normalize(`${e.name} ${e.aka ?? ''} ${formula}`) };
   });
   $('.sbx-sec__count').textContent = `(${libItems.length})`;
   $('.sbx-lib').innerHTML = subs.groups
@@ -256,8 +285,12 @@ export function createSandbox(elements, { onClose } = {}) {
       const items = libItems.filter((it) => it.e.group === g.key);
       if (!items.length) return '';
       return `<details class="sbx-libgroup" data-group="${g.key}"><summary>${esc(g.label)} <span>${items.length}</span></summary><div>${items
-        .map((it) => `<button type="button" class="sbx-libitem" data-id="${it.id}" data-ctype="0" data-search="${esc(it.search)}" style="--sw:${swatchColor(it.id)}" title="${esc(it.name)} (${esc(it.formula)})">
-            <span class="sbx-item__sw"></span><span class="sbx-libitem__name">${esc(it.name)}</span><span class="sbx-libitem__f">${esc(it.formula)}</span></button>`)
+        .map(
+          (
+            it,
+          ) => `<button type="button" class="sbx-libitem" data-id="${it.id}" data-ctype="0" data-search="${esc(it.search)}" style="--sw:${swatchColor(it.id)}" title="${esc(it.name)} (${esc(it.formula)})">
+            <span class="sbx-item__sw"></span><span class="sbx-libitem__name">${esc(it.name)}</span><span class="sbx-libitem__f">${esc(it.formula)}</span></button>`,
+        )
         .join('')}</div></details>`;
     })
     .join('');
@@ -349,7 +382,8 @@ export function createSandbox(elements, { onClose } = {}) {
     const mp = s.mp;
     const bp = s.bp;
     if (phase === SOLID) return mp > AMBIENT ? AMBIENT : Math.max(1, mp - Math.max(8, mp * 0.15));
-    if (phase === LIQUID) return mp <= AMBIENT && AMBIENT < bp ? AMBIENT : Math.min(T_MAX, mp + Math.min(100, (bp - mp) / 3));
+    if (phase === LIQUID)
+      return mp <= AMBIENT && AMBIENT < bp ? AMBIENT : Math.min(T_MAX, mp + Math.min(100, (bp - mp) / 3));
     return bp <= AMBIENT ? AMBIENT : Math.min(T_MAX, bp + 100);
   }
 
@@ -373,8 +407,17 @@ export function createSandbox(elements, { onClose } = {}) {
 
   function renderSelection() {
     const sel = state.sel;
-    root.querySelectorAll('[data-tool]').forEach((b) => b.classList.toggle('is-active', sel.kind === 'tool' && b.dataset.tool === sel.key));
-    root.querySelectorAll('[data-id]').forEach((b) => b.classList.toggle('is-active', sel.kind === 'sub' && Number(b.dataset.id) === sel.id && Number(b.dataset.ctype) === sel.ctype));
+    root
+      .querySelectorAll('[data-tool]')
+      .forEach((b) => b.classList.toggle('is-active', sel.kind === 'tool' && b.dataset.tool === sel.key));
+    root
+      .querySelectorAll('[data-id]')
+      .forEach((b) =>
+        b.classList.toggle(
+          'is-active',
+          sel.kind === 'sub' && Number(b.dataset.id) === sel.id && Number(b.dataset.ctype) === sel.ctype,
+        ),
+      );
     const card = $('.sbx-card');
     if (sel.kind === 'tool') {
       const x = TOOL[sel.key];
@@ -386,14 +429,18 @@ export function createSandbox(elements, { onClose } = {}) {
     }
     const s = L[sel.id];
     const label = substanceLabel(subs, sel.id, sel.ctype);
-    const cat = s.kind === 'element' ? CATEGORY[s.category] ?? CATEGORY.unknown : null;
+    const cat = s.kind === 'element' ? (CATEGORY[s.category] ?? CATEGORY.unknown) : null;
     const phase = phaseAt(s, state.place.temp);
     const canSolid = Number.isFinite(s.mp) ? s.mp > 2 : true;
-    const canLiquid = Number.isFinite(s.mp) && s.mp > 0 && s.bp > s.mp;
+    const canLiquid = Number.isFinite(s.mp) && s.mp >= 0 && s.bp > s.mp; // l'elio ha mp = 0
     const canGas = Number.isFinite(s.bp) && s.bp > 0;
     const blockOnly = s.flags & S.BLOCK_ONLY;
     const groupLabel = s.kind === 'compound' ? subs.groups.find((g) => g.key === s.group)?.label : null;
-    const eyebrow = cat ? `${esc(cat.singular)} · Z = ${s.z}` : groupLabel ? esc(t('selLibrary', { group: groupLabel })) : { material: t('selMaterial'), compound: t('selCompound'), product: t('selProduct') }[s.kind] ?? '';
+    const eyebrow = cat
+      ? `${esc(cat.singular)} · Z = ${s.z}`
+      : groupLabel
+        ? esc(t('selLibrary', { group: groupLabel }))
+        : ({ material: t('selMaterial'), compound: t('selCompound'), product: t('selProduct') }[s.kind] ?? '');
     const aqueous = s.flags & S.AQUEOUS;
     const soluble = s.flags & S.SOLUBLE;
     const dissolved = aqueous || (soluble && state.place.dissolved);
@@ -408,7 +455,7 @@ export function createSandbox(elements, { onClose } = {}) {
           ? ''
           : aqueous
             ? `<div class="sbx-place"><p class="sbx-label">${t('placeAs')}</p><p class="sbx-place__aq">${t('aqueousOnly')}</p>
-               <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="-273" max="99" value="${Math.round(state.place.temp - 273.15)}" /> °C</label></div>`
+               <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="0" max="99" value="${Math.round(state.place.temp - 273.15)}" /> °C</label></div>`
             : `<div class="sbx-place">
         <p class="sbx-label">${t('placeAs')}</p>
         <div class="segmented sbx-phase" role="group" aria-label="${t('phase')}" data-help="term.state">
@@ -421,10 +468,12 @@ export function createSandbox(elements, { onClose } = {}) {
           <button type="button" class="segmented__btn" data-form="powder" aria-pressed="${state.place.form === 'powder'}">${t('powder')}</button>
           <button type="button" class="segmented__btn" data-form="block" aria-pressed="${state.place.form === 'block'}">${t('block')}</button>
         </div>
-        <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="-273" max="${Math.round(T_MAX - 273.15)}" value="${Math.round(state.place.temp - 273.15)}" /> °C</label>
+        <label class="sbx-temp">${t('temperature')} <input type="number" step="1" min="${dissolved ? 0 : -273}" max="${dissolved ? 99 : Math.round(T_MAX - 273.15)}" value="${Math.round(state.place.temp - 273.15)}" /> °C</label>
       </div>`
       }
-      <ul class="sbx-notes">${substanceNotes(subs, sel.id, sel.ctype).map((n) => `<li>${esc(n)}</li>`).join('')}</ul>`;
+      <ul class="sbx-notes">${substanceNotes(subs, sel.id, sel.ctype)
+        .map((n) => `<li>${esc(n)}</li>`)
+        .join('')}</ul>`;
   }
 
   $('.sbx-card').addEventListener('click', (ev) => {
@@ -447,8 +496,12 @@ export function createSandbox(elements, { onClose } = {}) {
   });
   $('.sbx-card').addEventListener('change', (ev) => {
     if (!ev.target.matches('.sbx-temp input')) return;
-    const c = Number(ev.target.value);
-    if (Number.isFinite(c)) state.place.temp = Math.min(T_MAX, Math.max(0, c + 273.15));
+    // campo vuoto: resta la temperatura di prima (Number('') sarebbe 0 °C); i limiti sono quelli del campo (le
+    // soluzioni tra 0 e 99 °C)
+    const c = ev.target.value.trim() === '' ? NaN : Number(ev.target.value);
+    const lo = Number(ev.target.min);
+    const hi = Number(ev.target.max);
+    if (Number.isFinite(c)) state.place.temp = Math.min(T_MAX, Math.max(0, Math.min(hi, Math.max(lo, c)) + 273.15));
     renderSelection();
   });
   $('.sbx-card').addEventListener('keydown', (ev) => ev.stopPropagation());
@@ -505,14 +558,26 @@ export function createSandbox(elements, { onClose } = {}) {
     view = { scale, cw: canvas.width, ch: canvas.height, dpr };
     if (DETAIL) {
       // circa un pixel dello schermo per pixel della trama, senza superare ~1 milione di pixel
-      const k = Math.max(2, Math.min(4, Math.round((scale * dpr) / 1.5), Math.floor(Math.sqrt(1e6 / (world.W * world.H)))));
+      const k = Math.max(
+        2,
+        Math.min(4, Math.round((scale * dpr) / 1.5), Math.floor(Math.sqrt(1e6 / (world.W * world.H)))),
+      );
       if (!detail || detail.k !== k || detail.W !== world.W || detail.H !== world.H) {
         const c = document.createElement('canvas');
         c.width = world.W * k;
         c.height = world.H * k;
         const dctx = c.getContext('2d');
         const dimg = dctx.createImageData(c.width, c.height);
-        detail = { k, W: world.W, H: world.H, canvas: c, ctx: dctx, img: dimg, pix: new Uint32Array(dimg.data.buffer), cls: new Uint8Array(world.W * world.H) };
+        detail = {
+          k,
+          W: world.W,
+          H: world.H,
+          canvas: c,
+          ctx: dctx,
+          img: dimg,
+          pix: new Uint32Array(dimg.data.buffer),
+          cls: new Uint8Array(world.W * world.H),
+        };
       }
     }
   }
@@ -584,7 +649,14 @@ export function createSandbox(elements, { onClose } = {}) {
       ctx.fillStyle = shape.mode === 'erase' ? '#ff6a6a' : color;
       ctx.globalAlpha = 0.4;
       ctx.beginPath();
-      for (const [x, y] of shapeCells(shape.shape, shape.start[0], shape.start[1], shape.cur[0], shape.cur[1], filled)) {
+      for (const [x, y] of shapeCells(
+        shape.shape,
+        shape.start[0],
+        shape.start[1],
+        shape.cur[0],
+        shape.cur[1],
+        filled,
+      )) {
         if (!r) ctx.rect(x * k, y * k, k, k);
         else {
           ctx.moveTo((x + 0.5 + r + 0.5) * k, (y + 0.5) * k);
@@ -596,7 +668,12 @@ export function createSandbox(elements, { onClose } = {}) {
     }
     // pennello
     if (state.hover) {
-      const rad = state.sel.kind === 'tool' && state.sel.key === 'bomb' ? bombRadius() : state.mode === 'fill' ? 1.5 : state.brush + 0.5;
+      const rad =
+        state.sel.kind === 'tool' && state.sel.key === 'bomb'
+          ? bombRadius()
+          : state.mode === 'fill'
+            ? 1.5
+            : state.brush + 0.5;
       ctx.strokeStyle = color;
       ctx.globalAlpha = 0.85;
       ctx.lineWidth = Math.max(1, dpr);
@@ -618,21 +695,47 @@ export function createSandbox(elements, { onClose } = {}) {
     const sel = state.sel;
     if (sel.kind === 'sub') {
       const temp = state.place.dissolved ? Math.min(state.place.temp, 372) : state.place.temp;
-      world.paint(x, y, r, sel.id, { temp, powder: state.place.form === 'powder', ctype: sel.ctype, dissolved: state.place.dissolved });
+      world.paint(x, y, r, sel.id, {
+        temp,
+        powder: state.place.form === 'powder',
+        ctype: sel.ctype,
+        dissolved: state.place.dissolved,
+      });
       return;
     }
     switch (sel.key) {
-      case 'erase': world.erase(x, y, r); break;
-      case 'heat': world.heat(x, y, r, HEAT_RATE); break;
-      case 'cool': world.heat(x, y, r, -HEAT_RATE); break;
-      case 'fire': world.ignite(x, y, r); break;
-      case 'spark': world.sparkAt(x, y, r); break;
-      case 'neutron': world.emitNeutrons(x, y, r, Math.min(6, 1 + (r >> 1))); break;
-      case 'stir': world.stir(x, y, r); break;
-      case 'wind': world.blow(x, y, r, state.wind[0], state.wind[1]); break;
-      case 'equalize': world.equalize(x, y, r); break;
-      case 'extinguish': world.extinguish(x, y, r); break;
-      default: break;
+      case 'erase':
+        world.erase(x, y, r);
+        break;
+      case 'heat':
+        world.heat(x, y, r, HEAT_RATE);
+        break;
+      case 'cool':
+        world.heat(x, y, r, -HEAT_RATE);
+        break;
+      case 'fire':
+        world.ignite(x, y, r);
+        break;
+      case 'spark':
+        world.sparkAt(x, y, r);
+        break;
+      case 'neutron':
+        world.emitNeutrons(x, y, r, Math.min(6, 1 + (r >> 1)));
+        break;
+      case 'stir':
+        world.stir(x, y, r);
+        break;
+      case 'wind':
+        world.blow(x, y, r, state.wind[0], state.wind[1]);
+        break;
+      case 'equalize':
+        world.equalize(x, y, r);
+        break;
+      case 'extinguish':
+        world.extinguish(x, y, r);
+        break;
+      default:
+        break;
     }
   }
 
@@ -642,23 +745,26 @@ export function createSandbox(elements, { onClose } = {}) {
     $('[data-act="undo"]').disabled = !history.undo.length;
     $('[data-act="redo"]').disabled = !history.redo.length;
   }
-  /** Da chiamare prima di ogni modifica fatta dall'utente. */
-  function remember() {
-    history.undo.push(world.snapshot());
+  /** Stato da annullare: la griglia e le etichette degli esempi, che vanno e vengono con il loro disegno. */
+  const snapshot = () => ({ world: world.snapshot(), labels: state.labels });
+  /** Da chiamare prima di ogni modifica fatta dall'utente (o dopo, con la copia presa prima). */
+  function remember(snap = snapshot()) {
+    history.undo.push(snap);
     if (history.undo.length > UNDO_MAX) history.undo.shift();
-    history.redo.length = 0;
-    syncHistory();
-  }
-  function resetHistory() {
-    history.undo.length = 0;
     history.redo.length = 0;
     syncHistory();
   }
   function travel(from, to, label) {
     const snap = from.pop();
     if (!snap) return;
-    to.push(world.snapshot());
-    world.restore(snap);
+    to.push(snapshot());
+    // un passo fatto su un'altra griglia (cambio di griglia annullato): prima si torna a quella dimensione
+    if (snap.world.W !== world.W || snap.world.H !== world.H) {
+      world.resizeKeeping(snap.world.W, snap.world.H);
+      gridChanged();
+    }
+    world.restore(snap.world);
+    state.labels = snap.labels;
     syncHistory();
     message(label, 1500);
   }
@@ -667,7 +773,9 @@ export function createSandbox(elements, { onClose } = {}) {
 
   // ---------------------------------------------------------------- modi di disegno (forme, secchiello)
   /** La forma trascinata si usa con le sostanze e con gli strumenti che hanno senso su un'area. */
-  const shapeable = (mode) => ['line', 'rect', 'ellipse'].includes(state.mode) && (mode === 'erase' || state.sel.kind === 'sub' || SHAPE_TOOLS.has(state.sel.key));
+  const shapeable = (mode) =>
+    ['line', 'rect', 'ellipse'].includes(state.mode) &&
+    (mode === 'erase' || state.sel.kind === 'sub' || SHAPE_TOOLS.has(state.sel.key));
   const isFilled = () => state.filled && state.mode !== 'line';
 
   function commitShape(d) {
@@ -679,9 +787,10 @@ export function createSandbox(elements, { onClose } = {}) {
   }
 
   function bucket(x, y, mode) {
+    // niente da riempire (o da cancellare): nessun passo da annullare, e Ripeti resta com'era
     if (mode === 'erase') {
-      remember();
-      world.fill(x, y, 0);
+      const snap = snapshot();
+      if (world.fill(x, y, 0)) remember(snap);
       return;
     }
     const sel = state.sel;
@@ -689,13 +798,17 @@ export function createSandbox(elements, { onClose } = {}) {
       message(t('bucketNeedsSubstance'), 3000);
       return;
     }
-    remember();
+    const snap = snapshot();
     const temp = state.place.dissolved ? Math.min(state.place.temp, 372) : state.place.temp;
-    const n = world.fill(x, y, sel.id, { temp, powder: state.place.form === 'powder', ctype: sel.ctype, dissolved: state.place.dissolved });
-    if (!n) {
-      history.undo.pop(); // niente da riempire: non c'è nulla da annullare
-      syncHistory();
-    }
+    if (
+      world.fill(x, y, sel.id, {
+        temp,
+        powder: state.place.form === 'powder',
+        ctype: sel.ctype,
+        dissolved: state.place.dissolved,
+      })
+    )
+      remember(snap);
   }
 
   function setMode(key) {
@@ -720,7 +833,11 @@ export function createSandbox(elements, { onClose } = {}) {
     const r = canvas.getBoundingClientRect();
     const x = Math.floor(((ev.clientX - r.left) / r.width) * world.W);
     const y = Math.floor(((ev.clientY - r.top) / r.height) * world.H);
-    return { x: Math.max(0, Math.min(world.W - 1, x)), y: Math.max(0, Math.min(world.H - 1, y)), inside: x >= 0 && y >= 0 && x < world.W && y < world.H };
+    return {
+      x: Math.max(0, Math.min(world.W - 1, x)),
+      y: Math.max(0, Math.min(world.H - 1, y)),
+      inside: x >= 0 && y >= 0 && x < world.W && y < world.H,
+    };
   }
 
   function pick(x, y) {
@@ -837,7 +954,9 @@ export function createSandbox(elements, { onClose } = {}) {
   }
   function setHeatView(v) {
     state.heatView = v;
-    root.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.view === 'heat') === v)));
+    root
+      .querySelectorAll('[data-view]')
+      .forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.view === 'heat') === v)));
   }
   function setGlow(v) {
     state.glow = v;
@@ -846,7 +965,9 @@ export function createSandbox(elements, { onClose } = {}) {
 
   function closePops() {
     root.querySelectorAll('.sbx-pop').forEach((p) => (p.hidden = true));
-    root.querySelectorAll('[data-act="examples"], [data-act="help"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+    root
+      .querySelectorAll('[data-act="examples"], [data-act="help"]')
+      .forEach((b) => b.setAttribute('aria-expanded', 'false'));
   }
   function togglePop(sel, btnSel, show) {
     const box = $(sel);
@@ -904,19 +1025,61 @@ export function createSandbox(elements, { onClose } = {}) {
       return;
     }
     switch (a.dataset.act) {
-      case 'close': close(); break;
-      case 'play': setRunning(!state.running); break;
-      case 'step': setRunning(false); stepOnce(); break;
-      case 'examples': togglePop('.sbx-examples', '[data-act="examples"]'); break;
-      case 'help': togglePop('.sbx-help', '[data-act="help"]'); break;
-      case 'clear': clearAll(); message(t('cleared'), 2500); break;
-      case 'undo': undo(); break;
-      case 'redo': redo(); break;
-      case 'log-clear': world.events.clear(); state.logKeys = []; state.logSeen = -1; renderLog(); break;
-      case 'brush-': setBrush(state.brush - 1); break;
-      case 'brush+': setBrush(state.brush + 1); break;
-      case 'intro-close': hideIntro(); break;
-      default: break;
+      case 'close':
+        close();
+        break;
+      case 'play':
+        setRunning(!state.running);
+        break;
+      case 'step':
+        setRunning(false);
+        stepOnce();
+        break;
+      case 'examples':
+        togglePop('.sbx-examples', '[data-act="examples"]');
+        break;
+      case 'help':
+        togglePop('.sbx-help', '[data-act="help"]');
+        break;
+      case 'clear':
+        clearAll();
+        message(t('cleared'), 2500);
+        break;
+      case 'undo':
+        undo();
+        break;
+      case 'redo':
+        redo();
+        break;
+      case 'scene-save':
+        download(
+          new Blob([JSON.stringify(encodeScene(world, subs))], { type: 'application/json' }),
+          `sandbox-${stamp()}.json`,
+        );
+        break;
+      case 'scene-open':
+        $('.sbx-scene-file').click();
+        break;
+      case 'scene-png':
+        canvas.toBlob((blob) => blob && download(blob, `sandbox-${stamp()}.png`), 'image/png');
+        break;
+      case 'log-clear':
+        world.events.clear();
+        state.logKeys = [];
+        state.logSeen = -1;
+        renderLog();
+        break;
+      case 'brush-':
+        setBrush(state.brush - 1);
+        break;
+      case 'brush+':
+        setBrush(state.brush + 1);
+        break;
+      case 'intro-close':
+        hideIntro();
+        break;
+      default:
+        break;
     }
   });
   root.addEventListener('change', (ev) => {
@@ -925,23 +1088,76 @@ export function createSandbox(elements, { onClose } = {}) {
     if (opt === 'edges') world.openEdges = ev.target.checked;
     if (opt === 'filled') state.filled = ev.target.checked;
     if (ev.target.matches('.sbx-gridsize select')) {
+      // il disegno resta (centrato e appoggiato in basso) e il cambio si annulla come ogni altra modifica
       const [W, H] = GRIDS[ev.target.value];
-      world.resize(W, H);
-      resetHistory();
-      world.openEdges = $('[data-opt="edges"]').checked;
-      state.labels = [];
-      state.logKeys = [];
-      state.logSeen = -1;
-      allocBuffers();
-      layout();
-      renderLog();
+      remember();
+      const { dx, dy } = world.resizeKeeping(W, H);
+      state.labels = state.labels.map((l) => ({ ...l, x: l.x + dx, y: l.y + dy }));
+      gridChanged();
     }
   });
+
+  // ---------------------------------------------------------------- scene su file e salvataggio automatico (scene-file.js)
+  const stamp = () => new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+  function download(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  /** Mette nel mondo una scena letta (da file o dal salvataggio automatico), sulla sua griglia. */
+  function loadScene(snap) {
+    if (snap.W !== world.W || snap.H !== world.H) world.resize(snap.W, snap.H);
+    world.restore(snap);
+    state.labels = [];
+    gridChanged();
+    hideIntro();
+  }
+  $('.sbx-scene-file').addEventListener('change', async (ev) => {
+    const file = ev.target.files?.[0];
+    ev.target.value = '';
+    if (!file) return;
+    let snap;
+    try {
+      snap = decodeScene(JSON.parse(await file.text()), subs);
+    } catch (err) {
+      message(t(err.message === 'table' ? 'sceneOld' : err.message === 'kind' ? 'sceneNotScene' : 'sceneBroken'), 6000);
+      return;
+    }
+    remember();
+    loadScene(snap);
+    message(t('sceneOpened'), 3500);
+  });
+  const storage = (() => {
+    try {
+      return globalThis.localStorage ?? null;
+    } catch {
+      return null;
+    }
+  })();
+  // la scena resta chiudendo la sandbox, ricaricando o cambiando lingua o grafica (che ricaricano l'app)
+  const autosave = () => opened && storage && autosaveScene(storage, world, subs);
+  addEventListener('pagehide', autosave);
+
+  /** Dopo un cambio di dimensione del mondo: buffer, misure della vista e la voce scelta nel menu Griglia. */
+  function gridChanged() {
+    world.openEdges = $('[data-opt="edges"]').checked;
+    allocBuffers();
+    layout();
+    const key = Object.keys(GRIDS).find((k) => GRIDS[k][0] === world.W && GRIDS[k][1] === world.H);
+    if (key) $('.sbx-gridsize select').value = key;
+    renderLog();
+  }
 
   // ---------------------------------------------------------------- introduzione
   const FEATURED = ['alcalini', 'fiamma', 'termite', 'fissione', 'neon', 'idrogeno'];
   $('.sbx-intro__list').innerHTML = FEATURED.map((id) => PRESETS.find((p) => p.id === id))
-    .map((p) => `<button type="button" class="sbx-example" data-preset="${p.id}"><b>${esc(p.name)}</b><span>${esc(p.description)}</span></button>`)
+    .map(
+      (p) =>
+        `<button type="button" class="sbx-example" data-preset="${p.id}"><b>${esc(p.name)}</b><span>${esc(p.description)}</span></button>`,
+    )
     .join('');
   const hideIntro = () => ($('.sbx-intro').hidden = true);
 
@@ -975,9 +1191,11 @@ export function createSandbox(elements, { onClose } = {}) {
         const items = all.slice(0, LOG_ITEMS);
         const more = all.length - items.length;
         return `<section class="sbx-log__group"><h4>${esc(g)}</h4><ul>${items
-          .map(([k, d]) => `<li class="${now - (state.logFresh.get(k) ?? 0) < 1500 ? 'is-new' : ''}">
+          .map(
+            ([k, d]) => `<li class="${now - (state.logFresh.get(k) ?? 0) < 1500 ? 'is-new' : ''}">
             <div class="sbx-log__title"><span>${esc(d.title)}</span><b>×${fmtNumber(world.events.get(k))}</b></div>
-            <div class="sbx-log__eq">${esc(d.equation)}</div>${d.note ? `<p>${esc(d.note)}</p>` : ''}</li>`)
+            <div class="sbx-log__eq">${esc(d.equation)}</div>${d.note ? `<p>${esc(d.note)}</p>` : ''}</li>`,
+          )
           .join('')}</ul>${more > 0 ? `<p class="sbx-log__more">${t('logMore', { n: more })}</p>` : ''}</section>`;
       })
       .join('');
@@ -994,14 +1212,31 @@ export function createSandbox(elements, { onClose } = {}) {
     }
     if (!c.id) {
       const parts = world.particles.filter((p) => Math.floor(p.x) === h.x && Math.floor(p.y) === h.y);
-      el.innerHTML = parts.length ? `<b>${parts[0].kind === 1 ? t('hNeutron') : t('hRadiation')}</b>` : `<span class="muted">${t('hAir')} · ${fmtCelsius(AMBIENT)}</span>`;
+      el.innerHTML = parts.length
+        ? `<b>${parts[0].kind === 1 ? t('hNeutron') : t('hRadiation')}</b>`
+        : `<span class="muted">${t('hAir')} · ${fmtCelsius(AMBIENT)}</span>`;
       return;
     }
     const s = L[c.id];
     const label = substanceLabel(subs, c.id, c.ctype);
     if (c.id === WATER && c.phase === GAS) label.name = t('hSteam');
     const sym = s.kind === 'element' ? `<span class="sbx-hover__sym">${esc(s.symbol)}</span>` : '';
-    const state_ = s.flags & S.FIRE ? t('hFlame') : c.fume ? t('hFume') : c.dissolved || s.flags & S.AQUEOUS ? (c.phase === SOLID ? t('hFrozenSolution') : t('hSolution')) : c.phase === SOLID ? (s.flags & S.BLOCK_ONLY ? t('hSolid') : c.powder ? t('hPowder') : t('hBlock')) : PHASE_NAME[c.phase];
+    const state_ =
+      s.flags & S.FIRE
+        ? t('hFlame')
+        : c.fume
+          ? t('hFume')
+          : c.dissolved || s.flags & S.AQUEOUS
+            ? c.phase === SOLID
+              ? t('hFrozenSolution')
+              : t('hSolution')
+            : c.phase === SOLID
+              ? s.flags & S.BLOCK_ONLY
+                ? t('hSolid')
+                : c.powder
+                  ? t('hPowder')
+                  : t('hBlock')
+              : PHASE_NAME[c.phase];
     const extra = [c.burning ? t('hBurning') : '', c.spark ? t('hCurrent') : ''].filter(Boolean).join(' · ');
     const tShow = s.flags & S.WALL ? '' : ` · <b>${fmtCelsius(c.temp)}</b>`;
     el.innerHTML = `${sym}<b>${esc(label.name)}</b>${label.formula && label.formula !== s.symbol ? ` <span class="muted">${esc(label.formula)}</span>` : ''} · ${state_}${tShow}${extra ? ` · <span class="sbx-hover__hot">${extra}</span>` : ''}
@@ -1010,7 +1245,11 @@ export function createSandbox(elements, { onClose } = {}) {
 
   let fps = 60;
   function renderStats() {
-    $('.sbx-stats').textContent = t('stats', { cells: fmtNumber(cellCount), parts: fmtNumber(world.particles.length), fps: Math.round(fps) });
+    $('.sbx-stats').textContent = t('stats', {
+      cells: fmtNumber(cellCount),
+      parts: fmtNumber(world.particles.length),
+      fps: Math.round(fps),
+    });
   }
 
   // ---------------------------------------------------------------- ciclo
@@ -1059,7 +1298,8 @@ export function createSandbox(elements, { onClose } = {}) {
   // ---------------------------------------------------------------- tastiera
   function onKey(ev) {
     if (root.hidden) return;
-    const typing = ev.target instanceof HTMLElement && ev.target.matches('input[type="search"], input[type="number"], select');
+    const typing =
+      ev.target instanceof HTMLElement && ev.target.matches('input[type="search"], input[type="number"], select');
     if (ev.key === 'Escape') {
       ev.preventDefault();
       if (root.querySelector('.sbx-pop:not([hidden])')) closePops();
@@ -1093,13 +1333,15 @@ export function createSandbox(elements, { onClose } = {}) {
   }
   window.addEventListener('keydown', onKey);
 
-  // solo in sviluppo: accesso dalla console
-  if (import.meta.env.DEV) window.__sandbox = { world, subs, state, loadPreset };
+  // accesso dalla console e dagli E2E (solo con `vite` e nella build di prova, vedi src/test-hooks.js)
+  exposeForTests('__sandbox', { world, subs, state, loadPreset });
 
   // ---------------------------------------------------------------- apertura / chiusura
   let lastFocus = null;
   let opened = false;
+  let closing = 0; // timer della chiusura animata: riaprendo subito non deve più nascondere la sandbox
   function open(z) {
+    clearTimeout(closing);
     lastFocus = document.activeElement;
     root.hidden = false;
     root.classList.remove('is-leaving');
@@ -1111,6 +1353,11 @@ export function createSandbox(elements, { onClose } = {}) {
       opened = true;
       if (!z) selectSubstance(subs.byKey.get('Fe').id, 0);
       $('.sbx-intro').hidden = false;
+      const last = restoreAutosave(storage, subs);
+      if (last?.type.some((id) => id !== 0)) {
+        loadScene(last);
+        message(t('sceneRestored'), 4000);
+      }
       setRunning(true);
       renderLog();
     }
@@ -1122,8 +1369,10 @@ export function createSandbox(elements, { onClose } = {}) {
 
   function close() {
     if (root.hidden) return;
+    autosave();
     root.classList.add('is-leaving');
-    setTimeout(() => {
+    clearTimeout(closing);
+    closing = setTimeout(() => {
       root.hidden = true;
       root.classList.remove('is-leaving');
       cancelAnimationFrame(raf);

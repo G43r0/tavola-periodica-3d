@@ -88,7 +88,28 @@ export function displayCurrent(amps) {
 // ------------------------------------------------------------------ pila Daniell e contatore del gas (fase G8)
 
 /** Carica degli ioni dei metalli in soluzione (Zn²⁺, Cu²⁺, Ag⁺, Al³⁺…), per l'equazione di Nernst. */
-export const ION_CHARGE = { Li: 1, Na: 1, K: 1, Ag: 1, Mg: 2, Ca: 2, Ba: 2, Mn: 2, Zn: 2, Fe: 2, Cd: 2, Co: 2, Ni: 2, Sn: 2, Pb: 2, Cu: 2, Hg: 2, Al: 3, Cr: 3, Au: 3 };
+export const ION_CHARGE = {
+  Li: 1,
+  Na: 1,
+  K: 1,
+  Ag: 1,
+  Mg: 2,
+  Ca: 2,
+  Ba: 2,
+  Mn: 2,
+  Zn: 2,
+  Fe: 2,
+  Cd: 2,
+  Co: 2,
+  Ni: 2,
+  Sn: 2,
+  Pb: 2,
+  Cu: 2,
+  Hg: 2,
+  Al: 3,
+  Cr: 3,
+  Au: 3,
+};
 
 /** (R·T·ln 10) / F a 25 °C, in volt. */
 export const NERNST_SLOPE = 0.05916;

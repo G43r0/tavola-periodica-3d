@@ -1,15 +1,10 @@
+// @ts-check
 // Energia di legame nucleare per nucleone.
-// Nuclei leggeri (A ≤ 22): valori sperimentali AME2020 (Atomic Mass Evaluation).
-// Nuclei più pesanti: formula semi-empirica di Weizsäcker (errore tipico ≈ 1 % per A > 20).
+// Valori sperimentali AME2020 (Atomic Mass Evaluation) per i 2548 nuclei misurati (src/data/ame2020.js, generato da
+// scripts/build-ame.mjs); per gli altri la formula semi-empirica di Weizsäcker (errore tipico ≈ 1 % per A > 20).
 
 // B/A in keV, chiave "Z-A"
-const AME2020 = {
-  '1-2': 1112.283, '1-3': 2827.265, '2-3': 2572.681, '2-4': 7073.915,
-  '3-6': 5332.331, '3-7': 5606.439, '4-7': 5371.548, '4-9': 6462.668, '4-10': 6497.630,
-  '5-10': 6475.083, '5-11': 6927.732, '6-12': 7680.144, '6-13': 7469.849, '6-14': 7520.319,
-  '7-14': 7475.614, '7-15': 7699.460, '8-16': 7976.206, '8-17': 7750.728, '8-18': 7767.097,
-  '9-18': 7631.638, '9-19': 7778.018, '10-20': 8032.240, '10-21': 7971.713, '10-22': 8080.465,
-};
+import AME2020 from '../data/ame2020.js';
 
 /** Formula semi-empirica (coefficienti in MeV). */
 function weizsacker(z, a) {
@@ -30,4 +25,23 @@ export function bindingPerNucleon(z, a) {
   if (exp) return { mev: exp / 1000, measured: true };
   if (a < 16) return null;
   return { mev: weizsacker(z, a), measured: false };
+}
+
+/**
+ * Isotopi da proporre nel modello 3D, uno per numero di neutroni: lo stato fondamentale, oppure l'isomero se è l'unico
+ * nucleo con quei neutroni nei dati (il ¹⁸⁰ᵐTa naturale: lo stato fondamentale ¹⁸⁰Ta dura poche ore).
+ */
+export function viewerIsotopes(isotopes) {
+  return isotopes.filter((i) => !i.isomer || !isotopes.some((g) => !g.isomer && g.neutrons === i.neutrons));
+}
+
+/**
+ * Emivita breve per i pulsanti degli isotopi: «2,6 milioni di anni» → «2,6 Ma», «4,5 miliardi di anni» → «4,5 Ga»,
+ * «5730 anni» → «5730 a» (yearsShort: « a» o « y»). Prima restava «2,6 milioni di a».
+ */
+export function shortHalfLife(text, yearsShort) {
+  return text
+    .replace(/ (milioni di anni|million years)$/, ' Ma')
+    .replace(/ (miliardi di anni|billion years)$/, ' Ga')
+    .replace(/ (anni|years)$/, yearsShort);
 }

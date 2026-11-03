@@ -1,3 +1,4 @@
+// @ts-check
 // Energia di legame di un elettrone (energia minima per strapparlo all'atomo), dalla fonte migliore disponibile:
 //  1. sottolivello più esterno → prima energia di ionizzazione (NIST), misurata sull'atomo isolato;
 //  2. sottolivelli interni, Z ≤ 92 → X-ray Data Booklet (elemento nella sua forma naturale);
@@ -10,15 +11,18 @@ const J_WEIGHT = { '1/2': 2, '3/2': 4, '5/2': 6, '7/2': 8 };
 
 export const BINDING_SOURCE = table.meta.source;
 
-/** Sottolivello da cui si toglie il primo elettrone: n massimo, poi l massimo. */
+/**
+ * Sottolivello da cui si toglie il primo elettrone: n massimo, poi l massimo.
+ * @param {import('../types').Subshell[]} occupancy
+ */
 export function outermostSubshell(occupancy) {
   return occupancy.reduce((best, s) => (s.n > best.n || (s.n === best.n && s.l > best.l) ? s : best));
 }
 
 /**
- * @param {object} el elemento (elements.json)
+ * @param {import('../types').Element} el elemento (elements.json)
  * @param {{label:string}} sub sottolivello dell'elettrone
- * @param {object[]} occupancy orbitalOccupancy(z)
+ * @param {import('../types').Subshell[]} occupancy orbitalOccupancy(z)
  * @returns {{ ev:number, method:'ie'|'xray'|'slater', predicted?:boolean, components?:{j:string|null,ev:number}[], zeff:number }}
  */
 export function electronBinding(el, sub, occupancy) {

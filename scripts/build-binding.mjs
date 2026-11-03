@@ -10,7 +10,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const srcDir = path.join(root, 'data-sources', 'xray-data-booklet');
 const out = path.join(root, 'src', 'data', 'binding-energies.json');
 
-const cellText = (html) => html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+const cellText = (html) =>
+  html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 /** "L3 2p3/2" → { sub: "2p", j: "3/2" }; "K 1s" → { sub: "1s", j: null } */
 function parseHeader(h) {
@@ -21,7 +26,10 @@ function parseHeader(h) {
 
 const data = {};
 let cells = 0;
-for (const file of fs.readdirSync(srcDir).filter((f) => f.endsWith('.htm')).sort()) {
+for (const file of fs
+  .readdirSync(srcDir)
+  .filter((f) => f.endsWith('.htm'))
+  .sort()) {
   const html = fs.readFileSync(path.join(srcDir, file), 'latin1');
   let columns = null;
   for (const [, tr] of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
@@ -48,7 +56,8 @@ for (const file of fs.readdirSync(srcDir).filter((f) => f.endsWith('.htm')).sort
 
 // controlli di coerenza
 const zs = Object.keys(data).map(Number);
-if (zs.length !== 92 || Math.min(...zs) !== 1 || Math.max(...zs) !== 92) throw new Error(`Attesi Z = 1–92, trovati ${zs.length}`);
+if (zs.length !== 92 || Math.min(...zs) !== 1 || Math.max(...zs) !== 92)
+  throw new Error(`Attesi Z = 1–92, trovati ${zs.length}`);
 const check = [
   [1, '1s', '-', 13.6],
   [26, '1s', '-', 7112],
@@ -68,7 +77,8 @@ for (const z of zs) {
 
 const json = {
   meta: {
-    source: 'X-ray Data Booklet (LBNL), Table 1-1 — G. P. Williams; Bearden & Burr (1967), Cardona & Ley (1978), Fuggle & Mårtensson (1980)',
+    source:
+      'X-ray Data Booklet (LBNL), Table 1-1 — G. P. Williams; Bearden & Burr (1967), Cardona & Ley (1978), Fuggle & Mårtensson (1980)',
     note: 'Elementi nella loro forma naturale; energie riferite al livello del vuoto per i gas nobili e le molecole biatomiche, al livello di Fermi per i metalli.',
     unit: 'eV',
   },

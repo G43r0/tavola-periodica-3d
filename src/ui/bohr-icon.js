@@ -44,7 +44,9 @@ export function bohrSvg(el, { size = 120, animated = true } = {}) {
     const a = i * 2.39996; // angolo aureo
     const rr = rNuc * 0.55 * Math.sqrt(i / k);
     const fill = i % 2 ? 'var(--neutron)' : 'var(--proton)';
-    blob.push(`<circle cx="${(c + rr * Math.cos(a)).toFixed(2)}" cy="${(c + rr * Math.sin(a)).toFixed(2)}" r="${(rNuc * 0.42).toFixed(2)}" fill="${fill}"/>`);
+    blob.push(
+      `<circle cx="${(c + rr * Math.cos(a)).toFixed(2)}" cy="${(c + rr * Math.sin(a)).toFixed(2)}" r="${(rNuc * 0.42).toFixed(2)}" fill="${fill}"/>`,
+    );
   }
 
   return `

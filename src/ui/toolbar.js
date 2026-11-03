@@ -25,18 +25,19 @@ const t = createT({
     game: 'Simulatore',
     gameTitle: 'Simulatore di laboratorio: un gioco in prima persona nel laboratorio di chimica della scuola',
     explain: 'Spiega',
-    explainTitle: 'Modalità Spiega (F1): evidenzia una parola o fai clic destro su qualcosa per sapere cos\'è',
+    explainTitle: "Modalità Spiega (F1): evidenzia una parola o fai clic destro su qualcosa per sapere cos'è",
     language: 'Lingua',
     graphics: 'Grafica',
     graphicsTitle: 'Qualità della grafica',
     'gfx.simple': 'Semplice',
     'gfx.simpleText': 'Per computer poco potenti: niente effetti di luce, meno dettagli, animazioni ridotte.',
     'gfx.medium': 'Medio',
-    'gfx.mediumText': 'L\'equilibrio predefinito tra qualità e velocità.',
+    'gfx.mediumText': "L'equilibrio predefinito tra qualità e velocità.",
     'gfx.pro': 'Professionale',
     'gfx.proShort': 'Pro',
-    'gfx.proText': 'Massimo dettaglio: colori e materiali veri degli elementi, riflessi, ombre e antialiasing. Serve una buona scheda grafica.',
-    'gfx.note': 'L\'interfaccia si ricarica per applicare la scelta.',
+    'gfx.proText':
+      'Massimo dettaglio: colori e materiali veri degli elementi, riflessi, ombre e antialiasing. Serve una buona scheda grafica.',
+    'gfx.note': "L'interfaccia si ricarica per applicare la scelta.",
     info: 'Fonti dei dati e guida',
     categories: 'Categorie',
     categoriesGroup: 'Legenda e filtro per categoria',
@@ -74,7 +75,8 @@ const t = createT({
     'gfx.mediumText': 'The default balance between quality and speed.',
     'gfx.pro': 'Professional',
     'gfx.proShort': 'Pro',
-    'gfx.proText': 'Maximum detail: the real colours and materials of the elements, reflections, shadows and antialiasing. Needs a good graphics card.',
+    'gfx.proText':
+      'Maximum detail: the real colours and materials of the elements, reflections, shadows and antialiasing. Needs a good graphics card.',
     'gfx.note': 'The interface reloads to apply the choice.',
     info: 'Data sources and guide',
     categories: 'Categories',
@@ -89,23 +91,31 @@ const t = createT({
   eli6: {
     subtitle: 'Gioca e scopri di cosa è fatto il mondo',
     searchPlaceholder: 'Scrivi nome, sigla o numero…',
-    stateGroup: 'Com\'è a temperatura di casa',
+    stateGroup: "Com'è a temperatura di casa",
     stateLabel: 'A casa è…',
     labTitle: 'Laboratorio: attacca gli atomi tra loro e costruisci molecole',
     sandboxTitle: 'Sabbiera: versa polveri, liquidi e gas e guarda cosa succede quando li scaldi o li mescoli',
-    gameTitle: 'Il gioco del laboratorio: entra nel laboratorio della scuola e fai gli esperimenti come un vero chimico',
-    explainTitle: 'Modalità Spiega (F1): evidenzia una parola o premi il tasto destro su qualcosa e ti spiego cos\'è',
+    gameTitle:
+      'Il gioco del laboratorio: entra nel laboratorio della scuola e fai gli esperimenti come un vero chimico',
+    explainTitle: "Modalità Spiega (F1): evidenzia una parola o premi il tasto destro su qualcosa e ti spiego cos'è",
     info: 'Da dove vengono i dati, e come si usa',
     graphicsTitle: 'Quanto è bella la grafica',
     'gfx.simpleText': 'Per computer lenti: meno luci ed effetti, così tutto va veloce.',
     'gfx.mediumText': 'Una via di mezzo: bella e veloce.',
-    'gfx.proText': 'La più bella: gli elementi hanno i loro colori veri e sembrano oggetti reali, con riflessi e ombre. Serve un computer potente.',
+    'gfx.proText':
+      'La più bella: gli elementi hanno i loro colori veri e sembrano oggetti reali, con riflessi e ombre. Serve un computer potente.',
     'gfx.note': 'La pagina si ricarica per cambiare la grafica.',
     legendNote: 'Bordo a trattini = di questi elementi sappiamo poco, molti dati sono ipotesi',
   },
 });
 
-export function createToolbar(header, legend, elements, store, { onOpen, onInfo, onLab, onSandbox, onGame, onCategoryHover, onSearchCommit }) {
+export function createToolbar(
+  header,
+  legend,
+  elements,
+  store,
+  { onOpen, onInfo, onLab, onSandbox, onGame, onCategoryHover, onSearchCommit },
+) {
   header.innerHTML = `
     <div class="brand">
       <span class="brand__logo" data-help="ui.logo">${icons.atom(26)}</span>
@@ -127,7 +137,9 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
       <span class="filter-group__label">${t('stateLabel')}</span>
       <div class="segmented">
         ${STATES.map(
-          (s) => `<button type="button" class="segmented__btn" data-state="${s.key}" aria-pressed="false" title="${esc(s.label)}">
+          (
+            s,
+          ) => `<button type="button" class="segmented__btn" data-state="${s.key}" aria-pressed="false" title="${esc(s.label)}">
               ${s.icon ? icons[s.icon](14) : ''}<span>${esc(s.label)}</span></button>`,
         ).join('')}
       </div>
@@ -137,7 +149,8 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
       <span class="filter-group__label">${t('blockGroup')}</span>
       <div class="segmented segmented--blocks">
         ${BLOCKS.map(
-          (b) => `<button type="button" class="segmented__btn" data-block="${b.key}" aria-pressed="false" title="${esc(b.label)}: ${esc(b.hint)}">${b.key}</button>`,
+          (b) =>
+            `<button type="button" class="segmented__btn" data-block="${b.key}" aria-pressed="false" title="${esc(b.label)}: ${esc(b.hint)}">${b.key}</button>`,
         ).join('')}
       </div>
     </div>
@@ -154,8 +167,12 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
           ${icons.display(16)}<span>${esc(t.has(`gfx.${getGfx()}Short`) ? t(`gfx.${getGfx()}Short`) : t(`gfx.${getGfx()}`))}</span></button>
         <div class="gfx__menu pop-menu" role="menu" hidden>
           <p class="pop-menu__title">${t('graphicsTitle')}</p>
-          ${PRESETS.map((code) => `<button type="button" role="menuitemradio" class="gfx__item pop-menu__item" data-gfx="${code}" aria-checked="${code === getGfx()}">
-              <b>${esc(t(`gfx.${code}`))}</b><span>${esc(t(`gfx.${code}Text`))}</span></button>`).join('')}
+          ${PRESETS.map(
+            (
+              code,
+            ) => `<button type="button" role="menuitemradio" class="gfx__item pop-menu__item" data-gfx="${code}" aria-checked="${code === getGfx()}">
+              <b>${esc(t(`gfx.${code}`))}</b><span>${esc(t(`gfx.${code}Text`))}</span></button>`,
+          ).join('')}
           <p class="pop-menu__note">${t('gfx.note')}</p>
         </div>
       </div>
@@ -163,8 +180,12 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
         <button type="button" class="btn-ghost lang__btn" aria-haspopup="menu" aria-expanded="false" title="${esc(t('language'))}">
           ${icons.globe(16)}<span>${esc(langInfo().short)}</span></button>
         <div class="lang__menu pop-menu" role="menu" hidden>
-          ${LANGS.map((l) => `<button type="button" role="menuitemradio" class="lang__item pop-menu__item" data-lang="${l.code}" aria-checked="${l.code === getLang()}">
-              <b>${esc(l.short)}</b><span>${esc(l.name)}</span></button>`).join('')}
+          ${LANGS.map(
+            (
+              l,
+            ) => `<button type="button" role="menuitemradio" class="lang__item pop-menu__item" data-lang="${l.code}" aria-checked="${l.code === getLang()}">
+              <b>${esc(l.short)}</b><span>${esc(l.name)}</span></button>`,
+          ).join('')}
         </div>
       </div>
       <button type="button" class="btn-icon" data-action="info" data-help="ui.info" title="${esc(t('info'))}">${icons.info(18)}</button>
@@ -175,7 +196,9 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
     <span class="legend__label">${t('categories')}</span>
     <div class="legend__chips">
       ${CATEGORIES.map(
-        (c) => `<button type="button" class="chip" data-cat="${c.key}" aria-pressed="false" style="--c:${c.color}" title="${esc(t('chipTitle', { label: c.label }))}">
+        (
+          c,
+        ) => `<button type="button" class="chip" data-cat="${c.key}" aria-pressed="false" style="--c:${c.color}" title="${esc(t('chipTitle', { label: c.label }))}">
             <span class="chip__dot"></span>${esc(c.short)}</button>`,
       ).join('')}
     </div>
@@ -274,19 +297,27 @@ export function createToolbar(header, legend, elements, store, { onOpen, onInfo,
 
   // ---- rendering dello stato
   function render(s) {
-    header.querySelectorAll('[data-state]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.state === s.physState)));
-    header.querySelectorAll('[data-block]').forEach((b) => b.setAttribute('aria-pressed', String(s.blocks.has(b.dataset.block))));
-    legend.querySelectorAll('[data-cat]').forEach((b) => b.setAttribute('aria-pressed', String(s.categories.has(b.dataset.cat))));
+    header
+      .querySelectorAll('[data-state]')
+      .forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.state === s.physState)));
+    header
+      .querySelectorAll('[data-block]')
+      .forEach((b) => b.setAttribute('aria-pressed', String(s.blocks.has(b.dataset.block))));
+    legend
+      .querySelectorAll('[data-cat]')
+      .forEach((b) => b.setAttribute('aria-pressed', String(s.categories.has(b.dataset.cat))));
     legend.classList.toggle('has-selection', s.categories.size > 0);
 
     const active = hasActiveFilters(s);
     const { count: n, best } = computeVisibility(elements, s);
     reset.hidden = !active;
-    count.textContent = active ? t('countOf', { n, total: elements.length }) : t('countAll', { total: elements.length });
+    count.textContent = active
+      ? t('countOf', { n, total: elements.length })
+      : t('countAll', { total: elements.length });
     count.classList.toggle('is-empty', active && n === 0);
 
-    if (s.query && best) hint.innerHTML = `<kbd>${t('enter')}</kbd> ${esc(best.symbol)} · ${esc(best.name)}`;
-    else if (s.query) hint.textContent = t('noResults');
+    if (s.query.trim() && best) hint.innerHTML = `<kbd>${t('enter')}</kbd> ${esc(best.symbol)} · ${esc(best.name)}`;
+    else if (s.query.trim()) hint.textContent = t('noResults');
     else hint.textContent = '';
     if (input.value !== s.query) input.value = s.query;
   }

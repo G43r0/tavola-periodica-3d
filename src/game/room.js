@@ -45,7 +45,10 @@ export const LAYOUT = {
   extinguisher: { x: 4.82, z: 2.3 },
   store: { x: 4.6, z: 0.9 },
   // sgabelli accostati al bancone A (il suo mobile finisce a z = 0,05): nel corridoio resta il passaggio
-  stools: [{ x: -0.95, z: 0.25 }, { x: 1.05, z: 0.25 }],
+  stools: [
+    { x: -0.95, z: 0.25 },
+    { x: 1.05, z: 0.25 },
+  ],
 };
 /** Sgabello: seduta a 0,64 m, base larga sul pavimento; collisore = cilindro pieno (mezza altezza, raggio), massa in kg. */
 export const STOOL = { hh: 0.32, r: 0.17, mass: 5 };
@@ -102,43 +105,67 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.75, envMapIntensity: 0.05, ...o });
 
   const M = {
-    floor: std({ map: canvasTexture(256, 256, (g, w, h) => {
-      g.fillStyle = '#6e6862';
-      g.fillRect(0, 0, w, h);
-      noise(g, w, h, 0.08, 4000);
-      g.strokeStyle = 'rgba(30,27,24,0.45)';
-      g.lineWidth = 2;
-      g.strokeRect(1, 1, w - 2, h - 2);
-    }, [25, 20]), roughness: 0.6 }),
-    wall: std({ map: canvasTexture(128, 128, (g, w, h) => {
-      g.fillStyle = '#93a39a';
-      g.fillRect(0, 0, w, h);
-      noise(g, w, h, 0.03, 800);
-    }, [8, 3]), roughness: 0.92 }),
+    floor: std({
+      map: canvasTexture(
+        256,
+        256,
+        (g, w, h) => {
+          g.fillStyle = '#6e6862';
+          g.fillRect(0, 0, w, h);
+          noise(g, w, h, 0.08, 4000);
+          g.strokeStyle = 'rgba(30,27,24,0.45)';
+          g.lineWidth = 2;
+          g.strokeRect(1, 1, w - 2, h - 2);
+        },
+        [25, 20],
+      ),
+      roughness: 0.6,
+    }),
+    wall: std({
+      map: canvasTexture(
+        128,
+        128,
+        (g, w, h) => {
+          g.fillStyle = '#93a39a';
+          g.fillRect(0, 0, w, h);
+          noise(g, w, h, 0.03, 800);
+        },
+        [8, 3],
+      ),
+      roughness: 0.92,
+    }),
     wainscot: std({ color: 0x4d5f56, roughness: 0.6 }),
     ceiling: std({ color: 0xb9bbb6, roughness: 0.95 }),
     // piano in resina nera; senza riflessi dell'ambiente (Semplice) un po' più chiaro, se no sembra un buco
     top: std({ color: envMap ? 0x15171b : 0x24282e, roughness: 0.35, metalness: 0.05, envMapIntensity: 0.7 }),
-    cabinet: std({ map: canvasTexture(256, 128, (g, w, h) => {
-      g.fillStyle = '#56606b';
-      g.fillRect(0, 0, w, h);
-      g.strokeStyle = 'rgba(20,24,28,0.6)';
-      g.lineWidth = 3;
-      for (let x = 0; x < w; x += 64) g.strokeRect(x + 3, 6, 58, h - 12);
-      g.fillStyle = '#c3c8ce';
-      for (let x = 0; x < w; x += 64) g.fillRect(x + 28, 14, 8, 3);
-      // usura: graffi chiari vicino alle maniglie e in basso, dove si urta con i piedi
-      g.strokeStyle = 'rgba(200,206,212,0.18)';
-      g.lineWidth = 1;
-      for (let k = 0; k < 40; k++) {
-        const x = Math.random() * w;
-        const y = k % 3 ? h - 10 - Math.random() * 30 : 18 + Math.random() * 20;
-        g.beginPath();
-        g.moveTo(x, y);
-        g.lineTo(x + 4 + Math.random() * 14, y + (Math.random() - 0.5) * 4);
-        g.stroke();
-      }
-    }, [1, 1]), roughness: 0.85 }),
+    cabinet: std({
+      map: canvasTexture(
+        256,
+        128,
+        (g, w, h) => {
+          g.fillStyle = '#56606b';
+          g.fillRect(0, 0, w, h);
+          g.strokeStyle = 'rgba(20,24,28,0.6)';
+          g.lineWidth = 3;
+          for (let x = 0; x < w; x += 64) g.strokeRect(x + 3, 6, 58, h - 12);
+          g.fillStyle = '#c3c8ce';
+          for (let x = 0; x < w; x += 64) g.fillRect(x + 28, 14, 8, 3);
+          // usura: graffi chiari vicino alle maniglie e in basso, dove si urta con i piedi
+          g.strokeStyle = 'rgba(200,206,212,0.18)';
+          g.lineWidth = 1;
+          for (let k = 0; k < 40; k++) {
+            const x = Math.random() * w;
+            const y = k % 3 ? h - 10 - Math.random() * 30 : 18 + Math.random() * 20;
+            g.beginPath();
+            g.moveTo(x, y);
+            g.lineTo(x + 4 + Math.random() * 14, y + (Math.random() - 0.5) * 4);
+            g.stroke();
+          }
+        },
+        [1, 1],
+      ),
+      roughness: 0.85,
+    }),
     steel: std({ color: 0xc4c9cf, metalness: 0.85, roughness: 0.3, envMapIntensity: 1 }),
     darkSteel: std({ color: 0x5a6068, metalness: 0.7, roughness: 0.4, envMapIntensity: 1 }),
     wood: std({ color: 0x7a5233, roughness: 0.65 }),
@@ -146,7 +173,15 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     white: std({ color: 0xc9ccd0, roughness: 0.5 }),
     // strumenti (bilancia, piastra): grigio chiaro, così sul bancone nero si vedono ma non abbagliano
     instrument: std({ color: 0xaeb4bb, roughness: 0.45 }),
-    glassPane: new THREE.MeshStandardMaterial({ color: 0xcfe6ff, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.18, depthWrite: false, envMap }),
+    glassPane: new THREE.MeshStandardMaterial({
+      color: 0xcfe6ff,
+      roughness: 0.05,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.18,
+      depthWrite: false,
+      envMap,
+    }),
     light: new THREE.MeshBasicMaterial({ color: 0xf2f5fa }),
     red: std({ color: 0xc8161d, roughness: 0.4 }),
     green: std({ color: 0x2f9a4c, roughness: 0.5 }),
@@ -202,7 +237,8 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   box(0.08, 0.03, 0.06, M.steel, 3.15, 1.0, D / 2 - 0.06);
 
   // luci al soffitto
-  for (const x of [-2.5, 0, 2.5]) for (const z of [-2, 0.6, 2.8]) box(1.2, 0.03, 0.3, M.light, x, H - 0.02, z, { cast: false, receive: false });
+  for (const x of [-2.5, 0, 2.5])
+    for (const z of [-2, 0.6, 2.8]) box(1.2, 0.03, 0.3, M.light, x, H - 0.02, z, { cast: false, receive: false });
 
   // ------------------------------------------------------------ banconi degli studenti
   const bench = ({ x, z, w, d }, owner) => {
@@ -223,7 +259,14 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   const legendTex = new THREE.CanvasTexture(legendCanvas);
   legendTex.colorSpace = THREE.SRGBColorSpace;
   legendTex.anisotropy = 8;
-  const legend = mesh(new THREE.PlaneGeometry(2.6, 0.08), new THREE.MeshStandardMaterial({ map: legendTex, roughness: 0.8 }), sb.x, 1.55, sb.z + 0.328, { cast: false });
+  const legend = mesh(
+    new THREE.PlaneGeometry(2.6, 0.08),
+    new THREE.MeshStandardMaterial({ map: legendTex, roughness: 0.8 }),
+    sb.x,
+    1.55,
+    sb.z + 0.328,
+    { cast: false },
+  );
   legend.rotation.y = Math.PI;
   /** @param {string} title @param {{color: string, label: string}[]} entries */
   const setLegend = (title, entries) => {
@@ -257,18 +300,34 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     const stool = new THREE.Group();
     stool.position.set(s.x, 0, s.z);
     group.add(stool);
-    mesh(new THREE.CylinderGeometry(STOOL.r, STOOL.r, 0.04, seg(20, 10)), M.black, 0, 2 * STOOL.hh - 0.02, 0, { parent: stool });
+    mesh(new THREE.CylinderGeometry(STOOL.r, STOOL.r, 0.04, seg(20, 10)), M.black, 0, 2 * STOOL.hh - 0.02, 0, {
+      parent: stool,
+    });
     mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.6, 8), M.darkSteel, 0, 0.32, 0, { parent: stool });
-    mesh(new THREE.CylinderGeometry(STOOL.r - 0.03, STOOL.r - 0.01, 0.03, seg(20, 10)), M.darkSteel, 0, 0.015, 0, { parent: stool });
+    mesh(new THREE.CylinderGeometry(STOOL.r - 0.03, STOOL.r - 0.01, 0.03, seg(20, 10)), M.darkSteel, 0, 0.015, 0, {
+      parent: stool,
+    });
     const body = physics.prop({ x: s.x, z: s.z, ...STOOL });
     props.push({ mesh: stool, body, home: { x: s.x, z: s.z } });
   }
 
   // ------------------------------------------------------------ bilancia
   const bl = LAYOUT.balance;
-  const balance = { kind: 'balance', id: 'balance', hit: [], tare: 0, pan: { x: bl.x, y: BENCH_Y + 0.075, z: bl.z - 0.02, r: 0.075 } };
+  const balance = {
+    kind: 'balance',
+    id: 'balance',
+    hit: [],
+    tare: 0,
+    pan: { x: bl.x, y: BENCH_Y + 0.075, z: bl.z - 0.02, r: 0.075 },
+  };
   balance.hit.push(solid(0.22, 0.07, 0.28, M.instrument, bl.x, BENCH_Y + 0.035, bl.z, balance));
-  const pan = mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.008, seg(28, 14)), M.steel, bl.x, BENCH_Y + 0.071, bl.z - 0.02);
+  const pan = mesh(
+    new THREE.CylinderGeometry(0.075, 0.075, 0.008, seg(28, 14)),
+    M.steel,
+    bl.x,
+    BENCH_Y + 0.071,
+    bl.z - 0.02,
+  );
   physics.cylinder(bl.x, BENCH_Y + 0.071, bl.z - 0.02, 0.004, 0.075, balance);
   balance.hit.push(pan);
   const balCanvas = document.createElement('canvas');
@@ -276,7 +335,14 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   balCanvas.height = 64;
   const balTex = new THREE.CanvasTexture(balCanvas);
   balTex.colorSpace = THREE.SRGBColorSpace;
-  const display = mesh(new THREE.PlaneGeometry(0.14, 0.035), new THREE.MeshBasicMaterial({ map: balTex }), bl.x, BENCH_Y + 0.04, bl.z + 0.141, { cast: false });
+  const display = mesh(
+    new THREE.PlaneGeometry(0.14, 0.035),
+    new THREE.MeshBasicMaterial({ map: balTex }),
+    bl.x,
+    BENCH_Y + 0.04,
+    bl.z + 0.141,
+    { cast: false },
+  );
   balance.hit.push(display);
   fixtures.push(balance);
   let balanceText = '';
@@ -296,9 +362,21 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
 
   // ------------------------------------------------------------ piastra riscaldante con agitatore
   const hp = LAYOUT.hotplate;
-  const hotplate = { kind: 'hotplate', id: 'hotplate', hit: [], level: 0, T: 295, plate: { x: hp.x, y: BENCH_Y + 0.085, z: hp.z - 0.02, r: 0.1 } };
+  const hotplate = {
+    kind: 'hotplate',
+    id: 'hotplate',
+    hit: [],
+    level: 0,
+    T: 295,
+    plate: { x: hp.x, y: BENCH_Y + 0.085, z: hp.z - 0.02, r: 0.1 },
+  };
   hotplate.hit.push(solid(0.22, 0.08, 0.3, M.instrument, hp.x, BENCH_Y + 0.04, hp.z, hotplate));
-  const plateMat = new THREE.MeshStandardMaterial({ color: 0x9aa0a8, roughness: 0.4, emissive: 0xff2200, emissiveIntensity: 0 });
+  const plateMat = new THREE.MeshStandardMaterial({
+    color: 0x9aa0a8,
+    roughness: 0.4,
+    emissive: 0xff2200,
+    emissiveIntensity: 0,
+  });
   const plate = mesh(new THREE.BoxGeometry(0.19, 0.008, 0.19), plateMat, hp.x, BENCH_Y + 0.084, hp.z - 0.02);
   physics.box(hp.x, BENCH_Y + 0.084, hp.z - 0.02, 0.095, 0.004, 0.095, hotplate);
   hotplate.hit.push(plate);
@@ -311,31 +389,78 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
 
   // ------------------------------------------------------------ becco Bunsen e treppiede con la reticella
   const bu = LAYOUT.bunsen;
-  const bunsen = { kind: 'bunsen', id: 'bunsen', hit: [], on: false, flame: { x: bu.x, y: BENCH_Y + 0.15, z: bu.z, top: BENCH_Y + 0.29 }, gauze: { x: bu.x, y: BENCH_Y + 0.215, z: bu.z, r: 0.07 } };
-  bunsen.hit.push(mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.015, seg(20, 10)), M.darkSteel, bu.x, BENCH_Y + 0.008, bu.z));
+  const bunsen = {
+    kind: 'bunsen',
+    id: 'bunsen',
+    hit: [],
+    on: false,
+    flame: { x: bu.x, y: BENCH_Y + 0.15, z: bu.z, top: BENCH_Y + 0.29 },
+    gauze: { x: bu.x, y: BENCH_Y + 0.215, z: bu.z, r: 0.07 },
+  };
+  bunsen.hit.push(
+    mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.015, seg(20, 10)), M.darkSteel, bu.x, BENCH_Y + 0.008, bu.z),
+  );
   bunsen.hit.push(mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.13, 12), M.steel, bu.x, BENCH_Y + 0.08, bu.z));
   const valve = mesh(new THREE.BoxGeometry(0.02, 0.015, 0.03), M.yellow, bu.x + 0.04, BENCH_Y + 0.012, bu.z + 0.02);
   bunsen.hit.push(valve);
   // tubo del gas
-  const hose = mesh(new THREE.TorusGeometry(0.12, 0.006, 6, 16, Math.PI / 2), M.red, bu.x + 0.16, BENCH_Y + 0.006, bu.z + 0.02, { cast: false });
+  const hose = mesh(
+    new THREE.TorusGeometry(0.12, 0.006, 6, 16, Math.PI / 2),
+    M.red,
+    bu.x + 0.16,
+    BENCH_Y + 0.006,
+    bu.z + 0.02,
+    { cast: false },
+  );
   hose.rotation.x = Math.PI / 2;
   // treppiede
   for (let k = 0; k < 3; k++) {
     const a = (k / 3) * Math.PI * 2 + 0.5;
-    const leg = mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.22, 6), M.darkSteel, bu.x + Math.cos(a) * 0.075, BENCH_Y + 0.105, bu.z + Math.sin(a) * 0.075);
+    const leg = mesh(
+      new THREE.CylinderGeometry(0.004, 0.004, 0.22, 6),
+      M.darkSteel,
+      bu.x + Math.cos(a) * 0.075,
+      BENCH_Y + 0.105,
+      bu.z + Math.sin(a) * 0.075,
+    );
     leg.rotation.set(Math.sin(a) * 0.12, 0, -Math.cos(a) * 0.12);
   }
   mesh(new THREE.TorusGeometry(0.07, 0.004, 6, 24), M.darkSteel, bu.x, BENCH_Y + 0.21, bu.z).rotation.x = Math.PI / 2;
-  const gauzeMat = new THREE.MeshStandardMaterial({ color: 0x8c8c8c, roughness: 0.6, metalness: 0.5, emissive: 0xff5500, emissiveIntensity: 0 });
+  const gauzeMat = new THREE.MeshStandardMaterial({
+    color: 0x8c8c8c,
+    roughness: 0.6,
+    metalness: 0.5,
+    emissive: 0xff5500,
+    emissiveIntensity: 0,
+  });
   const gauze = mesh(new THREE.BoxGeometry(0.15, 0.003, 0.15), gauzeMat, bu.x, BENCH_Y + 0.213, bu.z);
   physics.box(bu.x, BENCH_Y + 0.213, bu.z, 0.075, 0.0025, 0.075, bunsen);
   bunsen.hit.push(gauze);
   bunsen.gauzeMat = gauzeMat;
   // fiamma: cono interno azzurro e cono esterno; il colore cambia nel saggio alla fiamma
-  const flameOuter = new THREE.MeshBasicMaterial({ color: 0x5a7dff, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-  const flameInner = new THREE.MeshBasicMaterial({ color: 0x9fe6ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
-  const fo = mesh(new THREE.ConeGeometry(0.02, 0.13, 16, 1, true), flameOuter, bu.x, BENCH_Y + 0.21, bu.z, { cast: false, receive: false });
-  const fi = mesh(new THREE.ConeGeometry(0.008, 0.045, 12, 1, true), flameInner, bu.x, BENCH_Y + 0.168, bu.z, { cast: false, receive: false });
+  const flameOuter = new THREE.MeshBasicMaterial({
+    color: 0x5a7dff,
+    transparent: true,
+    opacity: 0.6,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const flameInner = new THREE.MeshBasicMaterial({
+    color: 0x9fe6ff,
+    transparent: true,
+    opacity: 0.8,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const fo = mesh(new THREE.ConeGeometry(0.02, 0.13, 16, 1, true), flameOuter, bu.x, BENCH_Y + 0.21, bu.z, {
+    cast: false,
+    receive: false,
+  });
+  const fi = mesh(new THREE.ConeGeometry(0.008, 0.045, 12, 1, true), flameInner, bu.x, BENCH_Y + 0.168, bu.z, {
+    cast: false,
+    receive: false,
+  });
   bunsen.flameMeshes = [fo, fi];
   bunsen.hit.push(fo);
   bunsen.flameOuter = flameOuter;
@@ -348,13 +473,26 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   const lp = LAYOUT.lamp;
   const shadeZ = lp.z + 0.22;
   const shadeY = BENCH_Y + 0.36;
-  const lamp = { kind: 'lamp', id: 'lamp', hit: [], on: false, zone: { x: lp.x, z: shadeZ, r: 0.13, y0: BENCH_Y - 0.02, y1: shadeY - 0.04 } };
-  lamp.hit.push(mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.02, seg(20, 10)), M.darkSteel, lp.x, BENCH_Y + 0.01, lp.z));
+  const lamp = {
+    kind: 'lamp',
+    id: 'lamp',
+    hit: [],
+    on: false,
+    zone: { x: lp.x, z: shadeZ, r: 0.13, y0: BENCH_Y - 0.02, y1: shadeY - 0.04 },
+  };
+  lamp.hit.push(
+    mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.02, seg(20, 10)), M.darkSteel, lp.x, BENCH_Y + 0.01, lp.z),
+  );
   lamp.hit.push(mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.38, 8), M.steel, lp.x, BENCH_Y + 0.2, lp.z));
   lamp.hit.push(mesh(new THREE.BoxGeometry(0.012, 0.012, 0.24), M.steel, lp.x, BENCH_Y + 0.39, lp.z + 0.11));
   const shadeMat = std({ color: 0x2f6fd1, roughness: 0.45, side: THREE.DoubleSide });
   lamp.hit.push(mesh(new THREE.ConeGeometry(0.06, 0.07, seg(24, 12), 1, true), shadeMat, lp.x, shadeY + 0.01, shadeZ));
-  const bulbMat = new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.3, emissive: 0xfff2d8, emissiveIntensity: 0 });
+  const bulbMat = new THREE.MeshStandardMaterial({
+    color: 0xf4f1e8,
+    roughness: 0.3,
+    emissive: 0xfff2d8,
+    emissiveIntensity: 0,
+  });
   mesh(new THREE.SphereGeometry(0.02, 14, 10), bulbMat, lp.x, shadeY - 0.012, shadeZ, { cast: false });
   const lampLight = new THREE.SpotLight(0xfff4e2, 0, 1.4, 0.62, 0.6, 1.5);
   lampLight.position.set(lp.x, shadeY - 0.02, shadeZ);
@@ -378,12 +516,32 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   nbGroup.rotation.y = 0.18;
   group.add(nbGroup);
   // pagine (bordo bianco) e copertina rigida con il titolo; una penna accanto
-  notebook.hit.push(mesh(new THREE.BoxGeometry(0.205, 0.016, 0.29), std({ color: 0xf1ede2, roughness: 0.9 }), 0, 0.009, 0, { parent: nbGroup }));
+  notebook.hit.push(
+    mesh(new THREE.BoxGeometry(0.205, 0.016, 0.29), std({ color: 0xf1ede2, roughness: 0.9 }), 0, 0.009, 0, {
+      parent: nbGroup,
+    }),
+  );
   const coverMat = std({ color: 0x1f5f4a, roughness: 0.6 });
   const coverTop = new THREE.MeshStandardMaterial({ map: coverTex, roughness: 0.6 });
-  notebook.hit.push(mesh(new THREE.BoxGeometry(0.212, 0.003, 0.297), [coverMat, coverMat, coverTop, coverMat, coverMat, coverMat], 0, 0.0185, 0, { parent: nbGroup }));
+  notebook.hit.push(
+    mesh(
+      new THREE.BoxGeometry(0.212, 0.003, 0.297),
+      [coverMat, coverMat, coverTop, coverMat, coverMat, coverMat],
+      0,
+      0.0185,
+      0,
+      { parent: nbGroup },
+    ),
+  );
   notebook.hit.push(mesh(new THREE.BoxGeometry(0.012, 0.019, 0.297), coverMat, -0.1, 0.0095, 0, { parent: nbGroup }));
-  const pen = mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.14, 10), std({ color: 0x23395d, roughness: 0.4 }), 0.13, 0.004, 0.02, { parent: nbGroup });
+  const pen = mesh(
+    new THREE.CylinderGeometry(0.004, 0.004, 0.14, 10),
+    std({ color: 0x23395d, roughness: 0.4 }),
+    0.13,
+    0.004,
+    0.02,
+    { parent: nbGroup },
+  );
   pen.rotation.x = Math.PI / 2;
   physics.box(nbk.x, BENCH_Y + 0.01, nbk.z, 0.106, 0.01, 0.15, notebook, 0.18);
   /** Copertina: titolo e riga sotto (il gioco scrive i testi nella lingua dell'interfaccia). */
@@ -433,7 +591,16 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     group.add(grp);
     // libro rilegato spesso: pagine, copertina con il titolo, dorso
     b.hit.push(mesh(new THREE.BoxGeometry(0.17, 0.034, 0.24), bookPages, 0, 0.019, 0, { parent: grp }));
-    b.hit.push(mesh(new THREE.BoxGeometry(0.178, 0.004, 0.248), [bookCover, bookCover, bookTop, bookCover, bookCover, bookCover], 0, 0.038, 0, { parent: grp }));
+    b.hit.push(
+      mesh(
+        new THREE.BoxGeometry(0.178, 0.004, 0.248),
+        [bookCover, bookCover, bookTop, bookCover, bookCover, bookCover],
+        0,
+        0.038,
+        0,
+        { parent: grp },
+      ),
+    );
     b.hit.push(mesh(new THREE.BoxGeometry(0.178, 0.004, 0.248), bookCover, 0, 0.002, 0, { parent: grp }));
     b.hit.push(mesh(new THREE.BoxGeometry(0.01, 0.04, 0.248), bookCover, -0.088, 0.02, 0, { parent: grp }));
     physics.box(x, y + 0.02, z, 0.09, 0.02, 0.125, b, rot);
@@ -480,28 +647,104 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   // cartine indicatrici
   const st = LAYOUT.strips;
   const strips = { kind: 'strips', id: 'strips', hit: [] };
-  strips.hit.push(solid(0.08, 0.03, 0.05, std({ color: 0xf1c232, roughness: 0.6 }), st.x, BENCH_Y + 0.015, st.z, strips));
+  strips.hit.push(
+    solid(0.08, 0.03, 0.05, std({ color: 0xf1c232, roughness: 0.6 }), st.x, BENCH_Y + 0.015, st.z, strips),
+  );
   fixtures.push(strips);
 
   // ------------------------------------------------------------ bancone laterale con il lavandino (parete ovest)
   const cw = LAYOUT.counterW;
   const sk = LAYOUT.sink;
-  const sinkFix = { kind: 'sink', id: 'sink', hit: [], tap: false, basin: { x0: sk.x - sk.w / 2, x1: sk.x + sk.w / 2, z0: sk.z - sk.d / 2, z1: sk.z + sk.d / 2, y: BENCH_Y - sk.depth, top: BENCH_Y } };
+  const sinkFix = {
+    kind: 'sink',
+    id: 'sink',
+    hit: [],
+    tap: false,
+    basin: {
+      x0: sk.x - sk.w / 2,
+      x1: sk.x + sk.w / 2,
+      z0: sk.z - sk.d / 2,
+      z1: sk.z + sk.d / 2,
+      y: BENCH_Y - sk.depth,
+      top: BENCH_Y,
+    },
+  };
   const zA = cw.z - cw.d / 2;
   const zB = cw.z + cw.d / 2;
   // mobile sotto, piano diviso attorno alla vasca
-  solid(cw.w, BENCH_Y - 0.04 - sk.depth, cw.d, M.cabinet, cw.x, (BENCH_Y - 0.04 - sk.depth) / 2, cw.z, { kind: 'surface' });
+  solid(cw.w, BENCH_Y - 0.04 - sk.depth, cw.d, M.cabinet, cw.x, (BENCH_Y - 0.04 - sk.depth) / 2, cw.z, {
+    kind: 'surface',
+  });
   box(cw.w, sk.depth, cw.d, M.cabinet, cw.x, BENCH_Y - 0.04 - sk.depth / 2, cw.z);
-  physics.box(cw.x, BENCH_Y - 0.04 - sk.depth / 2, (zA + sinkFix.basin.z0) / 2, cw.w / 2, sk.depth / 2, (sinkFix.basin.z0 - zA) / 2);
-  physics.box(cw.x, BENCH_Y - 0.04 - sk.depth / 2, (sinkFix.basin.z1 + zB) / 2, cw.w / 2, sk.depth / 2, (zB - sinkFix.basin.z1) / 2);
+  physics.box(
+    cw.x,
+    BENCH_Y - 0.04 - sk.depth / 2,
+    (zA + sinkFix.basin.z0) / 2,
+    cw.w / 2,
+    sk.depth / 2,
+    (sinkFix.basin.z0 - zA) / 2,
+  );
+  physics.box(
+    cw.x,
+    BENCH_Y - 0.04 - sk.depth / 2,
+    (sinkFix.basin.z1 + zB) / 2,
+    cw.w / 2,
+    sk.depth / 2,
+    (zB - sinkFix.basin.z1) / 2,
+  );
   const topY = BENCH_Y - 0.02;
-  solid(cw.w + 0.04, 0.04, sinkFix.basin.z0 - zA, M.top, cw.x, topY, (zA + sinkFix.basin.z0) / 2, { kind: 'surface' }, { cast: false });
-  solid(cw.w + 0.04, 0.04, zB - sinkFix.basin.z1, M.top, cw.x, topY, (zB + sinkFix.basin.z1) / 2, { kind: 'surface' }, { cast: false });
-  solid(sinkFix.basin.x0 - (cw.x - cw.w / 2), 0.04, sk.d, M.top, (cw.x - cw.w / 2 + sinkFix.basin.x0) / 2, topY, sk.z, null, { cast: false });
-  solid(cw.x + cw.w / 2 + 0.02 - sinkFix.basin.x1, 0.04, sk.d, M.top, (cw.x + cw.w / 2 + 0.02 + sinkFix.basin.x1) / 2, topY, sk.z, null, { cast: false });
+  solid(
+    cw.w + 0.04,
+    0.04,
+    sinkFix.basin.z0 - zA,
+    M.top,
+    cw.x,
+    topY,
+    (zA + sinkFix.basin.z0) / 2,
+    { kind: 'surface' },
+    { cast: false },
+  );
+  solid(
+    cw.w + 0.04,
+    0.04,
+    zB - sinkFix.basin.z1,
+    M.top,
+    cw.x,
+    topY,
+    (zB + sinkFix.basin.z1) / 2,
+    { kind: 'surface' },
+    { cast: false },
+  );
+  solid(
+    sinkFix.basin.x0 - (cw.x - cw.w / 2),
+    0.04,
+    sk.d,
+    M.top,
+    (cw.x - cw.w / 2 + sinkFix.basin.x0) / 2,
+    topY,
+    sk.z,
+    null,
+    { cast: false },
+  );
+  solid(
+    cw.x + cw.w / 2 + 0.02 - sinkFix.basin.x1,
+    0.04,
+    sk.d,
+    M.top,
+    (cw.x + cw.w / 2 + 0.02 + sinkFix.basin.x1) / 2,
+    topY,
+    sk.z,
+    null,
+    { cast: false },
+  );
   // vasca d'acciaio
   sinkFix.hit.push(solid(sk.w, 0.02, sk.d, M.steel, sk.x, sinkFix.basin.y - 0.01, sk.z, sinkFix, { cast: false }));
-  for (const [w, d, x, z] of [[sk.w, 0.01, sk.x, sinkFix.basin.z0], [sk.w, 0.01, sk.x, sinkFix.basin.z1], [0.01, sk.d, sinkFix.basin.x0, sk.z], [0.01, sk.d, sinkFix.basin.x1, sk.z]]) {
+  for (const [w, d, x, z] of [
+    [sk.w, 0.01, sk.x, sinkFix.basin.z0],
+    [sk.w, 0.01, sk.x, sinkFix.basin.z1],
+    [0.01, sk.d, sinkFix.basin.x0, sk.z],
+    [0.01, sk.d, sinkFix.basin.x1, sk.z],
+  ]) {
     sinkFix.hit.push(solid(w, sk.depth, d, M.steel, x, BENCH_Y - sk.depth / 2, z, sinkFix, { cast: false }));
   }
   // rubinetto a collo di cigno
@@ -512,8 +755,17 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   const handle = mesh(new THREE.BoxGeometry(0.03, 0.02, 0.1), M.red, tapX, BENCH_Y + 0.25, sk.z + 0.06);
   sinkFix.hit.push(handle, neck);
   sinkFix.spout = { x: tapX + 0.24, y: BENCH_Y + 0.29, z: sk.z };
-  const streamMat = new THREE.MeshStandardMaterial({ color: 0xcfe8ff, transparent: true, opacity: 0.55, roughness: 0.05, depthWrite: false });
-  const stream = mesh(new THREE.CylinderGeometry(0.005, 0.006, 1, 8), streamMat, sinkFix.spout.x, 0, sk.z, { cast: false, receive: false });
+  const streamMat = new THREE.MeshStandardMaterial({
+    color: 0xcfe8ff,
+    transparent: true,
+    opacity: 0.55,
+    roughness: 0.05,
+    depthWrite: false,
+  });
+  const stream = mesh(new THREE.CylinderGeometry(0.005, 0.006, 1, 8), streamMat, sinkFix.spout.x, 0, sk.z, {
+    cast: false,
+    receive: false,
+  });
   stream.visible = false;
   sinkFix.stream = stream;
   sinkFix.handle = handle;
@@ -526,12 +778,25 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   fixtures.push(towels);
 
   // poster della tavola periodica sopra il bancone
-  const poster = mesh(new THREE.PlaneGeometry(1.8, 1.05), new THREE.MeshStandardMaterial({ map: posterTexture(elements), roughness: 0.8 }), -W / 2 + 0.01, 2.05, -1.5, { cast: false });
+  const poster = mesh(
+    new THREE.PlaneGeometry(1.8, 1.05),
+    new THREE.MeshStandardMaterial({ map: posterTexture(elements), roughness: 0.8 }),
+    -W / 2 + 0.01,
+    2.05,
+    -1.5,
+    { cast: false },
+  );
   poster.rotation.y = Math.PI / 2;
 
   // ------------------------------------------------------------ cappa aspirante (parete est)
   const hd = LAYOUT.hood;
-  const hood = { kind: 'hood', id: 'hood', hit: [], on: false, zone: { x0: hd.x - hd.w / 2 - 0.05, x1: W / 2, y0: BENCH_Y, y1: 2.2, z0: hd.z - hd.d / 2, z1: hd.z + hd.d / 2 } };
+  const hood = {
+    kind: 'hood',
+    id: 'hood',
+    hit: [],
+    on: false,
+    zone: { x0: hd.x - hd.w / 2 - 0.05, x1: W / 2, y0: BENCH_Y, y1: 2.2, z0: hd.z - hd.d / 2, z1: hd.z + hd.d / 2 },
+  };
   solid(hd.w, BENCH_Y - 0.04, hd.d, M.cabinet, hd.x, (BENCH_Y - 0.04) / 2, hd.z, { kind: 'surface' });
   // piano di lavoro nero come i banconi: la vetreria vi si stacca
   solid(hd.w + 0.02, 0.04, hd.d, M.top, hd.x, BENCH_Y - 0.02, hd.z, { kind: 'surface' }, { cast: false });
@@ -540,7 +805,10 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   solid(hd.w, 0.06, hd.d, M.white, hd.x, BENCH_Y + 1.4, hd.z);
   solid(0.03, 1.4, hd.d, M.white, W / 2 - 0.02, BENCH_Y + 0.7, hd.z, null, { cast: false });
   // vetro scorrevole aperto per metà
-  box(0.01, 0.75, hd.d - 0.06, M.glassPane, hd.x - hd.w / 2 + 0.02, BENCH_Y + 1.0, hd.z, { cast: false, receive: false });
+  box(0.01, 0.75, hd.d - 0.06, M.glassPane, hd.x - hd.w / 2 + 0.02, BENCH_Y + 1.0, hd.z, {
+    cast: false,
+    receive: false,
+  });
   physics.box(hd.x - hd.w / 2 + 0.02, BENCH_Y + 1.0, hd.z, 0.005, 0.375, hd.d / 2);
   box(0.03, 0.03, hd.d - 0.06, M.darkSteel, hd.x - hd.w / 2 + 0.02, BENCH_Y + 0.62, hd.z);
   box(0.9, 0.5, 0.9, M.darkSteel, hd.x, BENCH_Y + 1.7, hd.z);
@@ -548,7 +816,16 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   box(0.5, 0.01, 1.2, hoodLightMat, hd.x + 0.05, BENCH_Y + 1.36, hd.z, { cast: false, receive: false });
   hood.lightMat = hoodLightMat;
   const sw = solid(0.02, 0.06, 0.05, M.black, hd.x - hd.w / 2 + 0.01, BENCH_Y + 0.3, hd.z + hd.d / 2 + 0.06, hood);
-  const swLed = box(0.01, 0.015, 0.015, new THREE.MeshBasicMaterial({ color: 0x3a1010 }), hd.x - hd.w / 2 - 0.002, BENCH_Y + 0.32, hd.z + hd.d / 2 + 0.06, { cast: false });
+  const swLed = box(
+    0.01,
+    0.015,
+    0.015,
+    new THREE.MeshBasicMaterial({ color: 0x3a1010 }),
+    hd.x - hd.w / 2 - 0.002,
+    BENCH_Y + 0.32,
+    hd.z + hd.d / 2 + 0.06,
+    { cast: false },
+  );
   hood.led = swLed.material;
   hood.hit.push(sw);
   fixtures.push(hood);
@@ -557,32 +834,63 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   const so = LAYOUT.store;
   const store = { kind: 'store', id: 'store', hit: [] };
   store.hit.push(solid(0.6, 2.0, 1.0, std({ color: 0x6d7c8a, roughness: 0.5 }), so.x + 0.05, 1.0, so.z, store));
-  const screen = box(0.01, 0.3, 0.42, new THREE.MeshBasicMaterial({ map: canvasTexture(256, 192, (g, w, h) => {
-    g.fillStyle = '#0d2236';
-    g.fillRect(0, 0, w, h);
-    g.fillStyle = '#7cc8ff';
-    g.font = '700 30px "IBM Plex Sans", sans-serif';
-    g.fillText('MAGAZZINO', 20, 50);
-    g.font = '500 20px "IBM Plex Sans", sans-serif';
-    g.fillStyle = '#cfe6ff';
-    g.fillText('reagenti · vetreria', 20, 90);
-    g.fillText('[E]', 20, 150);
-  }) }), so.x - 0.255, 1.45, so.z, { cast: false });
+  const screen = box(
+    0.01,
+    0.3,
+    0.42,
+    new THREE.MeshBasicMaterial({
+      map: canvasTexture(256, 192, (g, w, h) => {
+        g.fillStyle = '#0d2236';
+        g.fillRect(0, 0, w, h);
+        g.fillStyle = '#7cc8ff';
+        g.font = '700 30px "IBM Plex Sans", sans-serif';
+        g.fillText('MAGAZZINO', 20, 50);
+        g.font = '500 20px "IBM Plex Sans", sans-serif';
+        g.fillStyle = '#cfe6ff';
+        g.fillText('reagenti · vetreria', 20, 90);
+        g.fillText('[E]', 20, 150);
+      }),
+    }),
+    so.x - 0.255,
+    1.45,
+    so.z,
+    { cast: false },
+  );
   store.hit.push(screen);
   fixtures.push(store);
 
   // ------------------------------------------------------------ cattedra, vassoio delle consegne, campanello, lavagna
   const dk = LAYOUT.desk;
   solid(dk.w, DESK_Y - 0.04, dk.d, M.wood, dk.x, (DESK_Y - 0.04) / 2, dk.z, { kind: 'surface' });
-  solid(dk.w + 0.04, 0.04, dk.d + 0.04, std({ color: 0x6b4a2a, roughness: 0.55 }), dk.x, DESK_Y - 0.02, dk.z, { kind: 'surface' }, { cast: false });
+  solid(
+    dk.w + 0.04,
+    0.04,
+    dk.d + 0.04,
+    std({ color: 0x6b4a2a, roughness: 0.55 }),
+    dk.x,
+    DESK_Y - 0.02,
+    dk.z,
+    { kind: 'surface' },
+    { cast: false },
+  );
   const tr = LAYOUT.tray;
   const tray = { kind: 'tray', id: 'tray', hit: [], zone: { x: tr.x, z: tr.z, hw: 0.2, hd: 0.15, y: DESK_Y } };
-  tray.hit.push(box(0.42, 0.012, 0.32, std({ color: 0x2b6fd8, roughness: 0.4 }), tr.x, DESK_Y + 0.006, tr.z, { cast: false }));
+  tray.hit.push(
+    box(0.42, 0.012, 0.32, std({ color: 0x2b6fd8, roughness: 0.4 }), tr.x, DESK_Y + 0.006, tr.z, { cast: false }),
+  );
   physics.box(tr.x, DESK_Y + 0.006, tr.z, 0.21, 0.006, 0.16, tray);
   fixtures.push(tray);
   const be = LAYOUT.bell;
   const bell = { kind: 'bell', id: 'bell', hit: [] };
-  bell.hit.push(mesh(new THREE.SphereGeometry(0.035, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), std({ color: 0xd4af37, metalness: 0.9, roughness: 0.25 }), be.x, DESK_Y + 0.01, be.z));
+  bell.hit.push(
+    mesh(
+      new THREE.SphereGeometry(0.035, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+      std({ color: 0xd4af37, metalness: 0.9, roughness: 0.25 }),
+      be.x,
+      DESK_Y + 0.01,
+      be.z,
+    ),
+  );
   bell.hit.push(mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.01, 16), M.black, be.x, DESK_Y + 0.005, be.z));
   physics.cylinder(be.x, DESK_Y + 0.02, be.z, 0.02, 0.045, bell);
   fixtures.push(bell);
@@ -594,7 +902,14 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   boardTex.colorSpace = THREE.SRGBColorSpace;
   boardTex.anisotropy = 8;
   box(3.8, 1.35, 0.04, M.wood, 0, 1.62, -D / 2 + 0.03, { cast: false });
-  const board = mesh(new THREE.PlaneGeometry(3.6, 1.2), new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.9 }), 0, 1.62, -D / 2 + 0.055, { cast: false });
+  const board = mesh(
+    new THREE.PlaneGeometry(3.6, 1.2),
+    new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.9 }),
+    0,
+    1.62,
+    -D / 2 + 0.055,
+    { cast: false },
+  );
   board.name = 'board';
   const setBoard = (lines) => {
     const g = boardCanvas.getContext('2d');
@@ -615,14 +930,41 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   BIN_KINDS.forEach((kind, i) => {
     const x = LAYOUT.bins.x + i * LAYOUT.bins.step;
     const z = LAYOUT.bins.z;
-    const bin = { kind: 'bin', bin: kind, id: `bin-${kind}`, hit: [], zone: { x0: x - 0.17, x1: x + 0.17, z0: z - 0.17, z1: z + 0.17, y0: 0, y1: 0.62 }, opening: { x, y: 0.62, z, r: 0.16 } };
+    const bin = {
+      kind: 'bin',
+      bin: kind,
+      id: `bin-${kind}`,
+      hit: [],
+      zone: { x0: x - 0.17, x1: x + 0.17, z0: z - 0.17, z1: z + 0.17, y0: 0, y1: 0.62 },
+      opening: { x, y: 0.62, z, r: 0.16 },
+    };
     const mat = std({ color: BIN_COLORS[kind], roughness: 0.55 });
     // quattro pareti e il fondo: gli oggetti cadono dentro
-    for (const [w, d, dx, dz] of [[0.38, 0.02, 0, -0.18], [0.38, 0.02, 0, 0.18], [0.02, 0.38, -0.18, 0], [0.02, 0.38, 0.18, 0]]) bin.hit.push(solid(w, 0.6, d, mat, x + dx, 0.3, z + dz, bin));
+    for (const [w, d, dx, dz] of [
+      [0.38, 0.02, 0, -0.18],
+      [0.38, 0.02, 0, 0.18],
+      [0.02, 0.38, -0.18, 0],
+      [0.02, 0.38, 0.18, 0],
+    ])
+      bin.hit.push(solid(w, 0.6, d, mat, x + dx, 0.3, z + dz, bin));
     bin.hit.push(solid(0.36, 0.02, 0.36, mat, x, 0.01, z, bin));
-    const funnel = mesh(new THREE.CylinderGeometry(0.16, 0.05, 0.08, seg(20, 10), 1, true), std({ color: 0x2a2d33, side: THREE.DoubleSide }), x, 0.58, z, { cast: false });
+    const funnel = mesh(
+      new THREE.CylinderGeometry(0.16, 0.05, 0.08, seg(20, 10), 1, true),
+      std({ color: 0x2a2d33, side: THREE.DoubleSide }),
+      x,
+      0.58,
+      z,
+      { cast: false },
+    );
     bin.hit.push(funnel);
-    const lbl = mesh(new THREE.PlaneGeometry(0.3, 0.16), new THREE.MeshStandardMaterial({ map: binLabel(kind) }), x, 0.42, z - 0.192, { cast: false });
+    const lbl = mesh(
+      new THREE.PlaneGeometry(0.3, 0.16),
+      new THREE.MeshStandardMaterial({ map: binLabel(kind) }),
+      x,
+      0.42,
+      z - 0.192,
+      { cast: false },
+    );
     lbl.rotation.y = Math.PI;
     bin.hit.push(lbl);
     bins.push(bin);
@@ -679,24 +1021,51 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
   bunsen.light = flameLight;
 
   // ------------------------------------------------------------ apparecchi della fase G4 (apparatus-room.js)
-  const apparatus = buildApparatus({ group, scene, physics, fixtures, mesh, box, solid, std, M, BENCH_Y, LAYOUT, canvasTexture });
+  const apparatus = buildApparatus({
+    group,
+    scene,
+    physics,
+    fixtures,
+    mesh,
+    box,
+    solid,
+    std,
+    M,
+    BENCH_Y,
+    LAYOUT,
+    canvasTexture,
+  });
   // armadi, orologio, cartelli, macchie (fase G8)
   const details = buildDetails({ group, physics, box, solid, std, M, ROOM, LAYOUT, BENCH_Y });
 
-  const zones = { hood: hood.zone, tray: tray.zone, basin: sinkFix.basin, bins, balancePan: balance.pan, plate: hotplate.plate, gauze: bunsen.gauze, flame: bunsen.flame };
+  const zones = {
+    hood: hood.zone,
+    tray: tray.zone,
+    basin: sinkFix.basin,
+    bins,
+    balancePan: balance.pan,
+    plate: hotplate.plate,
+    gauze: bunsen.gauze,
+    flame: bunsen.flame,
+  };
 
   const update = (dt, t) => {
     // fiamma del Bunsen tremolante
     for (const [k, m] of bunsen.flameMeshes.entries()) {
       m.visible = bunsen.on;
       const b = bunsen.boost && k === 0 ? 1.4 : 1; // nel saggio alla fiamma la fiamma colorata si allarga
-      if (bunsen.on) m.scale.set(b * (1 + Math.sin(t * 31 + k) * 0.05), b * (1 + Math.sin(t * 23 + k * 2) * 0.08), b * (1 + Math.cos(t * 29) * 0.05));
+      if (bunsen.on)
+        m.scale.set(
+          b * (1 + Math.sin(t * 31 + k) * 0.05),
+          b * (1 + Math.sin(t * 23 + k * 2) * 0.08),
+          b * (1 + Math.cos(t * 29) * 0.05),
+        );
     }
     flameLight.intensity = bunsen.on ? 0.6 + Math.sin(t * 40) * 0.08 : 0;
     lamp.light.intensity = lamp.on ? 7 : 0;
     lamp.bulbMat.emissiveIntensity = lamp.on ? 2.2 : 0;
     gauzeMat.emissiveIntensity += ((bunsen.on ? 0.55 : 0) - gauzeMat.emissiveIntensity) * Math.min(1, dt * 0.6);
-    hotplate.T += ((295 + hotplate.level * 60 - hotplate.T) * Math.min(1, dt * 0.5));
+    hotplate.T += (295 + hotplate.level * 60 - hotplate.T) * Math.min(1, dt * 0.5);
     plateMat.emissiveIntensity = Math.max(0, (hotplate.T - 420) / 600);
     hotplate.knob.rotation.y = -hotplate.level * 0.9;
     // acqua del rubinetto (lunghezza del getto: la decide il gioco, fino al recipiente sotto o al fondo del lavandino)
@@ -707,7 +1076,22 @@ export function buildRoom({ scene, physics, G, elements, envMap }) {
     details.update(dt);
   };
 
-  return { group, fixtures, zones, update, setBoard, setBalance, setLegend, setNotebookCover, setBookCover, setSigns: details.setSigns, bins, props, apparatus, lights: { sun, hemi, ceiling, ceilingB } };
+  return {
+    group,
+    fixtures,
+    zones,
+    update,
+    setBoard,
+    setBalance,
+    setLegend,
+    setNotebookCover,
+    setBookCover,
+    setSigns: details.setSigns,
+    bins,
+    props,
+    apparatus,
+    lights: { sun, hemi, ceiling, ceilingB },
+  };
 }
 
 function fitLine(g, text, x, y, w) {

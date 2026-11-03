@@ -13,7 +13,11 @@ import { gfx, seg } from '../gfx/preset.js';
 
 export const QUARK_R = 0.066;
 const GLUON_POINTS = seg(120, 60);
-const PAIRS = [[0, 1], [1, 2], [2, 0]];
+const PAIRS = [
+  [0, 1],
+  [1, 2],
+  [2, 0],
+];
 const COLORS = COLOR_CHARGES.map((c) => new THREE.Color(c.hex));
 const ANTI = COLORS.map((c) => new THREE.Color(1 - c.r * 0.6, 1 - c.g * 0.6, 1 - c.b * 0.6)); // anticolori (ciano, magenta, giallo)
 const SEA_PAIRS = Math.round(26 * Math.sqrt(gfx().points));
@@ -122,7 +126,10 @@ export class QuarkView {
       this.inner.add(mesh);
       const angle = (i / 3) * Math.PI * 2;
       return {
-        mesh, material, label, el,
+        mesh,
+        material,
+        label,
+        el,
         color: i, // indice della carica di colore attuale
         base: new THREE.Vector3(Math.cos(angle) * 0.27, Math.sin(angle) * 0.27, 0),
         phase: [rand() * 6.28, rand() * 6.28, rand() * 6.28],
@@ -134,11 +141,26 @@ export class QuarkView {
       const geometry = new LineGeometry();
       geometry.setPositions(new Float32Array(GLUON_POINTS * 3));
       geometry.setColors(new Float32Array(GLUON_POINTS * 3));
-      const material = new LineMaterial({ linewidth: 3.4, vertexColors: true, transparent: true, opacity: 0, depthWrite: false });
+      const material = new LineMaterial({
+        linewidth: 3.4,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      });
       const line = new Line2(geometry, material);
       line.frustumCulled = false;
       this.inner.add(line);
-      return { a, b, line, geometry, material, points: new Float32Array(GLUON_POINTS * 3), colors: new Float32Array(GLUON_POINTS * 3), spin: i * 2.1 };
+      return {
+        a,
+        b,
+        line,
+        geometry,
+        material,
+        points: new Float32Array(GLUON_POINTS * 3),
+        colors: new Float32Array(GLUON_POINTS * 3),
+        spin: i * 2.1,
+      };
     });
 
     // mare di coppie quark–antiquark virtuali
@@ -298,7 +320,10 @@ export class QuarkView {
       const theta = s * turns * Math.PI * 2 - time * 7 + g.spin;
       const env = Math.sin(Math.PI * s) ** 0.6; // la molla si stringe vicino ai quark
       _a.copy(A).addScaledVector(_u, start + s * span);
-      _b.copy(_e1).multiplyScalar(Math.cos(theta)).addScaledVector(_e2, Math.sin(theta)).multiplyScalar(radius * env);
+      _b.copy(_e1)
+        .multiplyScalar(Math.cos(theta))
+        .addScaledVector(_e2, Math.sin(theta))
+        .multiplyScalar(radius * env);
       _a.add(_b);
       g.points[i * 3] = _a.x;
       g.points[i * 3 + 1] = _a.y;

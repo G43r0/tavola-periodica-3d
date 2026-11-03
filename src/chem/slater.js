@@ -1,3 +1,4 @@
+// @ts-check
 // Regole di Slater (1930): carica nucleare efficace Z_eff e stima delle energie elettroniche.
 // Energia di un elettrone: −13,6 eV · (Z_eff / n*)²; l'energia di legame di un sottolivello è stimata
 // come differenza tra l'energia totale dello ione (con un elettrone in meno in quel sottolivello)

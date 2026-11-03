@@ -22,7 +22,9 @@
   font-size: max(10px, calc(var(--cell) * 0.13));
   color: var(--text-3);
   cursor: default;
-  transition: color var(--t-fast), text-shadow var(--t-fast);
+  transition:
+    color var(--t-fast),
+    text-shadow var(--t-fast);
 }
 .ptable__group {
   position: relative;
@@ -40,7 +42,9 @@
   background: var(--accent);
   opacity: 0;
   transform: scaleX(0.3);
-  transition: opacity var(--t-fast), transform var(--t-med) var(--ease-out);
+  transition:
+    opacity var(--t-fast),
+    transform var(--t-med) var(--ease-out);
 }
 .ptable__period {
   justify-items: end;
@@ -68,7 +72,9 @@
   line-height: 1.25;
   color: color-mix(in oklab, var(--c) 75%, var(--text-1));
   cursor: default;
-  transition: color var(--t-fast), text-shadow var(--t-fast);
+  transition:
+    color var(--t-fast),
+    text-shadow var(--t-fast);
 }
 .ptable__series-label span {
   font-weight: 600;
@@ -95,10 +101,11 @@
   padding: calc(var(--cell) * 0.07) calc(var(--cell) * 0.085) calc(var(--cell) * 0.065);
   text-align: left;
   color: var(--text-0);
-  background:
-    linear-gradient(160deg,
-      color-mix(in oklab, var(--c) 18%, var(--bg-2)) 0%,
-      color-mix(in oklab, var(--c) 6%, var(--bg-1)) 100%);
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--c) 18%, var(--bg-2)) 0%,
+    color-mix(in oklab, var(--c) 6%, var(--bg-1)) 100%
+  );
   border: 1px solid color-mix(in oklab, var(--c) 30%, transparent);
   border-radius: calc(var(--cell) * 0.09);
   cursor: pointer;
@@ -187,10 +194,11 @@
 .cell[data-z].is-hover {
   z-index: 3;
   transform: scale(1.14);
-  background:
-    linear-gradient(160deg,
-      color-mix(in oklab, var(--c) 34%, var(--bg-3)) 0%,
-      color-mix(in oklab, var(--c) 12%, var(--bg-2)) 100%);
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--c) 34%, var(--bg-3)) 0%,
+    color-mix(in oklab, var(--c) 12%, var(--bg-2)) 100%
+  );
   box-shadow:
     0 0 0 1px var(--c),
     0 0 28px color-mix(in oklab, var(--c) 50%, transparent),
@@ -199,10 +207,11 @@
 .cell.is-related,
 .cell--placeholder.is-lit {
   border-color: color-mix(in oklab, var(--c) 75%, transparent);
-  background:
-    linear-gradient(160deg,
-      color-mix(in oklab, var(--c) 26%, var(--bg-2)) 0%,
-      color-mix(in oklab, var(--c) 10%, var(--bg-1)) 100%);
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--c) 26%, var(--bg-2)) 0%,
+    color-mix(in oklab, var(--c) 10%, var(--bg-1)) 100%
+  );
 }
 .ptable.is-hovering .cell:not(.is-hover):not(.is-related):not(.is-lit) {
   opacity: 0.3;
@@ -216,7 +225,9 @@
   opacity: 0.07;
 }
 .cell.is-match {
-  box-shadow: 0 0 0 1px rgba(92, 225, 255, 0.75), 0 0 18px rgba(92, 225, 255, 0.22);
+  box-shadow:
+    0 0 0 1px rgba(92, 225, 255, 0.75),
+    0 0 18px rgba(92, 225, 255, 0.22);
 }
 .cell.is-selected {
   border-color: var(--accent);
@@ -321,7 +332,11 @@
   padding: calc(var(--cell) * 0.16);
   background:
     radial-gradient(circle at 75% 15%, color-mix(in oklab, var(--c) 30%, transparent), transparent 60%),
-    linear-gradient(160deg, color-mix(in oklab, var(--c) 24%, var(--bg-3)), color-mix(in oklab, var(--c) 8%, var(--bg-1)));
+    linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--c) 24%, var(--bg-3)),
+      color-mix(in oklab, var(--c) 8%, var(--bg-1))
+    );
   border: 1px solid color-mix(in oklab, var(--c) 70%, transparent);
   border-radius: calc(var(--cell) * 0.18);
   box-shadow: 0 0 40px color-mix(in oklab, var(--c) 22%, transparent);

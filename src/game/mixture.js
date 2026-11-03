@@ -1,5 +1,6 @@
+// @ts-check
 // Motore chimico dei contenitori del simulatore di laboratorio. Ogni contenitore ha una miscela: moli di ogni sostanza
-// (le stesse della sandbox: elementi, acqua e le 554 sostanze della libreria), quanto ne è sciolto in acqua, la
+// (le stesse della sandbox: elementi, acqua e le 558 sostanze della libreria), quanto ne è sciolto in acqua, la
 // temperatura. Da qui: volume, massa, pH, colore, scioglimento e cristallizzazione (anche come idrati), ebollizione ed
 // evaporazione, gas che si liberano, reazioni del catalogo con le loro condizioni e il loro calore.
 // Modulo puro (niente DOM, niente Three.js): lo usano il gioco e i test.
@@ -7,7 +8,17 @@ import { createSubstances, AMBIENT, GAS, LIQUID, SOLID, S, WATER, phaseAt } from
 import { buildChemistry, parseConditions, PAIR_K } from '../sandbox/chemistry.js';
 import { speciesInfo, reactionEnthalpy } from '../lab/chem/reactions.js';
 import { pick } from '../i18n/index.js';
-import { SOLUBILITY, HYDRATES, ACID_BASE, TOXIC_GASES, HEAVY_METALS, SINK_SAFE, INDICATORS } from './reagents.js';
+import {
+  SOLUBILITY,
+  HYDRATES,
+  ACID_BASE,
+  TOXIC_GASES,
+  HEAVY_METALS,
+  SINK_SAFE,
+  INERT_SOLIDS,
+  INDICATORS,
+  SOLUTION_ENTHALPIES,
+} from './reagents.js';
 
 /** Il tempo termico (riscaldamento, raffreddamento, evaporazione) scorre 4 volte più veloce del reale. */
 export const HEAT_SPEED = 4;
@@ -27,6 +38,7 @@ const TINY = 1e-10;
 const MOLAR_FALLBACK = { water: WATER_MOLAR, co2: 44.009, so2: 64.066, smoke: 12, ash: 60, oxide: 60 };
 const DIATOMIC = new Set(['H', 'N', 'O', 'F', 'Cl', 'Br', 'I']);
 // colore in acqua degli ioni dei metalli di transizione (come nella sandbox) e soglia di concentrazione (mol/L)
+/** @type {[z: number, rgb: number[], k: number][]} */
 const ION_COLOR = [
   [29, [40, 125, 235], 0.05], // Cu²⁺ azzurro
   [28, [70, 175, 95], 0.08], // Ni²⁺ verde
@@ -39,7 +51,7 @@ const PINK = [232, 46, 170];
 
 /**
  * Prepara le sostanze, le reazioni e i dati del gioco (una volta sola).
- * @param {object[]} elements elementi di elements.json (localizzati o no)
+ * @param {import('../types').Element[]} elements elementi di elements.json (localizzati o no)
  */
 export function createLabChemistry(elements) {
   const subs = createSubstances(elements);
@@ -56,7 +68,8 @@ export function createLabChemistry(elements) {
     const s = list[sid];
     if (!s) return 1;
     if (s.molar) return s.molar;
-    if (s.kind === 'element') return (s.atomicMass ?? elements[s.id - 1]?.atomicMass?.value ?? 1) * (DIATOMIC.has(s.symbol) ? 2 : 1);
+    if (s.kind === 'element')
+      return (s.atomicMass ?? elements[s.id - 1]?.atomicMass?.value ?? 1) * (DIATOMIC.has(s.symbol) ? 2 : 1);
     return MOLAR_FALLBACK[s.key] ?? 50;
   };
   const molarCache = new Float64Array(list.length);
@@ -71,10 +84,13 @@ export function createLabChemistry(elements) {
     hydrate.set(id(anh), { sid: id(hyd), w });
     hydrateOf.set(id(hyd), { sid: id(anh), w });
   }
+  const solutionHeat = new Map(); // sostanza → entalpia di soluzione (kJ/mol)
+  for (const [k, v] of Object.entries(SOLUTION_ENTHALPIES)) if (id(k)) solutionHeat.set(id(k), v);
   const acidBase = new Map();
   for (const [k, v] of Object.entries(ACID_BASE)) if (id(k)) acidBase.set(id(k), v);
   const toxic = new Set(TOXIC_GASES.map(id).filter(Boolean));
   const sinkSafe = new Set([...SINK_SAFE].map(id).filter(Boolean));
+  const inert = new Set([...INERT_SOLIDS].map(id).filter(Boolean));
   const O2 = id('O');
   const counts = (sid) => {
     const s = list[sid];
@@ -92,7 +108,8 @@ export function createLabChemistry(elements) {
     else if (ab) electrolyte[i] = 0.1; // acidi e basi deboli: pochi ioni
   }
   const heavy = new Uint8Array(list.length);
-  for (let i = 0; i < list.length; i++) if (Object.keys(counts(i)).some((z) => HEAVY_METALS.has(Number(z)))) heavy[i] = 1;
+  for (let i = 0; i < list.length; i++)
+    if (Object.keys(counts(i)).some((z) => HEAVY_METALS.has(Number(z)))) heavy[i] = 1;
 
   /** Solubilità (g di sostanza anidra in 100 g d'acqua) alla temperatura T (K). Infinity: si mescola in ogni rapporto. */
   const solubility = (sid, T) => {
@@ -133,13 +150,21 @@ export function createLabChemistry(elements) {
   };
   const enthalpy = (r) => {
     try {
-      const e = reactionEnthalpy(lab, r.reactants.map(([, k]) => info(k)), r.products.map(([, k]) => info(k)), r.reactants.map(([c]) => c), r.products.map(([c]) => c));
+      const e = reactionEnthalpy(
+        lab,
+        r.reactants.map(([, k]) => info(k)),
+        r.products.map(([, k]) => info(k)),
+        r.reactants.map(([c]) => c),
+        r.products.map(([c]) => c),
+      );
       return e.formation.value ?? e.bonds?.value ?? null;
     } catch {
       return null;
     }
   };
+  /** @type {import('../types').LabReaction[]} */
   const rxs = [];
+  /** @type {import('../types').OfflineReaction[]} */
   const offline = [];
   for (const entry of chem.list) {
     const r = entry.r;
@@ -179,7 +204,12 @@ export function createLabChemistry(elements) {
       combustion: r.group === 'combustioni' || entry.disabled === 'regola: combustione',
       // neutralizzazione con una base forte: in acqua libera 55,8 kJ per mole d'acqua (H⁺ + OH⁻ → H₂O); con i
       // carbonati e i bicarbonati vale il ΔH° della reazione (aceto e bicarbonato raffreddano un po')
-      neutral: (r.group === 'acidi-basi' || r.id === 'neutralizzazione') && waterOut > 0 && reactants.some((x) => acidBase.get(x.sid)?.sb) ? waterOut : 0,
+      neutral:
+        (r.group === 'acidi-basi' || r.id === 'neutralizzazione') &&
+        waterOut > 0 &&
+        reactants.some((x) => acidBase.get(x.sid)?.sb)
+          ? waterOut
+          : 0,
       air: reactants.findIndex((x) => x.sid === O2),
       slow: cond.rate < 0.01,
       electro: Boolean(cond.spark),
@@ -214,15 +244,22 @@ export function createLabChemistry(elements) {
     const ids = [...new Set(rx.reactants.map((x) => x.sid))];
     if (rx.combustion) {
       const fuel = ids.find((s) => s !== O2);
-      if (ids.length === 2 && rx.air >= 0 && P.flags[fuel] & S.FLAMMABLE && !rx.cond.lowO2 && !comb.has(fuel)) comb.set(fuel, rx);
+      if (ids.length === 2 && rx.air >= 0 && P.flags[fuel] & S.FLAMMABLE && !rx.cond.lowO2 && !comb.has(fuel))
+        comb.set(fuel, rx);
       continue; // la combustione è il fuoco, non una reazione nel contenitore
     }
     if (ids.length === 1) add(singleIdx, ids[0], rx);
     for (const a of ids) for (const b of ids) if (a !== b) add(pairIdx, a * PAIR_K + b, rx);
-    if (rx.air >= 0 && ids.length === 2) add(airIdx, ids.find((s) => s !== O2), rx);
+    if (rx.air >= 0 && ids.length === 2)
+      add(
+        airIdx,
+        ids.find((s) => s !== O2),
+        rx,
+      );
   }
 
-  const name = (sid) => (typeof sid === 'string' ? pick(INDICATORS[sid]?.name ?? { it: sid }) : list[sid]?.name ?? '?');
+  const name = (sid) =>
+    typeof sid === 'string' ? pick(INDICATORS[sid]?.name ?? { it: sid }) : (list[sid]?.name ?? '?');
   // gli elementi biatomici sono le loro molecole (H₂, O₂, Cl₂…), come nella sandbox
   const formula = (sid) => {
     if (typeof sid === 'string') return INDICATORS[sid]?.formula ?? '';
@@ -233,10 +270,36 @@ export function createLabChemistry(elements) {
   };
 
   return {
-    subs, chem, list, P, id, sub, molar: (sid) => (typeof sid === 'string' ? INDICATORS[sid]?.molar ?? 300 : molarCache[sid]),
-    solubility, hydrate, hydrateOf, acidBase, toxic, sinkSafe, heavy, counts, rxs, pairIdx, singleIdx, airIdx, comb, O2,
-    offline, offPair, offSingle, rxById: new Map([...rxs, ...offline].map((rx) => [rx.id, rx])), electrolyte,
-    name, formula,
+    subs,
+    chem,
+    list,
+    P,
+    id,
+    sub,
+    molar: (sid) => (typeof sid === 'string' ? (INDICATORS[sid]?.molar ?? 300) : molarCache[sid]),
+    solubility,
+    hydrate,
+    hydrateOf,
+    solutionHeat,
+    acidBase,
+    toxic,
+    sinkSafe,
+    inert,
+    heavy,
+    counts,
+    rxs,
+    pairIdx,
+    singleIdx,
+    airIdx,
+    comb,
+    O2,
+    offline,
+    offPair,
+    offSingle,
+    rxById: new Map([...rxs, ...offline].map((rx) => [rx.id, rx])),
+    electrolyte,
+    name,
+    formula,
   };
 }
 
@@ -258,12 +321,17 @@ export function solutionTint(ctx, sid) {
   // gli anioni colorati sono scuri o saturi (permanganato, bicromato); quelli quasi bianchi o appena giallini
   // (l'acido nitrico puro) in soluzione diluita sono incolori
   const col = s.colors?.[SOLID];
-  if (col && (Math.max(...col.slice(0, 3)) - Math.min(...col.slice(0, 3)) > 45 || col[0] + col[1] + col[2] < 600)) return { rgb: col.slice(0, 3), k: 0.004 };
+  if (col && (Math.max(...col.slice(0, 3)) - Math.min(...col.slice(0, 3)) > 45 || col[0] + col[1] + col[2] < 600))
+    return { rgb: col.slice(0, 3), k: 0.004 };
   return null;
 }
 
 /** Liquido che si mescola con l'acqua (etanolo, acido acetico…): sciolto o no, resta un liquido che può bollire. */
-const isMiscibleLiquid = (ctx, sid) => typeof sid === 'number' && sid !== WATER && (ctx.P.flags[sid] & (S.MISCIBLE | S.AQUEOUS)) === S.MISCIBLE && ctx.sub(sid).mp < AMBIENT;
+const isMiscibleLiquid = (ctx, sid) =>
+  typeof sid === 'number' &&
+  sid !== WATER &&
+  (ctx.P.flags[sid] & (S.MISCIBLE | S.AQUEOUS)) === S.MISCIBLE &&
+  ctx.sub(sid).mp < AMBIENT;
 
 /** Calcola il pH dal bilancio delle cariche: acidi e basi forti e deboli (Ka, Kb), per bisezione su log[H⁺]. */
 export function solvePH({ sa = 0, sb = 0, weakA = [], weakB = [] }) {
@@ -311,8 +379,19 @@ export class Mixture {
     const sid = ctx.id(solute);
     const mol = (molar * volumeMl) / 1000;
     const soluteVol = (mol * ctx.molar(sid)) / (ctx.sub(sid)?.densS || 2);
-    const waterG = Math.max(0, volumeMl - (ctx.P.flags[sid] & S.MISCIBLE ? (mol * ctx.molar(sid)) / ctx.sub(sid).densL : soluteVol)) * 0.998;
-    return Mixture.of(ctx, [['water', waterG / WATER_MOLAR], [sid, mol, true]], T);
+    const waterG =
+      Math.max(
+        0,
+        volumeMl - (ctx.P.flags[sid] & S.MISCIBLE ? (mol * ctx.molar(sid)) / ctx.sub(sid).densL : soluteVol),
+      ) * 0.998;
+    return Mixture.of(
+      ctx,
+      [
+        ['water', waterG / WATER_MOLAR],
+        [sid, mol, true],
+      ],
+      T,
+    );
   }
 
   /** Solido puro (grammi). */
@@ -413,7 +492,8 @@ export class Mixture {
       const free = mol - (this.d.get(sid) ?? 0);
       if (free > TINY && this.phaseOf(sid) === SOLID) v += ((free * ctx.molar(sid)) / (ctx.sub(sid).densS || 2)) * 1.6;
     }
-    if (this.n.get(WATER) > TINY && this.phaseOf(WATER) === SOLID) v += ((this.n.get(WATER) * WATER_MOLAR) / 0.917) * 1.1;
+    if (this.n.get(WATER) > TINY && this.phaseOf(WATER) === SOLID)
+      v += ((this.n.get(WATER) * WATER_MOLAR) / 0.917) * 1.1;
     return v;
   }
 
@@ -430,7 +510,8 @@ export class Mixture {
     for (const [sid, mol] of this.n) {
       if (mol <= TINY) continue;
       if (sid === WATER) c += mol * CP_WATER;
-      else c += mol * this.ctx.molar(sid) * (this.phaseOf(sid) === SOLID && !(this.d.get(sid) > 0) ? CP_SOLID : CP_LIQUID);
+      else
+        c += mol * this.ctx.molar(sid) * (this.phaseOf(sid) === SOLID && !(this.d.get(sid) > 0) ? CP_SOLID : CP_LIQUID);
     }
     return c;
   }
@@ -446,7 +527,7 @@ export class Mixture {
     const v = this.liquidVolume / 1000;
     if (this.water < 0.05 || v <= 0) return null;
     const acc = { sa: 0, sb: 0, weakA: [], weakB: [] };
-    for (const [sid, mol] of this.n) {
+    for (const sid of this.n.keys()) {
       const ab = this.ctx.acidBase.get(sid);
       if (!ab) continue;
       const c = (this.d.get(sid) ?? 0) / v;
@@ -567,7 +648,10 @@ export class Mixture {
         if (free <= TINY) continue;
         // bolle solo ciò che è liquido adesso (anche fermo al punto di ebollizione): un gas aggiunto (cloro, ammoniaca
         // da una bombola) non è un liquido surriscaldato, si scioglie o esce senza assorbire calore
-        const liquidNow = sid === WATER ? true : this.T <= bp + 0.5 && phaseAt(this.ctx.sub(sid), Math.min(this.T, bp - 0.01)) === LIQUID;
+        const liquidNow =
+          sid === WATER
+            ? true
+            : this.T <= bp + 0.5 && phaseAt(this.ctx.sub(sid), Math.min(this.T, bp - 0.01)) === LIQUID;
         if (liquidNow && bp < T && bp < lowBp) {
           low = sid;
           lowBp = bp;
@@ -575,7 +659,8 @@ export class Mixture {
       }
       if (low === null) break;
       const L = low === WATER ? L_WATER : TROUTON * lowBp;
-      const free = low === WATER || isMiscibleLiquid(this.ctx, low) ? this.n.get(low) : this.n.get(low) - (this.d.get(low) ?? 0);
+      const free =
+        low === WATER || isMiscibleLiquid(this.ctx, low) ? this.n.get(low) : this.n.get(low) - (this.d.get(low) ?? 0);
       const energy = (T - lowBp) * C;
       const mol = Math.min(free, energy / L);
       this.n.set(low, this.n.get(low) - mol);
@@ -592,8 +677,7 @@ export class Mixture {
   /**
    * Un passo della miscela.
    * @param {number} dt secondi di gioco
-   * @param {{heatW?: number, lossWK?: number, Tenv?: number, containerC?: number, area?: number, stir?: number,
-   *          open?: boolean, flame?: boolean, light?: boolean, volts?: number}} env potenza ricevuta (W), dispersione
+   * @param {import('../types').TickEnv} env potenza ricevuta (W), dispersione
    *          (W/K), temperatura dell'ambiente, capacità termica del contenitore (J/K), superficie libera (cm²),
    *          agitazione (0–1), aperto, nella fiamma, sotto la lampada, tensione degli elettrodi (V)
    * @returns {{gases: [number, number][], reactions: Set<string>, extent: Map<string, number>, heatK: number, ignite: number,
@@ -601,9 +685,30 @@ export class Mixture {
    */
   tick(dt, env = {}) {
     const { ctx } = this;
-    const ev = { gases: [], reactions: new Set(), extent: new Map(), heatK: 0, ignite: 0, explode: 0, precipitated: false, crystallized: false, current: 0 };
+    const ev = {
+      gases: [],
+      reactions: new Set(),
+      extent: new Map(),
+      heatK: 0,
+      ignite: 0,
+      explode: 0,
+      precipitated: false,
+      crystallized: false,
+      current: 0,
+    };
     if (this.isEmpty()) return ev;
-    const { heatW = 0, lossWK = 0.5, Tenv = AMBIENT, containerC = 0, area = 20, stir = 0, open = true, flame = false, light = false, volts = 0 } = env;
+    const {
+      heatW = 0,
+      lossWK = 0.5,
+      Tenv = AMBIENT,
+      containerC = 0,
+      area = 20,
+      stir = 0,
+      open = true,
+      flame = false,
+      light = false,
+      volts = 0,
+    } = env;
     const dtT = dt * HEAT_SPEED;
     // il calore delle reazioni scalda (o raffredda) anche il recipiente, come quello che arriva da fuori
     this.vesselC = containerC;
@@ -646,7 +751,8 @@ export class Mixture {
       if ((flame && ph !== SOLID) || (ctx.P.ignite[sid] > 0 && this.T >= ctx.P.ignite[sid])) ev.ignite = sid;
     }
     // esplosivi scaldati
-    for (const [sid, mol] of this.n) if (typeof sid !== 'string' && mol > 1e-4 && ctx.P.flags[sid] & S.EXPLOSIVE && this.T > 450) ev.explode += mol;
+    for (const [sid, mol] of this.n)
+      if (typeof sid !== 'string' && mol > 1e-4 && ctx.P.flags[sid] & S.EXPLOSIVE && this.T > 450) ev.explode += mol;
     if (ev.heatK > 140) ev.explode += ev.heatK / 400;
     this.prune();
     return ev;
@@ -656,6 +762,12 @@ export class Mixture {
   fraction(sid) {
     const lv = this.liquidVolume;
     return lv > 0 ? (this.amount(sid) * this.ctx.molar(sid)) / lv : 0;
+  }
+
+  /** Calore di soluzione di mol moli che si sciolgono (negative: cristallizzano), dalle entalpie di soluzione. */
+  solutionHeat(sid, mol) {
+    const h = this.ctx.solutionHeat.get(sid);
+    if (h !== undefined && mol) this.heat(-h * 1000 * mol, this.vesselC ?? 0);
   }
 
   /** Scioglimento verso la solubilità (più rapido agitando e a caldo) e cristallizzazione dell'eccesso. */
@@ -686,7 +798,7 @@ export class Mixture {
       if (hyd) {
         // un idrato si scioglie come sale anidro più la sua acqua
         const anh = hyd.sid;
-        const cap = (ctx.solubility(anh, this.T) / 100) * water / ctx.molar(anh);
+        const cap = ((ctx.solubility(anh, this.T) / 100) * water) / ctx.molar(anh);
         const room = cap - (this.d.get(anh) ?? 0);
         if (room > 0) {
           const x = Math.min(mol, room, room * (1 - Math.exp(-kDiss * dt)) + 0.0002 * dt * (1 + 4 * this.mix));
@@ -695,6 +807,7 @@ export class Mixture {
             this.n.set(anh, (this.n.get(anh) ?? 0) + x);
             this.d.set(anh, (this.d.get(anh) ?? 0) + x);
             this.n.set(WATER, (this.n.get(WATER) ?? 0) + hyd.w * x);
+            this.solutionHeat(sid, x);
           }
         }
         continue;
@@ -713,7 +826,9 @@ export class Mixture {
       if (d < target) {
         const phase = this.phaseOf(sid);
         const k = phase === GAS || phase === LIQUID ? 20 : kDiss;
-        this.d.set(sid, Math.min(target, d + (target - d) * (1 - Math.exp(-k * dt)) + 0.0002 * dt * (1 + 4 * this.mix)));
+        const next = Math.min(target, d + (target - d) * (1 - Math.exp(-k * dt)) + 0.0002 * dt * (1 + 4 * this.mix));
+        this.d.set(sid, next);
+        this.solutionHeat(sid, next - d);
       } else if (d > cap * 1.002) {
         const x = (d - cap) * (1 - Math.exp(-kCryst * dt));
         this.d.set(sid, d - x);
@@ -726,7 +841,8 @@ export class Mixture {
           this.n.set(sid, mol - x);
           this.n.set(hy.sid, (this.n.get(hy.sid) ?? 0) + x);
           this.n.set(WATER, free - hy.w * x);
-        }
+          this.solutionHeat(hy.sid, -x);
+        } else this.solutionHeat(sid, -x);
       }
     }
     // idrati scaldati oltre la temperatura di decomposizione: perdono l'acqua (CuSO₄·5H₂O azzurro → CuSO₄ bianco)
@@ -790,7 +906,8 @@ export class Mixture {
     if (cond.ignite && !flame && !(this.T >= cond.minT && cond.minT > 0)) return { why: 'flame' };
     if (cond.shock) return { why: 'shock' };
     if (cond.light && !light) return { why: 'light' };
-    if (cond.catalysts && ![...cond.catalysts].some((c) => (this.n.get(c) ?? 0) > TINY)) return { why: 'catalyst', sids: [...cond.catalysts] };
+    if (cond.catalysts && ![...cond.catalysts].some((c) => (this.n.get(c) ?? 0) > TINY))
+      return { why: 'catalyst', sids: [...cond.catalysts] };
     return null;
   }
 
@@ -801,8 +918,9 @@ export class Mixture {
     if (!candidates.size) return;
     const hasWater = this.water > 0.5;
     // la temperatura accelera le reazioni lente (fattore di Arrhenius con Ea ≈ 50 kJ/mol: ×2 ogni 10 °C circa);
-    // quelle tra ioni sciolti sono già istantanee
-    const arrhenius = Math.min(30, Math.max(0.15, Math.exp(6000 * (1 / 298 - 1 / Math.max(this.T, 150)))));
+    // quelle tra ioni sciolti sono già istantanee. Senza minimo: sotto i −50 °C una reazione si ferma quasi del tutto
+    // (prima andava sempre almeno al 15 % e una reazione endotermica portava il contenuto fino a 1 K)
+    const arrhenius = Math.min(30, Math.exp(6000 * (1 / 298 - 1 / Math.max(this.T, 1))));
     for (const rx of candidates.values()) {
       if (rx.electro || this.blocker(rx, { flame, light })) continue;
       let xi = Infinity;
@@ -819,8 +937,12 @@ export class Mixture {
         xi = Math.min(xi, avail / r.c);
       }
       if (!ok || !(xi > TINY) || xi === Infinity) continue;
-      const allDissolved = !hetero && rx.reactants.every((r) => r.sid === WATER || r.sid === ctx.O2 || (this.d.get(r.sid) ?? 0) > TINY);
-      let k = allDissolved && hasWater ? 5 * (0.3 + 0.7 * this.mix) + 1 : (hetero ? 0.1 * (1 + 3 * this.mix) : 0.8) * arrhenius;
+      const allDissolved =
+        !hetero && rx.reactants.every((r) => r.sid === WATER || r.sid === ctx.O2 || (this.d.get(r.sid) ?? 0) > TINY);
+      let k =
+        allDissolved && hasWater
+          ? 5 * (0.3 + 0.7 * this.mix) + 1
+          : (hetero ? 0.1 * (1 + 3 * this.mix) : 0.8) * arrhenius;
       if (rx.slow) k *= 0.05;
       // fotochimiche: lentissime anche sotto la lampada (circa l'1 % al minuto): il cloruro d'argento si decompone in
       // superficie, l'acido nitrico diluito resta quasi intatto; il gas che si libera è in tracce
@@ -829,7 +951,7 @@ export class Mixture {
       if (ext <= TINY) continue;
       this.apply(rx, ext, hasWater, ev);
       // calore: in soluzione la neutralizzazione libera 55,8 kJ per mole d'acqua formata
-      let dH = rx.neutral && allDissolved ? -55.8 * rx.neutral : rx.dH ?? (rx.group === 'combustioni' ? -600 : -10);
+      let dH = rx.neutral && allDissolved ? -55.8 * rx.neutral : (rx.dH ?? (rx.group === 'combustioni' ? -600 : -10));
       if (hasWater && !rx.neutral) dH = Math.max(-150, Math.min(80, dH));
       this.heat(-dH * 1000 * ext, this.vesselC ?? 0, ev.gases);
       ev.reactions.add(rx.id);
@@ -845,7 +967,8 @@ export class Mixture {
     const v = this.liquidVolume / 1000;
     if (!(volts > 0) || this.water < 1 || v <= 0) return 0;
     let c = 0;
-    for (const [sid, d] of this.d) if (typeof sid === 'number' && d > 0) c += (d / v) * (this.ctx.electrolyte[sid] ?? 0);
+    for (const [sid, d] of this.d)
+      if (typeof sid === 'number' && d > 0) c += (d / v) * (this.ctx.electrolyte[sid] ?? 0);
     return volts * 0.12 * (c / (c + 0.05));
   }
 
@@ -934,12 +1057,19 @@ export class Mixture {
       const d = this.d.get(sid) ?? 0;
       const free = mol - d;
       const base = { sid, name: ctx.name(sid), formula: ctx.formula(sid), molar: ctx.molar(sid) };
-      if (d > 1e-9 && sid !== WATER) out.push({ ...base, mol: d, grams: d * ctx.molar(sid), state: 'aq', conc: v > 0.01 ? (d / v) * 1000 : 0 });
+      if (d > 1e-9 && sid !== WATER)
+        out.push({ ...base, mol: d, grams: d * ctx.molar(sid), state: 'aq', conc: v > 0.01 ? (d / v) * 1000 : 0 });
       if (free > 1e-9 || sid === WATER) {
         const state = sid === WATER ? 'liquid' : ['', 'solid', 'liquid', 'gas'][this.phaseOf(sid)];
-        out.push({ ...base, mol: sid === WATER ? mol : free, grams: (sid === WATER ? mol : free) * ctx.molar(sid), state });
+        out.push({
+          ...base,
+          mol: sid === WATER ? mol : free,
+          grams: (sid === WATER ? mol : free) * ctx.molar(sid),
+          state,
+        });
       }
     }
+    // @ts-expect-error differenza tra booleani: true − false = 1, l'acqua va in fondo
     return out.sort((a, b) => (a.sid === WATER) - (b.sid === WATER) || b.grams - a.grams);
   }
 
@@ -995,10 +1125,27 @@ export class Mixture {
     }
     solid = sv > 0 ? solid.map((x) => x / sv) : [240, 240, 240];
     const water = this.water;
-    const solidKind = sv <= 0 ? 'none' : water <= 0.05 ? (this.crystals > 0 ? 'crystals' : 'powder') : insoluble > sv * 0.5 ? 'precipitate' : 'crystals';
+    const solidKind =
+      sv <= 0
+        ? 'none'
+        : water <= 0.05
+          ? this.crystals > 0
+            ? 'crystals'
+            : 'powder'
+          : insoluble > sv * 0.5
+            ? 'precipitate'
+            : 'crystals';
     const lv = this.liquidVolume;
     const turbid = lv > 0.05 ? Math.min(0.95, this.susp * Math.min(1, ((sv * 1.6) / lv) * 150)) : 0;
-    return { liquid: rgb.map(Math.round), alpha, turbid, turbidColor: solid.map(Math.round), solid: solid.map(Math.round), solidKind, pink };
+    return {
+      liquid: rgb.map(Math.round),
+      alpha,
+      turbid,
+      turbidColor: solid.map(Math.round),
+      solid: solid.map(Math.round),
+      solidKind,
+      pink,
+    };
   }
 }
 
@@ -1016,16 +1163,25 @@ export function wasteClass(mix) {
   const { ctx } = mix;
   let organicVol = 0;
   let unsafe = false;
+  let organicUnsafe = false; // un composto organico che non va nel lavandino, anche diluito (acetone in acqua)
+  let notInert = false; // qualcosa che non è né innocuo né un solido inerte (sabbia, marmo, carbone)
   const liquid = mix.liquidVolume;
   for (const [sid, mol] of mix.n) {
     if (mol <= 1e-9 || typeof sid === 'string' || sid === WATER) continue;
     if (ctx.heavy[sid]) return 'heavy';
     const s = ctx.sub(sid);
+    const inLiquid = mix.phaseOf(sid) === LIQUID || (mix.d.get(sid) ?? 0) > 0;
     if (s.flags & S.ORGANIC && mix.phaseOf(sid) === LIQUID) organicVol += (mol * ctx.molar(sid)) / (s.densL || 1);
-    if (!ctx.sinkSafe.has(sid) && mol > 2e-6) unsafe = true; // tracce trascurabili (resti di una titolazione)
+    if (!ctx.sinkSafe.has(sid) && mol > 2e-6) {
+      // tracce trascurabili (resti di una titolazione) a parte
+      unsafe = true;
+      if (s.flags & S.ORGANIC && inLiquid) organicUnsafe = true;
+      if (!ctx.inert.has(sid)) notInert = true;
+    }
   }
   if (organicVol > 2 && organicVol > liquid * 0.1) return 'organic';
-  if (liquid < 0.05) return unsafe ? 'inorganic' : 'solid';
+  if (organicUnsafe) return 'organic';
+  if (liquid < 0.05) return unsafe && notInert ? 'inorganic' : 'solid';
   const ph = mix.pH();
   if (ph !== null && (ph < 5.5 || ph > 9)) return 'inorganic';
   // anche le soluzioni innocue vanno nei rifiuti se sono concentrate (oltre ~1 mol/L di sali)

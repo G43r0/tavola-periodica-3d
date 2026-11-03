@@ -1,3 +1,4 @@
+// @ts-check
 // Formule e riconoscimento delle molecole.
 // L'"impronta" di un grafo (algoritmo di Weisfeiler–Lehman) non dipende dall'ordine in cui gli atomi
 // sono stati aggiunti: due molecole con la stessa impronta hanno la stessa struttura.
@@ -6,7 +7,8 @@ import { parseSmiles } from './smiles.js';
 const SUB = { 0: '₀', 1: '₁', 2: '₂', 3: '₃', 4: '₄', 5: '₅', 6: '₆', 7: '₇', 8: '₈', 9: '₉' };
 const SUP = { 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹', '+': '⁺', '-': '⁻' };
 export const subscript = (n) => String(n).replace(/\d/g, (d) => SUB[d]);
-export const chargeText = (q) => (q === 0 ? '' : `${Math.abs(q) === 1 ? '' : Math.abs(q)}${q > 0 ? '+' : '-'}`.replace(/[\d+-]/g, (c) => SUP[c]));
+export const chargeText = (q) =>
+  q === 0 ? '' : `${Math.abs(q) === 1 ? '' : Math.abs(q)}${q > 0 ? '+' : '-'}`.replace(/[\d+-]/g, (c) => SUP[c]);
 
 function fnv(str) {
   let h = 0x811c9dc5;
@@ -38,7 +40,11 @@ export function hillOrder(counts) {
 
 export function formulaKey(lab, atoms, charge = 0) {
   const counts = countElements(lab, atoms);
-  return hillOrder(counts).map((s) => `${s}${counts.get(s) > 1 ? counts.get(s) : ''}`).join('') + (charge ? `(${charge})` : '');
+  return (
+    hillOrder(counts)
+      .map((s) => `${s}${counts.get(s) > 1 ? counts.get(s) : ''}`)
+      .join('') + (charge ? `(${charge})` : '')
+  );
 }
 
 /**
@@ -52,7 +58,8 @@ export function displayFormula(lab, atoms, charge = 0, { ionic = false } = {}) {
   if (ionic) {
     // prima i cationi (atomi con carica positiva), poi il resto per elettronegatività crescente
     const cations = new Set(atoms.filter((a) => a.charge > 0).map((a) => lab.get(a.z).symbol));
-    order = [...counts.keys()].sort((a, b) => (cations.has(b) - cations.has(a)) || en(a) - en(b));
+    // @ts-expect-error differenza tra booleani: true − false = 1, i cationi passano per primi
+    order = [...counts.keys()].sort((a, b) => cations.has(b) - cations.has(a) || en(a) - en(b));
   } else if (counts.has('C')) {
     order = hillOrder(counts);
   } else {
@@ -67,18 +74,70 @@ export function displayFormula(lab, atoms, charge = 0, { ionic = false } = {}) {
   return order.map((s) => `${s}${counts.get(s) > 1 ? subscript(counts.get(s)) : ''}`).join('') + chargeText(charge);
 }
 
+/** Indici dei legami che stanno in un anello (non sono ponti del grafo). */
+function ringBondIndices(n, bonds) {
+  const adj = Array.from({ length: n }, () => []);
+  bonds.forEach((b, k) => {
+    adj[b.i].push([b.j, k]);
+    adj[b.j].push([b.i, k]);
+  });
+  const disc = new Array(n).fill(-1);
+  const low = new Array(n).fill(0);
+  const bridges = new Set();
+  let time = 0;
+  const dfs = (u, via) => {
+    disc[u] = low[u] = time++;
+    for (const [v, k] of adj[u]) {
+      if (k === via) continue;
+      if (disc[v] < 0) {
+        dfs(v, k);
+        low[u] = Math.min(low[u], low[v]);
+        if (low[v] > disc[u]) bridges.add(k);
+      } else low[u] = Math.min(low[u], disc[v]);
+    }
+  };
+  for (let u = 0; u < n; u++) if (disc[u] < 0) dfs(u, -1);
+  return new Set(bonds.map((_, k) => k).filter((k) => !bridges.has(k)));
+}
+
+/**
+ * Ordini di legame uguali per tutte le strutture di Kekulé: negli anelli, i legami tra atomi che hanno ciascuno
+ * esattamente un doppio legame nell'anello valgono 1,5 (aspirina con i doppi legami da una parte o dall'altra).
+ */
+function resonanceOrders(n, bonds) {
+  const ring = ringBondIndices(n, bonds);
+  const ringDoubles = new Array(n).fill(0);
+  bonds.forEach((b, k) => {
+    if (ring.has(k) && b.order === 2) {
+      ringDoubles[b.i]++;
+      ringDoubles[b.j]++;
+    }
+  });
+  return bonds.map((b, k) =>
+    ring.has(k) && b.order <= 2 && ringDoubles[b.i] === 1 && ringDoubles[b.j] === 1 ? 1.5 : b.order,
+  );
+}
+
 /** Impronta di un frammento covalente. */
 export function signature(atoms, bonds, { orders = true, charge = 0 } = {}) {
   const n = atoms.length;
   const adj = atoms.map(() => []);
-  for (const b of bonds) {
-    const o = orders ? b.order : 1;
+  const resonant = orders ? resonanceOrders(n, bonds) : null;
+  for (const [k, b] of bonds.entries()) {
+    const o = orders ? resonant[k] : 1;
     adj[b.i].push([b.j, o]);
     adj[b.j].push([b.i, o]);
   }
   let labels = atoms.map((a) => String(a.z));
   for (let round = 0; round < Math.min(6, n); round++) {
-    labels = labels.map((l, i) => fnv(`${l}|${adj[i].map(([j, o]) => `${o}${labels[j]}`).sort().join(',')}`));
+    labels = labels.map((l, i) =>
+      fnv(
+        `${l}|${adj[i]
+          .map(([j, o]) => `${o}${labels[j]}`)
+          .sort()
+          .join(',')}`,
+      ),
+    );
   }
   return `${[...labels].sort().join('.')}|${charge}`;
 }
@@ -99,7 +158,9 @@ export function covalentParts(atoms, bonds) {
     return {
       indices: idx,
       atoms: idx.map((i) => atoms[i]),
-      bonds: bonds.filter((b) => map.has(b.i) && map.has(b.j)).map((b) => ({ i: map.get(b.i), j: map.get(b.j), order: b.order })),
+      bonds: bonds
+        .filter((b) => map.has(b.i) && map.has(b.j))
+        .map((b) => ({ i: map.get(b.i), j: map.get(b.j), order: b.order })),
       charge: idx.reduce((s, i) => s + (atoms[i].charge || 0), 0),
     };
   });
@@ -115,12 +176,18 @@ export function unitSignature(atoms, bonds, orders = true) {
 
 /**
  * Indice della libreria: per ogni voce struttura (SMILES), impronte e formula.
- * @param {object[]} entries
+ * @param {import('../../types').LabElements} lab
+ * @param {import('../../types').Molecule[]} entries
+ * @returns {import('../../types').LibraryIndex}
  */
 export function createLibraryIndex(lab, entries) {
+  /** @type {Map<string, import('../../types').LibraryEntry>} */
   const full = new Map();
+  /** @type {Map<string, import('../../types').LibraryEntry[]>} */
   const skeleton = new Map();
+  /** @type {Map<string, import('../../types').LibraryEntry[]>} */
   const byFormula = new Map();
+  /** @type {Map<string, import('../../types').LibraryEntry>} */
   const parsed = new Map();
   for (const e of entries) {
     const g = parseSmiles(e.smiles, lab.bySymbol);
@@ -138,7 +205,12 @@ export function createLibraryIndex(lab, entries) {
   // nomi (anche alternativi) senza accenti né maiuscole, per la ricerca testuale
   const names = [...parsed.values()].map((e) => ({
     e,
-    keys: [e.name, e.nameIt, ...(e.aka ? e.aka.split(/,\s*|\s+(?:o|or)\s+/) : []), ...(e.akaIt ? e.akaIt.split(/,\s*|\s+o\s+/) : [])]
+    keys: [
+      e.name,
+      e.nameIt,
+      ...(e.aka ? e.aka.split(/,\s*|\s+(?:o|or)\s+/) : []),
+      ...(e.akaIt ? e.akaIt.split(/,\s*|\s+o\s+/) : []),
+    ]
       .filter(Boolean)
       .map((s) => normalizeName(s))
       .filter(Boolean),
@@ -149,20 +221,20 @@ export function createLibraryIndex(lab, entries) {
     byFormula: (key) => byFormula.get(key) ?? [],
     /**
      * Cerca per nome: voce con il nome esatto e voci che lo contengono (al massimo `limit`).
-     * @returns {{exact:object|null, matches:object[]}}
      */
     byName(query, limit = 8) {
       const q = normalizeName(query);
       if (q.length < 2) return { exact: null, matches: [] };
       const exact = names.find((n) => n.keys.includes(q))?.e ?? null;
       const starts = names.filter((n) => n.e !== exact && n.keys.some((k) => k.startsWith(q))).map((n) => n.e);
-      const inside = names.filter((n) => n.e !== exact && !starts.includes(n.e) && n.keys.some((k) => k.includes(q))).map((n) => n.e);
+      const inside = names
+        .filter((n) => n.e !== exact && !starts.includes(n.e) && n.keys.some((k) => k.includes(q)))
+        .map((n) => n.e);
       return { exact, matches: [...starts, ...inside].slice(0, limit) };
     },
     /**
      * Riconosce un'unità costruita sul banco.
      * @param {{z:number,charge:number}[]} atoms cariche degli atomi (ioni e elettroni aggiunti/tolti)
-     * @returns {{entry:object|null, exact:boolean, byFormula?:boolean, sameFormula:object[]}}
      */
     identify(atoms, bonds) {
       const charge = atoms.reduce((s, a) => s + a.charge, 0);
@@ -181,6 +253,20 @@ export function createLibraryIndex(lab, entries) {
   };
 }
 
-/** Nome per la ricerca: minuscolo, senza accenti, apostrofi e spazi doppi. */
+/** Nome per la ricerca: minuscolo, senza accenti, apostrofi e spazi doppi; pedici e apici come cifre e segni (NFKD). */
 export const normalizeName = (s) =>
-  String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’']/g, ' ').replace(/\s+/g, ' ').trim();
+  String(s)
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[−–—]/g, '-')
+    .toLowerCase()
+    .replace(/[’']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/** Testo in cui si cerca una voce della libreria: nomi e formule, quelle degli ioni con la carica (Na⁺, [Cu(NH₃)₄]²⁺). */
+export function librarySearchText(lab, e) {
+  const q = e.charge ?? 0;
+  const formulas = `${e.formula ? e.formula + chargeText(q) : ''} ${displayFormula(lab, e.graph.atoms, q, { ionic: e.ionic })} ${formulaKey(lab, e.graph.atoms, 0)}`;
+  return normalizeName(`${e.name} ${e.aka ?? ''} ${formulas}`);
+}

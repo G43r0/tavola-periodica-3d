@@ -1,3 +1,4 @@
+// @ts-check
 // Costanti delle particelle: CODATA 2022 (NIST) e Particle Data Group (PDG 2024).
 import { pick } from '../i18n/index.js';
 

@@ -1,3 +1,4 @@
+// @ts-check
 // Salvataggi del simulatore, con la versione e la migrazione. Modulo puro: riceve e restituisce oggetti (la vista li
 // scrive in localStorage e, nell'app Electron, anche in un file nella cartella dei dati dell'utente).
 //
@@ -9,6 +10,7 @@
 // Versione 1 (fino alla G5): { career: { index, money, stars[] }, chemMode, legend, fov, notebook }, con le cinque
 //   esercitazioni di allora in ordine.
 import { newCareer, chapterExercises, PASS_STARS } from './career.js';
+import { prefersReducedMotion } from '../ui/motion.js';
 
 export const SAVE_VERSION = 2;
 /** Volume dell'audio per chi non l'ha mai cambiato (0–1). */
@@ -22,7 +24,12 @@ const NAME_MAX = 24;
 
 /** Nome di un profilo ripulito: senza spazi in eccesso né caratteri di controllo, al massimo 24 caratteri. */
 export function cleanName(name, fallback) {
-  const s = String(name ?? '').replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim().slice(0, NAME_MAX);
+  const s = String(name ?? '')
+    // eslint-disable-next-line no-control-regex -- i caratteri di controllo (U+0000-U+001F, U+007F) vanno tolti di proposito
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, NAME_MAX);
   return s || fallback;
 }
 
@@ -35,12 +42,33 @@ const newId = (profiles) => {
 /** Nome predefinito del profilo n (la vista lo passa tradotto). */
 const defaultName = (n) => `Studente ${n}`;
 
-/** Profilo nuovo con la Carriera vuota. */
-export function newProfile(profiles, name, now = new Date().toISOString(), fallback = defaultName) {
-  return { id: newId(profiles), name: cleanName(name, fallback(profiles.length + 1)), created: now, career: newCareer(), notebook: null };
+/** Il primo nome predefinito che nessun profilo usa («Studente 2» dopo aver eliminato il secondo, non «Studente 3» doppio). */
+export function freeProfileName(profiles, name = defaultName) {
+  const used = new Set(profiles.map((p) => p.name));
+  let n = 1;
+  while (used.has(name(n))) n++;
+  return name(n);
 }
 
-/** Carriera della versione 1 nella forma nuova: le stelle per esercitazione, i soldi; il capitolo 0 dato per fatto. */
+/**
+ * Profilo nuovo con la Carriera vuota.
+ * @param {import('../types').Profile[]} profiles
+ * @returns {import('../types').Profile}
+ */
+export function newProfile(profiles, name, now = new Date().toISOString(), fallback = defaultName) {
+  return {
+    id: newId(profiles),
+    name: cleanName(name, freeProfileName(profiles, fallback)),
+    created: now,
+    career: newCareer(),
+    notebook: null,
+  };
+}
+
+/**
+ * Carriera della versione 1 nella forma nuova: le stelle per esercitazione, i soldi; il capitolo 0 dato per fatto.
+ * @returns {import('../types').Career}
+ */
 export function migrateCareerV1(old) {
   const career = newCareer();
   if (!old) return career;
@@ -51,12 +79,16 @@ export function migrateCareerV1(old) {
   });
   // chi aveva già cominciato la Carriera sa usare il laboratorio: il tutorial (capitolo 0) risulta superato
   if ((old.index ?? 0) > 0 || Object.keys(career.results).length) {
-    for (const ex of chapterExercises(0)) career.results[ex.id] ??= { stars: PASS_STARS, report: 0, tries: 0, migrated: true };
+    for (const ex of chapterExercises(0))
+      career.results[ex.id] ??= { stars: PASS_STARS, report: 0, tries: 0, migrated: true };
   }
   return career;
 }
 
-/** Controlla e completa una Carriera letta da un salvataggio (campi mancanti o di tipo sbagliato). */
+/**
+ * Controlla e completa una Carriera letta da un salvataggio (campi mancanti o di tipo sbagliato).
+ * @returns {import('../types').Career}
+ */
 function sanitizeCareer(c) {
   const out = newCareer();
   if (!c || typeof c !== 'object') return out;
@@ -66,14 +98,26 @@ function sanitizeCareer(c) {
   out.last = typeof c.last === 'string' ? c.last : null;
   for (const [id, r] of Object.entries(c.results ?? {})) {
     if (!r || typeof r !== 'object') continue;
-    out.results[id] = { stars: Math.max(0, Math.min(5, Number(r.stars) || 0)), report: Math.max(0, Number(r.report) || 0), tries: Math.max(0, Number(r.tries) || 0), ...(r.migrated ? { migrated: true } : {}) };
+    out.results[id] = {
+      stars: Math.max(0, Math.min(5, Number(r.stars) || 0)),
+      report: Math.max(0, Number(r.report) || 0),
+      tries: Math.max(0, Number(r.tries) || 0),
+      ...(r.migrated ? { migrated: true } : {}),
+    };
+    // incidenti del tentativo più pulito (dalla 1.0.0; prima contavano solo quelli dell'anno)
+    if (Number(r.incidents) > 0) out.results[id].incidents = Math.floor(Number(r.incidents));
     // voto di una verifica (4–10)
-    if (Number.isFinite(Number(r.mark)) && r.mark !== null) out.results[id].mark = Math.max(4, Math.min(10, Number(r.mark)));
+    if (Number.isFinite(Number(r.mark)) && r.mark !== null)
+      out.results[id].mark = Math.max(4, Math.min(10, Number(r.mark)));
   }
   // sfide a tempo: medaglia (0–3) e miglior tempo
   for (const [id, r] of Object.entries(c.challenges ?? {})) {
     if (!r || typeof r !== 'object') continue;
-    out.challenges[id] = { medal: Math.max(0, Math.min(3, Math.round(Number(r.medal) || 0))), best: Number.isFinite(Number(r.best)) && r.best !== null ? Number(r.best) : null, tries: Math.max(0, Number(r.tries) || 0) };
+    out.challenges[id] = {
+      medal: Math.max(0, Math.min(3, Math.round(Number(r.medal) || 0))),
+      best: Number.isFinite(Number(r.best)) && r.best !== null ? Number(r.best) : null,
+      tries: Math.max(0, Number(r.tries) || 0),
+    };
   }
   return out;
 }
@@ -81,7 +125,7 @@ function sanitizeCareer(c) {
 /**
  * Salvataggio di qualsiasi versione (o niente, o qualcosa di rotto) → versione 2 valida. Non modifica l'originale.
  * name(n): nome predefinito dei profili nella lingua dell'interfaccia.
- * @returns {{version: number, settings: object, active: string, profiles: object[]}}
+ * @returns {import('../types').Save}
  */
 export function migrate(raw, now = new Date().toISOString(), name = defaultName) {
   const data = raw && typeof raw === 'object' ? raw : {};
@@ -91,19 +135,40 @@ export function migrate(raw, now = new Date().toISOString(), name = defaultName)
     const p = newProfile([], null, now, name);
     p.career = migrateCareerV1(data.career);
     p.notebook = data.notebook ?? null;
-    save = { version: SAVE_VERSION, settings: { chemMode: data.chemMode, legend: data.legend, fov: data.fov }, active: p.id, profiles: [p] };
+    save = {
+      version: SAVE_VERSION,
+      settings: { chemMode: data.chemMode, legend: data.legend, fov: data.fov },
+      active: p.id,
+      profiles: [p],
+    };
   } else save = { ...data, profiles: Array.isArray(data.profiles) ? data.profiles : [] };
   const settings = save.settings ?? {};
   save.settings = {
     chemMode: settings.chemMode === 'simple' ? 'simple' : 'real',
     legend: settings.legend !== false,
     fov: Number.isFinite(Number(settings.fov)) ? Number(settings.fov) : undefined,
-    volume: settings.volume !== undefined && settings.volume !== null && Number.isFinite(Number(settings.volume)) ? Math.max(0, Math.min(1, Number(settings.volume))) : DEFAULT_VOLUME,
+    volume:
+      settings.volume !== undefined && settings.volume !== null && Number.isFinite(Number(settings.volume))
+        ? Math.max(0, Math.min(1, Number(settings.volume)))
+        : DEFAULT_VOLUME,
     muted: settings.muted === true,
-    shake: settings.shake !== false,
+    // chi non l'ha mai scelta: spenta se il sistema chiede di ridurre il movimento
+    shake: typeof settings.shake === 'boolean' ? settings.shake : !prefersReducedMotion(),
   };
-  save.profiles = save.profiles.filter((p) => p && typeof p === 'object').slice(0, MAX_PROFILES).map((p, i, all) => ({
-    id: typeof p.id === 'string' && p.id ? p.id : newId(all.slice(0, i)),
+  const list = save.profiles.filter((p) => p && typeof p === 'object').slice(0, MAX_PROFILES);
+  // id: quelli scritti restano (il primo, se è doppio); a chi non ce l'ha uno che nessun altro profilo usa
+  const given = list.map((p) => (typeof p.id === 'string' && p.id ? p.id : null));
+  const taken = [];
+  const ids = list.map((p, i) => {
+    const id =
+      given[i] && !taken.some((t) => t.id === given[i])
+        ? given[i]
+        : newId([...taken, ...given.filter(Boolean).map((g) => ({ id: g }))]);
+    taken.push({ id });
+    return id;
+  });
+  save.profiles = list.map((p, i) => ({
+    id: ids[i],
     name: cleanName(p.name, name(i + 1)),
     created: typeof p.created === 'string' ? p.created : now,
     career: sanitizeCareer(p.career),
@@ -115,7 +180,10 @@ export function migrate(raw, now = new Date().toISOString(), name = defaultName)
   return save;
 }
 
-/** Profilo attivo. */
+/**
+ * Profilo attivo.
+ * @param {import('../types').Save} save
+ */
 export const activeProfile = (save) => save.profiles.find((p) => p.id === save.active) ?? save.profiles[0];
 
 /** Aggiunge un profilo e lo rende attivo (al massimo 8): restituisce il salvataggio nuovo o null. */

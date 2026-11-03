@@ -16,7 +16,11 @@ const ctx = createLabChemistry(elements);
 const shelf = keysOf(SHELF);
 const cabinet = keysOf(SHELF, CABINET);
 const store = [...ctx.subs.library.entries.map((e) => e.id), ...ctx.subs.elements.map((el) => el.symbol)];
-const runs = [['scaffale', reachable(ctx, shelf)], ['+ armadio', reachable(ctx, cabinet)], ['magazzino', reachable(ctx, store)]];
+const runs = [
+  ['scaffale', reachable(ctx, shelf)],
+  ['+ armadio', reachable(ctx, cabinet)],
+  ['magazzino', reachable(ctx, store)],
+];
 const doable = new Map();
 for (const rx of ctx.rxs) doable.set(rx.group, (doable.get(rx.group) ?? 0) + 1);
 
@@ -25,7 +29,9 @@ const pad = (s) => String(s).padEnd(W);
 const num = (s, n) => String(s).padStart(n);
 console.log(`${pad('gruppo')}${runs.map(([n]) => num(n, 11)).join('')}${num('simulatore', 12)}`);
 for (const g of REACTION_GROUPS) {
-  console.log(`${pad(g.label)}${runs.map(([, r]) => num(r.byGroup.get(g.key) ?? 0, 11)).join('')}${num(doable.get(g.key) ?? 0, 12)}`);
+  console.log(
+    `${pad(g.label)}${runs.map(([, r]) => num(r.byGroup.get(g.key) ?? 0, 11)).join('')}${num(doable.get(g.key) ?? 0, 12)}`,
+  );
 }
 console.log(`${pad('totale')}${runs.map(([, r]) => num(r.ids.size, 11)).join('')}${num(ctx.rxs.length, 12)}`);
 console.log(`\nreagenti: scaffale ${shelf.length}, con l'armadio ${cabinet.length}`);
@@ -36,6 +42,11 @@ if (process.argv.includes('--gain')) {
     const rest = keysOf(SHELF, Object.fromEntries(Object.entries(CABINET).filter(([x]) => x !== k)));
     return [k, all - reachable(ctx, rest).ids.size];
   });
-  console.log('\nreazioni perse togliendo ogni reagente dell\'armadio:');
-  console.log(gain.sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(' · '));
+  console.log("\nreazioni perse togliendo ogni reagente dell'armadio:");
+  console.log(
+    gain
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, n]) => `${k} ${n}`)
+      .join(' · '),
+  );
 }

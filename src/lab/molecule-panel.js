@@ -6,6 +6,7 @@ import { bondEnergy } from './chem/bond-energy.js';
 import { angleAt } from './chem/geometry.js';
 import { subscript, chargeText } from './chem/identify.js';
 import { lewisSvg } from './lewis-svg.js';
+import { writeSmiles } from './chem/smiles.js';
 import { icons } from '../ui/icons.js';
 import { createT } from '../i18n/index.js';
 
@@ -21,20 +22,25 @@ const t = createT({
     isolatedAtom: 'Atomo isolato',
     polyIon: 'Ione poliatomico',
     notInLibrary: 'Molecola non in libreria',
-    radical: (p) => `<b>Radicale</b>: elettron${p.n === 1 ? 'e spaiato' : 'i spaiati'} su ${p.list}. I radicali sono molto reattivi.`,
+    radical: (p) =>
+      `<b>Radicale</b>: elettron${p.n === 1 ? 'e spaiato' : 'i spaiati'} su ${p.list}. I radicali sono molto reattivi.`,
     incomplete: '<b>Ottetto incompleto</b> su {list}.',
     electronsN: '{sym} ({n} elettroni)',
-    incompleteException: ' Il boro, il berillio e l\'alluminio sono eccezioni note.',
+    incompleteException: " Il boro, il berillio e l'alluminio sono eccezioni note.",
     incompleteHint: ' Prova a trasformare un legame in doppio o triplo (clic sul legame).',
     expanded: '<b>Ottetto espanso</b> su {list}: possibile solo dal 3° periodo in poi.',
-    allOctets: 'Tutti gli atomi hanno l\'ottetto completo (l\'idrogeno il duetto) e non ci sono elettroni spaiati.',
-    formalCharges: 'Le cariche formali (+, −) indicano come sono ripartiti gli elettroni nella struttura di Lewis; la loro somma è la carica totale.',
-    unknownChem: '<b>Chimica sconosciuta</b>: contiene un elemento superpesante; i suoi composti non sono mai stati osservati.',
-    unverified: '<b>Struttura non verificata</b>: per i metalli d e f le regole dell\'ottetto e della VSEPR non bastano a prevedere la struttura.',
+    allOctets: "Tutti gli atomi hanno l'ottetto completo (l'idrogeno il duetto) e non ci sono elettroni spaiati.",
+    formalCharges:
+      'Le cariche formali (+, −) indicano come sono ripartiti gli elettroni nella struttura di Lewis; la loro somma è la carica totale.',
+    unknownChem:
+      '<b>Chimica sconosciuta</b>: contiene un elemento superpesante; i suoi composti non sono mai stati osservati.',
+    unverified:
+      "<b>Struttura non verificata</b>: per i metalli d e f le regole dell'ottetto e della VSEPR non bastano a prevedere la struttura.",
     byFormula: 'Riconosciuto dalla formula come <b>{name}</b>. ',
     byFormulaIonic: 'Nel composto reale il legame è ionico: usa Combina (o un esempio) per vedere gli ioni.',
     byFormulaOther: 'Nella struttura di riferimento gli atomi sono collegati in modo diverso.',
-    differentOrders: 'Riconosciuta come <b>{name}</b>, ma nella struttura di riferimento gli ordini di legame sono diversi: cambia i legami (clic) finché la scheda la riconosce.',
+    differentOrders:
+      'Riconosciuta come <b>{name}</b>, ma nella struttura di riferimento gli ordini di legame sono diversi: cambia i legami (clic) finché la scheda la riconosce.',
     isomer: 'Stessa formula di {list}, ma con gli atomi collegati in modo diverso (isomero).',
     ideal: 'ideale {v}',
     notVerified: 'non verificata',
@@ -47,7 +53,8 @@ const t = createT({
     bond: 'Legame',
     type: 'Tipo',
     length: 'Lunghezza',
-    bondsNote: 'Lunghezze in grassetto: sperimentali; ≈ stimate dai raggi covalenti (ionici per gli ioni). Energie di legame medie; ≈ stima di Pauling. ΔEN = differenza di elettronegatività (Pauling).',
+    bondsNote:
+      'Lunghezze in grassetto: sperimentali; ≈ stimate dai raggi covalenti (ionici per gli ioni). Energie di legame medie; ≈ stima di Pauling. ΔEN = differenza di elettronegatività (Pauling).',
     nonpolarMu: 'apolare (μ = 0)',
     polarMu: 'polare, μ = {d} D',
     dipoleNote: 'momento dipolare sperimentale (debye)',
@@ -56,18 +63,25 @@ const t = createT({
     polarityNote: 'stima dalla simmetria e dai dipoli dei legami',
     dfMetal: '{name} è un metallo del blocco {block}: stati di ossidazione comuni {ox}.',
     nobleGas: 'Gas nobile: il guscio esterno è completo ({n} elettroni), quindi non forma legami.',
-    valence: (p) => `<b>${p.lone}</b> elettroni di valenza${p.q ? ` (ione con carica ${p.q})` : ''}: ${p.pairs} coppi${p.pairs === 1 ? 'a' : 'e'} e ${p.single} elettron${p.single === 1 ? 'e spaiato' : 'i spaiati'} (regola di Hund).`,
-    canBond: (p) => `Gli elettroni spaiati possono formare legami: ${p.art} forma di solito <b>${p.v}</b> legam${p.v === 1 ? 'e' : 'i'}${p.more ? ` (anche ${p.more} con atomi più elettronegativi, ottetto espanso)` : ''}.`,
+    valence: (p) =>
+      `<b>${p.lone}</b> elettroni di valenza${p.q ? ` (ione con carica ${p.q})` : ''}: ${p.pairs} coppi${p.pairs === 1 ? 'a' : 'e'} e ${p.single} elettron${p.single === 1 ? 'e spaiato' : 'i spaiati'} (regola di Hund).`,
+    canBond: (p) =>
+      `Gli elettroni spaiati possono formare legami: ${p.art} forma di solito <b>${p.v}</b> legam${p.v === 1 ? 'e' : 'i'}${p.more ? ` (anche ${p.more} con atomi più elettronegativi, ottetto espanso)` : ''}.`,
     nobleConfig: 'Lo ione ha la configurazione elettronica di un gas nobile: è stabile.',
-    metal: 'Metallo: con un non metallo molto elettronegativo cede elettroni e forma uno ione positivo (legame ionico).',
+    metal:
+      'Metallo: con un non metallo molto elettronegativo cede elettroni e forma uno ione positivo (legame ionico).',
     composition: 'Composizione',
     element: 'Elemento',
     atoms: 'Atomi',
     massPct: '% in massa',
-    massNote: 'contiene elementi senza isotopi stabili: numero di massa dell\'isotopo più stabile',
+    massNote: "contiene elementi senza isotopi stabili: numero di massa dell'isotopo più stabile",
     generated: ' · nome generato',
     deselect: 'Deseleziona (Esc)',
     lewis: 'Struttura di Lewis',
+    export: 'Copia ed esporta',
+    copySmiles: 'Copia SMILES',
+    copyFormula: 'Copia formula',
+    saveSvg: 'Salva il disegno (SVG)',
     atom: 'Atomo',
     data: 'Dati',
     molarMass: 'Massa molare',
@@ -78,7 +92,8 @@ const t = createT({
     sheet: 'Scheda',
     usesLabel: 'Usi e presenza:',
     isomers: 'Altri isomeri con la stessa formula',
-    isomersNote: '«Combina» ha scelto la struttura con l\'energia di legame totale più alta; clic per costruire l\'altra.',
+    isomersNote:
+      "«Combina» ha scelto la struttura con l'energia di legame totale più alta; clic per costruire l'altra.",
     emptyTitle: 'Banco vuoto',
     emptySteps: [
       'Aggiungi atomi dalla tavolozza (clic o trascinamento).',
@@ -103,20 +118,24 @@ const t = createT({
     isolatedAtom: 'Isolated atom',
     polyIon: 'Polyatomic ion',
     notInLibrary: 'Molecule not in the library',
-    radical: (p) => `<b>Radical</b>: unpaired electron${p.n === 1 ? '' : 's'} on ${p.list}. Radicals are very reactive.`,
+    radical: (p) =>
+      `<b>Radical</b>: unpaired electron${p.n === 1 ? '' : 's'} on ${p.list}. Radicals are very reactive.`,
     incomplete: '<b>Incomplete octet</b> on {list}.',
     electronsN: '{sym} ({n} electrons)',
     incompleteException: ' Boron, beryllium and aluminium are well-known exceptions.',
     incompleteHint: ' Try turning a bond into a double or triple bond (click the bond).',
     expanded: '<b>Expanded octet</b> on {list}: possible only from period 3 onwards.',
     allOctets: 'Every atom has a full octet (hydrogen a duet) and there are no unpaired electrons.',
-    formalCharges: 'Formal charges (+, −) show how the electrons are shared out in the Lewis structure; they add up to the total charge.',
+    formalCharges:
+      'Formal charges (+, −) show how the electrons are shared out in the Lewis structure; they add up to the total charge.',
     unknownChem: '<b>Unknown chemistry</b>: it contains a superheavy element; its compounds have never been observed.',
-    unverified: '<b>Structure not verified</b>: for d and f metals the octet and VSEPR rules are not enough to predict the structure.',
+    unverified:
+      '<b>Structure not verified</b>: for d and f metals the octet and VSEPR rules are not enough to predict the structure.',
     byFormula: 'Recognised from the formula as <b>{name}</b>. ',
     byFormulaIonic: 'In the real compound the bond is ionic: use Combine (or an example) to see the ions.',
     byFormulaOther: 'In the reference structure the atoms are connected differently.',
-    differentOrders: 'Recognised as <b>{name}</b>, but in the reference structure the bond orders are different: change the bonds (click) until the card recognises it.',
+    differentOrders:
+      'Recognised as <b>{name}</b>, but in the reference structure the bond orders are different: change the bonds (click) until the card recognises it.',
     isomer: 'Same formula as {list}, but with the atoms connected differently (isomer).',
     ideal: 'ideal {v}',
     notVerified: 'not verified',
@@ -129,7 +148,8 @@ const t = createT({
     bond: 'Bond',
     type: 'Type',
     length: 'Length',
-    bondsNote: 'Lengths in bold: experimental; ≈ estimated from covalent radii (ionic radii for ions). Average bond energies; ≈ Pauling estimate. ΔEN = electronegativity difference (Pauling).',
+    bondsNote:
+      'Lengths in bold: experimental; ≈ estimated from covalent radii (ionic radii for ions). Average bond energies; ≈ Pauling estimate. ΔEN = electronegativity difference (Pauling).',
     nonpolarMu: 'nonpolar (μ = 0)',
     polarMu: 'polar, μ = {d} D',
     dipoleNote: 'experimental dipole moment (debye)',
@@ -138,8 +158,10 @@ const t = createT({
     polarityNote: 'estimate from the symmetry and the bond dipoles',
     dfMetal: '{name} is a {block}-block metal: common oxidation states {ox}.',
     nobleGas: 'Noble gas: the outer shell is full ({n} electrons), so it forms no bonds.',
-    valence: (p) => `<b>${p.lone}</b> valence electrons${p.q ? ` (ion with charge ${p.q})` : ''}: ${p.pairs} pair${p.pairs === 1 ? '' : 's'} and ${p.single} unpaired electron${p.single === 1 ? '' : 's'} (Hund's rule).`,
-    canBond: (p) => `Unpaired electrons can form bonds: ${p.art} usually forms <b>${p.v}</b> bond${p.v === 1 ? '' : 's'}${p.more ? ` (also ${p.more} with more electronegative atoms, expanded octet)` : ''}.`,
+    valence: (p) =>
+      `<b>${p.lone}</b> valence electrons${p.q ? ` (ion with charge ${p.q})` : ''}: ${p.pairs} pair${p.pairs === 1 ? '' : 's'} and ${p.single} unpaired electron${p.single === 1 ? '' : 's'} (Hund's rule).`,
+    canBond: (p) =>
+      `Unpaired electrons can form bonds: ${p.art} usually forms <b>${p.v}</b> bond${p.v === 1 ? '' : 's'}${p.more ? ` (also ${p.more} with more electronegative atoms, expanded octet)` : ''}.`,
     nobleConfig: 'The ion has the electron configuration of a noble gas: it is stable.',
     metal: 'Metal: with a very electronegative nonmetal it gives away electrons and forms a positive ion (ionic bond).',
     composition: 'Composition',
@@ -150,6 +172,10 @@ const t = createT({
     generated: ' · generated name',
     deselect: 'Deselect (Esc)',
     lewis: 'Lewis structure',
+    export: 'Copy and export',
+    copySmiles: 'Copy SMILES',
+    copyFormula: 'Copy formula',
+    saveSvg: 'Save the drawing (SVG)',
     atom: 'Atom',
     data: 'Data',
     molarMass: 'Molar mass',
@@ -175,20 +201,24 @@ const t = createT({
     unitsNote: 'Click an item (or the molecule) for its card. Ctrl+click to select several and combine them.',
   },
   eli6: {
-    radical: (p) => `<b>Elettron${p.n === 1 ? 'e solo' : 'i soli'}</b> su ${p.list}: un elettrone senza compagno cerca subito qualcuno con cui legarsi, per questo queste molecole reagiscono facilmente.`,
+    radical: (p) =>
+      `<b>Elettron${p.n === 1 ? 'e solo' : 'i soli'}</b> su ${p.list}: un elettrone senza compagno cerca subito qualcuno con cui legarsi, per questo queste molecole reagiscono facilmente.`,
     incomplete: '<b>Non completo</b>: {list} vorrebbe 8 elettroni intorno, ma ne ha meno.',
     incompleteHint: ' Prova a cliccare un legame per renderlo doppio o triplo.',
     expanded: '<b>Più di 8 elettroni</b> intorno a {list}: gli atomi grandi possono permetterselo.',
-    allOctets: 'Ogni atomo ha 8 elettroni intorno a sé (l\'idrogeno ne vuole 2): la molecola è «contenta» e stabile.',
+    allOctets: "Ogni atomo ha 8 elettroni intorno a sé (l'idrogeno ne vuole 2): la molecola è «contenta» e stabile.",
     formalCharges: 'I piccoli + e − dicono quale atomo ha qualche elettrone in più o in meno del normale.',
     geometry: 'Che forma ha',
     geoEst: 'Gli atomi si sistemano il più lontano possibile tra loro, come palloncini legati insieme.',
     bonds: 'I legami (le «strette di mano»)',
-    bondsNote: 'Un legame è una coppia di elettroni condivisa da due atomi. Più il numero dei kJ/mol è alto, più il legame è forte.',
-    polarityNote: 'polare = un lato della molecola è un po\' negativo e l\'altro un po\' positivo',
+    bondsNote:
+      'Un legame è una coppia di elettroni condivisa da due atomi. Più il numero dei kJ/mol è alto, più il legame è forte.',
+    polarityNote: "polare = un lato della molecola è un po' negativo e l'altro un po' positivo",
     nobleGas: 'Gas nobile: è già «completo» e non ha bisogno di legarsi con nessuno.',
-    valence: (p) => `Ha <b>${p.lone}</b> elettroni esterni${p.q ? ` (e carica ${p.q})` : ''}: ${p.pairs} coppi${p.pairs === 1 ? 'a' : 'e'} e ${p.single} elettron${p.single === 1 ? 'e da solo' : 'i da soli'}.`,
-    canBond: (p) => `Ogni elettrone da solo è come una «mano» libera: ${p.art} di solito fa <b>${p.v}</b> legam${p.v === 1 ? 'e' : 'i'}.`,
+    valence: (p) =>
+      `Ha <b>${p.lone}</b> elettroni esterni${p.q ? ` (e carica ${p.q})` : ''}: ${p.pairs} coppi${p.pairs === 1 ? 'a' : 'e'} e ${p.single} elettron${p.single === 1 ? 'e da solo' : 'i da soli'}.`,
+    canBond: (p) =>
+      `Ogni elettrone da solo è come una «mano» libera: ${p.art} di solito fa <b>${p.v}</b> legam${p.v === 1 ? 'e' : 'i'}.`,
     nobleConfig: 'Lo ione ora è «completo», come un gas nobile: è stabile.',
     metal: 'È un metallo: se incontra un atomo che attira molto gli elettroni (come il cloro), gliene regala qualcuno.',
     lewis: 'Disegno degli elettroni (struttura di Lewis)',
@@ -196,7 +226,7 @@ const t = createT({
     molarMass: 'Quanto pesa (massa molare)',
     valenceElectrons: 'Elettroni esterni',
     polarity: 'Ha due «poli»?',
-    sheet: 'Che cos\'è',
+    sheet: "Che cos'è",
     emptyTitle: 'Il banco è vuoto',
     emptySteps: [
       'Clicca un elemento a sinistra per mettere un atomo sul banco.',
@@ -214,18 +244,32 @@ const BSYM = { 1: '–', 2: '=', 3: '≡' };
 const formulaHtml = (f) => esc(f).replace(/([₀-₉]+)/g, '<span class="sub">$1</span>');
 
 const sectionHtml = (title, body, cls = '') => `<section class="mp-sec ${cls}"><h4>${title}</h4>${body}</section>`;
-const row = (label, value, note = '') => `<div class="mp-row"><dt>${label}</dt><dd>${value}${note ? `<small>${note}</small>` : ''}</dd></div>`;
+const row = (label, value, note = '') =>
+  `<div class="mp-row"><dt>${label}</dt><dd>${value}${note ? `<small>${note}</small>` : ''}</dd></div>`;
 
 function title(lab, u) {
   const { ident, desc } = u;
-  if (ident.entry) return { name: ident.entry.name, aka: ident.entry.aka, kind: ident.entry.ionic ? t('ionicCompound') : ident.entry.charge ? t('ion') : t('molecule') };
+  if (ident.entry)
+    return {
+      name: ident.entry.name,
+      aka: ident.entry.aka,
+      kind: ident.entry.ionic ? t('ionicCompound') : ident.entry.charge ? t('ion') : t('molecule'),
+    };
   if (desc.atoms.length === 1) {
     const info = lab.get(desc.atoms[0].z);
     const q = u.charge;
     const p = { name: info.name.toLowerCase(), Name: info.name };
-    return { name: q ? u.generatedName ?? t('ionOf', p) : t('atomOf', p), kind: q ? t('monoIon') : t('isolatedAtom') };
+    return {
+      name: q ? (u.generatedName ?? t('ionOf', p)) : t('atomOf', p),
+      kind: q ? t('monoIon') : t('isolatedAtom'),
+    };
   }
-  if (u.ionic) return { name: u.generatedName ?? t('ionicCompound'), kind: t('ionicCompound'), generated: Boolean(u.generatedName) };
+  if (u.ionic)
+    return {
+      name: u.generatedName ?? t('ionicCompound'),
+      kind: t('ionicCompound'),
+      generated: Boolean(u.generatedName),
+    };
   if (u.generatedName) return { name: u.generatedName, kind: t('molecule'), generated: true };
   return { name: u.charge ? t('polyIon') : t('notInLibrary'), kind: u.charge ? t('ion') : t('molecule') };
 }
@@ -242,22 +286,39 @@ function statusList(lab, u) {
     items.push(['warn', t('radical', { n: radicals.length, list: radicals.map(sym).join(', ') })]);
   }
   if (incomplete.length) {
-    const exception = incomplete.every((i) => [4, 5, 13].includes(u.desc.atoms[i].z) || lab.get(u.desc.atoms[i].z).group <= 2);
+    const exception = incomplete.every(
+      (i) => [4, 5, 13].includes(u.desc.atoms[i].z) || lab.get(u.desc.atoms[i].z).group <= 2,
+    );
     const list = incomplete.map((i) => t('electronsN', { sym: sym(i), n: u.lewisAtoms[i].electronsAround })).join(', ');
-    items.push([exception ? 'info' : 'warn', `${t('incomplete', { list })}${exception ? t('incompleteException') : t('incompleteHint')}`]);
+    items.push([
+      exception ? 'info' : 'warn',
+      `${t('incomplete', { list })}${exception ? t('incompleteException') : t('incompleteHint')}`,
+    ]);
   }
-  if (expanded.length) items.push(['info', t('expanded', { list: expanded.map((i) => t('electronsN', { sym: sym(i), n: u.lewisAtoms[i].electronsAround })).join(', ') })]);
+  if (expanded.length)
+    items.push([
+      'info',
+      t('expanded', {
+        list: expanded.map((i) => t('electronsN', { sym: sym(i), n: u.lewisAtoms[i].electronsAround })).join(', '),
+      }),
+    ]);
   if (!radicals.length && !incomplete.length && !u.invalid && !u.unverified) items.push(['ok', t('allOctets')]);
   const fc = u.lewisAtoms.filter((a) => a.formalCharge).length;
   if (fc && !u.ionic) items.push(['info', t('formalCharges')]);
   if (u.tier === TIER.UNKNOWN) items.push(['bad', t('unknownChem')]);
   else if (u.tier === TIER.UNVERIFIED) items.push(['warn', t('unverified')]);
   if (u.ident.byFormula) {
-    items.push(['info', `${t('byFormula', { name: esc(u.ident.entry.name) })}${u.ident.entry.ionic ? t('byFormulaIonic') : t('byFormulaOther')}`]);
+    items.push([
+      'info',
+      `${t('byFormula', { name: esc(u.ident.entry.name) })}${u.ident.entry.ionic ? t('byFormulaIonic') : t('byFormulaOther')}`,
+    ]);
   } else if (u.ident.entry && !u.ident.exact) {
     items.push(['warn', t('differentOrders', { name: esc(u.ident.entry.name) })]);
   } else if (!u.ident.entry && u.ident.sameFormula?.length) {
-    items.push(['info', t('isomer', { list: u.ident.sameFormula.map((e) => `<b>${esc(e.name.toLowerCase())}</b>`).join(', ') })]);
+    items.push([
+      'info',
+      t('isomer', { list: u.ident.sameFormula.map((e) => `<b>${esc(e.name.toLowerCase())}</b>`).join(', ') }),
+    ]);
   }
   return items;
 }
@@ -288,10 +349,15 @@ function geometryHtml(lab, u) {
       const vals = [...new Set(list.map((a) => Math.round(a)))].sort((x, y) => x - y).slice(0, 3);
       const expKey = k.replace(/–/g, '-');
       const exp = entryGeo?.[expKey] ?? entryGeo?.[expKey.split('-').reverse().join('-')];
-      return exp && v.steric <= 4 ? `${k} <b>${fmtNumber(exp, 1)}°</b>` : `${k} ≈ ${vals.map((x) => `${x}°`).join(', ')}`;
+      return exp && v.steric <= 4
+        ? `${k} <b>${fmtNumber(exp, 1)}°</b>`
+        : `${k} ≈ ${vals.map((x) => `${x}°`).join(', ')}`;
     });
-    lines.push(`<li><b>${centre}</b> <span class="mp-vsepr">${v.notation.replace(/(\d)/g, (d) => subscript(d))}</span> ${esc(v.shape)}${
-      v.ideal ? ` <small>(${esc(t('ideal', { v: v.ideal }))})</small>` : ''}${v.reliable ? '' : ` <small class="mp-warn">${t('notVerified')}</small>`}<br><small>${angles.join(' · ')}</small></li>`);
+    lines.push(
+      `<li><b>${centre}</b> <span class="mp-vsepr">${v.notation.replace(/(\d)/g, (d) => subscript(d))}</span> ${esc(v.shape)}${
+        v.ideal ? ` <small>(${esc(t('ideal', { v: v.ideal }))})</small>` : ''
+      }${v.reliable ? '' : ` <small class="mp-warn">${t('notVerified')}</small>`}<br><small>${angles.join(' · ')}</small></li>`,
+    );
   });
   if (!lines.length) return '';
   const src = entryGeo ? t('geoExp') : t('geoEst');
@@ -327,7 +393,9 @@ function bondsHtml(lab, u) {
     const d = Math.hypot(...[0, 1, 2].map((k) => u.positions[b.i][k] - u.positions[b.j][k])) * 100;
     const qa = chargeText(u.desc.atoms[b.i].charge);
     const qb = chargeText(u.desc.atoms[b.j].charge);
-    rows.push(`<tr><td><b>${A.symbol}${qa}···${B.symbol}${qb}</b></td><td>${t('ionic')}<br><small>${t('transferred', { n: b.transfer })}${ch.dEN != null ? ` · ΔEN ${fmtNumber(ch.dEN, 2, 2)}` : ''}</small></td><td>≈ ${Math.round(d)} pm</td><td>—</td></tr>`);
+    rows.push(
+      `<tr><td><b>${A.symbol}${qa}···${B.symbol}${qb}</b></td><td>${t('ionic')}<br><small>${t('transferred', { n: b.transfer })}${ch.dEN != null ? ` · ΔEN ${fmtNumber(ch.dEN, 2, 2)}` : ''}</small></td><td>≈ ${Math.round(d)} pm</td><td>—</td></tr>`,
+    );
   }
   if (!rows.length) return '';
   return sectionHtml(
@@ -352,7 +420,7 @@ function polarity(lab, u) {
     for (let a = 0; a < 3; a++) v[a] += (u.positions[b.j][a] - u.positions[b.i][a]) * k;
   }
   // coppie solitarie dell'atomo centrale (es. NH₃, H₂O): contribuiscono al dipolo
-  u.lone?.forEach((list, i) => {
+  u.lone?.forEach((list) => {
     for (const d of list ?? []) if (d.kind === 'pair') for (let a = 0; a < 3; a++) v[a] += d.dir[a] * 0.35;
   });
   const m = Math.hypot(...v);
@@ -365,7 +433,9 @@ function atomHtml(lab, u) {
   const q = u.charge;
   const parts = [];
   if (info.tier !== TIER.MAIN) {
-    parts.push(`<p>${t('dfMetal', { name: esc(info.name), block: info.block, ox: info.valences.map((v) => `+${v}`).join(', ') })}</p>`);
+    parts.push(
+      `<p>${t('dfMetal', { name: esc(info.name), block: info.block, ox: info.valences.map((v) => `+${v}`).join(', ') })}</p>`,
+    );
   } else if (info.nobleGas && info.maxBonds === 0) {
     parts.push(`<p>${t('nobleGas', { n: info.V })}</p>`);
   } else {
@@ -373,7 +443,9 @@ function atomHtml(lab, u) {
     const single = la.unpaired;
     parts.push(`<p>${t('valence', { lone: la.lone, q: q ? chargeText(q) : '', pairs, single })}</p>`);
     if (!q && single > 0) {
-      parts.push(`<p>${t('canBond', { art: art(info), v: info.valences[0], more: info.valences.length > 1 ? info.valences.slice(1).join(', ') : '' })}</p>`);
+      parts.push(
+        `<p>${t('canBond', { art: art(info), v: info.valences[0], more: info.valences.length > 1 ? info.valences.slice(1).join(', ') : '' })}</p>`,
+      );
     }
     if (q && single === 0) parts.push(`<p>${t('nobleConfig')}</p>`);
     if (info.metal && !q) parts.push(`<p>${t('metal')}</p>`);
@@ -393,11 +465,32 @@ export function compositionHtml(lab, u, mass) {
   const rows = [...by]
     .map(([x, n]) => ({ x, n, pct: (100 * n * x.mass) / mass }))
     .sort((a, b) => b.pct - a.pct)
-    .map(({ x, n, pct }) => `<tr><td><b>${x.symbol}</b> <small>${esc(x.name.toLowerCase())}</small></td><td>${n}</td>
-      <td class="mp-pct"><span class="mp-bar" style="--w:${pct.toFixed(1)}%;--c:${x.color}"></span>${fmtNumber(pct, 2, 2)} %</td></tr>`);
+    .map(
+      ({ x, n, pct }) => `<tr><td><b>${x.symbol}</b> <small>${esc(x.name.toLowerCase())}</small></td><td>${n}</td>
+      <td class="mp-pct"><span class="mp-bar" style="--w:${pct.toFixed(1)}%;--c:${x.color}"></span>${fmtNumber(pct, 2, 2)} %</td></tr>`,
+    );
   return sectionHtml(
     t('composition'),
     `<table class="mp-table mp-comp"><thead><tr><th>${t('element')}</th><th>${t('atoms')}</th><th>${t('massPct')}</th></tr></thead><tbody>${rows.join('')}</tbody></table>`,
+  );
+}
+
+/** Formula in testo semplice, da copiare: «C₉H₈O₄» → «C9H8O4», «NH₄⁺» → «NH4+». */
+export const plainFormula = (formula) => String(formula).normalize('NFKD').replace(/[−–]/g, '-');
+
+/** SMILES della molecola selezionata (lo scrittore di chem/smiles.js: incollata torna uguale). */
+export const unitSmiles = (lab, u) => writeSmiles(u.desc, (z) => lab.get(z).symbol);
+
+/** Copia della molecola: SMILES e formula negli appunti, disegno di Lewis come file SVG. */
+function exportHtml(lab, u, svg) {
+  return sectionHtml(
+    t('export'),
+    `<p class="mp-smiles"><code>${esc(unitSmiles(lab, u))}</code></p>
+     <div class="mp-alts">
+       <button type="button" class="chip-btn" data-act="copy-smiles">${t('copySmiles')}</button>
+       <button type="button" class="chip-btn" data-act="copy-formula">${t('copyFormula')}</button>
+       ${svg ? `<button type="button" class="chip-btn" data-act="save-svg">${t('saveSvg')}</button>` : ''}
+     </div>`,
   );
 }
 
@@ -437,6 +530,7 @@ export function unitPanelHtml(lab, u, { alternatives = [] } = {}) {
     ${u.desc.atoms.length > 2 ? geometryHtml(lab, u) : ''}
     ${bondsHtml(lab, u)}
     ${entry ? sectionHtml(t('sheet'), `<p>${esc(entry.desc)}</p>${entry.note ? `<p class="mp-callout">${esc(entry.note)}</p>` : ''}${entry.uses ? `<p><b>${t('usesLabel')}</b> ${esc(entry.uses)}</p>` : ''}`) : ''}
+    ${exportHtml(lab, u, svg)}
     ${alternatives.length ? sectionHtml(t('isomers'), `<div class="mp-alts">${alternatives.map((e) => `<button type="button" class="chip-btn" data-alt="${e.id}">${esc(e.name)}</button>`).join('')}</div><p class="mp-note">${t('isomersNote')}</p>`) : ''}`;
 }
 
@@ -445,12 +539,17 @@ export function summaryHtml(units) {
   if (!units.length) {
     return `<div class="mp-empty">
       <p class="mp-empty__title">${t('emptyTitle')}</p>
-      <ol>${t('emptySteps').map((s) => `<li>${s}</li>`).join('')}</ol>
+      <ol>${t('emptySteps')
+        .map((s) => `<li>${s}</li>`)
+        .join('')}</ol>
       <p>${t('emptyOr')}</p></div>`;
   }
   return `<header class="mp-head"><p class="mp-kind">${t('onBench')}</p><h3 class="mp-name">${t('units', { n: units.length })}</h3></header>
     <ul class="mp-units">${units
-      .map((u) => `<li><button type="button" class="mp-unit" data-unit="${u.key}"><b>${formulaHtml(u.formula)}</b><span>${esc(u.label)}</span></button></li>`)
+      .map(
+        (u) =>
+          `<li><button type="button" class="mp-unit" data-unit="${u.key}"><b>${formulaHtml(u.formula)}</b><span>${esc(u.label)}</span></button></li>`,
+      )
       .join('')}</ul>
     <p class="mp-note">${t('unitsNote')}</p>`;
 }

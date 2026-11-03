@@ -29,5 +29,5 @@ export const initialState = {
 };
 
 export function hasActiveFilters(s) {
-  return s.query !== '' || s.categories.size > 0 || s.physState !== 'all' || s.blocks.size > 0;
+  return s.query.trim() !== '' || s.categories.size > 0 || s.physState !== 'all' || s.blocks.size > 0;
 }

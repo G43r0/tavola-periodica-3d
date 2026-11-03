@@ -1,0 +1,47 @@
+name: Errore nei contenuti
+description: Un dato, un nome, una reazione, una ricetta o una traduzione sbagliati
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Grazie! I contenuti vengono da fonti pubblicate (le trovi nella finestra «Fonti dei dati e guida»): per correggerli
+        serve sapere dove, che cosa c'è scritto, che cosa dovrebbe esserci e da dove lo sai.
+
+        Nel titolo scrivi prima la parte dell'app e poi l'errore, per esempio «Scheda del rame: densità sbagliata».
+  - type: input
+    id: where
+    attributes:
+      label: Dove
+      description: L'elemento, la sostanza, la reazione, la ricetta, l'esercitazione o il testo con l'errore.
+      placeholder: 'Elemento Cu, scheda; oppure reazione «Na + H₂O»; oppure ricetta del libro «Titolazione»'
+    validations:
+      required: true
+  - type: textarea
+    id: found
+    attributes:
+      label: Che cosa c'è scritto
+      description: Il valore o il testo come lo vedi nell'app. Uno screenshot aiuta.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Che cosa dovrebbe esserci
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Fonte
+      description: Un collegamento o un riferimento che si può controllare (banca dati, libro con pagina, articolo).
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versione dell'app
+      description: Si legge in fondo alla finestra «Fonti dei dati e guida».
+      placeholder: '0.9.2'
+    validations:
+      required: false

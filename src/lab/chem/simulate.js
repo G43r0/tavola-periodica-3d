@@ -1,3 +1,4 @@
+// @ts-check
 // «Simula reazione»: che cosa succede quando le molecole presenti sul banco si urtano.
 // 1. Reazioni della libreria: si sceglie il percorso (anche a più passi: i prodotti di un passo possono
 //    reagire nel successivo) che lascia meno molecole di partenza inutilizzate, poi quello con ΔH più
@@ -14,14 +15,22 @@ import { entryEnergy } from './combine.js';
 /** ΔH minimo (kJ) perché una reazione prevista dal modello avvenga: sotto questa soglia l'urto non è efficace. */
 export const MODEL_MIN_DH = -40;
 
-/** ΔH di una reazione caricata (kJ, per l'equazione in moli): entalpie di formazione, altrimenti energie di legame. */
+/**
+ * ΔH di una reazione caricata (kJ, per l'equazione in moli): entalpie di formazione, altrimenti energie di legame.
+ * @param {import('../../types').LoadedReaction} re
+ */
 export function reactionDH(re) {
   return re.enthalpy.formation.value ?? re.enthalpy.bonds?.value ?? null;
 }
 
-const sideKey = (list) => list.map(([, k]) => k).sort().join('+');
+const sideKey = (list) =>
+  list
+    .map(([, k]) => k)
+    .sort()
+    .join('+');
 /** b è la reazione inversa di a (stesse specie con i lati scambiati). */
-const isReverse = (a, b) => sideKey(a.r.reactants) === sideKey(b.r.products) && sideKey(a.r.products) === sideKey(b.r.reactants);
+const isReverse = (a, b) =>
+  sideKey(a.r.reactants) === sideKey(b.r.products) && sideKey(a.r.products) === sideKey(b.r.reactants);
 const sum = (m) => [...m.values()].reduce((t, v) => t + v, 0);
 
 /**
@@ -29,10 +38,10 @@ const sum = (m) => [...m.values()].reduce((t, v) => t + v, 0);
  * Si esplorano tutte le combinazioni dei primi `lookahead` passi; da lì in poi si sceglie ogni volta il
  * passo che consuma più molecole di partenza (a parità, il più esotermico).
  * @param {Map<string,number>} inventory specie (id della libreria o "el:X") → numero di molecole
- * @param {object[]} reactions reazioni caricate ({ r, enthalpy, … })
- * @param {{energy?:boolean, exclude?:object[], lookahead?:number}} opts energy: energia fornita dall'esterno
+ * @param {import('../../types').LoadedReaction[]} reactions reazioni caricate ({ r, enthalpy, … })
+ * @param {{energy?:boolean, exclude?:import('../../types').LoadedReaction[], lookahead?:number}} opts energy: energia fornita dall'esterno
  *   (ammette le reazioni endotermiche); exclude: reazioni già avvenute, di cui non si ammette l'inversa
- * @returns {{ steps:{re:object, times:number, onlyOrig:boolean}[], leftover:Map<string,number>, dH:number }}
+ * @returns {{ steps:{re:import('../../types').LoadedReaction, times:number, onlyOrig:boolean}[], leftover:Map<string,number>, dH:number }}
  *   onlyOrig: il passo usa solo molecole di partenza (può avvenire subito, insieme agli altri passi così)
  */
 export function planReactions(inventory, reactions, { energy = false, exclude = [], lookahead = 2 } = {}) {
@@ -42,7 +51,7 @@ export function planReactions(inventory, reactions, { energy = false, exclude = 
   });
   // solo le reazioni i cui reagenti sono presenti o si possono formare
   const reachable = new Set(inventory.keys());
-  for (let grew = true; grew; ) {
+  for (let grew = true; grew;) {
     grew = false;
     for (const re of usable) {
       if (!re.r.reactants.every(([, k]) => reachable.has(k))) continue;
@@ -58,7 +67,8 @@ export function planReactions(inventory, reactions, { energy = false, exclude = 
 
   // orig: molecole di partenza, made: prodotti dei passi precedenti (si consumano prima le prime)
   const available = (k, orig, made) => (orig.get(k) || 0) + (made.get(k) || 0);
-  const maxTimes = (re, orig, made) => Math.min(...re.r.reactants.map(([c, k]) => Math.floor(available(k, orig, made) / c)));
+  const maxTimes = (re, orig, made) =>
+    Math.min(...re.r.reactants.map(([c, k]) => Math.floor(available(k, orig, made) / c)));
   const apply = (re, times, orig, made) => {
     const o = new Map(orig);
     const m = new Map(made);
@@ -83,6 +93,7 @@ export function planReactions(inventory, reactions, { energy = false, exclude = 
     return a.steps.length < b.steps.length;
   };
 
+  /** @returns {{ re: import('../../types').LoadedReaction, times: number, gain?: number, dH?: number }[]} */
   const options = (orig, made, path) =>
     usable
       .filter((re) => !path.some((p) => isReverse(p, re)))
@@ -90,7 +101,13 @@ export function planReactions(inventory, reactions, { energy = false, exclude = 
       .filter((o) => o.times >= 1);
   const step = (st, { re, times }) => {
     const [orig, made, onlyOrig] = apply(re, times, st.orig, st.made);
-    return { orig, made, path: [...st.path, re], steps: [...st.steps, { re, times, onlyOrig }], dH: st.dH + reactionDH(re) * times };
+    return {
+      orig,
+      made,
+      path: [...st.path, re],
+      steps: [...st.steps, { re, times, onlyOrig }],
+      dH: st.dH + reactionDH(re) * times,
+    };
   };
 
   /** Completa in modo goloso: ogni volta il passo che consuma più molecole di partenza, poi il più esotermico. */
@@ -129,7 +146,9 @@ export function planReactions(inventory, reactions, { energy = false, exclude = 
 /**
  * Perché non avviene nessuna reazione: reazioni con tutti i reagenti presenti ma in quantità insufficiente,
  * reazioni endotermiche (servirebbe energia) e reazioni che richiedono altro (es. i lieviti).
- * @returns {{ missing:{re:object, lack:{display:string, count:number}[]}[], endothermic:object[], needs:object[] }}
+ * @param {Map<string,number>} inventory specie (id della libreria o "el:X") → numero di molecole
+ * @param {import('../../types').LoadedReaction[]} reactions
+ * @returns {{ missing:{re:import('../../types').LoadedReaction, lack:{display:string, count:number}[]}[], endothermic:import('../../types').LoadedReaction[], needs:import('../../types').LoadedReaction[] }}
  */
 export function diagnose(inventory, reactions, { energy = false } = {}) {
   const missing = [];
@@ -173,14 +192,23 @@ const gcd = (a, b) => (b ? gcd(b, a % b) : a);
 /**
  * Sostanza della libreria che si forma con tutti questi atomi: una molecola (H₂SO₄) o più copie
  * della stessa (2 HBr). Tra più isomeri, quello con l'energia di legame maggiore (come Combina).
- * @returns {{entry:object, copies:number} | null}
+ * @param {import('../../types').LabElements} lab
+ * @param {import('../../types').LibraryIndex} library
+ * @param {number[]} zs numeri atomici di tutti gli atomi
+ * @returns {{entry:import('../../types').LibraryEntry, copies:number} | null}
  */
 export function libraryProduct(lab, library, zs) {
   const pick = (list) =>
-    list
-      .map((e) => ({ e, energy: entryEnergy(lab, e) }))
-      .sort((a, b) => b.energy - a.energy)[0]?.e ?? null;
-  const direct = pick(library.byFormula(formulaKey(lab, zs.map((z) => ({ z })), 0)));
+    list.map((e) => ({ e, energy: entryEnergy(lab, e) })).sort((a, b) => b.energy - a.energy)[0]?.e ?? null;
+  const direct = pick(
+    library.byFormula(
+      formulaKey(
+        lab,
+        zs.map((z) => ({ z })),
+        0,
+      ),
+    ),
+  );
   if (direct) return { entry: direct, copies: 1 };
   const counts = new Map();
   for (const z of zs) counts.set(z, (counts.get(z) || 0) + 1);
@@ -207,15 +235,20 @@ function modelEnthalpy(lab, members, product) {
  * La reazione più esotermica prevista dal modello tra 2 molecole (o, se nessuna coppia reagisce, tra 3).
  * Non si usa per specie che compaiono insieme in una reazione della libreria: lì vale la libreria
  * (H₂ + O₂ non forma H₂O₂: per l'acqua servono 2 H₂ per ogni O₂).
+ * @param {import('../../types').LabElements} lab
+ * @param {import('../../types').LibraryIndex} library
  * @param {{key:string, count:number, zs:number[], hf:number|null, bondKj:number|null}[]} species
  *   hf: entalpia di formazione (null se non nota); bondKj: graphBondEnergy con `tabulated` (null per i composti ionici)
- * @returns {{ keys:string[], product:{entry:object, copies:number}, dH:number, method:'formation'|'bonds' } | null}
+ * @param {import('../../types').LoadedReaction[]} reactions
+ * @returns {{ keys:string[], product:{entry:import('../../types').LibraryEntry, copies:number}, dH:number, method:'formation'|'bonds' } | null}
  */
 export function modelReaction(lab, library, species, reactions) {
   const reactantSets = reactions.map((re) => new Set(re.r.reactants.map(([, k]) => k)));
   const blocked = (keys) => {
     const distinct = [...new Set(keys)];
-    return reactantSets.some((set) => (distinct.length === 1 ? set.size === 1 && set.has(distinct[0]) : distinct.every((k) => set.has(k))));
+    return reactantSets.some((set) =>
+      distinct.length === 1 ? set.size === 1 && set.has(distinct[0]) : distinct.every((k) => set.has(k)),
+    );
   };
   for (const size of [2, 3]) {
     let best = null;
@@ -224,7 +257,11 @@ export function modelReaction(lab, library, species, reactions) {
         const members = picked.map((i) => species[i]);
         const keys = members.map((s) => s.key);
         if (blocked(keys)) return;
-        const product = libraryProduct(lab, library, members.flatMap((s) => s.zs));
+        const product = libraryProduct(
+          lab,
+          library,
+          members.flatMap((s) => s.zs),
+        );
         if (!product) return;
         const dH = modelEnthalpy(lab, members, product);
         if (!dH || dH.value > MODEL_MIN_DH) return;

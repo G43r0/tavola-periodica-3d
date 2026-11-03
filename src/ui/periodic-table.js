@@ -129,7 +129,10 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
     btn.style.setProperty('--i', el.grid.x + el.grid.y * 1.6);
     btn.tabIndex = el.z === 1 ? 0 : -1;
     if (el.dataQuality === 'predicted') btn.classList.add('cell--predicted');
-    btn.setAttribute('aria-label', t('cellLabel', { name: el.name, symbol: el.symbol, z: el.z, mass: fmtMass(el.atomicMass) }));
+    btn.setAttribute(
+      'aria-label',
+      t('cellLabel', { name: el.name, symbol: el.symbol, z: el.z, mass: fmtMass(el.atomicMass) }),
+    );
     btn.innerHTML = `
       <span class="cell__z">${el.z}</span>
       <span class="cell__sym">${esc(el.symbol)}</span>
@@ -143,7 +146,8 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
   setTimeout(() => grid.classList.remove('is-entering'), 1400);
 
   if (gfx().specimens) {
-    for (const cell of cells.values()) cell.insertAdjacentHTML('beforeend', '<span class="cell__spec" aria-hidden="true"></span>');
+    for (const cell of cells.values())
+      cell.insertAdjacentHTML('beforeend', '<span class="cell__spec" aria-hidden="true"></span>');
     const run = () =>
       import('../gfx/specimen.js')
         .then((m) =>
@@ -290,7 +294,7 @@ export function createPeriodicTable(stage, elements, store, { onOpen }) {
     const cell = ev.target.closest('.cell[data-z]');
     if (!cell) return;
     const el = byZ.get(Number(cell.dataset.z));
-    let target = null;
+    let target;
     if (DIRS[ev.key]) target = neighbour(el, DIRS[ev.key]);
     else if (ev.key === 'Home') target = byZ.get(1);
     else if (ev.key === 'End') target = byZ.get(118);

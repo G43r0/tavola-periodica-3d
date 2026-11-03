@@ -33,12 +33,14 @@ const t = createT({
     errorLab: 'Impossibile caricare il laboratorio molecolare.',
     errorSandbox: 'Impossibile caricare la sandbox.',
     errorGame: 'Impossibile caricare il simulatore di laboratorio.',
+    recovered: "L'app si era chiusa per un errore ed è stata ricaricata",
   },
   en: {
     error3d: 'Could not load the 3D viewer.',
     errorLab: 'Could not load the molecular laboratory.',
     errorSandbox: 'Could not load the sandbox.',
     errorGame: 'Could not load the laboratory simulator.',
+    recovered: 'The app closed because of an error and was reloaded',
   },
 });
 
@@ -151,7 +153,9 @@ function openGame() {
   gameLoading ??= import('./game/game-view.js')
     .then((m) => {
       // dal quaderno del simulatore una reazione si apre nel laboratorio molecolare, sopra il gioco
-      game = m.createGame(elements, { onOpenLab: (reaction, onClose) => openLab(null, { reaction, above: true, onClose }) });
+      game = m.createGame(elements, {
+        onOpenLab: (reaction, onClose) => openLab(null, { reaction, above: true, onClose }),
+      });
       return game;
     })
     .catch((err) => {
@@ -176,7 +180,7 @@ const explain = createExplain(elements, {
   },
 });
 
-const sparks = initSparks({ elements, store, table, explain });
+const sparks = initSparks({ elements, store, explain });
 
 try {
   const resume = JSON.parse(sessionStorage.getItem(RESUME_KEY) || 'null');
@@ -191,7 +195,14 @@ try {
 const isTyping = (t) => t instanceof HTMLElement && (t.matches('input, textarea, select') || t.isContentEditable);
 
 window.addEventListener('keydown', (ev) => {
-  if (document.querySelector('dialog[open]') || viewer?.isOpen() || lab?.isOpen() || sandbox?.isOpen() || game?.isOpen()) return;
+  if (
+    document.querySelector('dialog[open]') ||
+    viewer?.isOpen() ||
+    lab?.isOpen() ||
+    sandbox?.isOpen() ||
+    game?.isOpen()
+  )
+    return;
   const typing = isTyping(ev.target);
 
   if ((ev.key === '/' && !typing) || ((ev.ctrlKey || ev.metaKey) && ['f', 'k'].includes(ev.key.toLowerCase()))) {
@@ -218,3 +229,5 @@ window.addEventListener('keydown', (ev) => {
 
 if (window.desktop) document.documentElement.dataset.platform = window.desktop.platform;
 initUpdater();
+// app desktop: il processo principale ha ricaricato la pagina dopo che il renderer si era chiuso (electron/recover.cjs)
+window.desktop?.onRecovered?.(() => toast(t('recovered'), { duration: 8000 }));

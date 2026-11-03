@@ -1,3 +1,4 @@
+// @ts-check
 // Banco di lavoro come grafo: atomi, legami covalenti (ordine 1–3) e legami ionici
 // (elettroni trasferiti dal metallo al non metallo). Nessuna grafica qui.
 
@@ -23,6 +24,8 @@ export class Bench {
   }
 
   addBond(a, b, { order = 1, ionic = false, transfer = 0, donor = null } = {}) {
+    // un legame verso un atomo che non c'è (un errore di chi costruisce) renderebbe il banco inutilizzabile
+    if (a === b || !this.atoms.has(a) || !this.atoms.has(b)) return null;
     const id = nextId++;
     this.bonds.set(id, { id, a, b, order: ionic ? 0 : order, ionic, transfer, donor });
     return id;

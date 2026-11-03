@@ -255,17 +255,29 @@ export function liquidMaterial({ physical = false } = {}) {
   });
   if (physical) mat.clearcoat = 0.4;
   const uniforms = {
-    uLevel: { value: 1e3 }, uNormal: { value: new THREE.Vector3(0, 1, 0) }, uSurface: { value: new THREE.Color(0xffffff) }, uSurfaceAlpha: { value: 0.6 },
+    uLevel: { value: 1e3 },
+    uNormal: { value: new THREE.Vector3(0, 1, 0) },
+    uSurface: { value: new THREE.Color(0xffffff) },
+    uSurfaceAlpha: { value: 0.6 },
   };
   mat.userData.uniforms = uniforms;
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWorldP;')
-      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWorldP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      .replace(
+        '#include <worldpos_vertex>',
+        '#include <worldpos_vertex>\nvWorldP = (modelMatrix * vec4(transformed, 1.0)).xyz;',
+      );
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vWorldP;\nuniform float uLevel;\nuniform vec3 uNormal;\nuniform vec3 uSurface;\nuniform float uSurfaceAlpha;')
-      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (dot(vWorldP, uNormal) > uLevel) discard;')
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying vec3 vWorldP;\nuniform float uLevel;\nuniform vec3 uNormal;\nuniform vec3 uSurface;\nuniform float uSurfaceAlpha;',
+      )
+      .replace(
+        '#include <clipping_planes_fragment>',
+        '#include <clipping_planes_fragment>\nif (dot(vWorldP, uNormal) > uLevel) discard;',
+      )
       .replace(
         '#include <dithering_fragment>',
         '#include <dithering_fragment>\nif (!gl_FrontFacing) { gl_FragColor = vec4(mix(gl_FragColor.rgb, uSurface, 0.55), max(gl_FragColor.a, uSurfaceAlpha)); }',

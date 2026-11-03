@@ -41,7 +41,8 @@ class GameAO extends GTAOPass {
     this.scene.traverse((o) => {
       if (!o.visible) return;
       const m = o.material;
-      const see = o.isMesh && !(Array.isArray(m) ? m.some((x) => x.transparent) : m?.transparent || m?.depthWrite === false);
+      const see =
+        o.isMesh && !(Array.isArray(m) ? m.some((x) => x.transparent) : m?.transparent || m?.depthWrite === false);
       if (!see && (o.isMesh || o.isPoints || o.isLine || o.isSprite)) {
         o.visible = false;
         cache.push(o);
@@ -68,7 +69,14 @@ export class GameRenderer {
     this.ao = null;
     if (G.ao) {
       this.ao = new GameAO(game.scene, game.camera, 1, 1);
-      this.ao.updateGtaoMaterial({ radius: 0.3, distanceExponent: 1.6, thickness: 1.5, scale: 1, samples: 12, distanceFallOff: 1 });
+      this.ao.updateGtaoMaterial({
+        radius: 0.3,
+        distanceExponent: 1.6,
+        thickness: 1.5,
+        scale: 1,
+        samples: 12,
+        distanceFallOff: 1,
+      });
       this.ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
       this.ao.blendIntensity = 0.85;
       // sulla tela si moltiplica solo il colore: l'alfa resta 1 (se no la pagina sotto traspare e l'immagine sbiadisce)

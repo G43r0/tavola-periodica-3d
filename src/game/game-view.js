@@ -4,12 +4,49 @@ import * as THREE from 'three';
 import '../styles/game.css';
 import { createT, locale, pick } from '../i18n/index.js';
 import { gfx } from '../gfx/preset.js';
-import { esc, normalize } from '../chem/format.js';
+import { esc, normalize, fmtNumber } from '../chem/format.js';
 import { icons } from '../ui/icons.js';
 import { loadPhysics } from './physics.js';
 import { LabGame, FOV } from './game.js';
-import { CHAPTERS, EXERCISES, EXERCISE_BY_ID, EXTRAS, CHALLENGES, CHALLENGE_BY_ID, MEDALS, chapterExercises, chapterState, exerciseOpen, nextExercise, reputation, repTitle, recordResult, recordChallenge, challengeOpen, reportCard, SHOP, canBuy, buy, passed, newCareer, bookUnlocks } from './career.js';
-import { migrate, activeProfile, addProfile, renameProfile, deleteProfile, selectProfile, updateActive, newer } from './save.js';
+import {
+  CHAPTERS,
+  EXERCISES,
+  EXERCISE_BY_ID,
+  EXTRAS,
+  CHALLENGES,
+  CHALLENGE_BY_ID,
+  MEDALS,
+  chapterExercises,
+  chapterState,
+  exerciseOpen,
+  nextExercise,
+  reputation,
+  repTitle,
+  recordResult,
+  recordChallenge,
+  challengeOpen,
+  reportCard,
+  SHOP,
+  canBuy,
+  buy,
+  passed,
+  newCareer,
+  bookUnlocks,
+  lineParams,
+  answerNumber,
+  runSolution,
+} from './career.js';
+import {
+  migrate,
+  activeProfile,
+  addProfile,
+  renameProfile,
+  deleteProfile,
+  selectProfile,
+  updateActive,
+  newer,
+  freeProfileName,
+} from './save.js';
 import { SHELF, CABINET } from './reagents.js';
 import { reagentLook, FAMILIES, FAMILY_ORDER } from './stock.js';
 import { isClick, POUR_HOLD_MS } from './controls.js';
@@ -21,6 +58,7 @@ import { createBookView } from './book-view.js';
 import { TOOL_PAGES, TECHNIQUE_PAGES, SAFETY_PAGES } from './data/book-pages.js';
 import { GameAudio } from './audio/audio.js';
 import { GameRenderer } from './game-render.js';
+import { TEST_HOOKS, exposeForTests } from '../test-hooks.js';
 
 const t = createT(GAME_STRINGS);
 const SAVE_KEY = 'tp3d.game';
@@ -52,15 +90,27 @@ async function readDesktop() {
 }
 
 const rows = (list) => list.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-const stars = (n) => Array.from({ length: 5 }, (_, i) => `<span class="gm-star ${n >= i + 1 ? 'is-full' : n >= i + 0.5 ? 'is-half' : ''}">★</span>`).join('');
+const stars = (n) =>
+  Array.from(
+    { length: 5 },
+    (_, i) => `<span class="gm-star ${n >= i + 1 ? 'is-full' : n >= i + 0.5 ? 'is-half' : ''}">★</span>`,
+  ).join('');
 
 /** Mouse disegnato, con evidenziato il tasto sinistro (l), destro (r) o la rotella (w). */
-const mouseIcon = (part) => `<svg class="gm-mouse" viewBox="0 0 14 20" width="14" height="20" aria-hidden="true"><rect x="1" y="1" width="12" height="18" rx="6"/><path d="M1 8h12M7 1v7" class="gm-mouse__line"/>${
-  part === 'l' ? '<path d="M7 1.5A5.5 5.5 0 0 0 1.5 7v.5H7z" class="gm-mouse__on"/>' : part === 'r' ? '<path d="M7 1.5A5.5 5.5 0 0 1 12.5 7v.5H7z" class="gm-mouse__on"/>' : part === 'w' ? '<rect x="5.8" y="2.8" width="2.4" height="4.2" rx="1.2" class="gm-mouse__on"/>' : ''
-}</svg>`;
+const mouseIcon = (part) =>
+  `<svg class="gm-mouse" viewBox="0 0 14 20" width="14" height="20" aria-hidden="true"><rect x="1" y="1" width="12" height="18" rx="6"/><path d="M1 8h12M7 1v7" class="gm-mouse__line"/>${
+    part === 'l'
+      ? '<path d="M7 1.5A5.5 5.5 0 0 0 1.5 7v.5H7z" class="gm-mouse__on"/>'
+      : part === 'r'
+        ? '<path d="M7 1.5A5.5 5.5 0 0 1 12.5 7v.5H7z" class="gm-mouse__on"/>'
+        : part === 'w'
+          ? '<rect x="5.8" y="2.8" width="2.4" height="4.2" rx="1.2" class="gm-mouse__on"/>'
+          : ''
+  }</svg>`;
 /** Frecce accanto al mouse nella legenda: movimento in su e in giù (versare, alzare) o di lato (ruotare). */
 const ARROWS = { mouse: '↕', mousex: '↔' };
-const DROP = '<svg class="gm-drop" viewBox="0 0 10 14" width="9" height="12" aria-hidden="true"><path d="M5 .8C3.4 3.4 1 6.2 1 8.9a4 4 0 0 0 8 0C9 6.2 6.6 3.4 5 .8z"/></svg>';
+const DROP =
+  '<svg class="gm-drop" viewBox="0 0 10 14" width="9" height="12" aria-hidden="true"><path d="M5 .8C3.4 3.4 1 6.2 1 8.9a4 4 0 0 0 8 0C9 6.2 6.6 3.4 5 .8z"/></svg>';
 
 const TEMPLATE = () => `
   <div class="gm-stage"></div>
@@ -192,6 +242,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     game.notebook = notebook;
     bookView = createBookView({ game, t, kj, canOpenLab: () => Boolean(onOpenLab) });
     if (import.meta.env?.DEV) Object.assign(window, { __game: game, __view: view });
+    // il controllo anche qui, non solo in exposeForTests: nella build vera testHook() non gira nemmeno
+    if (TEST_HOOKS) exposeForTests('__tp3d', testHook());
     layout();
     $('.gm-loading').hidden = true;
   }
@@ -224,8 +276,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
         save = updateActive(save, { notebook });
         storeSave();
       }
-    }
-    else if (type === 'alert' && data.kind === 'splash') toast(t('splash'), 'danger', 6000);
+    } else if (type === 'alert' && data.kind === 'splash') toast(t('splash'), 'danger', 6000);
   }
 
   function toast(text, kind = 'info', ms = 3600) {
@@ -242,7 +293,10 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   /** ΔH° con il segno vero (−, +) e le unità. */
   const kj = (v) => `${v < 0 ? '−' : '+'}${game.fmt(Math.abs(v), Math.abs(v) < 100 ? 1 : 0)} kJ`;
   /** Che cosa si vede (bolle, precipitato…) come etichette brevi. */
-  const tagsHtml = (tags = []) => (tags.length ? `<span class="gm-tags">${tags.map((k) => `<i class="gm-tag gm-tag--${k}">${esc(t(`tag_${k}`))}</i>`).join('')}</span>` : '');
+  const tagsHtml = (tags = []) =>
+    tags.length
+      ? `<span class="gm-tags">${tags.map((k) => `<i class="gm-tag gm-tag--${k}">${esc(t(`tag_${k}`))}</i>`).join('')}</span>`
+      : '';
 
   /** Avviso di una reazione osservata: equazione con gli stati fisici, ΔH°, cosa si vede; «nuova nel quaderno» la prima volta. */
   function reactionNote({ equation, dH, tags, isNew }) {
@@ -346,29 +400,52 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
 
   // ---------------------------------------------------------------- profili
   function showProfiles(editing = null) {
-    const rows = save.profiles.map((p) => {
-      const rep = reputation(p.career);
-      const done = EXERCISES.filter((e) => passed(p.career, e.id)).length;
-      const on = p.id === save.active;
-      const name = editing === p.id
-        ? `<input class="gm-search gm-profile__name" data-profile-name="${esc(p.id)}" value="${esc(p.name)}" maxlength="24" aria-label="${esc(t('profileRename'))}" spellcheck="false"/>`
-        : `<b>${esc(p.name)}</b>`;
-      return `<li class="gm-profile__row ${on ? 'is-on' : ''}">
+    const rows = save.profiles
+      .map((p) => {
+        const rep = reputation(p.career);
+        const done = EXERCISES.filter((e) => passed(p.career, e.id)).length;
+        const on = p.id === save.active;
+        const name =
+          editing === p.id
+            ? `<input class="gm-search gm-profile__name" data-profile-name="${esc(p.id)}" value="${esc(p.name)}" maxlength="24" aria-label="${esc(t('profileRename'))}" spellcheck="false"/>`
+            : `<b>${esc(p.name)}</b>`;
+        return `<li class="gm-profile__row ${on ? 'is-on' : ''}">
         <span class="gm-profile__who">${name}<small>${esc(t('profileStats', { n: done, total: EXERCISES.length, rep, money: fmtMoney(p.career.money ?? 0) }))}</small></span>
         <span class="gm-profile__btns">
           ${editing === p.id ? `<button type="button" class="btn-ghost" data-profile-save="${esc(p.id)}">${t('profileSave')}</button>` : `<button type="button" class="btn-ghost" data-profile-edit="${esc(p.id)}">${t('profileRename')}</button>`}
           ${save.profiles.length > 1 ? `<button type="button" class="btn-ghost" data-profile-del="${esc(p.id)}">${t('profileDelete')}</button>` : ''}
           ${on ? `<span class="gm-small">${t('profileActive')}</span>` : `<button type="button" class="gm-primary" data-profile-use="${esc(p.id)}">${t('profileUse')}</button>`}
         </span></li>`;
-    }).join('');
-    showDialog(`
+      })
+      .join('');
+    showDialog(
+      `
       <h3>${t('profilesTitle')}</h3>
       <p class="gm-small">${t('profilesText')}</p>
       <ul class="gm-profiles">${rows}</ul>
       <div class="gm-actions">
         ${save.profiles.length < 8 ? `<button type="button" class="btn-ghost" data-act="profile-new">${icons.plus(14)}<span>${t('profileNew')}</span></button>` : ''}
-        <button type="button" class="gm-primary" data-act="menu">${t('done')}</button></div>`, 'gm-profiles-card');
-    $('[data-profile-name]')?.focus();
+        <button type="button" class="gm-primary" data-act="menu">${t('done')}</button></div>`,
+      'gm-profiles-card',
+    );
+    const nameInput = $('[data-profile-name]');
+    // Invio conferma il nome come il pulsante Salva
+    nameInput?.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      $(`[data-profile-save="${CSS.escape(nameInput.dataset.profileName)}"]`)?.click();
+    });
+    nameInput?.focus();
+  }
+
+  /** Conferma prima di eliminare un profilo: Carriera, soldi e quaderno si perdono per sempre. */
+  function showProfileDelete(id) {
+    const p = save.profiles.find((x) => x.id === id);
+    if (!p) return showProfiles();
+    showDialog(`
+      <h3>${t('profileDeleteTitle')}</h3>
+      <p>${t('profileDeleteText', { name: esc(p.name) })}</p>
+      <div class="gm-actions"><button type="button" class="btn-ghost" data-act="profiles">${t('cancel')}</button><button type="button" class="gm-primary gm-danger" data-profile-del-yes="${esc(id)}">${t('profileDeleteYes')}</button></div>`);
   }
 
   // ---------------------------------------------------------------- Carriera
@@ -380,20 +457,26 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     const chapters = CHAPTERS.map((ch) => {
       const stt = chapterState(c, ch.id);
       const list = chapterExercises(ch.id);
-      let note = '';
+      let note;
       if (stt === 'soon') note = t('chSoon');
       else if (stt === 'locked') {
         let prev = ch.id - 1;
         while (prev > 0 && !chapterExercises(prev).length) prev--;
-        note = list.length && !chapterExercises(prev).every((e) => passed(c, e.id)) ? t('chLockedPrev', { n: prev }) : t('chLockedRep', { rep: ch.rep });
+        note =
+          list.length && !chapterExercises(prev).every((e) => passed(c, e.id))
+            ? t('chLockedPrev', { n: prev })
+            : t('chLockedRep', { rep: ch.rep });
       } else note = t('chProgress', { n: list.filter((e) => passed(c, e.id)).length, total: list.length });
-      const exs = list.map((e) => {
-        const res = c.results?.[e.id];
-        const open = exerciseOpen(c, e.id);
-        const mark = res?.mark !== undefined ? `<small class="gm-mark">${t('examMark')} ${fmtMark(res.mark)}</small>` : '';
-        return `<button type="button" class="gm-ex ${passed(c, e.id) ? 'is-passed' : ''} ${e.exam ? 'is-exam' : ''}" data-ex="${e.id}" ${open ? '' : 'disabled'}>
+      const exs = list
+        .map((e) => {
+          const res = c.results?.[e.id];
+          const open = exerciseOpen(c, e.id);
+          const mark =
+            res?.mark !== undefined ? `<small class="gm-mark">${t('examMark')} ${fmtMark(res.mark)}</small>` : '';
+          return `<button type="button" class="gm-ex ${passed(c, e.id) ? 'is-passed' : ''} ${e.exam ? 'is-exam' : ''}" data-ex="${e.id}" ${open ? '' : 'disabled'}>
           <span>${esc(t(`${e.id}Title`))}</span><span class="gm-ex__stars">${mark}${res ? stars(res.stars) : open ? `<small>${t('exNew')}</small>` : ''}</span></button>`;
-      }).join('');
+        })
+        .join('');
       return `<li class="gm-ch is-${stt}">
         <div class="gm-ch__head"><b>${t('chapterN', { n: ch.id })} · ${esc(t(`chapter${ch.id}Title`))}</b><small>${esc(note)}</small></div>
         <p class="gm-ch__text">${esc(t(`chapter${ch.id}Text`))}</p>
@@ -402,7 +485,9 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     const extras = EXTRAS.map((e) => {
       const res = c.results?.[e.id];
       const open = exerciseOpen(c, e.id);
-      const note = open ? t('extraFrom', { who: t(`giver_${e.extra.giver}`) }) : t('extraLocked', { n: e.chapter, rep: e.extra.rep });
+      const note = open
+        ? t('extraFrom', { who: t(`giver_${e.extra.giver}`) })
+        : t('extraLocked', { n: e.chapter, rep: e.extra.rep });
       return `<button type="button" class="gm-ex gm-ex--extra ${passed(c, e.id) ? 'is-passed' : ''}" data-ex="${e.id}" ${open ? '' : 'disabled'}>
         <span>${esc(t(`${e.id}Title`))}<small>${esc(note)}</small></span><span class="gm-ex__stars">${res ? stars(res.stars) : open ? `<small>${t('exNew')}</small>` : ''}</span></button>`;
     }).join('');
@@ -419,7 +504,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     }).join('');
     const extraBlock = `<details class="gm-more"><summary>${t('extraTitle')}</summary><p class="gm-ch__text">${t('extraText')}</p><div class="gm-ch__ex">${extras}</div></details>
       <details class="gm-more"><summary>${t('challengeTitle')}</summary><p class="gm-ch__text">${t('challengeText')}</p><div class="gm-ch__ex">${challenges}</div></details>`;
-    showDialog(`
+    showDialog(
+      `
       <div class="gm-map__top">
         <div><p class="gm-eyebrow">${esc(profile().name)}</p><h3>${t('mapTitle')}</h3></div>
         <div class="gm-rep" title="${esc(t('repHelp'))}"><span>${t('repLabel')}: <b>${esc(t(`rep_${repTitle(rep)}`))}</b></span><i style="--p:${rep}%"></i><small>${rep} / 100</small></div>
@@ -433,7 +519,9 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
         <button type="button" class="btn-ghost" data-act="shop">${t('shopTitle')}</button>
         <button type="button" class="btn-ghost" data-act="map-book">${icons.book(14)}<span>${t('bookTitle')}</span></button>
         ${next ? `<button type="button" class="gm-primary" data-ex="${next.id}">${t('mapNext', { title: t(`${next.id}Title`) })}</button>` : ''}
-      </div>`, 'gm-map');
+      </div>`,
+      'gm-map',
+    );
     $('.gm-map').dataset.help = 'ui.gameCareer';
   }
 
@@ -445,15 +533,21 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   }
 
   /** Voto di una verifica: 8, 8,5. */
-  const fmtMark = (m) => (Number.isInteger(m) ? String(m) : m.toFixed(1).replace('.', locale().startsWith('it') ? ',' : '.'));
+  const fmtMark = (m) =>
+    Number.isInteger(m) ? String(m) : m.toFixed(1).replace('.', locale().startsWith('it') ? ',' : '.');
 
   /** Pagella: i voti delle verifiche di ogni capitolo, la media e il giudizio dell'insegnante. */
   function showReportCard() {
     const card = reportCard(career());
-    const rows = card.rows.map((r) => `<tr>
+    const rows = card.rows
+      .map(
+        (r) => `<tr>
       <th>${t('rcChapter', { n: r.chapter })} · ${esc(t(`chapter${r.chapter}Title`))}</th>
-      <td>${r.marks.map((m) => (m.mark === null ? `<span class="gm-rc__todo">${t('rcNotTaken')}</span>` : `<b>${fmtMark(m.mark)}</b>`)).join(' · ')}</td></tr>`).join('');
-    showDialog(`
+      <td>${r.marks.map((m) => (m.mark === null ? `<span class="gm-rc__todo">${t('rcNotTaken')}</span>` : `<b>${fmtMark(m.mark)}</b>`)).join(' · ')}</td></tr>`,
+      )
+      .join('');
+    showDialog(
+      `
       <p class="gm-eyebrow">${esc(profile().name)}</p>
       <h3>${t('reportCardTitle')}</h3>
       <p class="gm-small">${t('reportCardText')}</p>
@@ -461,7 +555,9 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       <p class="gm-rc__avg">${t('rcAverage')}: <b>${card.average === null ? '—' : fmtMark(Math.round(card.average * 10) / 10)}</b></p>
       <p class="gm-rc__verdict is-${card.verdict}">${t(`rcVerdict_${card.verdict}`)}</p>
       ${card.judgement ? `<p class="gm-small">${t(`judge_${card.judgement}`)}</p>` : ''}
-      <div class="gm-actions"><button type="button" class="gm-primary" data-act="map">${t('mapTitle')}</button></div>`, 'gm-rccard');
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="map">${t('mapTitle')}</button></div>`,
+      'gm-rccard',
+    );
   }
 
   function startFree() {
@@ -488,13 +584,20 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       const page = list.find((x) => x.id === id);
       return page ? pick(page).title : p;
     };
-    return (ex.book ?? []).map((p) => `<button type="button" class="gm-chip" data-bk-open="${esc(p)}">${icons.book(12)} ${esc(label(p))}</button>`).join('');
+    return (ex.book ?? [])
+      .map(
+        (p) =>
+          `<button type="button" class="gm-chip" data-bk-open="${esc(p)}">${icons.book(12)} ${esc(label(p))}</button>`,
+      )
+      .join('');
   }
 
   function showOrderIntro({ ex, challenge }) {
     const list = chapterExercises(ex.chapter);
     const steps = ex.steps.map((st) => t(st.key, game.stepParams(ex)));
-    const where = ex.extra ? t('extraFrom', { who: t(`giver_${ex.extra.giver}`) }) : `${t('chapterN', { n: ex.chapter })} · ${t(`chapter${ex.chapter}Title`)} · ${list.indexOf(ex) + 1} / ${list.length}`;
+    const where = ex.extra
+      ? t('extraFrom', { who: t(`giver_${ex.extra.giver}`) })
+      : `${t('chapterN', { n: ex.chapter })} · ${t(`chapter${ex.chapter}Title`)} · ${list.indexOf(ex) + 1} / ${list.length}`;
     showDialog(`
       <p class="gm-eyebrow">${esc(where)}</p>
       <h3>${t(`${ex.id}Title`)}</h3>
@@ -512,35 +615,56 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
 
   /** Relazione di laboratorio: due o tre domande sul perché; le risposte giuste danno stelle in più. */
   function showReport({ ex, questions }) {
-    const qs = questions.map((q, i) => `<fieldset class="gm-rq"><legend>${i + 1}. ${esc(t(q.q))}</legend>
-      ${q.opts.map((o, k) => `<label><input type="radio" name="rq${i}" value="${k}"/><span>${esc(optText(o))}</span></label>`).join('')}</fieldset>`).join('');
-    showDialog(`
+    const qs = questions
+      .map(
+        (q, i) => `<fieldset class="gm-rq"><legend>${i + 1}. ${esc(t(q.q))}</legend>
+      ${q.opts.map((o, k) => `<label><input type="radio" name="rq${i}" value="${k}"/><span>${esc(optText(o))}</span></label>`).join('')}</fieldset>`,
+      )
+      .join('');
+    showDialog(
+      `
       <p class="gm-eyebrow">${esc(t(`${ex.id}Title`))}</p>
       <h3>${t('reportTitle')}</h3>
       <p class="gm-small">${t('reportText')}</p>
       <form class="gm-report">${qs}</form>
-      <div class="gm-actions"><button type="button" class="btn-ghost" data-act="report-skip">${t('reportSkip')}</button><button type="button" class="gm-primary" data-act="report-submit">${t('reportSubmit')}</button></div>`, 'gm-reportcard');
+      <div class="gm-actions"><button type="button" class="btn-ghost" data-act="report-skip">${t('reportSkip')}</button><button type="button" class="gm-primary" data-act="report-submit">${t('reportSubmit')}</button></div>`,
+      'gm-reportcard',
+    );
   }
 
   function showResult(r) {
     const before = career();
     const repBefore = reputation(before);
-    let next = recordResult(before, r.id, { stars: r.stars, report: r.report.right, money: r.money, incidents: r.incidents, quality: r.quality });
-    if (r.challenge) next = recordChallenge(next, r.challenge.id, { medal: r.challenge.medal, elapsed: r.challenge.elapsed });
+    let next = recordResult(before, r.id, {
+      stars: r.stars,
+      report: r.report.right,
+      money: r.money,
+      incidents: r.incidents,
+      quality: r.quality,
+    });
+    if (r.challenge)
+      next = recordChallenge(next, r.challenge.id, { medal: r.challenge.medal, elapsed: r.challenge.elapsed });
     setCareer(next);
     const repAfter = reputation(next);
     const mark = (ok) => (ok === true ? 'ok' : ok === 'warn' ? 'warn' : 'bad');
     const lines = r.lines.map((l) => `<li class="gm-line gm-line--${mark(l.ok)}">${esc(lineText(l))}</li>`).join('');
-    const rq = r.report.total ? r.report.questions.map((q, i) => {
-      const ok = r.report.answers[i] === q.right;
-      return `<li class="gm-line gm-line--${ok ? 'ok' : 'bad'}">${esc(t(q.q))} — ${esc(optText(q.opts[q.right]))}</li>`;
-    }).join('') : '';
+    const rq = r.report.total
+      ? r.report.questions
+          .map((q, i) => {
+            const ok = r.report.answers[i] === q.right;
+            return `<li class="gm-line gm-line--${ok ? 'ok' : 'bad'}">${esc(t(q.q))} — ${esc(optText(q.opts[q.right]))}</li>`;
+          })
+          .join('')
+      : '';
     const following = nextExercise(next);
     const repDelta = repAfter - repBefore;
     const ch = r.challenge;
     const medalName = ch ? t(`medal_${MEDALS[ch.medal]}`) : '';
-    const where = r.ex.extra ? t('extraFrom', { who: t(`giver_${r.ex.extra.giver}`) }) : `${t('chapterN', { n: r.ex.chapter })} · ${t(`chapter${r.ex.chapter}Title`)}`;
-    showDialog(`
+    const where = r.ex.extra
+      ? t('extraFrom', { who: t(`giver_${r.ex.extra.giver}`) })
+      : `${t('chapterN', { n: r.ex.chapter })} · ${t(`chapter${r.ex.chapter}Title`)}`;
+    showDialog(
+      `
       <p class="gm-eyebrow">${esc(where)}</p>
       <h3>${t(`${r.ex.id}Title`)}</h3>
       <div class="gm-stars" aria-label="${t('starsLabel', { n: r.stars })}">${stars(r.stars)}</div>
@@ -552,12 +676,18 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       <dl class="gm-bill">
         ${rows([
           [t('billQuality'), `${Math.round(r.quality * 100)} %`],
-          [t('billSafety'), `${Math.round(r.safety * 100)} %${r.mess ? ` · ${t('billMess', { n: r.mess })}` : ''}${r.incidents ? ` · ${t('billIncidents', { n: r.incidents })}` : ''}`],
+          [
+            t('billSafety'),
+            `${Math.round(r.safety * 100)} %${r.mess ? ` · ${t('billMess', { n: r.mess })}` : ''}${r.incidents ? ` · ${t('billIncidents', { n: r.incidents })}` : ''}`,
+          ],
           [t('billTime'), `${fmtTime(r.elapsed)} / ${fmtTime(r.ex.par)}`],
           [t('billPay'), `+ ${fmtMoney(r.earned)}`],
           [t('billCosts'), `− ${fmtMoney(r.reagents)}${r.fines ? ` (${t('billFines')}: ${fmtMoney(r.fines)})` : ''}`],
           [t('billTotal'), `<b>${fmtMoney(r.money)}</b>`],
-          [t('repLabel'), `${repAfter} / 100${repDelta ? ` (${repDelta > 0 ? '+' : '−'}${Math.abs(repDelta)})` : ''} · ${esc(t(`rep_${repTitle(repAfter)}`))}`],
+          [
+            t('repLabel'),
+            `${repAfter} / 100${repDelta ? ` (${repDelta > 0 ? '+' : '−'}${Math.abs(repDelta)})` : ''} · ${esc(t(`rep_${repTitle(repAfter)}`))}`,
+          ],
         ])}
       </dl>
       ${r.stars < 2 ? `<p class="gm-small">${t('resultRetry')}</p>` : r.ex.deliver === 'answers' ? '' : `<p class="gm-small">${t('resultCleanup')}</p>`}
@@ -565,7 +695,9 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
         <button type="button" class="btn-ghost" data-act="map">${t('mapTitle')}</button>
         <button type="button" class="btn-ghost" data-ex-retry="${r.id}" ${ch ? `data-ex-challenge="${ch.id}"` : ''}>${t('retry')}</button>
         ${following ? `<button type="button" class="gm-primary" data-ex-next="${following.id}">${t('nextOrder')}</button>` : `<button type="button" class="gm-primary" data-act="keep-playing">${t('keepPlaying')}</button>`}
-      </div>`, 'gm-result');
+      </div>`,
+      'gm-result',
+    );
   }
 
   /** Riga del resoconto: i numeri formattati; per le risposte, il nome della risposta data e di quella giusta. */
@@ -582,7 +714,10 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   /** Nome di una risposta: il testo tradotto (ans_<valore>), il nome dell'elemento (saggio alla fiamma) o il numero. */
   function answerLabel(ex, v) {
     if (v === null || v === undefined || v === '' || v === '—') return '—';
-    if (ex?.answers?.type === 'number') return `${game.fmt(Number(String(v).replace(',', '.')), 2)} ${ex.answers.unit}`;
+    if (ex?.answers?.type === 'number') {
+      const n = answerNumber(v);
+      return Number.isFinite(n) ? `${game.fmt(n, 2)} ${ex.answers.unit}` : '—';
+    }
     if (ex?.answers?.options === 'flame') return `${game.chem.sub(game.chem.id(v))?.name ?? v} (${v})`;
     return t(`ans_${v}`);
   }
@@ -590,11 +725,12 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   /** Risposte: un menu per ogni campione (a scelta) o un numero. */
   function showAnswers({ ex, count, options }) {
     const a = ex.answers;
-    const field = (i) => (a.type === 'number'
-      ? `<label>${count > 1 ? t('sampleName', { s: 'ABCDE'[i] }) : t(`${ex.id}Question`)}
+    const field = (i) =>
+      a.type === 'number'
+        ? `<label>${count > 1 ? t('sampleName', { s: 'ABCDE'[i] }) : t(`${ex.id}Question`)}
           <span class="gm-answer__num"><input type="text" inputmode="decimal" name="s${i}" autocomplete="off" spellcheck="false"/> <span>${esc(a.unit)}</span></span></label>`
-      : `<label>${t('sampleName', { s: 'ABCDE'[i] })}
-          <select name="s${i}"><option value="">—</option>${options.map((o) => `<option value="${esc(o)}">${esc(answerLabel(ex, o))}</option>`).join('')}</select></label>`);
+        : `<label>${t('sampleName', { s: 'ABCDE'[i] })}
+          <select name="s${i}"><option value="">—</option>${options.map((o) => `<option value="${esc(o)}">${esc(answerLabel(ex, o))}</option>`).join('')}</select></label>`;
     showDialog(`
       <h3>${t('answersTitle')}</h3>
       <p>${t(`${ex.id}AnswersText`) !== `${ex.id}AnswersText` ? t(`${ex.id}AnswersText`) : t('answersText')}</p>
@@ -611,11 +747,14 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       return `<li class="gm-shop__row ${owned ? 'is-owned' : ''}"><span><b>${esc(t(`shop_${x.id}`))}</b><small>${esc(t(`shop_${x.id}Text`))}</small></span>
         <span class="gm-shop__buy">${owned ? `<span class="gm-small">${t('shopOwned')}</span>` : `<button type="button" class="gm-primary" data-buy="${x.id}" ${canBuy(c, x.id) ? '' : 'disabled'}>${fmtMoney(x.price)}</button>`}</span></li>`;
     }).join('');
-    showDialog(`
+    showDialog(
+      `
       <h3>${t('shopTitle')}</h3>
       <p class="gm-small">${t('shopText', { money: fmtMoney(c.money ?? 0) })}</p>
       <ul class="gm-shop">${items}</ul>
-      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${back}">${t('done')}</button></div>`, 'gm-shopcard');
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${back}">${t('done')}</button></div>`,
+      'gm-shopcard',
+    );
   }
 
   /** Conferma prima di ricominciare la Carriera del profilo. */
@@ -630,12 +769,15 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     // nella Carriera, con la chiave dell'armadio (negozio): solo vetreria, scaffale e armadio della scuola
     if (cabinet) {
       const glass = ['beaker100', 'beaker250', 'flask250', 'cylinder100'];
-      showDialog(`
+      showDialog(
+        `
         <h3>${t('cabinetTitle')}</h3>
         <p class="gm-small">${t('cabinetText')}</p>
         <div class="gm-cat-glass">${glass.map((k) => `<button type="button" class="btn-ghost" data-glass="${k}">${t(`item_${k}`)}</button>`).join('')}</div>
         <div class="gm-cat-ready">${readyHtml()}</div>
-        <div class="gm-actions"><button type="button" class="gm-primary" data-act="play">${t('done')}</button></div>`, 'gm-catalog');
+        <div class="gm-actions"><button type="button" class="gm-primary" data-act="play">${t('done')}</button></div>`,
+        'gm-catalog',
+      );
       return;
     }
     // le stesse forme che usano le ricette del libro (book.js): sostanze della libreria e metalli in pezzi
@@ -644,23 +786,30 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       return { key: e.key, sid, name: s.name, formula: s.formula || s.symbol, st: e.st, soluble: e.soluble };
     });
     const glass = ['beaker100', 'beaker250', 'flask250', 'cylinder100', 'crucible', 'dish', 'spatula', 'loop'];
-    showDialog(`
+    showDialog(
+      `
       <h3>${t('catalogTitle')}</h3>
       <div class="gm-cat-glass">${glass.map((k) => `<button type="button" class="btn-ghost" data-glass="${k}">${t(`item_${k}`)}</button>`).join('')}</div>
       <div class="gm-cat-ready">${readyHtml()}</div>
       <input type="search" class="gm-search" placeholder="${t('catalogSearch')}" aria-label="${t('catalogSearch')}" spellcheck="false"/>
       <div class="gm-cat-list"></div>
-      <div class="gm-actions"><button type="button" class="gm-primary" data-act="play">${t('done')}</button></div>`, 'gm-catalog');
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="play">${t('done')}</button></div>`,
+      'gm-catalog',
+    );
     const list = $('.gm-cat-list');
     const render = (q) => {
       const nq = normalize(q || '');
       const hits = all.filter((x) => !nq || normalize(`${x.name} ${x.formula}`).includes(nq)).slice(0, 60);
       list.innerHTML = hits
-        .map((x) => `<div class="gm-cat-row"><span><b>${esc(x.name)}</b> <code>${esc(x.formula)}</code></span><span class="gm-cat-btns">
+        .map(
+          (
+            x,
+          ) => `<div class="gm-cat-row"><span><b>${esc(x.name)}</b> <code>${esc(x.formula)}</code></span><span class="gm-cat-btns">
           ${x.st === 'solid' ? `<button type="button" data-spawn="${esc(x.key)}" data-form="solid">${t('formSolid')}</button>` : ''}
           ${x.st === 'liquid' ? `<button type="button" data-spawn="${esc(x.key)}" data-form="liquid">${t('formLiquid')}</button>` : ''}
-          ${x.soluble ? `<button type="button" data-spawn="${esc(x.key)}" data-form="sol01">0,1 M</button><button type="button" data-spawn="${esc(x.key)}" data-form="sol1">1 M</button>` : ''}
-        </span></div>`)
+          ${x.soluble ? `<button type="button" data-spawn="${esc(x.key)}" data-form="sol01">${fmtNumber(0.1)} M</button><button type="button" data-spawn="${esc(x.key)}" data-form="sol1">1 M</button>` : ''}
+        </span></div>`,
+        )
         .join('');
     };
     render('');
@@ -681,8 +830,18 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       if (!fams.has(row)) fams.set(row, []);
       fams.get(row).push(k);
     }
-    return FAMILY_ORDER.filter((f) => fams.has(f)).map((f) => `<div class="gm-cat-fam"><span class="gm-cat-cap" style="background:${FAMILIES[f]}" title="${esc(t(`legend_${f}`))}"></span>
-      ${fams.get(f).sort((a, b) => readyName(a).localeCompare(readyName(b))).map((k) => `<button type="button" class="btn-ghost" data-ready="${k}">${esc(readyName(k))}</button>`).join('')}</div>`).join('');
+    return FAMILY_ORDER.filter((f) => fams.has(f))
+      .map(
+        (
+          f,
+        ) => `<div class="gm-cat-fam"><span class="gm-cat-cap" style="background:${FAMILIES[f]}" title="${esc(t(`legend_${f}`))}"></span>
+      ${fams
+        .get(f)
+        .sort((a, b) => readyName(a).localeCompare(readyName(b)))
+        .map((k) => `<button type="button" class="btn-ghost" data-ready="${k}">${esc(readyName(k))}</button>`)
+        .join('')}</div>`,
+      )
+      .join('');
   }
 
   function readyName(k) {
@@ -691,7 +850,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     if (r.water) return t('distilledWater');
     if (r.indicator) return c.name(r.indicator);
     const key = r.solute ?? r.solid ?? r.liquid;
-    return `${c.formula(c.id(key)) || c.name(c.id(key))}${r.molar ? ` ${String(r.molar).replace('.', ',')} M` : ''}`;
+    return `${c.formula(c.id(key)) || c.name(c.id(key))}${r.molar ? ` ${fmtNumber(r.molar)} M` : ''}`;
   }
 
   function showPause() {
@@ -720,10 +879,13 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   function showNotebook(back = 'play') {
     const tabs = `<div class="gm-nb__tabs" role="tablist">${['tutorial', 'reactions'].map((k) => `<button type="button" role="tab" aria-selected="${nbTab === k}" class="gm-nb__tab ${nbTab === k ? 'is-on' : ''}" data-nb-tab="${k}">${t(k === 'tutorial' ? 'nbTabTutorial' : 'nbTabReactions')}</button>`).join('')}</div>`;
     const body = nbTab === 'tutorial' ? tutorialHtml() : reactionsHtml();
-    showDialog(`
+    showDialog(
+      `
       <h3>${t('notebookTitle')}</h3>
       ${tabs}${body}
-      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${back}">${t('done')}</button></div>`, 'gm-notebook');
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${back}">${t('done')}</button></div>`,
+      'gm-notebook',
+    );
     $('.gm-notebook').dataset.help = 'ui.gameNotebook';
     const list = $('.gm-nb__pages');
     if (list) list.scrollTop = 0;
@@ -732,7 +894,10 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   /** Tutorial: l'elenco delle pagine e la pagina aperta, con l'illustrazione e i passi numerati. */
   function tutorialHtml() {
     const id = TUTORIAL[tutPage];
-    const nav = TUTORIAL.map((k, i) => `<button type="button" class="gm-nb__group ${i === tutPage ? 'is-on' : ''}" data-tut-page="${i}"><span>${i + 1}. ${esc(t(`tut_${k}_title`))}</span></button>`).join('');
+    const nav = TUTORIAL.map(
+      (k, i) =>
+        `<button type="button" class="gm-nb__group ${i === tutPage ? 'is-on' : ''}" data-tut-page="${i}"><span>${i + 1}. ${esc(t(`tut_${k}_title`))}</span></button>`,
+    ).join('');
     const steps = t(`tut_${id}_steps`);
     return `<div class="gm-nb">
         <nav class="gm-nb__groups" aria-label="${t('nbTabTutorial')}">${nav}</nav>
@@ -751,8 +916,12 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     const nb = notebookPages(game.chem, notebook);
     nbGroup ??= (nb.groups.find((g) => g.found) ?? nb.groups[0]).key;
     const g = nb.groups.find((x) => x.key === nbGroup) ?? nb.groups[0];
-    const groups = nb.groups.map((x) => `<button type="button" class="gm-nb__group ${x.key === g.key ? 'is-on' : ''}" data-nb-group="${x.key}">
-        <span>${esc(x.label)}</span><small>${x.found} / ${x.doable}</small><i style="--p:${percent(x.found, x.doable)}%"></i></button>`).join('');
+    const groups = nb.groups
+      .map(
+        (x) => `<button type="button" class="gm-nb__group ${x.key === g.key ? 'is-on' : ''}" data-nb-group="${x.key}">
+        <span>${esc(x.label)}</span><small>${x.found} / ${x.doable}</small><i style="--p:${percent(x.found, x.doable)}%"></i></button>`,
+      )
+      .join('');
     // scoperte prima, con tutti i dettagli; le altre raggruppate per sottogruppo (quante restano e, per quelle che il
     // simulatore non sa fare, il motivo)
     const found = g.pages.filter((p) => p.found);
@@ -768,8 +937,13 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       }
       hidden.set(k, e);
     }
-    const hiddenRows = [...hidden].map(([sub, e]) => `<li class="gm-nb__page ${e.open ? '' : 'is-off'}"><p class="gm-nb__eq">? + ? → ?${e.open ? ` <small>${t('nbHidden', { n: e.open })}</small>` : ''}</p>
-      <p class="gm-nb__meta">${esc(sub)}${[...e.off].map(([why, n]) => ` · ${esc(t('nbOffCount', { n, why: t(`nbWhy_${why}`) }))}`).join('')}</p></li>`);
+    const hiddenRows = [...hidden].map(
+      ([
+        sub,
+        e,
+      ]) => `<li class="gm-nb__page ${e.open ? '' : 'is-off'}"><p class="gm-nb__eq">? + ? → ?${e.open ? ` <small>${t('nbHidden', { n: e.open })}</small>` : ''}</p>
+      <p class="gm-nb__meta">${esc(sub)}${[...e.off].map(([why, n]) => ` · ${esc(t('nbOffCount', { n, why: t(`nbWhy_${why}`) }))}`).join('')}</p></li>`,
+    );
     const page = (p) => {
       const e = notebook.rx[p.id];
       const sig = game.signals(p.rx, e.aq);
@@ -800,8 +974,11 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     if (!bookView) return;
     if (back === 'map') game.bookLocks = bookUnlocks(career());
     if (target) bookView.open(target);
-    showDialog(`<h3>${t('bookTitle')}</h3><div class="gm-bk__body"></div>
-      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${back}">${t('done')}</button></div>`, 'gm-book');
+    showDialog(
+      `<h3>${t('bookTitle')}</h3><div class="gm-bk__body"></div>
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${back}">${t('done')}</button></div>`,
+      'gm-book',
+    );
     $('.gm-book').dataset.help = 'ui.gameBook';
     renderBook();
   }
@@ -821,11 +998,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     }
     const d = b.dataset;
     if (d.bkPrepare) {
-      const recipe = game.book.byId.get(d.bkPrepare);
-      const list = game.prepareRecipe(recipe);
-      game.followRecipe(recipe.id);
-      toast(t('bkPrepared', { list: list.join(', ') }), 'ok', 6000);
-      play();
+      prepareOnBench(game.book.byId.get(d.bkPrepare));
       return true;
     }
     if (d.bkFollow) {
@@ -842,6 +1015,18 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       return true;
     }
     return false;
+  }
+
+  /**
+   * «Prepara sul banco»: gli oggetti della ricetta sul bancone B, la ricetta seguita nel riquadro, di nuovo in gioco.
+   * @returns {string[]} nomi di ciò che è stato messo sul banco
+   */
+  function prepareOnBench(recipe) {
+    const list = game.prepareRecipe(recipe);
+    game.followRecipe(recipe.id);
+    toast(t('bkPrepared', { list: list.join(', ') }), 'ok', 6000);
+    play();
+    return list;
   }
 
   /** Riquadro della ricetta seguita: i passi, spuntati quando il gioco li riconosce, con quello di adesso evidenziato. */
@@ -864,27 +1049,21 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
 
   function showHelp() {
     const prev = state;
-    showDialog(`
+    showDialog(
+      `
       <h3>${t('controls')}</h3>
       <p class="gm-help__note">${t('helpNote')}</p>
       <div class="gm-help">
         <div><h4>${t('helpWalk')}</h4><dl>${rows(t('helpWalkRows'))}</dl></div>
         <div><h4>${t('helpBench')}</h4><dl>${rows(t('helpBenchRows'))}</dl><h4>${t('helpTools')}</h4><dl>${rows([...t('helpToolsRows'), t('helpAudioRow')])}</dl></div>
       </div>
-      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${prev === 'menu' ? 'menu' : 'play'}">${t('ok')}</button></div>`, 'gm-helpcard');
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="${prev === 'menu' ? 'menu' : 'play'}">${t('ok')}</button></div>`,
+      'gm-helpcard',
+    );
   }
 
   const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-  function formatParams(p = {}) {
-    const out = {};
-    for (const [k, v] of Object.entries(p)) {
-      if (typeof v !== 'number') out[k] = v;
-      else if (!Number.isFinite(v)) out[k] = '—';
-      else if (k === 'value' || k === 'target') out[k] = game.fmt(v, Math.abs(v) < 1 ? 3 : Math.abs(v) < 10 ? 2 : 1);
-      else out[k] = game.fmt(v, 0);
-    }
-    return out;
-  }
+  const formatParams = (p) => lineParams(p, (n, d) => game.fmt(n, d));
 
   // ---------------------------------------------------------------- clic nelle finestre e nei menu
   root.addEventListener('click', (ev) => {
@@ -906,7 +1085,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       showMenu();
     } else if (act === 'profiles') showProfiles();
     else if (act === 'profile-new') {
-      const next = addProfile(save, t('profileDefault', { n: save.profiles.length + 1 }));
+      const next = addProfile(save, freeProfileName(save.profiles, profileName));
       if (next) useProfile(next);
       showProfiles(next ? profile().id : null);
     } else if (b.dataset.profileUse) {
@@ -918,8 +1097,9 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       save = renameProfile(save, b.dataset.profileSave, input?.value ?? '');
       storeSave();
       showProfiles();
-    } else if (b.dataset.profileDel) {
-      useProfile(deleteProfile(save, b.dataset.profileDel));
+    } else if (b.dataset.profileDel) showProfileDelete(b.dataset.profileDel);
+    else if (b.dataset.profileDelYes) {
+      useProfile(deleteProfile(save, b.dataset.profileDelYes));
       showProfiles();
     } else if (act === 'shop') showShop();
     else if (b.dataset.buy) {
@@ -937,10 +1117,13 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     else if (b.dataset.exNext) startExercise(b.dataset.exNext, false);
     else if (act === 'report-submit' || act === 'report-skip') {
       const answers = [];
-      if (act === 'report-submit') $('.gm-report')?.querySelectorAll('fieldset').forEach((f, i) => {
-        const v = f.querySelector('input:checked')?.value;
-        answers[i] = v === undefined ? -1 : Number(v);
-      });
+      if (act === 'report-submit')
+        $('.gm-report')
+          ?.querySelectorAll('fieldset')
+          .forEach((f, i) => {
+            const v = f.querySelector('input:checked')?.value;
+            answers[i] = v === undefined ? -1 : Number(v);
+          });
       game.finishReport(answers);
     } else if (act === 'free') startFree();
     else if (act === 'help') showHelp();
@@ -961,7 +1144,13 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       nbTab = b.dataset.nbTab;
       showNotebook($('.gm-notebook .gm-primary')?.dataset.act);
     } else if (b.dataset.tutPage !== undefined || b.dataset.tutStep !== undefined) {
-      tutPage = Math.max(0, Math.min(TUTORIAL.length - 1, b.dataset.tutPage !== undefined ? Number(b.dataset.tutPage) : tutPage + Number(b.dataset.tutStep)));
+      tutPage = Math.max(
+        0,
+        Math.min(
+          TUTORIAL.length - 1,
+          b.dataset.tutPage !== undefined ? Number(b.dataset.tutPage) : tutPage + Number(b.dataset.tutStep),
+        ),
+      );
       showNotebook($('.gm-notebook .gm-primary')?.dataset.act);
     } else if (b.dataset.nbLab && onOpenLab) {
       labAbove = true;
@@ -980,7 +1169,12 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       const key = b.dataset.spawn;
       const form = b.dataset.form;
       // contenitore, tappo ed etichetta li sceglie stock.js
-      const r = form === 'solid' ? { solid: key } : form === 'liquid' ? { liquid: key } : { solute: key, molar: form === 'sol1' ? 1 : 0.1 };
+      const r =
+        form === 'solid'
+          ? { solid: key }
+          : form === 'liquid'
+            ? { liquid: key }
+            : { solute: key, molar: form === 'sol1' ? 1 : 0.1 };
       const item = game.spawnReagent(null, 'benchB', r);
       toast(t('spawned', { name: item.name }), 'ok');
     }
@@ -1055,10 +1249,28 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       else pressed.delete(id);
     }
     // movimento come in Cooking Simulator: Spazio corre, Ctrl accovaccia, Maiusc tenuto è la manipolazione precisa
-    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'Space', 'ControlLeft', 'ControlRight'].includes(code)) {
+    if (
+      [
+        'KeyW',
+        'KeyA',
+        'KeyS',
+        'KeyD',
+        'ArrowUp',
+        'ArrowDown',
+        'ArrowLeft',
+        'ArrowRight',
+        'ShiftLeft',
+        'ShiftRight',
+        'Space',
+        'ControlLeft',
+        'ControlRight',
+      ].includes(code)
+    ) {
       // nella vista del bancone A e D cambiano postazione; con un oggetto in mano lo ruotano (game.js)
-      if (game.player.mode === 'bench' && !game.held && down && (code === 'KeyA' || code === 'ArrowLeft')) game.station(-1);
-      else if (game.player.mode === 'bench' && !game.held && down && (code === 'KeyD' || code === 'ArrowRight')) game.station(1);
+      if (game.player.mode === 'bench' && !game.held && down && (code === 'KeyA' || code === 'ArrowLeft'))
+        game.station(-1);
+      else if (game.player.mode === 'bench' && !game.held && down && (code === 'KeyD' || code === 'ArrowRight'))
+        game.station(1);
       if (down) game.player.keys.add(code);
       else game.player.keys.delete(code);
       if ((code === 'ShiftLeft' || code === 'ShiftRight') && !ev.repeat) game.setPrecise(down);
@@ -1084,16 +1296,14 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       storeSave();
       lastLegendHtml = null;
       if (!showLegend) toast(t('legendHidden'));
-    }
-    else if (code === 'KeyH') showHelp();
+    } else if (code === 'KeyH') showHelp();
     else if (code === 'KeyM') {
       muted = !muted;
       audio?.setMuted(muted);
       save = { ...save, settings: { ...save.settings, muted } };
       storeSave();
       toast(t(muted ? 'audioOff' : 'audioOn'));
-    }
-    else if (code === 'KeyN') showNotebook();
+    } else if (code === 'KeyN') showNotebook();
     else if (code === 'KeyB') showBook();
     else if (code === 'KeyF') {
       // fps per controllare le prestazioni
@@ -1127,8 +1337,10 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     if (code === 'Tab') return 'tab';
     if (code === 'KeyH') return 'h';
     if (code === 'ShiftLeft' || code === 'ShiftRight') return 'shift';
-    if ((game?.player.mode === 'bench' || game?.held) && ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight'].includes(code)) return 'ad';
-    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) return 'wasd';
+    if ((game?.player.mode === 'bench' || game?.held) && ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight'].includes(code))
+      return 'ad';
+    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code))
+      return 'wasd';
     return null;
   }
 
@@ -1231,11 +1443,15 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     game.setPour(true);
   }
 
-  stage.addEventListener('wheel', (ev) => {
-    if (state !== 'play') return;
-    ev.preventDefault();
-    game.wheel(ev.deltaY);
-  }, { passive: false });
+  stage.addEventListener(
+    'wheel',
+    (ev) => {
+      if (state !== 'play') return;
+      ev.preventDefault();
+      game.wheel(ev.deltaY);
+    },
+    { passive: false },
+  );
 
   // ---------------------------------------------------------------- HUD
   const fmtSec = (s) => fmtTime(Math.max(0, s));
@@ -1245,18 +1461,48 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     const meta = [info.temp, info.ph].filter(Boolean).map(esc).join(' · ');
     const rowsList = info.rows.slice(0, 3);
     const more = info.rows.length - rowsList.length;
-    const rowsHtml = rowsList.map((r) => `<li><span>${esc(r.label)}${r.formula ? ` <code>${esc(r.formula)}</code>` : ''}</span><b>${esc(r.value)}</b></li>`).join('') + (more > 0 ? `<li class="gm-pop__more"><span>+${more}</span></li>` : '');
-    const strip = info.swatch ? `<div class="gm-strip"><span style="background:${info.swatch}"></span><div class="gm-scale">${info.scale.map((c, i) => `<i style="background:${c}" title="pH ${i}">${i}</i>`).join('')}</div></div>` : '';
-    const notes = info.notes.slice(0, 2).map((n) => `<p class="gm-pop__note">${esc(n)}</p>`).join('');
+    const rowsHtml =
+      rowsList
+        .map(
+          (r) =>
+            `<li><span>${esc(r.label)}${r.formula ? ` <code>${esc(r.formula)}</code>` : ''}</span><b>${esc(r.value)}</b></li>`,
+        )
+        .join('') + (more > 0 ? `<li class="gm-pop__more"><span>+${more}</span></li>` : '');
+    const strip = info.swatch
+      ? `<div class="gm-strip"><span style="background:${info.swatch}"></span><div class="gm-scale">${info.scale.map((c, i) => `<i style="background:${c}" title="pH ${i}">${i}</i>`).join('')}</div></div>`
+      : '';
+    const notes = info.notes
+      .slice(0, 2)
+      .map((n) => `<p class="gm-pop__note">${esc(n)}</p>`)
+      .join('');
     // reazioni appena avvenute nel contenitore e, se non succede niente, perché
-    const rx = (info.reactions ?? []).map((r) => `<p class="gm-pop__rx ${r.live ? 'is-live' : ''}"><span class="gm-pop__eq">${esc(r.eq)}</span>${r.dH !== null ? `<small>ΔH° ${kj(r.dH)}</small>` : ''}${tagsHtml(r.tags)}</p>`).join('');
-    const why = info.why ? `<div class="gm-pop__why"><b>${t('whyTitle')}</b> ${esc(info.why.text)}${info.why.eq ? `<span class="gm-pop__eq">${esc(info.why.eq)}</span>` : ''}</div>` : '';
+    const rx = (info.reactions ?? [])
+      .map(
+        (r) =>
+          `<p class="gm-pop__rx ${r.live ? 'is-live' : ''}"><span class="gm-pop__eq">${esc(r.eq)}</span>${r.dH !== null ? `<small>ΔH° ${kj(r.dH)}</small>` : ''}${tagsHtml(r.tags)}</p>`,
+      )
+      .join('');
+    const why = info.why
+      ? `<div class="gm-pop__why"><b>${t('whyTitle')}</b> ${esc(info.why.text)}${info.why.eq ? `<span class="gm-pop__eq">${esc(info.why.eq)}</span>` : ''}</div>`
+      : '';
     if (kind === 'held') {
-      const status = info.status ? `<small class="gm-pop__status ${info.spilling ? 'is-bad' : ''}">${esc(info.status)}${chemMode === 'simple' && info.pouring > 0.2 ? ` · ${t('pourRate', { ml: game.fmt(info.pouring, info.pouring < 10 ? 1 : 0) })}` : ''}</small>` : '';
-      const big = info.volume ? `<div class="gm-pop__big">${DROP}<b>${esc(info.volume)}</b></div>` : info.readout ? `<div class="gm-pop__big gm-pop__big--read"><b>${esc(info.readout)}</b></div>` : '';
+      const status = info.status
+        ? `<small class="gm-pop__status ${info.spilling ? 'is-bad' : ''}">${esc(info.status)}${chemMode === 'simple' && info.pouring > 0.2 ? ` · ${t('pourRate', { ml: game.fmt(info.pouring, info.pouring < 10 ? 1 : 0) })}` : ''}</small>`
+        : '';
+      const big = info.volume
+        ? `<div class="gm-pop__big">${DROP}<b>${esc(info.volume)}</b></div>`
+        : info.readout
+          ? `<div class="gm-pop__big gm-pop__big--read"><b>${esc(info.readout)}</b></div>`
+          : '';
       return `${big}${status}<p class="gm-pop__name"><span class="gm-swatch" style="background:${info.color ?? 'transparent'}"></span>${esc(info.name)}</p>${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}${meta ? `<p class="gm-pop__meta">${meta}</p>` : ''}${strip}${rx}${info.volume ? '' : notes}`;
     }
-    const vol = info.volume ? `<p class="gm-pop__vol">${DROP}<b>${esc(info.volume)}</b>${meta ? ` <span>· ${meta}</span>` : ''}</p>` : info.readout ? `<p class="gm-pop__vol"><b>${esc(info.readout)}</b></p>` : meta ? `<p class="gm-pop__meta">${meta}</p>` : '';
+    const vol = info.volume
+      ? `<p class="gm-pop__vol">${DROP}<b>${esc(info.volume)}</b>${meta ? ` <span>· ${meta}</span>` : ''}</p>`
+      : info.readout
+        ? `<p class="gm-pop__vol"><b>${esc(info.readout)}</b></p>`
+        : meta
+          ? `<p class="gm-pop__meta">${meta}</p>`
+          : '';
     return `<header class="${info.hot ? 'is-hot' : ''} ${info.on ? 'is-on' : ''}"><span class="gm-swatch" style="background:${info.color ?? 'transparent'}"></span><h4>${esc(info.name)}</h4></header>
       <div class="gm-pop__body">${vol}${rowsHtml ? `<ul>${rowsHtml}</ul>` : ''}${strip}${rx}${notes}${why}</div>`;
   }
@@ -1282,8 +1528,12 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     const label = t(`key_${k}`);
     if (k === 'lmb' || k === 'rmb') return `<span class="gm-key" title="${esc(label)}">${mouseIcon(k[0])}</span>`;
     if (k === 'wheel' || k === 'mmb') return `<span class="gm-key" title="${esc(label)}">${mouseIcon('w')}</span>`;
-    if (k === 'mouse' || k === 'mousex') return `<span class="gm-key" title="${esc(label)}">${mouseIcon('')}<b class="gm-arrows">${ARROWS[k]}</b></span>`;
-    return label.split(/\s+\/\s+|\s+/).map((c) => `<kbd>${esc(c)}</kbd>`).join('');
+    if (k === 'mouse' || k === 'mousex')
+      return `<span class="gm-key" title="${esc(label)}">${mouseIcon('')}<b class="gm-arrows">${ARROWS[k]}</b></span>`;
+    return label
+      .split(/\s+\/\s+|\s+/)
+      .map((c) => `<kbd>${esc(c)}</kbd>`)
+      .join('');
   }
 
   let lastLegendHtml = null;
@@ -1291,11 +1541,15 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
   /** Legenda in basso a destra, piccola come in Cooking Simulator: icona del tasto e azione, senza riquadro. */
   function renderLegend(rowsList) {
     const html = showLegend
-      ? rowsList.map((r) => {
-        // «tasto + mouse»: un solo mouse disegnato, con le frecce del movimento accanto
-        const keys = r.keys.map((k) => (ARROWS[k] && r.keys.length > 1 ? `<b class="gm-arrows">${ARROWS[k]}</b>` : keyHtml(k))).join('');
-        return `<li class="${r.off ? 'is-off' : ''} ${r.keys.some((k) => pressed.has(k)) ? 'is-down' : ''}"><span class="gm-keys">${keys}</span><span>${esc(t(r.key, r.params ?? undefined))}</span></li>`;
-      }).join('')
+      ? rowsList
+          .map((r) => {
+            // «tasto + mouse»: un solo mouse disegnato, con le frecce del movimento accanto
+            const keys = r.keys
+              .map((k) => (ARROWS[k] && r.keys.length > 1 ? `<b class="gm-arrows">${ARROWS[k]}</b>` : keyHtml(k)))
+              .join('');
+            return `<li class="${r.off ? 'is-off' : ''} ${r.keys.some((k) => pressed.has(k)) ? 'is-down' : ''}"><span class="gm-keys">${keys}</span><span>${esc(t(r.key, r.params ?? undefined))}</span></li>`;
+          })
+          .join('')
       : '';
     if (html !== lastLegendHtml) {
       lastLegendHtml = html;
@@ -1330,7 +1584,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       y -= pop.h / 2;
       x = Math.max(12, Math.min(W - pop.w - 12, x));
       y = Math.max(64, Math.min(H - pop.h - 12, y));
-      if (legendBox && x + pop.w > legendBox.left - 10 && y + pop.h > legendBox.top - 10) y = Math.max(64, legendBox.top - 10 - pop.h);
+      if (legendBox && x + pop.w > legendBox.left - 10 && y + pop.h > legendBox.top - 10)
+        y = Math.max(64, legendBox.top - 10 - pop.h);
       box[kind] = { x, y, w: pop.w, h: pop.h };
     }
     const l = box.looked;
@@ -1339,7 +1594,9 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       // si toccano: quella dell'oggetto in mano va sotto (o sopra, se sotto non c'è spazio)
       h.y = l.y + l.h + 8 + h.h < H - 12 ? l.y + l.h + 8 : Math.max(12, l.y - h.h - 8);
     }
-    for (const kind of ['looked', 'held']) if (box[kind]) pops[kind].el.style.transform = `translate3d(${Math.round(box[kind].x)}px, ${Math.round(box[kind].y)}px, 0)`;
+    for (const kind of ['looked', 'held'])
+      if (box[kind])
+        pops[kind].el.style.transform = `translate3d(${Math.round(box[kind].x)}px, ${Math.round(box[kind].y)}px, 0)`;
   }
 
   let lastOrderHtml = '';
@@ -1349,12 +1606,16 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     renderLegend(h.legend);
     $('.gm-cross').hidden = h.mode !== 'walk';
     $('.gm-money').innerHTML = h.free ? `<span>${t('freeShort')}</span>` : `<span>${fmtMoney(h.money)}</span>`;
-    $('.gm-view').innerHTML = `${h.mode === 'walk' ? t('viewWalk') : t('viewBench', { station: t(`station_${h.station}`) })}${fpsShow ? ` · ${fps} fps` : ''}`;
+    $('.gm-view').innerHTML =
+      `${h.mode === 'walk' ? t('viewWalk') : t('viewBench', { station: t(`station_${h.station}`) })}${fpsShow ? ` · ${fps} fps` : ''}`;
     let orderHtml = '';
     if (h.order) {
       const late = h.order.elapsed > h.order.par;
       // sfida a tempo: il conto alla rovescia fino all'oro; poi il tempo che passa
-      const clock = h.order.challenge && !late ? t('challengeLeft', { time: fmtSec(h.order.par - h.order.elapsed) }) : fmtSec(h.order.elapsed);
+      const clock =
+        h.order.challenge && !late
+          ? t('challengeLeft', { time: fmtSec(h.order.par - h.order.elapsed) })
+          : fmtSec(h.order.elapsed);
       const tag = h.order.challenge ? `${t('challengeShort')} · ` : h.order.exam ? `${t('examLabel')} · ` : '';
       orderHtml = `<header><span>${tag}${t('orderShort', { n: h.order.n, ch: h.order.chapter })}</span><b class="${late ? 'is-late' : ''}">${clock}</b></header>
         <h4>${esc(h.order.title)}</h4>
@@ -1398,7 +1659,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     lastT = now;
     if (!game) return;
     // sinistro tenuto fermo con un recipiente in mano: dopo un attimo comincia a versare (un clic, invece, lo posa)
-    if (state === 'play' && lmb && !lmb.pour && canPour() && isClick(lmb.moved) && now - lmb.t > POUR_HOLD_MS) startPour();
+    if (state === 'play' && lmb && !lmb.pour && canPour() && isClick(lmb.moved) && now - lmb.t > POUR_HOLD_MS)
+      startPour();
     if (state === 'play' || state === 'dialog') game.update(state === 'play' ? dt : 0, { blocked: state !== 'play' });
     else audio?.loops([]); // pausa e menu: il laboratorio tace
     view.render();
@@ -1421,19 +1683,76 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     }
   }
 
+  // ---------------------------------------------------------------- gancio di test
+  /**
+   * `window.__tp3d`, solo con i ganci di test (src/test-hooks.js). Il simulatore si gioca con il puntatore bloccato, che
+   * un test non può comandare: gli E2E (tests/e2e/simulatore.spec.mjs) lo guidano da qui, con le funzioni dei pulsanti.
+   */
+  function testHook() {
+    const hook = {
+      game,
+      startFree,
+      /** Comincia un'esercitazione come dalla mappa della Carriera, anche se nel profilo non è ancora aperta. */
+      startExercise: (id) => game.startCareer(chemMode, id, career()),
+      /** «Prepara sul banco» di una ricetta del libro (game.book.recipes). */
+      prepareRecipe: prepareOnBench,
+      pause: showPause,
+      /**
+       * Consegna l'esercitazione in corso con la soluzione scritta nei dati (career.js, runSolution) e passa dal
+       * campanello e dalla relazione come chi gioca: il recipiente della soluzione va sul vassoio, i suoi eventi (tare,
+       * reazioni, gas, pH letti) vanno nell'ordine, poi campanello e relazione con le risposte giuste. Risolve con il
+       * `result` del gioco.
+       */
+      async deliverSolution() {
+        const o = game.order;
+        if (!o || o.delivered) throw new Error('nessuna esercitazione da consegnare');
+        const s = runSolution(game.chem, o.ex, game.chemMode);
+        if (s.product) {
+          // la soluzione non dice in che recipiente: un becher da 250 mL, appena sopra il piano del vassoio (12 mm)
+          const z = game.fx.tray.zone;
+          const pos = new THREE.Vector3(z.x, z.y + 0.015, z.z);
+          game.spawn('beaker250', { pos, mixture: s.product, name: t('item_beaker250') });
+        }
+        Object.assign(o.ev, s.ev);
+        Object.assign(o.gas, s.gas);
+        for (const id of s.rx) o.rx.add(id);
+        for (const id of s.phRead) o.phRead.add(id);
+        const before = hook.lastResult;
+        game.ringBell();
+        if (o.pending) game.finishReport(o.questions.map((q) => q.right));
+        if (hook.lastResult === before) throw new Error(`«${o.id}»: il campanello non ha chiuso l'esercitazione`);
+        return hook.lastResult;
+      },
+      /** L'ultimo resoconto (`result`) del gioco. */
+      lastResult: null,
+    };
+    const emit = game.emit;
+    game.emit = (type, data) => {
+      if (type === 'result') hook.lastResult = data;
+      emit(type, data);
+    };
+    return hook;
+  }
+
   // ---------------------------------------------------------------- apertura / chiusura
   let lastFocus = null;
+  let booting = null; // avvio in corso: un secondo clic durante il caricamento non deve creare un altro renderer
+  let closing = 0; // timer della chiusura animata: riaprendo subito non deve più nascondere il simulatore
   async function open() {
+    clearTimeout(closing);
     lastFocus = document.activeElement;
     root.hidden = false;
+    root.classList.remove('is-leaving');
     root.classList.add('is-entering');
     setTimeout(() => root.classList.remove('is-entering'), 600);
     if (!game) {
       try {
-        await boot();
+        await (booting ??= boot());
       } catch (err) {
+        booting = null;
         console.error(err);
-        $('.gm-loading').innerHTML = `<p>${t('loadError')}</p><button type="button" class="btn-ghost" data-act="close">${t('back')}</button>`;
+        $('.gm-loading').innerHTML =
+          `<p>${t('loadError')}</p><button type="button" class="btn-ghost" data-act="close">${t('back')}</button>`;
         return;
       }
       showMenu();
@@ -1450,7 +1769,8 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
     audio?.suspend();
     if (state === 'play') setState('pause');
     root.classList.add('is-leaving');
-    setTimeout(() => {
+    clearTimeout(closing);
+    closing = setTimeout(() => {
       root.hidden = true;
       root.classList.remove('is-leaving');
       cancelAnimationFrame(raf);

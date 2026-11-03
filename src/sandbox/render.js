@@ -1,7 +1,22 @@
 // Disegno della sandbox: dalla griglia del motore ai pixel (una cella = un pixel, poi ingrandito dal canvas).
 // Colori realistici delle sostanze, incandescenza dei corpi caldi (dal punto di Draper, 525 °C), fiamme colorate,
 // scintille, scarica nei gas e vista termica. Riempie due buffer: colore e bagliore (per l'effetto glow).
-import { SOLID, LIQUID, GAS, S, WOOD, CONCRETE, WALL, GENERATOR, SOURCE, DRAIN, SALT, OXIDE, SOLUTION, variantColor } from './substances.js';
+import {
+  SOLID,
+  LIQUID,
+  GAS,
+  S,
+  WOOD,
+  CONCRETE,
+  WALL,
+  GENERATOR,
+  SOURCE,
+  DRAIN,
+  SALT,
+  OXIDE,
+  SOLUTION,
+  variantColor,
+} from './substances.js';
 import { C_BURN, C_DISSOLVED, C_FUME, C_POWDER, SPARK_ACTIVE, NEUTRON } from './world.js';
 
 // classi di trama per il disegno dettagliato (preset Professionale)
@@ -57,7 +72,7 @@ const HEAT_STOPS = [
 
 /** Posizione (0–1) di una temperatura sulla scala della vista termica: lineare fino a 22 °C, poi logaritmica. */
 export function heatScale(T) {
-  if (T <= 295) return 0.35 * Math.max(0, T) / 295;
+  if (T <= 295) return (0.35 * Math.max(0, T)) / 295;
   return Math.min(1, 0.35 + (0.65 * Math.log(T / 295)) / Math.log(10000 / 295));
 }
 
@@ -187,14 +202,21 @@ export function createRenderer(world, subs) {
         const ph = isDissolved ? (T < 271.15 ? SOLID : LIQUID) : T < mp[id] ? SOLID : T < bp[id] ? LIQUID : GAS;
         if (cls) {
           cls[i] =
-            ph === GAS ? T_GAS
-            : ph === LIQUID ? T_LIQUID
-            : id === WOOD ? T_WOOD
-            : id === CONCRETE || id === WALL ? T_STONE
-            : id === GENERATOR || id === SOURCE || id === DRAIN ? T_FLAT
-            : cf[i] & C_POWDER ? T_POWDER
-            : sf & S.METAL ? T_METAL
-            : T_SOLID;
+            ph === GAS
+              ? T_GAS
+              : ph === LIQUID
+                ? T_LIQUID
+                : id === WOOD
+                  ? T_WOOD
+                  : id === CONCRETE || id === WALL
+                    ? T_STONE
+                    : id === GENERATOR || id === SOURCE || id === DRAIN
+                      ? T_FLAT
+                      : cf[i] & C_POWDER
+                        ? T_POWDER
+                        : sf & S.METAL
+                          ? T_METAL
+                          : T_SOLID;
         }
         const o = id * 16 + ph * 4;
         if (isDissolved) {
@@ -218,11 +240,11 @@ export function createRenderer(world, subs) {
         const y = (i / W) | 0;
         // trama: grana del legno, ghiaia del calcestruzzo, muro tratteggiato, variazioni delle polveri
         let shade;
-        if (id === WOOD) shade = 0.82 + ((y * 7 + ((x >> 2) * 3)) % 5) * 0.04 + seed[i] / 2550;
+        if (id === WOOD) shade = 0.82 + ((y * 7 + (x >> 2) * 3) % 5) * 0.04 + seed[i] / 2550;
         else if (id === CONCRETE) shade = seed[i] > 236 ? 0.72 : seed[i] < 18 ? 1.12 : 0.95 + seed[i] / 2550;
         else if (id === WALL) shade = (x + y) % 4 === 0 ? 1.25 : 1;
         else if (id === GENERATOR) shade = ((x >> 1) + (y >> 1)) & 1 ? 1 : 0.55;
-        else if (id === DRAIN) shade = ((x + y) & 3) === 0 ? 1.5 : ((x ^ y) & 2 ? 0.45 : 0.8);
+        else if (id === DRAIN) shade = ((x + y) & 3) === 0 ? 1.5 : (x ^ y) & 2 ? 0.45 : 0.8;
         else if (id === SOURCE) {
           // scacchiera: il colore della sorgente e quello della sostanza che clona
           shade = 1;
@@ -234,8 +256,7 @@ export function createRenderer(world, subs) {
             g = base[mo + 1];
             b = base[mo + 2];
           }
-        }
-        else if (ph === SOLID) shade = cf[i] & 1 ? 0.86 + seed[i] / 920 : 0.95 + seed[i] / 2550;
+        } else if (ph === SOLID) shade = cf[i] & 1 ? 0.86 + seed[i] / 920 : 0.95 + seed[i] / 2550;
         else if (ph === LIQUID) shade = 0.95 + seed[i] / 2550;
         else shade = 1;
         r = Math.min(255, r * shade);
@@ -374,7 +395,11 @@ export function createRenderer(world, subs) {
             let shine = 0;
             if (c === T_LIQUID) {
               // più scuro in profondità, leggere increspature che si muovono
-              s = 1 - Math.min(0.3, depth * 0.011) + 0.022 * Math.sin(X * 0.47 + Y * 0.21 + frame * 0.11) + 0.018 * Math.sin(X * 0.19 - Y * 0.53 - frame * 0.07);
+              s =
+                1 -
+                Math.min(0.3, depth * 0.011) +
+                0.022 * Math.sin(X * 0.47 + Y * 0.21 + frame * 0.11) +
+                0.018 * Math.sin(X * 0.19 - Y * 0.53 - frame * 0.07);
               if (up && sy === 0) shine = 0.45;
             } else if (c === T_POWDER) {
               // granelli: ogni granello porta con sé la sua trama (dipende dal seme della cella)
@@ -406,7 +431,8 @@ export function createRenderer(world, subs) {
               g += (255 - g) * shine;
               b += (255 - b) * shine;
             }
-            out[o + sy * OW + sx] = (255 << 24) | ((b > 255 ? 255 : b) << 16) | ((g > 255 ? 255 : g) << 8) | (r > 255 ? 255 : r);
+            out[o + sy * OW + sx] =
+              (255 << 24) | ((b > 255 ? 255 : b) << 16) | ((g > 255 ? 255 : g) << 8) | (r > 255 ? 255 : r);
           }
         }
       }
