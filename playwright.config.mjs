@@ -25,7 +25,11 @@ const needsWebServer = projects.length === 0 || projects.includes('web');
 export default defineConfig({
   testDir: 'tests/e2e',
   testMatch: '*.spec.mjs',
-  timeout: 60_000,
+  // I tempi sono pensati per un computer da sviluppo veloce; sui runner della CI il rendering software è più lento, quindi
+  // il doppio per le prove e il triplo per le asserzioni. Anche le attese esplicite dei test (`patience` in
+  // tests/e2e/fixtures.mjs) crescono in CI.
+  timeout: process.env.CI ? 120_000 : 60_000,
+  expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   retries: process.env.CI ? 1 : 0,
   // il rendering software usa tutti i processori: più prove insieme si rubano il tempo e la sandbox rallenta
   workers: 1,

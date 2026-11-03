@@ -43,8 +43,9 @@ test('esempio termite, registro, annulla e ripeti', async ({ page }) => {
   await expect.poll(() => running(page)).toBe(true);
   await expect.poll(async () => (await grid(page)).filled).toBeGreaterThan(0);
 
-  // 10 s di simulazione, cioè 600 passi: se il browser rallenta ci mette di più, i passi sono quelli
-  await expect.poll(() => tick(page), { timeout: 60_000 }).toBeGreaterThanOrEqual(600);
+  // 10 s di simulazione, cioè 600 passi: se il browser rallenta ci mette di più, i passi sono quelli. L'attesa resta
+  // più breve del timeout della prova (60 s, 120 s in CI): se non basta, fallisce l'attesa e non la prova intera.
+  await expect.poll(() => tick(page), { timeout: process.env.CI ? 80_000 : 40_000 }).toBeGreaterThanOrEqual(600);
   await expect(log).toContainText('Reazione della termite');
   await expect(log).toContainText('Fe₂O₃ + 2 Al → Al₂O₃ + 2 Fe');
 

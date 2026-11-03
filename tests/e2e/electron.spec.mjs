@@ -22,6 +22,19 @@ const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 /** La cartella dei dati dell'app (`app.getPath('userData')`), letta dal processo principale. */
 const userDataOf = (app) => app.evaluate(({ app }) => app.getPath('userData'));
 
+/**
+ * Il percorso vero di una cartella, per confrontare due percorsi della stessa cartella: sul runner Windows della CI
+ * `os.tmpdir()` è in forma 8.3 (`C:\Users\RUNNER~1\...`) e Electron restituisce quella lunga. Se la cartella non esiste
+ * si resta al percorso assoluto (non può coincidere con una cartella che esiste).
+ */
+const realPath = (dir) => {
+  try {
+    return fs.realpathSync.native(dir);
+  } catch {
+    return path.resolve(dir);
+  }
+};
+
 const test = base.extend({
   // La cartella temporanea dei dati dell'app: si cancella a fine prova, dopo la chiusura di Electron (che la tiene aperta).
   // eslint-disable-next-line no-empty-pattern -- Playwright vuole che il primo argomento di una fixture sia un pattern
@@ -55,7 +68,7 @@ const test = base.extend({
         errors.push(`console.error: ${msg.text()}${url ? ` (${url})` : ''}`);
       });
       const actual = await userDataOf(app);
-      if (path.resolve(actual) !== path.resolve(userData)) {
+      if (realPath(actual) !== realPath(userData)) {
         throw new Error(`L'app usa ${actual} come cartella dei dati invece di ${userData}: prova interrotta`);
       }
       await use(app);
@@ -68,9 +81,18 @@ const test = base.extend({
   // La finestra dell'app, a tavola periodica caricata.
   window: async ({ app }, use) => {
     const window = await app.firstWindow();
-    await expect(window.locator('.cell[data-z="1"]')).toBeVisible();
+    // il primo disegno su un computer lento (runner della CI, rendering software) può superare il tempo delle asserzioni
+    await expect(window.locator('.cell[data-z="1"]')).toBeVisible({ timeout: 20_000 });
     await use(window);
   },
+});
+
+// L'app si lancia sulla build di produzione in dist/: senza, `electron .` aprirebbe una finestra vuota o, peggio, una
+// build vecchia di un'altra prova. Si ferma tutto prima di lanciare Electron, con il comando che manca.
+test.beforeAll(() => {
+  if (!fs.existsSync(path.join(ROOT, 'dist', 'index.html'))) {
+    throw new Error('manca dist/: esegui prima `npx vite build`, poi rilancia `npm run e2e -- --project=electron`');
+  }
 });
 
 /** Le etichette del menu dell'app (quelle in alto: File, Visualizza, Aiuto), lette dal processo principale. */
@@ -78,7 +100,7 @@ const menuLabels = (app) => app.evaluate(({ Menu }) => Menu.getApplicationMenu()
 
 test('userData è la cartella temporanea', async ({ app, userData }) => {
   // è la stessa verifica che la fixture `app` fa prima di ogni prova: qui è lo scenario dichiarato
-  expect(path.resolve(await userDataOf(app))).toBe(path.resolve(userData));
+  expect(realPath(await userDataOf(app))).toBe(realPath(userData));
 });
 
 test('preload: window.desktop con la piattaforma e il salvataggio', async ({ window }) => {

@@ -1,4 +1,4 @@
-import { test, expect, openModule } from './fixtures.mjs';
+import { test, expect, openModule, patience } from './fixtures.mjs';
 
 /**
  * Lo stato del banco dal gancio `window.__lab`: atomi, formule delle unità (molecole o atomi isolati) in ordine e
@@ -47,7 +47,9 @@ test('formula, Combina, reazione avviata e annullata', async ({ page }) => {
   await page.locator('.rx-results [data-reaction="acqua"]').click();
   await expect(panel.locator('.mp-name')).toHaveText("Sintesi dell'acqua");
   await page.locator('[data-act="rx-run"]').click();
-  await expect.poll(() => bench(page), { timeout: 30_000 }).toEqual({ atoms: 6, units: ['H₂O', 'H₂O'], busy: false });
+  await expect
+    .poll(() => bench(page), { timeout: patience(30_000) })
+    .toEqual({ atoms: 6, units: ['H₂O', 'H₂O'], busy: false });
 
   // Annulla: il banco torna ai reagenti
   await page.locator('.lab-dock [data-act="undo"]').click();

@@ -2,6 +2,14 @@
 import { test as base, expect } from '@playwright/test';
 
 /**
+ * Un'attesa esplicita lunga (il motore fisico che carica, una simulazione che avanza): `ms` in locale, il triplo in CI,
+ * dove il rendering software è più lento. Dev'essere sempre più breve del timeout della prova (playwright.config.mjs).
+ *
+ * @param {number} ms
+ */
+export const patience = (ms) => (process.env.CI ? ms * 3 : ms);
+
+/**
  * I cinque moduli dell'app: il nome da passare a `openModule` e il gancio di test che il modulo espone con
  * `exposeForTests` (src/test-hooks.js: esiste solo nella build `--mode e2e` e con `vite`).
  *
@@ -54,7 +62,7 @@ export async function openModule(page, name, { z = 6 } = {}) {
       await page.locator('.toolbar [data-action="game"]').click();
       await expect(page.locator('.gm')).toBeVisible();
       // il simulatore carica il motore fisico: il menu compare a caricamento finito
-      await expect(page.locator('.gm .gm-menu')).toBeVisible({ timeout: 30_000 });
+      await expect(page.locator('.gm .gm-menu')).toBeVisible({ timeout: patience(30_000) });
       break;
   }
 

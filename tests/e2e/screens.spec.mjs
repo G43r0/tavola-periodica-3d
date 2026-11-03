@@ -1,6 +1,6 @@
 import { mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { test, expect, openModule, startFreeLab } from './fixtures.mjs';
+import { test, expect, openModule, startFreeLab, patience } from './fixtures.mjs';
 import { PRESETS } from '../../src/gfx/preset.js';
 
 // Screenshot di controllo: cinque inquadrature in ciascuno dei tre preset grafici, in test-results/screens/
@@ -37,7 +37,7 @@ const VIEWS = {
     if (preset === 'pro') {
       await expect(page.locator('.panel .specimen canvas')).toBeVisible();
       // le miniature dei 118 elementi si generano dopo l'avvio, poche alla volta
-      await expect(page.locator('.cell[data-z].has-spec')).toHaveCount(118, { timeout: 60_000 });
+      await expect(page.locator('.cell[data-z].has-spec')).toHaveCount(118, { timeout: patience(60_000) });
     }
     await frames(page);
   },
@@ -77,7 +77,9 @@ const VIEWS = {
   async simulatore(page) {
     await openModule(page, 'simulatore');
     await startFreeLab(page);
-    await expect.poll(() => page.evaluate(() => window.__tp3d.game.time), { timeout: 30_000 }).toBeGreaterThan(1);
+    await expect
+      .poll(() => page.evaluate(() => window.__tp3d.game.time), { timeout: patience(30_000) })
+      .toBeGreaterThan(1);
     await frames(page);
   },
 };
