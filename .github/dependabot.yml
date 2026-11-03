@@ -1,0 +1,37 @@
+# Aggiornamenti delle dipendenze, ogni lunedì.
+# Gli strumenti di controllo (formato, lint, tipi, E2E) sono fissati a una versione esatta in package.json: Dependabot
+# li propone tutti insieme, così una PR sola mostra se la CI resta verde. Tutto il resto va nel gruppo «runtime».
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      devtools:
+        patterns:
+          - prettier
+          - eslint
+          - '@eslint/js'
+          - globals
+          - typescript
+          - '@playwright/test'
+      runtime:
+        patterns:
+          - '*'
+        exclude-patterns:
+          - prettier
+          - eslint
+          - '@eslint/js'
+          - globals
+          - typescript
+          - '@playwright/test'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
