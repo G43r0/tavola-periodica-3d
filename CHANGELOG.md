@@ -10,7 +10,7 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 
 ## [Non rilasciato] — per la 1.0.0
 
-Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
+Correzioni e fondamenta (fase R1 del piano) che entreranno nella versione 1.0.0 (nessuna release intermedia).
 
 ### Aggiunto
 - **SMILES come si copiano da PubChem e Wikipedia** nel riquadro Formula: aromatici minuscoli (`c1ccccc1`,
@@ -42,6 +42,33 @@ Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
 - **Sandbox, scene.** Salva e Apri una scena su file `.json` (le celle uguali vicine compresse; si apre solo con la
   stessa tabella di sostanze, altrimenti un avviso), Esporta un'immagine PNG, e l'ultima scena si salva da sola e
   torna alla prossima apertura (#63).
+- **Licenze e avvisi di terze parti (R1).** `LICENSE` (MIT) e `THIRD_PARTY_NOTICES.md` (three, Rapier, IBM Plex,
+  Electron, electron-updater, i 21 suoni CC0 di Freesound e le fonti dei dati) viaggiano dentro l'app impacchettata, e
+  la finestra «Fonti dei dati e guida» ha una sezione **Licenze** in italiano, inglese e nella versione semplice. Un
+  test controlla che le licenze elencate siano quelle di `node_modules`.
+- **Ripresa dopo un crash (R1, app desktop).** Se il processo della pagina si chiude da solo, la pagina si ricarica e un
+  avviso lo dice; se si richiude entro 30 secondi dal ricaricamento non si riprova all'infinito e compare un messaggio
+  d'errore (`electron/recover.cjs`, provato con finte finestre). `TP3D_USER_DATA` sposta la cartella dei dati dell'app
+  (la usano i test E2E, e serve a chi la porta su una chiavetta).
+- **Documenti di progetto (R1).** `CONTRIBUTING.md` (come si lavora e che cosa controlla la CI), `SECURITY.md`
+  (segnalazione privata dalle Security Advisories di GitHub), moduli per le issue (errore dell'app, errore nei
+  contenuti, proposta) e modello per le pull request. `reports/` e `research_notes/` sono ora in `docs/ricerca/`.
+- **Controlli di formato, correttezza e tipi (R1).** Prettier 3.9.10 (120 colonne, apici singoli, fine riga LF fissata
+  da `.gitattributes`; dati, Markdown e JSON esclusi), ESLint 10.14 con le sole regole di correttezza (`recommended`) e
+  TypeScript 7.0.2 come controllore dei tipi JSDoc su 26 moduli puri (`// @ts-check` in testa, un modulo alla volta,
+  forme condivise in `src/types.d.ts`): `npm run format:check`, `npm run lint`, `npm run typecheck`. Gli strumenti sono
+  fissati a una versione esatta.
+- **Test end-to-end con Playwright (R1, `npm run e2e`).** 22 prove sulla versione web (tavola, atomo 3D, laboratorio,
+  sandbox, simulatore in Laboratorio libero e in Carriera, e cinque inquadrature in ciascuno dei tre preset grafici in
+  `test-results/screens/`) e 4 sull'app Electron lanciata davvero (cartella dei dati temporanea, preload, salvataggio su
+  file, menu nella lingua scelta). Una prova fallisce se la pagina scrive un errore in console. I ganci di test
+  (`window.__tp3d` e gli altri) stanno in `src/test-hooks.js`, attivi solo con `vite` o con la build `--mode e2e`:
+  `scripts/check-dist.mjs` controlla che non finiscano nella build vera, e che la CSP non contenga `ws:`.
+- **Controlli a ogni pull request (R1, GitHub Actions, `.github/workflows/ci.yml`).** Lavoro Linux: formato, lint, tipi,
+  test, `npm audit --audit-level=high`, build, controllo di `dist/` ed E2E nel browser. Lavoro Windows: formato (anche
+  con i CRLF di git), build, `electron-builder --dir`, i cinque fusibili di Electron letti sull'eseguibile costruito ed
+  E2E dell'app. Una PR con un test rotto, un errore di tipo o una dipendenza vulnerabile resta rossa. Dependabot
+  propone gli aggiornamenti ogni lunedì, con gli strumenti di controllo in un gruppo solo.
 
 ### Corretto
 - **Laboratorio, Formula.** La carica dopo una parentesi quadra è una carica (`[Fe(CN)6]3-` non è più Fe₃C₁₈N₁₈⁻) e
@@ -122,6 +149,30 @@ Correzioni che entreranno nella versione 1.0.0 (nessuna release intermedia).
 - **Carriera, reputazione.** Contano gli incidenti del tentativo più pulito di ogni esercitazione, non tutti quelli
   dell'anno per sempre: rifacendo un'esercitazione senza incidenti la reputazione torna, e un capitolo non resta chiuso
   senza via d'uscita. Il totale dell'anno resta nel salvataggio (#49).
+
+### Modificato
+- **Rapier 0.21.0** (era 0.19.3; il motore passa dalla 0.30 alla 0.36). L'avviso «using deprecated parameters for the
+  initialization function» in console non c'è più. Nel simulatore i corpi si addormentano dopo 0,5 s invece di 2 s e un
+  cilindro lasciato cadere dritto da 0,6 m o più (urto oltre circa 3,4 m/s) ora si ribalta invece di restare in piedi;
+  le scatole restano in piedi. Il pezzo del motore passa da 2,2 a 4,3 MB (il WASM da 1,6 a 3,1 MB).
+- **Riformattazione unica con Prettier** di 149 file (JS, MJS, CJS e CSS): solo formato, i file JS e CSS di
+  `dist/assets/` costruiti prima e dopo sono identici byte per byte. Il commit è elencato in `.git-blame-ignore-revs`,
+  quindi `git blame` e GitHub lo saltano.
+- **ESLint: 21 segnalazioni sistemate** (variabili e assegnazioni mai lette, due espressioni con caratteri di controllo
+  volute e ora commentate, uno spazio unificatore diventato ` `): nessuna era un bug, il comportamento non cambia.
+  Anche i 182 errori di tipo dei moduli controllati erano JSDoc troppo vaghi (`@param {object}`), corretti senza
+  toccare il codice.
+
+### Sicurezza
+- **App desktop, fusibili di Electron.** L'eseguibile costruito ha spenti `runAsNode`, `NODE_OPTIONS` e `--inspect`
+  (non si usa come un Node qualunque né ci si attacca un debugger) e accesi la verifica dell'integrità di `app.asar` e
+  il caricamento del codice solo da lì (`build.electronFuses` di electron-builder).
+- **App desktop, pagine incorporate.** I `<webview>` sono bloccati su ogni finestra (`webviewTag: false` e
+  `will-attach-webview` negato) e la Content-Security-Policy aggiunge `object-src 'none'; base-uri 'none'`.
+- **Dipendenze sorvegliate.** `npm audit fix` porta le vulnerabilità alte da 3 a 0 (`undici`, `joi`, `follow-redirects`)
+  e `npm audit --omit=dev` resta pulito. Restano 19 avvisi moderati, tutti da `minimatch` dentro ESLint ed
+  electron-builder, cioè solo strumenti di sviluppo: l'unica via che `npm audit fix --force` propone è abbassare la
+  versione maggiore dei due strumenti, quindi si aspetta un loro aggiornamento. In CI `npm audit --audit-level=high` è su tutte le dipendenze.
 
 ## [0.9.2] — 2026-10-30 — Aggiornamenti automatici e barra che ci sta sempre
 
