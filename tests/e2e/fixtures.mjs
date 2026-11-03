@@ -66,6 +66,21 @@ export async function openModule(page, name, { z = 6 } = {}) {
   }
 }
 
+/**
+ * Dal menu del simulatore al Laboratorio libero, fino al gioco (HUD visibile, nessuna finestra aperta). Il simulatore
+ * dev'essere già aperto (`openModule(page, 'simulatore')`).
+ *
+ * @param {import('@playwright/test').Page} page
+ */
+export async function startFreeLab(page) {
+  const dialog = page.locator('.gm-dialog');
+  await page.locator('.gm-menu [data-act="free"]').click();
+  await expect(dialog.locator('h3')).toHaveText('Laboratorio libero');
+  await dialog.getByRole('button', { name: 'Inizia', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('.gm-hud')).toBeVisible();
+}
+
 export const test = base.extend({
   // Errori in console: un `pageerror` o un `console.error` fa fallire il test, con il loro testo. Gli avvisi
   // (`warning`) non contano: per esempio il «deprecated parameters» di Rapier.

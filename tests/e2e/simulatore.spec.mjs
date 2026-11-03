@@ -1,4 +1,4 @@
-import { test, expect, openModule } from './fixtures.mjs';
+import { test, expect, openModule, startFreeLab } from './fixtures.mjs';
 import { PASS_STARS } from '../../src/game/career.js';
 
 // Il simulatore si gioca con il puntatore bloccato, che un test non può comandare: le azioni di gioco passano dal
@@ -18,16 +18,6 @@ const benchB = (page) =>
       .map((it) => it.name)
       .sort(),
   );
-
-/** Dal menu del simulatore al Laboratorio libero, fino al gioco (HUD visibile, nessuna finestra aperta). */
-async function startFreeLab(page) {
-  const dialog = page.locator('.gm-dialog');
-  await page.locator('.gm-menu [data-act="free"]').click();
-  await expect(dialog.locator('h3')).toHaveText('Laboratorio libero');
-  await dialog.getByRole('button', { name: 'Inizia', exact: true }).click();
-  await expect(dialog).toBeHidden();
-  await expect(page.locator('.gm-hud')).toBeVisible();
-}
 
 test('laboratorio libero: Prepara sul banco e 20 s di gioco', async ({ page }) => {
   // al caricamento del motore fisico si aggiungono i 20 s di gioco
