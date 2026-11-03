@@ -36,12 +36,8 @@ jobs:
         run: npm run format:check
       - name: Lint
         run: npm run lint
-      # tsconfig.json tiene skipLibCheck a true, che salta anche i file .d.ts del progetto (src/types.d.ts): qui si
-      # controllano. --lib ripete quello di tsconfig.json più esnext.disposable, perché i tipi di Rapier usano
-      # Symbol.dispose e senza darebbero 41 errori, tutti dentro node_modules. Se cambia `lib` in tsconfig.json,
-      # cambia anche qui.
       - name: Tipi
-        run: npm run typecheck -- --skipLibCheck false --lib es2023,dom,esnext.disposable
+        run: npm run typecheck
       - name: Test unitari
         run: npm test
       # Tutte le dipendenze, non solo quelle di produzione (--omit=dev): Electron, three e Rapier sono devDependencies,
@@ -90,8 +86,21 @@ jobs:
         run: npx vite build
       - name: App Windows (cartella, senza installer)
         run: npx electron-builder --win --dir --publish never
-      # Mostra i fusibili dell'app impacchettata (runAsNode e gli altri, vedi build.electronFuses in package.json).
+      # `fuses read` stampa i fusibili ed esce sempre 0: qui si controllano i cinque che imposta build.electronFuses in
+      # package.json (gli altri, come EnableCookieEncryption, restano al valore di Electron). `tr` toglie i CR.
       - name: Fusibili di Electron
-        run: npx @electron/fuses read --app "release/win-unpacked/Tavola Periodica 3D.exe"
+        run: |
+          out="$(npx @electron/fuses read --app "release/win-unpacked/Tavola Periodica 3D.exe" | tr -d '\r')"
+          echo "$out"
+          expected=(
+            "RunAsNode is Disabled"
+            "EnableNodeOptionsEnvironmentVariable is Disabled"
+            "EnableNodeCliInspectArguments is Disabled"
+            "EnableEmbeddedAsarIntegrityValidation is Enabled"
+            "OnlyLoadAppFromAsar is Enabled"
+          )
+          for f in "${expected[@]}"; do
+            grep -qE "^ +$f$" <<<"$out" || { echo "Fusibile inatteso: $f"; exit 1; }
+          done
       - name: E2E di Electron
         run: npm run e2e -- --project=electron

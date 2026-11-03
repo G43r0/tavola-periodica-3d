@@ -54,8 +54,7 @@ request con un lavoro rosso non si unisce: apri il passo che è fallito e rilanc
 
 **`check`** (Linux, Node 22) controlla il codice, nell'ordine:
 
-1. `npm run format:check`, `npm run lint` e `npm run typecheck`. In CI il controllo dei tipi guarda anche i file `.d.ts`
-   del progetto (`src/types.d.ts`), che con `skipLibCheck: true` (`tsconfig.json`) il comando locale salta;
+1. `npm run format:check`, `npm run lint` e `npm run typecheck`;
 2. `npm test`, i test unitari;
 3. `npm audit --audit-level=high` su **tutte** le dipendenze, anche quelle di sviluppo (Electron, three e Rapier lo
    sono): un avviso alto blocca la pull request anche se non l'hai toccata tu. Di solito lo risolve `npm audit fix` o la
@@ -67,7 +66,9 @@ request con un lavoro rosso non si unisce: apri il passo che è fallito e rilanc
 
 **`windows`** (Windows, Node 22) controlla l'app vera: `npm run format:check` (i file devono restare LF anche dove git
 li riscrive con CRLF), `npx vite build`, `npx electron-builder --win --dir --publish never` (l'app in una cartella,
-senza installer), `npx @electron/fuses read` (mostra i fusibili di Electron) e `npm run e2e -- --project=electron`.
+senza installer), `npx @electron/fuses read` (controlla i cinque fusibili di Electron che imposta `build.electronFuses`
+in `package.json`: `runAsNode`, `enableNodeOptionsEnvironmentVariable` e `enableNodeCliInspectArguments` spenti,
+`enableEmbeddedAsarIntegrityValidation` e `onlyLoadAppFromAsar` accesi) e `npm run e2e -- --project=electron`.
 
 Dalla pagina dell'esecuzione, in fondo, si scaricano due archivi anche quando un passo fallisce: `screenshot` (cinque
 inquadrature dell'interfaccia in ciascuno dei tre preset grafici) ed `e2e-report` (il rapporto di Playwright, con le
