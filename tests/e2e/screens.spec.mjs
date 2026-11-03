@@ -73,13 +73,15 @@ const VIEWS = {
     await frames(page);
   },
 
-  // il simulatore in Laboratorio libero, a gioco avviato e con il tempo del gioco che scorre
+  // il simulatore in Laboratorio libero, a gioco avviato e con il tempo del gioco che scorre. Basta un passo di gioco
+  // (al massimo 0,05 s per fotogramma): sul runner della CI il preset Professionale disegna un fotogramma ogni
+  // diversi secondi, e aspettare un secondo intero di gioco sforava il tempo del test.
   async simulatore(page) {
     await openModule(page, 'simulatore');
     await startFreeLab(page);
     await expect
       .poll(() => page.evaluate(() => window.__tp3d.game.time), { timeout: patience(30_000) })
-      .toBeGreaterThan(1);
+      .toBeGreaterThan(0);
     await frames(page);
   },
 };

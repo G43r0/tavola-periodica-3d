@@ -25,8 +25,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # l'E2E del browser dura circa 4 minuti in locale (rendering software): sui runner di più, quindi c'è margine
-    timeout-minutes: 30
+    # l'E2E del browser dura circa 4 minuti in locale; sul runner, senza scheda grafica, il simulatore disegna un
+    # fotogramma ogni pochi secondi e l'E2E ha superato i 25 minuti: c'è margine anche per un tentativo ripetuto
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
