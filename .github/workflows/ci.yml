@@ -1,0 +1,97 @@
+# Controlla ogni pull request e ogni push su main. Sono due lavori che girano insieme:
+#  - check (Linux): formato, lint, tipi, test unitari, audit delle dipendenze, build, controllo della build e E2E
+#    dell'interfaccia nel browser;
+#  - windows: build dell'app Windows e E2E di Electron (la build di prova gira solo su Windows: macOS e Linux si
+#    decidono nella R9).
+# Una pull request con un passo rosso non si unisce. Gli screenshot e il rapporto dell'E2E restano scaricabili dalla
+# pagina dell'esecuzione anche quando un passo fallisce. Come lanciare gli stessi controlli in locale: CONTRIBUTING.md.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Un solo giro per ramo o pull request: un push nuovo cancella quello ancora in corso.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    # l'E2E del browser dura circa 4 minuti in locale (rendering software): sui runner di più, quindi c'è margine
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Formato
+        run: npm run format:check
+      - name: Lint
+        run: npm run lint
+      # tsconfig.json tiene skipLibCheck a true, che salta anche i file .d.ts del progetto (src/types.d.ts): qui si
+      # controllano. --lib ripete quello di tsconfig.json più esnext.disposable, perché i tipi di Rapier usano
+      # Symbol.dispose e senza darebbero 41 errori, tutti dentro node_modules. Se cambia `lib` in tsconfig.json,
+      # cambia anche qui.
+      - name: Tipi
+        run: npm run typecheck -- --skipLibCheck false --lib es2023,dom,esnext.disposable
+      - name: Test unitari
+        run: npm test
+      # Tutte le dipendenze, non solo quelle di produzione (--omit=dev): Electron, three e Rapier sono devDependencies,
+      # e un avviso alto di Electron (come GHSA-jr5w-w6x2-84p9) deve bloccare.
+      - name: Audit delle dipendenze
+        run: npm audit --audit-level=high
+      - name: Build
+        run: npx vite build
+      - name: Controllo della build
+        run: npm run check:dist
+      - name: Installa Chromium
+        run: npx playwright install --with-deps chromium
+      - name: E2E del browser
+        run: npm run e2e -- --project=web
+      - name: Screenshot di controllo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot
+          path: test-results/screens/
+      - name: Rapporto dell'E2E
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: playwright-report/
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Su Windows git può riscrivere le righe con CRLF (core.autocrlf): .gitattributes le tiene LF e questo passo
+      # controlla che Prettier non trovi differenze nella copia di lavoro.
+      - name: Formato
+        run: npm run format:check
+      - name: Build
+        run: npx vite build
+      - name: App Windows (cartella, senza installer)
+        run: npx electron-builder --win --dir --publish never
+      # Mostra i fusibili dell'app impacchettata (runAsNode e gli altri, vedi build.electronFuses in package.json).
+      - name: Fusibili di Electron
+        run: npx @electron/fuses read --app "release/win-unpacked/Tavola Periodica 3D.exe"
+      - name: E2E di Electron
+        run: npm run e2e -- --project=electron
