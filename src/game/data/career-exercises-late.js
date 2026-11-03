@@ -1002,8 +1002,6 @@ export const LATE_EXERCISES = [
  * in soldi è la paga dell'esercitazione per 0,25 per ogni medaglia (bronzo 1, argento 2, oro 3).
  */
 /** @type {import('../../types').Challenge[]} */
-/** @type {import('../../types').Challenge[]} */
-/** @type {import('../../types').Challenge[]} */
 export const CHALLENGES = [
   { id: 'chNacl', ex: 'nacl', gold: 150, silver: 200, bronze: 280 },
   { id: 'chDilute', ex: 'dilute', gold: 120, silver: 170, bronze: 240 },

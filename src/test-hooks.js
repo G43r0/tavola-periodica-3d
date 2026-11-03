@@ -4,7 +4,8 @@
 // Attivi solo con `vite` (sviluppo) e con la build di prova `vite build --mode e2e` (npm run build:e2e). Nella build
 // vera `TEST_HOOKS` vale `false` già in fase di compilazione e `scripts/check-dist.mjs` (npm run check:dist) controlla
 // che nessun nome di gancio resti nei file di `dist/`.
-export const TEST_HOOKS = import.meta.env.DEV || import.meta.env.MODE === 'e2e';
+// Il `?.` serve a `node --test`: senza Vite `import.meta.env` non esiste e l'importazione del modulo lancerebbe.
+export const TEST_HOOKS = import.meta.env?.DEV || import.meta.env?.MODE === 'e2e';
 
 /**
  * Espone `value` come `window[name]`, ma solo se i ganci di test sono attivi.
