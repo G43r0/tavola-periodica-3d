@@ -1,0 +1,73 @@
+/* Finestra «Qualcosa è andato storto» (src/ui/error-report.js): sopra tutto, anche sopra il simulatore */
+.err-dialog {
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(86vh, 760px);
+  padding: 0;
+  color: var(--text-0);
+  background: var(--bg-2);
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--line-2));
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+}
+.err-dialog::backdrop {
+  background: rgba(2, 5, 10, 0.7);
+  backdrop-filter: blur(3px);
+}
+.err-dialog[open] {
+  animation: dialog-in var(--t-med) var(--ease-out);
+}
+.err-dialog__inner {
+  display: grid;
+  gap: 12px;
+  padding: 22px 26px 24px;
+}
+.err-dialog h2 {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--danger);
+}
+.err-dialog__text,
+.err-dialog__note {
+  color: var(--text-1);
+  line-height: 1.5;
+}
+.err-dialog__note {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.err-dialog__error {
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+.err-dialog__error code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text-0);
+}
+.err-dialog__details summary {
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+.err-dialog__details pre {
+  max-height: 240px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  color: var(--text-1);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  user-select: text;
+}
+.err-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}

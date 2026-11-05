@@ -90,16 +90,24 @@ export async function startFreeLab(page) {
 }
 
 export const test = base.extend({
+  // Errori che una prova provoca di proposito (per esempio quella della finestra «Qualcosa è andato storto»): una sola
+  // espressione regolare, con `test.use({ allowedErrors: /…/ })` (un array, per Playwright, sarebbe la coppia valore e
+  // opzioni). Gli altri errori fanno fallire la prova lo stesso.
+  allowedErrors: [null, { option: true }],
+
   // Errori in console: un `pageerror` o un `console.error` fa fallire il test, con il loro testo. Gli avvisi
   // (`warning`) non contano: per esempio il «deprecated parameters» di Rapier.
   consoleErrors: [
-    async ({ page }, use) => {
+    async ({ page, allowedErrors }, use) => {
       const errors = [];
-      page.on('pageerror', (err) => errors.push(`pageerror: ${err.stack ?? err}`));
+      const push = (text) => {
+        if (!allowedErrors?.test(text)) errors.push(text);
+      };
+      page.on('pageerror', (err) => push(`pageerror: ${err.stack ?? err}`));
       page.on('console', (msg) => {
         if (msg.type() !== 'error') return;
         const { url } = msg.location();
-        errors.push(`console.error: ${msg.text()}${url ? ` (${url})` : ''}`);
+        push(`console.error: ${msg.text()}${url ? ` (${url})` : ''}`);
       });
       // il browser chiede da solo /favicon.ico e l'app non ne ha una: senza questa risposta ogni test avrebbe un 404
       await page.route('**/favicon.ico', (route) => route.fulfill({ status: 204 }));

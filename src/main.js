@@ -1,4 +1,6 @@
 // Punto di ingresso dell'interfaccia.
+// Per primo: la finestra «Qualcosa è andato storto» ascolta gli errori anche mentre si caricano gli altri moduli.
+import { setErrorContext } from './ui/error-report.js';
 import '@fontsource/ibm-plex-sans/400.css';
 import '@fontsource/ibm-plex-sans/500.css';
 import '@fontsource/ibm-plex-sans/600.css';
@@ -225,6 +227,20 @@ window.addEventListener('keydown', (ev) => {
     const z = ev.key === 'ArrowLeft' ? (selectedZ === 1 ? 118 : selectedZ - 1) : selectedZ === 118 ? 1 : selectedZ + 1;
     store.set({ selectedZ: z });
   }
+});
+
+// per i dettagli di un errore imprevisto: quale modulo è aperto (il laboratorio può stare sopra il simulatore)
+setErrorContext({
+  module: () =>
+    lab?.isOpen()
+      ? 'laboratorio'
+      : game?.isOpen()
+        ? 'simulatore'
+        : sandbox?.isOpen()
+          ? 'sandbox'
+          : viewer?.isOpen()
+            ? 'atomo'
+            : 'tavola',
 });
 
 if (window.desktop) document.documentElement.dataset.platform = window.desktop.platform;

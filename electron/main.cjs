@@ -6,13 +6,20 @@ const { menuTemplate } = require('./menu.cjs');
 const { lockDownSession, lockWebContents } = require('./security.cjs');
 const { watchRenderer } = require('./recover.cjs');
 const { chooseUserData } = require('./portable.cjs');
+const { createLogFile, createRateLimit } = require('./log-file.cjs');
 const path = require('node:path');
+const os = require('node:os');
 
 // Cartella dei dati dell'utente: `TP3D_USER_DATA` per gli E2E (una cartella temporanea, mai i dati veri di chi sviluppa),
 // poi la cartella `dati` accanto all'eseguibile per l'app su chiavetta (electron/portable.cjs). Va impostata prima di
 // `ready` e prima che qualcosa legga userData (blocco dell'istanza unica, salvataggi, impostazioni dell'aggiornatore).
 const userData = chooseUserData({ env: process.env, execPath: process.execPath });
 if (userData) app.setPath('userData', userData.dir);
+
+// Registro locale (electron/log-file.cjs): errori del renderer, crash, salvataggi. Mai inviato da solo.
+let logFile = null;
+const logs = () => (logFile ??= createLogFile(path.join(app.getPath('userData'), 'logs')));
+const rendererLogLimit = createRateLimit({ perMinute: 60 });
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 const isDev = Boolean(DEV_URL);
@@ -56,7 +63,11 @@ function createWindow() {
   const renderer = watchRenderer(mainWindow, {
     onGiveUp: (details) => dialog.showErrorBox('Tavola Periodica 3D', GIVE_UP_TEXT[uiLang](details.reason)),
   });
-  mainWindow.webContents.on('render-process-gone', (_event, details) => renderer.handle(details));
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    if (details.reason !== 'clean-exit')
+      logs().append('error', 'main', `Il renderer si è chiuso: ${details.reason} (codice ${details.exitCode})`);
+    renderer.handle(details);
+  });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.maximize();
@@ -78,7 +89,12 @@ function createWindow() {
 
 // Voci del menu nella lingua scelta nell'app (electron/menu.cjs).
 function buildMenu(lang = 'it') {
-  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate(lang, { isDev })));
+  const onOpenLogs = () => {
+    // la cartella può non esserci ancora: niente errori finora
+    require('node:fs').mkdirSync(logs().dir, { recursive: true });
+    shell.openPath(logs().dir);
+  };
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate(lang, { isDev, onOpenLogs })));
 }
 
 ipcMain.on('set-language', (_event, code) => {
@@ -88,10 +104,30 @@ ipcMain.on('set-language', (_event, code) => {
 
 // Salvataggi del simulatore (electron/save-file.cjs): un file JSON nella cartella dei dati dell'utente.
 let saves = null;
-const saveStore = () => (saves ??= createSaveFile(path.join(app.getPath('userData'), 'simulatore-salvataggio.json')));
+const saveStore = () =>
+  (saves ??= createSaveFile(path.join(app.getPath('userData'), 'simulatore-salvataggio.json'), {
+    onError: (message) => {
+      console.error(message);
+      logs().append('error', 'salvataggi', message);
+    },
+  }));
 ipcMain.handle('game-save:read', () => saveStore().read());
 ipcMain.on('game-save:write', (_event, json) => {
   saveStore().write(json);
+});
+
+// Errori del renderer (src/ui/error-report.js): al più 60 voci al minuto, poi una riga con quante sono state saltate.
+ipcMain.on('app-log:write', (_event, text) => {
+  if (!rendererLogLimit.take()) return;
+  const skipped = rendererLogLimit.flushSkipped();
+  if (skipped) logs().append('warn', 'renderer', `${skipped} voci saltate (troppi errori in un minuto)`);
+  logs().append('error', 'renderer', String(text));
+});
+
+// Un processo di Chromium che si chiude (la GPU, per esempio): il renderer di solito se la cava, ma resta nel registro.
+app.on('child-process-gone', (_event, details) => {
+  if (details.reason !== 'clean-exit')
+    logs().append('warn', 'main', `Processo ${details.type} chiuso: ${details.reason} (codice ${details.exitCode})`);
 });
 
 if (!app.requestSingleInstanceLock()) {
@@ -105,6 +141,12 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
+    logs().append(
+      'info',
+      'main',
+      `Avvio ${app.getVersion()} · Electron ${process.versions.electron} · ${process.platform} ${os.release()}` +
+        (userData?.why === 'portable' ? ' · dati sulla chiavetta' : ''),
+    );
     lockDownSession(session.defaultSession);
     app.setAboutPanelOptions({
       applicationName: 'Tavola Periodica 3D',

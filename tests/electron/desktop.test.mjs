@@ -26,6 +26,20 @@ test('menu: «Informazioni su Tavola Periodica 3D» (ruolo about) in italiano e 
   assert.ok(items(menuTemplate('it', { isDev: true })).some((i) => i.role === 'toggleDevTools'));
 });
 
+test('menu: «Apri la cartella dei registri» nell’Aiuto, solo se c’è chi la apre', () => {
+  let opened = 0;
+  for (const [lang, label] of [
+    ['it', 'Apri la cartella dei registri'],
+    ['en', 'Open the log folder'],
+  ]) {
+    const item = items(menuTemplate(lang, { onOpenLogs: () => opened++ })).find((i) => i.label === label);
+    assert.ok(item, lang);
+    item.click();
+  }
+  assert.equal(opened, 2);
+  assert.ok(!items(menuTemplate('it')).some((i) => /registri/.test(i.label ?? '')));
+});
+
 test('sessione: la pagina non ottiene permessi (fotocamera, microfono, posizione, notifiche…) tranne quelli che usa', () => {
   const session = {
     setPermissionRequestHandler(fn) {

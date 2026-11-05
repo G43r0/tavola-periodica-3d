@@ -1,6 +1,6 @@
 // Preload: espone al renderer solo informazioni innocue sulla piattaforma, la lingua scelta (per il menu), l'avviso di
-// ricaricamento dopo un errore e il file dei salvataggi del simulatore (un solo file JSON nella cartella dei dati
-// dell'utente, letto e scritto dal processo principale: il renderer non sceglie il percorso).
+// ricaricamento dopo un errore, il registro degli errori e il file dei salvataggi del simulatore (un solo file JSON
+// nella cartella dei dati dell'utente, letto e scritto dal processo principale: il renderer non sceglie il percorso).
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('desktop', {
@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('desktop', {
     ipcRenderer.on('app:recovered', handler);
     return () => ipcRenderer.removeListener('app:recovered', handler);
   },
+  // un errore del renderer nel registro locale (electron/log-file.cjs), mai inviato da solo
+  log: (text) => ipcRenderer.send('app-log:write', String(text).slice(0, 16_000)),
   gameSave: {
     read: () => ipcRenderer.invoke('game-save:read'),
     write: (json) => ipcRenderer.send('game-save:write', String(json)),

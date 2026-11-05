@@ -12,6 +12,7 @@ const MENU_TEXT = {
     devTools: 'Strumenti per sviluppatori',
     help: 'Aiuto',
     about: 'Informazioni su Tavola Periodica 3D',
+    openLogs: 'Apri la cartella dei registri',
   },
   en: {
     quit: 'Quit',
@@ -24,10 +25,15 @@ const MENU_TEXT = {
     devTools: 'Developer tools',
     help: 'Help',
     about: 'About Tavola Periodica 3D',
+    openLogs: 'Open the log folder',
   },
 };
 
-function menuTemplate(lang = 'it', { isDev = false } = {}) {
+/**
+ * @param {string} [lang]
+ * @param {{ isDev?: boolean, onOpenLogs?: () => void }} [options] onOpenLogs: apre la cartella dei registri
+ */
+function menuTemplate(lang = 'it', { isDev = false, onOpenLogs } = {}) {
   const m = MENU_TEXT[lang] ?? MENU_TEXT.it;
   return [
     {
@@ -49,8 +55,12 @@ function menuTemplate(lang = 'it', { isDev = false } = {}) {
     },
     {
       label: m.help,
-      // la finestra con la versione dell'app, di Electron e di Chrome (app.setAboutPanelOptions in main.cjs)
-      submenu: [{ role: 'about', label: m.about }],
+      // la finestra con la versione dell'app, di Electron e di Chrome (app.setAboutPanelOptions in main.cjs) e i registri
+      // (electron/log-file.cjs), da allegare a una segnalazione
+      submenu: [
+        ...(onOpenLogs ? [{ label: m.openLogs, click: () => onOpenLogs() }, { type: 'separator' }] : []),
+        { role: 'about', label: m.about },
+      ],
     },
   ];
 }
