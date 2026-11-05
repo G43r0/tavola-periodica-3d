@@ -116,5 +116,7 @@ sicurezza):
 `check` è il CRC-32 del file senza `check`, scritto in JSON con le chiavi in ordine alfabetico: scopre un file troncato o
 modificato (non protegge da chi lo falsifica di proposito). «Importa» rifiuta un file che non è JSON, che non è un
 profilo, che viene da un'app più nuova, con il controllo sbagliato o più grande di 2 MB. Il profilo importato passa da
-`migrate()` come ogni salvataggio. Se è lo stesso profilo (stesso `id` e stessa data di creazione) sostituisce quello
-che c'è, dopo una conferma; altrimenti si aggiunge (al massimo 8 profili).
+`migrate()` come ogni salvataggio. Se è lo stesso profilo, cioè con la stessa data di creazione al millesimo di secondo
+(l'identità di un profilo, anche se cambia nome o `id`), prende il posto di quello che c'è, dopo una conferma: così
+da scuola a casa e ritorno il profilo si aggiorna e non si duplica. Altrimenti si aggiunge, con un `id` nuovo se il suo
+è già usato (al massimo 8 profili). Le impostazioni scritte nel file non cambiano quelle del computer su cui si importa.

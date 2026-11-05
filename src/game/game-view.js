@@ -60,8 +60,17 @@ import { GameAudio } from './audio/audio.js';
 import { GameRenderer } from './game-render.js';
 import { TEST_HOOKS, exposeForTests } from '../test-hooks.js';
 import { watchContextLoss, contextNotice } from '../gfx/context-loss.js';
+import {
+  exportProfile,
+  profileFileText,
+  profileFileName,
+  parseProfileFile,
+  importProfile,
+  PROFILE_FILE_MAX,
+} from './profile-file.js';
 
 const t = createT(GAME_STRINGS);
+const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : null;
 const SAVE_KEY = 'tp3d.game';
 const HUD_HZ = 10;
 
@@ -423,6 +432,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
         <span class="gm-profile__who">${name}<small>${esc(t('profileStats', { n: done, total: EXERCISES.length, rep, money: fmtMoney(p.career.money ?? 0) }))}</small></span>
         <span class="gm-profile__btns">
           ${editing === p.id ? `<button type="button" class="btn-ghost" data-profile-save="${esc(p.id)}">${t('profileSave')}</button>` : `<button type="button" class="btn-ghost" data-profile-edit="${esc(p.id)}">${t('profileRename')}</button>`}
+          <button type="button" class="btn-ghost" data-profile-export="${esc(p.id)}" title="${esc(t('profileExportTitle'))}">${t('profileExport')}</button>
           ${save.profiles.length > 1 ? `<button type="button" class="btn-ghost" data-profile-del="${esc(p.id)}">${t('profileDelete')}</button>` : ''}
           ${on ? `<span class="gm-small">${t('profileActive')}</span>` : `<button type="button" class="gm-primary" data-profile-use="${esc(p.id)}">${t('profileUse')}</button>`}
         </span></li>`;
@@ -435,6 +445,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       <ul class="gm-profiles">${rows}</ul>
       <div class="gm-actions">
         ${save.profiles.length < 8 ? `<button type="button" class="btn-ghost" data-act="profile-new">${icons.plus(14)}<span>${t('profileNew')}</span></button>` : ''}
+        <button type="button" class="btn-ghost" data-act="profile-import">${t('profileImport')}</button>
         <button type="button" class="gm-primary" data-act="menu">${t('done')}</button></div>`,
       'gm-profiles-card',
     );
@@ -446,6 +457,68 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       $(`[data-profile-save="${CSS.escape(nameInput.dataset.profileName)}"]`)?.click();
     });
     nameInput?.focus();
+  }
+
+  // ---------------------------------------------------------------- file di profilo (profile-file.js)
+  /** Scarica il profilo in un file (nell'app desktop si sceglie dove salvarlo). */
+  function exportProfileFile(id) {
+    const p = save.profiles.find((x) => x.id === id);
+    if (!p) return;
+    const now = new Date().toISOString();
+    const name = profileFileName(p.name, now);
+    const blob = new Blob([profileFileText(exportProfile(save, id, { app: APP_VERSION, now }))], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: name });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    toast(t('profileExported', { file: name }), 'ok', 5000);
+  }
+
+  /** Sceglie un file di profilo e lo importa (con una conferma se aggiorna un profilo che c'è già). */
+  function pickProfileFile() {
+    const input = Object.assign(document.createElement('input'), { type: 'file', accept: '.json,application/json' });
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > PROFILE_FILE_MAX) return showImportError('size');
+      let text;
+      try {
+        text = await file.text();
+      } catch {
+        return showImportError('read');
+      }
+      const parsed = parseProfileFile(text);
+      if (!parsed.ok) return showImportError(parsed.error);
+      const res = importProfile(save, parsed);
+      if ('error' in res) return showImportError(res.error);
+      if (res.action === 'replaced') return showImportReplace(parsed, res);
+      useProfile(res.save);
+      toast(t('profileImported', { name: profile().name }), 'ok');
+      showProfiles();
+    });
+    input.click();
+  }
+
+  function showImportError(error) {
+    showDialog(`
+      <h3>${t('profileImportErrorTitle')}</h3>
+      <p>${t(`profileImportError_${error}`)}</p>
+      <div class="gm-actions"><button type="button" class="gm-primary" data-act="profiles">${t('done')}</button></div>`);
+  }
+
+  let pendingImport = null; // l'importazione che aspetta la conferma
+  function showImportReplace(parsed, res) {
+    pendingImport = res;
+    const old = save.profiles.find((p) => p.id === res.id);
+    const date = parsed.exported ? new Date(parsed.exported).toLocaleDateString(locale()) : '—';
+    showDialog(`
+      <h3>${t('profileImportReplaceTitle')}</h3>
+      <p>${t('profileImportReplaceText', { name: `<b>${esc(parsed.profile.name)}</b>`, date: esc(date), old: `<b>${esc(old?.name ?? '')}</b>` })}</p>
+      <div class="gm-actions"><button type="button" class="btn-ghost" data-act="profiles">${t('cancel')}</button><button type="button" class="gm-primary" data-act="profile-import-yes">${t('profileImportReplaceYes')}</button></div>`);
   }
 
   /** Conferma prima di eliminare un profilo: Carriera, soldi e quaderno si perdono per sempre. */
@@ -1106,6 +1179,15 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       const input = $(`[data-profile-name="${b.dataset.profileSave}"]`);
       save = renameProfile(save, b.dataset.profileSave, input?.value ?? '');
       storeSave();
+      showProfiles();
+    } else if (b.dataset.profileExport) exportProfileFile(b.dataset.profileExport);
+    else if (act === 'profile-import') pickProfileFile();
+    else if (act === 'profile-import-yes') {
+      if (pendingImport) {
+        useProfile(pendingImport.save);
+        pendingImport = null;
+        toast(t('profileReplaced', { name: profile().name }), 'ok');
+      }
       showProfiles();
     } else if (b.dataset.profileDel) showProfileDelete(b.dataset.profileDel);
     else if (b.dataset.profileDelYes) {

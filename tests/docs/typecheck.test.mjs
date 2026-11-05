@@ -23,6 +23,7 @@ const CHECKED = [
   'src/game/career.js',
   'src/game/save.js',
   'src/game/book.js',
+  'src/game/profile-file.js',
   'src/ui/error-logic.js',
 ];
 

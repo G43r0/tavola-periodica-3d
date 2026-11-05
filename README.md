@@ -496,8 +496,11 @@ Daniell e contatore del gas.
   vende occhiali e camice (niente doccia per gli schizzi), vetreria di scorta, termometro digitale, bilancia di
   precisione (0,001 g), cappa più potente e la chiave dell'armadio (il magazzino della scuola anche nella Carriera). Il
   libro «Come si fa» apre le sue pagine con i capitoli e l'insegnante indica quelle che servono. **Profili** (fino a 8),
-  ognuno con la sua Carriera e il suo quaderno; i **salvataggi** hanno una versione e passano da soli dalla vecchia alla
-  nuova (`src/game/save.js`); nell'app Electron sono anche in un file nella cartella dei dati dell'utente.
+  ognuno con la sua Carriera e il suo quaderno; un profilo si **esporta** in un file e si **importa** su un altro
+  computer (da scuola a casa e ritorno: lo stesso profilo si aggiorna, non si duplica). I **salvataggi** hanno una
+  versione e passano da soli dalla vecchia alla nuova (ogni salvataggio dalla 0.8.0 si apre); nell'app Electron sono
+  anche in un file nella cartella dei dati dell'utente, con tre copie di sicurezza. Formato e garanzie in
+  [docs/salvataggi.md](docs/salvataggi.md).
 - **Chimica** scelta all'inizio: *realistica* (si legge la bilancia, la graduazione e le etichette; un cucchiaino di
   spatola pesa 1 g ± 5 %; tolleranze strette) o *semplificata* (un cucchiaino = 1 g, quantità e pH sempre visibili,
   tolleranze larghe).
@@ -738,6 +741,7 @@ src/
     career.js         la Carriera: capitoli, misure e condizioni dichiarative, valutazione, relazione, reputazione, negozio
     orders.js         punteggio, stelle e paga delle esercitazioni
     save.js           salvataggi con la versione, migrazione e profili
+    profile-file.js   file di profilo da esportare e importare (con il controllo CRC-32)
     physics.js        Rapier: mondo a passo fisso, corpi, urti (rottura del vetro), raggi, controllore del personaggio
     room.js           l'aula di chimica: banconi, lavandino, cappa, cattedra, lavagna, rifiuti, doccia, luci
     items.js          vetreria e strumenti: profili reali, collisori, graduazioni, etichette
