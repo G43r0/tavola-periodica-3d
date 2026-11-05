@@ -5,7 +5,7 @@
 //  - renderThumbnails(): miniature di tutti gli elementi per la tavola, generate poche alla volta.
 // Caricato su richiesta solo con il preset Professionale.
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { watchContextLoss, roomEnvironment, renewEnvironment } from './context-loss.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { APPEARANCE } from './appearance.js';
@@ -589,6 +589,12 @@ function frameObject(camera, sphere, margin = 1) {
 }
 
 // ---------------------------------------------------------------- studio fotografico
+const STUDIO_SIGMA = 0.02; // sfocatura della mappa d'ambiente dello studio
+
+/** Dopo un contesto WebGL perso e ripristinato: la mappa d'ambiente dello studio si rifà (gfx/context-loss.js). */
+const renewStudio = (renderer, scene) =>
+  renewEnvironment(renderer, scene.environment, STUDIO_SIGMA, { scenes: [scene] });
+
 function createStudio(renderer) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NeutralToneMapping;
@@ -598,12 +604,8 @@ function createStudio(renderer) {
 
   const scene = new THREE.Scene();
   scene.background = backdropTex();
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  const room = new RoomEnvironment();
-  scene.environment = pmrem.fromScene(room, 0.02).texture;
+  scene.environment = roomEnvironment(renderer, STUDIO_SIGMA);
   scene.environmentIntensity = 1.25;
-  room.dispose();
-  pmrem.dispose();
 
   const key = new THREE.DirectionalLight(0xffffff, 1.3);
   key.position.set(-2.2, 4, 2.6);
@@ -651,6 +653,14 @@ export function createSpecimenView() {
   const spin = specimenSpin();
   const rot = { yaw: 0.4, pitch: 0, vyaw: spin, dragging: false, lastX: 0, lastY: 0, idle: 0 };
 
+  // contesto WebGL perso: si smette di disegnare; al ripristino lo studio si rifà e la rotazione riparte
+  const context = watchContextLoss(canvas, {
+    onRestored: () => {
+      renewStudio(renderer, scene);
+      start();
+    },
+  });
+
   const observer = new IntersectionObserver((entries) => {
     visible = entries.some((e) => e.isIntersecting);
     if (visible) start();
@@ -669,7 +679,7 @@ export function createSpecimenView() {
 
   function frame(now) {
     raf = 0;
-    if (!visible || !host?.isConnected || document.hidden) return;
+    if (!visible || !host?.isConnected || document.hidden || context.lost) return;
     const dt = Math.min(0.05, (now - (last || now)) / 1000);
     last = now;
     time += dt;
@@ -767,11 +777,20 @@ export function renderThumbnails(zs, size, onThumb) {
   let stopped = false;
   const finish = () => {
     stopped = true;
+    context.dispose(); // la perdita voluta del contesto qui sotto non è da ripristinare
     renderer.dispose();
     renderer.forceContextLoss();
   };
+  // contesto WebGL perso a metà: le miniature aspettano il ripristino e ripartono dallo studio rifatto
+  const context = watchContextLoss(renderer.domElement, {
+    onRestored: () => {
+      if (stopped) return;
+      renewStudio(renderer, scene);
+      requestAnimationFrame(step);
+    },
+  });
   const step = () => {
-    if (stopped) return;
+    if (stopped || context.lost) return;
     const t0 = performance.now();
     while (queue.length && performance.now() - t0 < 12) {
       const z = queue.shift();
@@ -782,6 +801,11 @@ export function renderThumbnails(zs, size, onThumb) {
       renderer.render(scene, camera);
       holder.remove(group);
       disposeGroup(group);
+      // perso proprio adesso: la miniatura sarebbe vuota, si rifà dopo il ripristino
+      if (renderer.getContext().isContextLost()) {
+        queue.unshift(z);
+        return;
+      }
       renderer.domElement.toBlob((blob) => blob && onThumb(z, URL.createObjectURL(blob)), 'image/webp', 0.9);
     }
     if (queue.length) requestAnimationFrame(step);

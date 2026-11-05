@@ -20,6 +20,8 @@ import { icons } from '../ui/icons.js';
 import { viewerAutoplay } from '../ui/motion.js';
 import { createT } from '../i18n/index.js';
 import { exposeForTests } from '../test-hooks.js';
+import { contextNotice } from '../gfx/context-loss.js';
+import { toast } from '../ui/toast.js';
 
 const ORIGIN = new THREE.Vector3();
 
@@ -938,6 +940,9 @@ export function createAtomViewer(elements, { onClose }) {
 
   // accesso dalla console e dagli E2E (solo con `vite` e nella build di prova, vedi src/test-hooks.js)
   exposeForTests('__atomViewer', { engine, nucleus, bohr, clouds, quarks, marker, state, select, clearSelection });
+
+  // contesto WebGL perso e ripristinato (engine.js): un avviso mentre la grafica riparte
+  engine.onContext = (kind) => toast(contextNotice(kind), { duration: kind === 'lost' ? 8000 : 3200 });
 
   const fpsEl = $('.av-fps');
   engine.onFps = (fps, q) => {

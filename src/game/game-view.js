@@ -59,6 +59,7 @@ import { TOOL_PAGES, TECHNIQUE_PAGES, SAFETY_PAGES } from './data/book-pages.js'
 import { GameAudio } from './audio/audio.js';
 import { GameRenderer } from './game-render.js';
 import { TEST_HOOKS, exposeForTests } from '../test-hooks.js';
+import { watchContextLoss, contextNotice } from '../gfx/context-loss.js';
 
 const t = createT(GAME_STRINGS);
 const SAVE_KEY = 'tp3d.game';
@@ -156,6 +157,7 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
 
   let game = null;
   let renderer = null;
+  let context = null; // contesto WebGL perso? (gfx/context-loss.js)
   let view = null; // GameRenderer: occlusione ambientale (Professionale) e qualità adattiva
   let audio = null; // GameAudio: i suoni CC0 di Freesound
   let raf = 0;
@@ -233,6 +235,14 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       renderer.shadowMap.type = THREE.PCFShadowMap;
     }
     stage.append(renderer.domElement);
+    // contesto WebGL perso: la partita continua senza disegnare, poi l'aula riprende i suoi riflessi
+    context = watchContextLoss(renderer.domElement, {
+      onLost: () => toast(contextNotice('lost'), 'warn', 8000),
+      onRestored: () => {
+        game?.restoreContext();
+        toast(contextNotice('restored'), 'info', 4000);
+      },
+    });
     game = new LabGame(renderer, R, elements, { t, onEvent });
     game.setFov(fov);
     game.shakeOn = shake;
@@ -1663,8 +1673,10 @@ export function createGame(elements, { onClose, onOpenLab } = {}) {
       startPour();
     if (state === 'play' || state === 'dialog') game.update(state === 'play' ? dt : 0, { blocked: state !== 'play' });
     else audio?.loops([]); // pausa e menu: il laboratorio tace
-    view.render();
-    if (state === 'play') view.sample(dt);
+    if (!context?.lost) {
+      view.render();
+      if (state === 'play') view.sample(dt);
+    }
     if (state !== 'menu') {
       placePops();
       drawCharge();

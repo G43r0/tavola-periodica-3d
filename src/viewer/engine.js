@@ -9,15 +9,16 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { gfx } from '../gfx/preset.js';
 import { SphereAO } from './sphere-ao.js';
+import { watchContextLoss, roomEnvironment, renewEnvironment } from '../gfx/context-loss.js';
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 const _follow = new THREE.Vector3();
 const _delta = new THREE.Vector3();
 const _to = new THREE.Vector3();
 const KEY_DIR = new THREE.Vector3(6, 10, 8).normalize();
+const ENV_SIGMA = 0.03; // sfocatura della mappa d'ambiente
 
 export class Engine {
   constructor(host) {
@@ -82,12 +83,8 @@ export class Engine {
     this.scene.add(rim);
     if (G.env) {
       // riflessi di uno studio fotografico: le superfici lucide mostrano finestre e pannelli luminosi
-      const pmrem = new THREE.PMREMGenerator(this.renderer);
-      const room = new RoomEnvironment();
-      this.scene.environment = pmrem.fromScene(room, 0.03).texture;
+      this.scene.environment = roomEnvironment(this.renderer, ENV_SIGMA);
       this.scene.environmentIntensity = 0.22;
-      room.dispose();
-      pmrem.dispose();
     }
     if (G.dust) this.scene.add(this.#dust(G.dust));
 
@@ -121,6 +118,20 @@ export class Engine {
     this.frameTimes = [];
     this.steps = 0; // passi di riduzione della qualità già fatti (vedi gfx().adapt)
     this.onFps = null;
+
+    // contesto WebGL perso (driver riavviato, PC che esce dalla sospensione): si smette di disegnare finché non torna,
+    // poi si rifà la mappa d'ambiente e la qualità adattiva riparte da capo (gfx/context-loss.js). onContext: l'avviso.
+    this.onContext = null;
+    this.graceFrames = 0;
+    this.context = watchContextLoss(this.renderer.domElement, {
+      onLost: () => this.onContext?.('lost'),
+      onRestored: () => {
+        renewEnvironment(this.renderer, this.scene.environment, ENV_SIGMA, { scenes: [this.scene] });
+        this.frameTimes.length = 0;
+        this.graceFrames = 60; // i primi fotogrammi ricompilano gli shader: non contano per la qualità
+        this.onContext?.('restored');
+      },
+    });
 
     new ResizeObserver(() => requestAnimationFrame(() => this.resize())).observe(host);
     this.resize();
@@ -291,6 +302,7 @@ export class Engine {
     // prima si aggiornano le particelle, poi la camera: chi segue un elettrone lo vede fermo al centro
     for (const fn of this.updaters) fn(dt);
     this.#updateCamera(dt);
+    if (this.context.lost) return; // niente da disegnare finché il contesto non torna
 
     if (this.composer && this.bloom.enabled) this.composer.render();
     else this.renderer.render(this.scene, this.camera);
@@ -340,6 +352,10 @@ export class Engine {
    * (sovracampionamento, occlusione ambientale, ombre, bloom) e alla fine si riduce la risoluzione.
    */
   #adapt(dt) {
+    if (this.graceFrames > 0) {
+      this.graceFrames--;
+      return;
+    }
     this.frameTimes.push(dt);
     if (this.frameTimes.length < 90) return;
     const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;

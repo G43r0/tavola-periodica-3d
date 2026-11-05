@@ -4,7 +4,7 @@
 // esplosioni, schizzi); rifiuti e pulizia; esercitazioni della Carriera e Laboratorio libero.
 // L'interfaccia (DOM, menu, HUD) è in game-view.js: qui si producono solo stato e messaggi.
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { roomEnvironment, renewEnvironment } from '../gfx/context-loss.js';
 import { gfx } from '../gfx/preset.js';
 import { locale, pick } from '../i18n/index.js';
 import { Physics } from './physics.js';
@@ -71,6 +71,7 @@ const WATER = 123;
 const REACH = 2.3;
 const BREAK_SPEED = 3.3; // m/s: un becher che cade dal bancone (≈ 4,2 m/s) si rompe, posato no
 const CHEM_DT = 1 / 20;
+const ENV_SIGMA = 0.04; // sfocatura della mappa d'ambiente dell'aula
 const RESIDUE_ML = 0.2;
 const TAP_FLOW = 25; // mL/s, portata iniziale del rubinetto (la rotella la cambia da 5 a 50)
 const PLACE_REACH = 0.6; // m: si posa con precisione solo vicino all'oggetto in mano
@@ -187,11 +188,9 @@ export class LabGame {
     this.camera = new THREE.PerspectiveCamera(FOV.default, 16 / 9, 0.02, 40);
     this.envMap = null;
     if (this.G.env || this.G.post) {
-      const pmrem = new THREE.PMREMGenerator(renderer);
-      this.envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      this.envMap = roomEnvironment(renderer, ENV_SIGMA);
       this.scene.environment = this.envMap;
       this.scene.environmentIntensity = 0.28;
-      pmrem.dispose();
     }
     this.physics = new Physics(R);
     this.chem = createLabChemistry(elements);
@@ -3857,6 +3856,19 @@ export class LabGame {
   briefText(ex) {
     const key = `${ex.id}BriefSimple`;
     return this.chemMode === 'simple' && this.t(key) !== key ? this.t(key) : this.t(`${ex.id}Brief`);
+  }
+
+  /**
+   * Dopo un contesto WebGL perso e ripristinato (game-view.js): three.js ricarica da sé geometrie e texture, la mappa
+   * d'ambiente invece si rifà e va al posto della vecchia nell'aula e nei materiali degli oggetti, anche in quelli non
+   * ancora sul banco. Fisica, chimica e partita non dipendono dalla scheda grafica e continuano.
+   */
+  restoreContext() {
+    if (!this.envMap) return;
+    this.envMap = renewEnvironment(this.renderer, this.envMap, ENV_SIGMA, {
+      scenes: [this.scene],
+      materials: Object.values(this.mats),
+    });
   }
 
   stepParams(def) {
