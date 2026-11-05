@@ -10,7 +10,8 @@ Storico delle versioni di **Tavola Periodica 3D**. Ogni versione corrisponde a u
 
 ## [Non rilasciato] — per la 1.0.0
 
-Correzioni e fondamenta (fase R1 del piano) che entreranno nella versione 1.0.0 (nessuna release intermedia).
+Correzioni, fondamenta e robustezza (fasi R1 e R2 del piano) che entreranno nella versione 1.0.0 (nessuna release
+intermedia).
 
 ### Aggiunto
 - **SMILES come si copiano da PubChem e Wikipedia** nel riquadro Formula: aromatici minuscoli (`c1ccccc1`,
@@ -72,6 +73,26 @@ Correzioni e fondamenta (fase R1 del piano) che entreranno nella versione 1.0.0 
   avvisi moderati non bloccano. Dependabot propone gli aggiornamenti ogni lunedì, con gli strumenti di controllo in un
   gruppo solo.
 
+- **«Qualcosa è andato storto».** Un errore imprevisto non sparisce più nella console: si apre una finestra con il
+  messaggio, i dettagli tecnici e i pulsanti Ricarica l'app, Copia i dettagli (versione, sistema, grafica, lingua,
+  modulo aperto e gli errori, senza la cartella dell'utente), Segnala (il modulo «Errore dell'app» di GitHub già
+  compilato) e Chiudi. Lo stesso errore si conta una volta; gli avvisi innocui del browser non la aprono.
+- **Registro dell'app desktop** in `logs/` nella cartella dei dati: gli errori, i crash del renderer o della GPU e gli
+  errori dei salvataggi, al massimo 1 MB in due file a rotazione. Non si invia mai da solo: menu «Aiuto → Apri la
+  cartella dei registri».
+- **Grafica che riparte da sola.** Se il contesto WebGL si perde (driver della scheda grafica che si riavvia, PC che
+  esce dalla sospensione) l'atomo 3D, il simulatore e i campioni della scheda lo dicono e ripartono senza ricaricare,
+  con i riflessi dello studio rifatti; la partita del simulatore va avanti intanto.
+- **Esporta e importa un profilo** del simulatore: un file con Carriera e quaderno da portare da scuola a casa o su un
+  altro computer, con un controllo d'integrità (CRC-32). Lo stesso profilo si aggiorna e non si duplica; un file
+  rovinato, modificato o di un'app più nuova si rifiuta con un messaggio.
+- **App su chiavetta**: con una cartella `dati` accanto all'eseguibile (anche quello «portable») impostazioni,
+  salvataggi e registri stanno lì e viaggiano con l'app. Se la cartella non è scrivibile si usa quella solita.
+- **Tre copie di sicurezza** del salvataggio dell'app desktop invece di una: il salvataggio precedente, uno di al più
+  10 minuti prima e uno di almeno 10 minuti prima di quello. Un file rotto sul disco non scaccia le copie buone.
+- **Salvataggi garantiti**: formato e promessa in `docs/salvataggi.md` (la 1.0 e le 1.x aprono ogni salvataggio dalla
+  0.8.0), un salvataggio vero di ogni versione nei test e una prova con migliaia di salvataggi rovinati a caso.
+
 ### Corretto
 - **Laboratorio, Formula.** La carica dopo una parentesi quadra è una carica (`[Fe(CN)6]3-` non è più Fe₃C₁₈N₁₈⁻) e
   `SO42-`, `PO43-`, `Cr2O72-` sono SO₄²⁻, PO₄³⁻, Cr₂O₇²⁻, con l'avviso di lettura (#17); gli stati fisici `(aq)`, `(s)`,
@@ -94,6 +115,10 @@ Correzioni e fondamenta (fase R1 del piano) che entreranno nella versione 1.0.0 
   dal seme casuale. Ora un metallo che arde accende, dove la tocca, la reazione che chiede un innesco, con la
   temperatura della sua fiamma (≈ 2 800 °C per il magnesio), come il nastro di magnesio nella termite vera. La legna e
   il carbone non cambiano: la legna non basta ancora, il carbone a 1450 K ci mette qualche secondo come prima.
+- **Salvataggi rovinati** (trovati dalla prova a caso): un salvataggio con `{"toString": 1}` al posto di un nome o di un
+  numero faceva lanciare l'apertura del simulatore; le chiavi `__proto__` nei risultati della Carriera e nel quaderno ne
+  cambiavano il prototipo; `Infinity` nei tentativi e nei conteggi diventava `null` alla rilettura; il quaderno passava
+  com'era. Ora si apre sempre un salvataggio valido, tenendo tutto quello che si legge.
 - **Condizioni delle reazioni del catalogo** (simulatore, sandbox e libro). «Detonazione» e «sfregamento» chiedono un
   urto (il nitrato d'ammonio non esplode più da solo nel becher, #37); le sostanze scritte nella condizione sono
   requisiti anche senza «cat.» (clorato e zucchero vogliono l'acido, l'acetammide il P₄O₁₀, la formaldeide il

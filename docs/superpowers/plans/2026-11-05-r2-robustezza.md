@@ -11,6 +11,9 @@ file e sopravvivono a un file rovinato. L'app gira da una chiavetta con i progre
 **Specifica:** [docs/superpowers/specs/2026-10-29-versione-1.0-piano.md](../specs/2026-10-29-versione-1.0-piano.md),
 fase R2.
 
+**Stato (05/11/2026):** fatti i compiti 0–6 (branch `claude/fix-other-issues-cewsq3`, un commit per compito). Restano
+il 7 (memoria e GPU) e l'8 (`game.js` in pezzi), per una PR successiva della R2, e il 9, con la R3.
+
 **Fatto quando** (dalla specifica):
 
 - nessun percorso E2E lascia errori in console (già controllato dalla R1: la fixture `consoleErrors` di
@@ -56,8 +59,8 @@ fase R2.
    voci al minuto dal renderer. Test `log-file: non supera 1 MB`.
 3. **Un file di profilo importato non deve poter rompere il salvataggio**: si controlla il CRC, la versione e poi passa
    da `migrate()` come ogni salvataggio. Test `profile-file: file rovinati` e la prova a caso del compito 4.
-4. **Le tre copie non devono essere tre copie dello stesso minuto**: si spostano solo se la più recente ha più di
-   10 minuti. Test `save-file: copie distanziate`.
+4. **Le tre copie non devono essere tre copie dello stesso minuto**: la `.2` e la `.3` si spostano solo quando la `.2`
+   ha almeno 10 minuti. Test `copie: scritture ravvicinate non spostano la .2 e la .3`.
 5. **La cartella `dati/` della chiavetta si usa solo se è scrivibile** (una chiavetta protetta da scrittura, un CD,
    `Program Files`): altrimenti la cartella solita. Test `portable: cartella non scrivibile`.
 
@@ -66,15 +69,16 @@ fase R2.
 ### Compito 0: piano
 
 - Crea: `docs/superpowers/plans/2026-11-05-r2-robustezza.md` (questo file).
-- [ ] Commit «R2: piano di implementazione».
+- [x] Commit «R2: piano di implementazione».
 
 ### Compito 1: tre copie di sicurezza a rotazione
 
 **File:** modifica `electron/save-file.cjs`; test in `tests/electron/save-file.test.mjs`.
 
-- Le copie sono `simulatore-salvataggio.json.1`, `.2`, `.3` (la `.1` la più recente). A ogni scrittura, se la `.1` non
-  c'è o ha più di 10 minuti, si spostano `.2 → .3`, `.1 → .2` e il file di prima diventa `.1`; altrimenti le copie non
-  si toccano. Così coprono la sessione in corso e le due prima, non gli ultimi tre secondi.
+- Le copie sono `simulatore-salvataggio.json.1`, `.2`, `.3`. La `.1` è sempre il salvataggio precedente (come il
+  `.bak` di prima); la `.2` si rinfresca con la `.1` quando ha almeno 10 minuti, e la `.2` di prima passa alla `.3`.
+  Così coprono gli ultimi secondi, al più 10 minuti prima e almeno 10 minuti prima ancora, non gli ultimi tre
+  salvataggi di fila. Un file rotto sul disco non sposta le copie.
 - La lettura prova il file, poi `.1`, `.2`, `.3` e infine il `.bak` delle versioni 0.9.x: il primo JSON valido.
 - Test: file rotto → `.1`; file e `.1` rotti → `.2`; il vecchio `.bak` letto se non c'è altro; scritture ravvicinate
   non spostano le copie; dopo 10 minuti (orologio finto) sì, e la `.3` più vecchia sparisce.
