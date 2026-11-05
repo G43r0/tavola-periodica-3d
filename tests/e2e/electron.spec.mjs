@@ -130,3 +130,23 @@ test('menu nella lingua scelta', async ({ app, window }) => {
   await expect.poll(() => menuLabels(app)).toContain('Help');
   expect(await menuLabels(app)).not.toContain('Aiuto');
 });
+
+test('registro: la riga d’avvio e gli errori del renderer in logs/app.log; la voce nel menu Aiuto', async ({
+  app,
+  window,
+  userData,
+}) => {
+  const log = path.join(userData, 'logs', 'app.log');
+  const read = () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '');
+  await expect.poll(read).toMatch(/INFO \[main\] Avvio \d+\.\d+\.\d+/);
+  // un errore del renderer arriva al registro dal preload, come fa la finestra «Qualcosa è andato storto»
+  await window.evaluate(() => window.desktop.log('TypeError: errore di prova del registro\n    at prova (app.js:1:1)'));
+  await expect.poll(read).toContain('ERROR [renderer] TypeError: errore di prova del registro');
+  expect(read()).toContain('    at prova (app.js:1:1)');
+  const help = await app.evaluate(({ Menu }) =>
+    Menu.getApplicationMenu()
+      .items.find((item) => item.label === 'Aiuto')
+      .submenu.items.map((item) => item.label),
+  );
+  expect(help).toContain('Apri la cartella dei registri');
+});
