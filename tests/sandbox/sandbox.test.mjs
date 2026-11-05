@@ -317,6 +317,63 @@ test('alluminotermia: alluminio + ruggine ad alta temperatura danno ferro fuso',
   assert.equal(describeEvent(subs, `thermite:${Z('Al')}:${Z('Fe')}`).equation, '2 Al + Fe₂O₃ → Al₂O₃ + 2 Fe');
 });
 
+test('termite: il magnesio che arde la accende dove la tocca, il fuoco della legna no', () => {
+  // miscela di alluminio e ruggine della libreria (la reazione «termite» del catalogo) e di ossido generico
+  const mix = (w) => {
+    for (let y = 25; y < 39; y++)
+      for (let x = 15; x < 45; x++) {
+        if ((x + y) % 2) w.paint(x, y, 0, Z('Al'), { powder: true });
+        else if (x < 30) w.paint(x, y, 0, Z('fe2o3'), { powder: true });
+        else w.paint(x, y, 0, OXIDE, { ctype: Z('Fe'), powder: true });
+      }
+  };
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    const w = world(60, 40, seed);
+    mix(w);
+    // un nastro di magnesio acceso sopra la miscela
+    for (let x = 20; x < 40; x++) {
+      w.paint(x, 24, 0, Z('Mg'), { powder: false });
+      w.setBurning(24 * w.W + x);
+    }
+    run(w, 60);
+    assert.ok(events(w, 'rx:termite') > 0, `seme ${seed}: la termite della libreria non parte`);
+    assert.ok(events(w, `thermite:${Z('Al')}:${Z('Fe')}`) > 0, `seme ${seed}: l'alluminotermia non parte`);
+  }
+  // la legna arde a ≈ 900 °C: sotto i 1200 K dell'innesco
+  const w = world(60, 40, 9);
+  mix(w);
+  for (let y = 21; y < 25; y++)
+    for (let x = 20; x < 40; x++) {
+      w.paint(x, y, 0, WOOD);
+      w.setBurning(y * w.W + x);
+    }
+  run(w, 600);
+  assert.ok(events(w, `burn:${WOOD}`) + events(w, 'pyrolysis') > 0, 'la legna non è bruciata');
+  assert.equal(events(w, 'rx:termite'), 0);
+  assert.equal(events(w, 'thermite:'), 0);
+});
+
+test('esempio «Termite»: si accende con ogni seme e su ogni griglia', () => {
+  const termite = PRESETS.find((p) => p.id === 'termite');
+  for (const [W, H] of [
+    [240, 135],
+    [320, 180],
+    [400, 225],
+  ]) {
+    for (let s = 1; s <= 25; s++) {
+      const seed = ((s * 2654435761) & 0x7fffffff) | 1; // semi sparsi, come Date.now() all'apertura
+      const w = new World(subs, W, H, { seed });
+      termite.build(w, subs);
+      let lit = false;
+      for (let k = 0; k < 180 && !lit; k++) {
+        w.step();
+        lit = w.events.has('rx:termite');
+      }
+      assert.ok(lit, `griglia ${W}×${H}, seme ${seed}: in 3 s la termite non si è accesa`);
+    }
+  }
+});
+
 test('decadimento: il polonio diventa piombo e libera elio', () => {
   const w = world();
   w.paint(30, 30, 4, Z('Po'), { powder: true });

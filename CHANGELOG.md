@@ -89,6 +89,11 @@ Correzioni e fondamenta (fase R1 del piano) che entreranno nella versione 1.0.0 
   (centrato e appoggiato in basso) e si annulla come ogni altra modifica (#43); il campo Temperatura rispetta i limiti
   (le soluzioni tra 0 e 99 °C) e vuoto lascia il valore di prima (#44); nella barra laterale non ci sono più etichette
   tagliate a 1280×800 né alla finestra minima (#23).
+- **Sandbox, termite.** L'esempio «Termite» non si accendeva circa una volta su sei: la cella del magnesio che arde
+  resta sotto l'ebollizione (1090 °C) e scaldava la miscela appena oltre i 1200 K dell'innesco, quindi tutto dipendeva
+  dal seme casuale. Ora un metallo che arde accende, dove la tocca, la reazione che chiede un innesco, con la
+  temperatura della sua fiamma (≈ 2 800 °C per il magnesio), come il nastro di magnesio nella termite vera. La legna e
+  il carbone non cambiano: la legna non basta ancora, il carbone a 1450 K ci mette qualche secondo come prima.
 - **Condizioni delle reazioni del catalogo** (simulatore, sandbox e libro). «Detonazione» e «sfregamento» chiedono un
   urto (il nitrato d'ammonio non esplode più da solo nel becher, #37); le sostanze scritte nella condizione sono
   requisiti anche senza «cat.» (clorato e zucchero vogliono l'acido, l'acetammide il P₄O₁₀, la formaldeide il
@@ -163,7 +168,7 @@ Correzioni e fondamenta (fase R1 del piano) che entreranno nella versione 1.0.0 
 - **ESLint: 21 segnalazioni sistemate** (variabili e assegnazioni mai lette, due espressioni con caratteri di controllo
   volute e ora commentate, uno spazio unificatore diventato ` `): nessuna era un bug, il comportamento non cambia.
   Anche i 182 errori di tipo dei moduli controllati erano JSDoc troppo vaghi (`@param {object}`), corretti senza
-  toccare il codice.
+  toccare il codice. I tipi si controllano anche dentro `src/types.d.ts`, che `skipLibCheck` lasciava fuori.
 
 ### Sicurezza
 - **App desktop, fusibili di Electron.** L'eseguibile costruito ha spenti `runAsNode`, `NODE_OPTIONS` e `--inspect`: non

@@ -1,8 +1,8 @@
 import { test, expect, openModule } from './fixtures.mjs';
 
-// Il seme del mondo è casuale (Date.now() all'apertura) e l'esempio «Termite» non innesca in circa una sessione su
-// cinque: perché la prova sia ripetibile si ferma il tempo, si fissano seme e passo e solo dopo si carica l'esempio.
-// Con questo seme la reazione parte dopo una quarantina di passi.
+// Il seme del mondo è casuale (Date.now() all'apertura): perché la prova sia ripetibile, griglie comprese, si ferma il
+// tempo, si fissano seme e passo e solo dopo si carica l'esempio. L'innesco della termite non dipende dal seme
+// (tests/sandbox/sandbox.test.mjs lo prova con 25 semi su ogni griglia).
 const SEED = 23758;
 
 /**

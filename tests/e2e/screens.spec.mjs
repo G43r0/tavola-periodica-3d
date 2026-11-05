@@ -60,8 +60,7 @@ const VIEWS = {
     await frames(page);
   },
 
-  // la sandbox con l'esempio «Termite» dopo 5 s di tempo vero. Che la reazione parta o no non conta (in circa una
-  // sessione su cinque non innesca): la prova non lo controlla.
+  // la sandbox con l'esempio «Termite» dopo 5 s di tempo vero (la reazione la controlla sandbox.spec)
   async sandbox(page) {
     await openModule(page, 'sandbox');
     await page.locator('.sbx-intro [data-preset="termite"]').click();

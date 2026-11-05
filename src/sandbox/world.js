@@ -239,6 +239,27 @@ export class World {
     return false;
   }
 
+  /**
+   * La fiamma più calda di un metallo che arde (magnesio, alluminio…) nelle 8 celle intorno a (x, y), 0 se nessuno.
+   * La cella di un metallo che brucia resta sotto l'ebollizione (il magnesio arde, non evapora), ma la sua fiamma è
+   * molto più calda (≈ 2 800 °C per il magnesio): è lei che accende ciò che tocca, come il nastro di magnesio la termite.
+   */
+  metalFlameNear(x, y) {
+    const { P } = this;
+    let T = 0;
+    for (let k = 0; k < 8; k++) {
+      const nx = x + DX[k];
+      const ny = y + DY[k];
+      if (nx < 0 || ny < 0 || nx >= this.W || ny >= this.H) continue;
+      const j = ny * this.W + nx;
+      const id = this.type[j];
+      // senza ossigeno accanto non c'è fiamma (vedi burn())
+      if (this.flags[j] & C_BURN && P.flags[id] & S.METAL && P.flame[id] > T && this.oxidizer(nx, ny) !== -1)
+        T = P.flame[id];
+    }
+    return T;
+  }
+
   /** Luce vicina (fiamma, scintilla, corpo incandescente): basta per le reazioni fotochimiche. */
   lightNear(x, y) {
     for (let m = 0; m < 24; m++) {
@@ -636,7 +657,12 @@ export class World {
     if (sf & S.WATER_REACTIVE && nid === WATER && this.temp[j] >= P.mp[WATER])
       return this.waterReaction(i, j, x, y, id);
     if (sf & S.METAL && nf & S.HALOGEN) return this.halide(i, j, id, nid);
-    if (nid === OXIDE && sf & S.METAL && this.temp[i] >= THERMITE_T && (phase !== SOLID || this.flags[i] & C_POWDER))
+    if (
+      nid === OXIDE &&
+      sf & S.METAL &&
+      (phase !== SOLID || this.flags[i] & C_POWDER) &&
+      (this.temp[i] >= THERMITE_T || this.metalFlameNear(x, y) >= THERMITE_T)
+    )
       return this.thermite(i, j, x, y, id);
     if (id === FE_Z && nid === WATER && this.rand() < 0.0008 && this.touchesAir(x, y)) {
       this.setType(i, this.subs.oxideFor(FE_Z) || OXIDE, this.temp[i], FE_Z);
@@ -675,6 +701,8 @@ export class World {
     let T = this.temp[i];
     if (nid > 0) T = Math.max(T, this.temp[j]);
     if (T > c.maxT) return false;
+    // un innesco parte anche dalla fiamma di un metallo che arde e tocca i reagenti
+    if (c.ignite && T < c.minT) T = Math.max(T, this.metalFlameNear(x, y));
     if (c.light) {
       if (!(this.lightNear(x, y) || (c.ignite && T >= c.minT))) return false;
     } else if (T < c.minT) return false;
