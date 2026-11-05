@@ -5,12 +5,14 @@ const { createSaveFile } = require('./save-file.cjs');
 const { menuTemplate } = require('./menu.cjs');
 const { lockDownSession, lockWebContents } = require('./security.cjs');
 const { watchRenderer } = require('./recover.cjs');
+const { chooseUserData } = require('./portable.cjs');
 const path = require('node:path');
 
-// Cartella dei dati dell'utente scelta da fuori: serve all'E2E (una cartella temporanea, mai i dati veri di chi sviluppa)
-// ed è la base per l'app su chiavetta. Va impostata prima di `ready` e prima che qualcosa legga userData (blocco
-// dell'istanza unica, salvataggi, impostazioni dell'aggiornatore).
-if (process.env.TP3D_USER_DATA) app.setPath('userData', path.resolve(process.env.TP3D_USER_DATA));
+// Cartella dei dati dell'utente: `TP3D_USER_DATA` per gli E2E (una cartella temporanea, mai i dati veri di chi sviluppa),
+// poi la cartella `dati` accanto all'eseguibile per l'app su chiavetta (electron/portable.cjs). Va impostata prima di
+// `ready` e prima che qualcosa legga userData (blocco dell'istanza unica, salvataggi, impostazioni dell'aggiornatore).
+const userData = chooseUserData({ env: process.env, execPath: process.execPath });
+if (userData) app.setPath('userData', userData.dir);
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 const isDev = Boolean(DEV_URL);

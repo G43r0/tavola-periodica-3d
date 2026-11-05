@@ -92,6 +92,14 @@ La prima build scarica una volta i binari di Electron e NSIS (serve Internet sol
 Insieme ai due eseguibili compaiono `latest.yml` e il file `.blockmap`: servono agli **aggiornamenti automatici** e vanno
 caricati nella release di GitHub accanto ai due `.exe` (vedi la sezione successiva).
 
+### Su una chiavetta
+
+Per portare app e progressi da un PC all'altro (o per i laboratori di informatica che si azzerano a ogni riavvio):
+copia `TavolaPeriodica3D-portable-<versione>.exe` su una chiavetta e crea accanto una cartella vuota chiamata `dati`.
+L'app tiene lì impostazioni, salvataggi del simulatore, copie di sicurezza e registri, invece che nella cartella dei
+dati dell'utente del PC. Se la cartella non c'è, o la chiavetta è protetta da scrittura, l'app usa la cartella solita.
+Lo stesso vale per l'app installata o per `win-unpacked/`: conta la cartella `dati` accanto all'eseguibile.
+
 ### Aggiornamenti automatici
 
 L'app installata cerca da sola le versioni nuove dalle release di GitHub (15 secondi dopo l'avvio e poi ogni 6 ore), le
@@ -660,6 +668,8 @@ electron/
   preload.cjs         ponte minimo verso il renderer (lingua, salvataggi, aggiornamenti)
   updater.cjs         aggiornamenti automatici (electron-updater; versione portabile: avviso e collegamento)
   update-logic.cjs    logica pura degli aggiornamenti (confronto delle versioni, impostazioni), provata dai test
+  save-file.cjs       file dei salvataggi del simulatore con tre copie di sicurezza
+  portable.cjs        app su chiavetta: la cartella `dati` accanto all'eseguibile
 src/
   main.js             avvio dell'interfaccia e scorciatoie globali
   gfx/                preset grafici e aspetto reale degli elementi
