@@ -44,7 +44,9 @@ test('salvataggi: la versione 1 passa alla 2 senza perdere stelle, soldi, impost
   assert.equal(p.career.results.nacl.stars, 4);
   assert.equal(p.career.results.titration.stars, 3.5);
   assert.equal(p.career.results.goldrain.stars, 5);
-  assert.deepEqual(p.notebook, v1.notebook);
+  // il quaderno resta, nella forma che il gioco usa (loadNotebook): la voce c'è, i campi mancanti hanno il valore predefinito
+  assert.deepEqual(Object.keys(p.notebook.rx), ['cat-765']);
+  assert.equal(p.notebook.rx['cat-765'].count, 1);
   // le impostazioni dell'audio e della scossa (G8) prendono i valori predefiniti
   assert.deepEqual(s.settings, {
     chemMode: 'simple',

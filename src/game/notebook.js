@@ -19,10 +19,14 @@ export function loadNotebook(raw) {
   if (!raw || typeof raw !== 'object' || typeof raw.rx !== 'object' || raw.rx === null) return nb;
   if (typeof raw.v === 'number' && raw.v > NOTEBOOK_VERSION) return nb;
   for (const [id, e] of Object.entries(raw.rx)) {
-    if (!e || typeof e !== 'object') continue;
+    // le chiavi che in un oggetto JavaScript cambierebbero il prototipo si scartano
+    if (!e || typeof e !== 'object' || id === '__proto__' || id === 'constructor' || id === 'prototype') continue;
+    // solo numeri veri: Number() di un oggetto con «valueOf» rovinato lancerebbe
+    const first = typeof e.first === 'number' ? e.first : NaN;
+    const count = typeof e.count === 'number' ? e.count : NaN;
     nb.rx[id] = {
-      first: Number(e.first) || 0,
-      count: Math.max(1, Number(e.count) || 1),
+      first: Number.isFinite(first) ? first : 0,
+      count: Number.isFinite(count) ? Math.max(1, count) : 1,
       mode: e.mode === 'career' ? 'career' : 'free',
       aq: Boolean(e.aq),
       tags: Array.isArray(e.tags) ? e.tags.filter((x) => typeof x === 'string') : [],
