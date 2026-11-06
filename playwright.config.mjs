@@ -4,11 +4,12 @@ import { defineConfig } from '@playwright/test';
 // serve con `vite preview`. Il rendering WebGL è software (SwiftShader), come nelle misure della specifica.
 //
 // In locale `PW_CHANNEL=chrome` usa il Chrome installato, senza scaricare Chromium (`npx playwright install`, che
-// serve solo in CI).
+// serve solo in CI); `PW_EXECUTABLE_PATH` usa un Chromium già presente altrove. `E2E_PORT` cambia la porta del server
+// (4173), per far girare due copie del progetto insieme.
 //
 // Il progetto `electron` lancia l'app vera (`electron .`) su dist/, la build di produzione: si costruisce prima con
 // `npx vite build`. Non usa né il server né la build di prova, quindi con `--project=electron` il `webServer` non parte.
-const PORT = 4173;
+const PORT = Number(process.env.E2E_PORT) || 4173;
 
 // I progetti chiesti dalla riga di comando (`--project=web`, `--project web`, `-p web`); nessuno = tutti.
 function requestedProjects(argv = process.argv) {
@@ -59,7 +60,10 @@ export default defineConfig({
         browserName: 'chromium',
         channel: process.env.PW_CHANNEL,
         viewport: { width: 1366, height: 768 },
-        launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
+        launchOptions: {
+          args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+          executablePath: process.env.PW_EXECUTABLE_PATH || undefined,
+        },
       },
     },
     {
